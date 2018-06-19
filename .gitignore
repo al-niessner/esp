@@ -1,0 +1,9 @@
+*~
+*.docx
+*.pdf
+*.pyc
+*.rpt.txt
+__pycache__
+notes.txt
+.coverage*
+.cache/
