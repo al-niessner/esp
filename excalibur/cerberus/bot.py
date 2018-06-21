@@ -4,7 +4,7 @@ import sys
 import pdb
 
 import dawgie
-import exo.spec.ae.cerberus.algorithms as crbalg
+import excalibur.cerberus.algorithms as crbalg
 # ------------- ------------------------------------------------------
 # -- TASK -- ---------------------------------------------------------
 class Actor(dawgie.Task):

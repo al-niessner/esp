@@ -1,27 +1,27 @@
 # -- IMPORTS -- ------------------------------------------------------
 import dawgie
 
-import exo.spec.ae
+import excalibur
 # ------------- ------------------------------------------------------
 # -- SV -- -----------------------------------------------------------
 class PriorsSV(dawgie.StateVector):
     def __init__(self, name):
         self._version_ = dawgie.VERSION(1,1,0)
         self.__name = name
-        self['STATUS'] = exo.spec.ae.ValuesList()
-        self['PP'] = exo.spec.ae.ValuesList()
-        self['priors'] = exo.spec.ae.ValuesDict()
-        self['pignore'] = exo.spec.ae.ValuesDict()
-        self['ignore'] = exo.spec.ae.ValuesList()
-        self['autofill'] = exo.spec.ae.ValuesList()
-        self['needed'] = exo.spec.ae.ValuesList()
-        self['pneeded'] = exo.spec.ae.ValuesList()
-        self['starmdt'] = exo.spec.ae.ValuesList()
-        self['planetmdt'] = exo.spec.ae.ValuesList()
-        self['extsmdt'] = exo.spec.ae.ValuesList()
-        self['starkeys'] = exo.spec.ae.ValuesList()
-        self['planetkeys'] = exo.spec.ae.ValuesList()
-        self['exts'] = exo.spec.ae.ValuesList()
+        self['STATUS'] = excalibur.ValuesList()
+        self['PP'] = excalibur.ValuesList()
+        self['priors'] = excalibur.ValuesDict()
+        self['pignore'] = excalibur.ValuesDict()
+        self['ignore'] = excalibur.ValuesList()
+        self['autofill'] = excalibur.ValuesList()
+        self['needed'] = excalibur.ValuesList()
+        self['pneeded'] = excalibur.ValuesList()
+        self['starmdt'] = excalibur.ValuesList()
+        self['planetmdt'] = excalibur.ValuesList()
+        self['extsmdt'] = excalibur.ValuesList()
+        self['starkeys'] = excalibur.ValuesList()
+        self['planetkeys'] = excalibur.ValuesList()
+        self['exts'] = excalibur.ValuesList()
         self['starmdt'].extend(['R*', 'T*', 'FEH*', 'LOGG*'])
         self['planetmdt'].extend(['inc', 'period', 'ecc', 'rp',
                                   't0', 'sma', 'mass'])

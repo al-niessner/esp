@@ -4,17 +4,17 @@ import pdb
 import dawgie
 import dawgie.context
 
-import exo.spec.ae.data as dat
-import exo.spec.ae.data.core as datcore
-import exo.spec.ae.data.states as datstates
+import excalibur.data as dat
+import excalibur.data.core as datcore
+import excalibur.data.states as datstates
 
-import exo.spec.ae.target as trg
-import exo.spec.ae.target.edit as trgedit
-import exo.spec.ae.target.core as trgcore
-import exo.spec.ae.target.states as trgstates
-import exo.spec.ae.target.algorithms as trgalg
-import exo.spec.ae.system as sys
-import exo.spec.ae.system.algorithms as sysalg
+import excalibur.target as trg
+import excalibur.target.edit as trgedit
+import excalibur.target.core as trgcore
+import excalibur.target.states as trgstates
+import excalibur.target.algorithms as trgalg
+import excalibur.system as sys
+import excalibur.system.algorithms as sysalg
 # ------------- ------------------------------------------------------
 # -- ALGO RUN OPTIONS -- ---------------------------------------------
 # VERBOSE AND DEBUG

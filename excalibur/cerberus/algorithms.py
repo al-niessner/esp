@@ -6,14 +6,14 @@ import pdb
 import dawgie
 import dawgie.context
 
-import exo.spec.ae.system as sys
-import exo.spec.ae.system.algorithms as sysalg
-#import exo.spec.ae.extrasolar as makepriors
-#import exo.spec.ae.extrasolar.algorithms as mkpalg
+import excalibur.system as sys
+import excalibur.system.algorithms as sysalg
+#import excalibur.extrasolar as makepriors
+#import excalibur.extrasolar.algorithms as mkpalg
 
-import exo.spec.ae.cerberus as cerberus
-import exo.spec.ae.cerberus.states as crbstates
-import exo.spec.ae.cerberus.core as crb
+import excalibur.cerberus as cerberus
+import excalibur.cerberus.states as crbstates
+import excalibur.cerberus.core as crb
 # ------------- ------------------------------------------------------
 # -- ALGOS RUN OPTIONS -- --------------------------------------------
 # PLOTS

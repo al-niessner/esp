@@ -8,8 +8,8 @@ import subprocess
 import dawgie
 import dawgie.db
 
-import exo.spec.ae.target as trg
-import exo.spec.ae.target.edit as trgedit
+import excalibur.target as trg
+import excalibur.target.edit as trgedit
 
 import astropy.io.fits as pyfits
 import urllib.request as urlrequest

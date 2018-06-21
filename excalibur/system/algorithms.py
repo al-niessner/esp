@@ -3,13 +3,13 @@ import pdb
 
 import dawgie
 
-import exo.spec.ae.system as sys
-import exo.spec.ae.system.core as syscore
-import exo.spec.ae.system.states as sysstates
+import excalibur.system as sys
+import excalibur.system.core as syscore
+import excalibur.system.states as sysstates
 
-import exo.spec.ae.target as trg
-import exo.spec.ae.target.edit as trgedit
-import exo.spec.ae.target.algorithms as trgalg
+import excalibur.target as trg
+import excalibur.target.edit as trgedit
+import excalibur.target.algorithms as trgalg
 # ------------- ------------------------------------------------------
 # -- ALGO RUN OPTIONS -- ---------------------------------------------
 # VERBOSE AND DEBUG

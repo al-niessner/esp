@@ -1,22 +1,22 @@
 # -- IMPORTS -- ------------------------------------------------------
 import dawgie
 
-import exo.spec.ae
+import excalibur
 # ------------- ------------------------------------------------------
 # -- TARGET -- -------------------------------------------------------
 class TargetSV(dawgie.StateVector):
     def __init__(self, name):
         self._version_ = dawgie.VERSION(1,1,0)
         self.__name = name
-        self['STATUS'] = exo.spec.ae.ValuesList()
-        self['starID'] = exo.spec.ae.ValuesDict()
-        self['nexscie'] = exo.spec.ae.ValuesList()
-        self['nexscic'] = exo.spec.ae.ValuesList()
-        self['nexscix'] = exo.spec.ae.ValuesList()
-        self['candidates'] = exo.spec.ae.ValuesList()
-        self['starkeys'] = exo.spec.ae.ValuesList()
-        self['planetkeys'] = exo.spec.ae.ValuesList()
-        self['exts'] = exo.spec.ae.ValuesList()
+        self['STATUS'] = excalibur.ValuesList()
+        self['starID'] = excalibur.ValuesDict()
+        self['nexscie'] = excalibur.ValuesList()
+        self['nexscic'] = excalibur.ValuesList()
+        self['nexscix'] = excalibur.ValuesList()
+        self['candidates'] = excalibur.ValuesList()
+        self['starkeys'] = excalibur.ValuesList()
+        self['planetkeys'] = excalibur.ValuesList()
+        self['exts'] = excalibur.ValuesList()
         self['STATUS'].append(False)
         return
     
@@ -109,8 +109,8 @@ class FilterSV(dawgie.StateVector):
     def __init__(self, name):
         self._version_ = dawgie.VERSION(1,1,0)
         self.__name = name
-        self['STATUS'] = exo.spec.ae.ValuesList()
-        self['activefilters'] = exo.spec.ae.ValuesDict()
+        self['STATUS'] = excalibur.ValuesList()
+        self['activefilters'] = excalibur.ValuesDict()
         self['STATUS'].append(False)
         return
 
@@ -151,8 +151,8 @@ class DatabaseSV(dawgie.StateVector):
     def __init__(self, name):
         self._version_ = dawgie.VERSION(1,1,0)
         self.__name = name
-        self['STATUS'] = exo.spec.ae.ValuesList()
-        self['name'] = exo.spec.ae.ValuesDict()
+        self['STATUS'] = excalibur.ValuesList()
+        self['name'] = excalibur.ValuesDict()
         self['STATUS'].append(False)
         return
     

@@ -13,7 +13,7 @@ from scipy.interpolate import UnivariateSpline as spl
 from scipy.interpolate import PchipInterpolator as xspl
 from scipy.interpolate import interp1d as bspl
 
-#from exo.spec.ae.system.mcmclzz import trihist, deuxdcont, ffcme, asymgauss
+#from excalibur.system.mcmclzz import trihist, deuxdcont, ffcme, asymgauss
 # ------------- ------------------------------------------------------
 # -- CHECK INPUT STATE VECTORS -- ------------------------------------
 def checksvin(sv):

@@ -6,7 +6,7 @@ import dawgie
 import dawgie.db
 import dawgie.security
 
-import exo.spec.ae.phasecurve.algorithms as phcalg
+import excalibur.phasecurve.algorithms as phcalg
 # ------------- ------------------------------------------------------
 # -- A&A -- ----------------------------------------------------------
 class Actor(dawgie.Task):

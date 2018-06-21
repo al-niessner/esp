@@ -5,12 +5,12 @@ import pdb
 import dawgie
 import dawgie.context
 
-import exo.spec.ae.phasecurve as phc
-import exo.spec.ae.phasecurve.states as phcstates
+import excalibur.phasecurve as phc
+import excalibur.phasecurve.states as phcstates
 
-import exo.spec.ae.data as dat
-import exo.spec.ae.data.algorithms as datalg
-import exo.spec.ae.target.edit as trgedit
+import excalibur.data as dat
+import excalibur.data.algorithms as datalg
+import excalibur.target.edit as trgedit
 # ------------- ------------------------------------------------------
 # -- ALGO RUN OPTIONS -- ---------------------------------------------
 # VERBOSE AND DEBUG

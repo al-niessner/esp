@@ -6,7 +6,7 @@ import dawgie
 import dawgie.db
 import dawgie.security
 
-import exo.spec.ae.data.algorithms as datalg
+import excalibur.data.algorithms as datalg
 # ------------- ------------------------------------------------------
 # -- A&A -- ----------------------------------------------------------
 class Actor(dawgie.Task):

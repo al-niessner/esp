@@ -6,7 +6,7 @@ import dawgie
 import dawgie.db
 import dawgie.security
 
-import exo.spec.ae.target.algorithms as trgalg
+import excalibur.target.algorithms as trgalg
 # ------------- ------------------------------------------------------
 # -- A&A -- ----------------------------------------------------------
 class Actor(dawgie.Analysis):

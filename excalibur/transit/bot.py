@@ -6,7 +6,7 @@ import dawgie
 import dawgie.db
 import dawgie.security
 
-import exo.spec.ae.transit.algorithms as trnalg
+import excalibur.transit.algorithms as trnalg
 # ------------- ------------------------------------------------------
 # -- A&A -- ----------------------------------------------------------
 class Actor(dawgie.Task):

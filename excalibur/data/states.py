@@ -3,7 +3,7 @@ import io
 
 import dawgie
 
-import exo.spec.ae
+import excalibur
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -13,8 +13,8 @@ class CalibrateSV(dawgie.StateVector):
     def __init__(self, name):
         self.__name = name
         self._version_ = dawgie.VERSION(1,1,0)
-        self['data'] = exo.spec.ae.ValuesDict()
-        self['STATUS'] = exo.spec.ae.ValuesList()
+        self['data'] = excalibur.ValuesDict()
+        self['STATUS'] = excalibur.ValuesList()
         self['STATUS'].append(False)
         return
     
@@ -145,11 +145,11 @@ class TimingSV(dawgie.StateVector):
     def __init__(self, name):
         self._version_ = dawgie.VERSION(1,1,0)
         self.__name = name
-        self['STATUS'] = exo.spec.ae.ValuesList()
-        self['data'] = exo.spec.ae.ValuesDict()
-        self['transit'] = exo.spec.ae.ValuesList()        
-        self['eclipse'] = exo.spec.ae.ValuesList()        
-        self['phasecurve'] = exo.spec.ae.ValuesList()
+        self['STATUS'] = excalibur.ValuesList()
+        self['data'] = excalibur.ValuesDict()
+        self['transit'] = excalibur.ValuesList()        
+        self['eclipse'] = excalibur.ValuesList()        
+        self['phasecurve'] = excalibur.ValuesList()
         self['STATUS'].append(False)
         return
 

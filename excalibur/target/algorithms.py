@@ -5,9 +5,9 @@ import pdb
 import dawgie
 import dawgie.context
 
-import exo.spec.ae.target as trg
-import exo.spec.ae.target.core as trgcore
-import exo.spec.ae.target.states as trgstates
+import excalibur.target as trg
+import excalibur.target.core as trgcore
+import excalibur.target.states as trgstates
 # ------------- ------------------------------------------------------
 # -- ALGO RUN OPTIONS -- ---------------------------------------------
 # VERBOSE AND DEBUG
