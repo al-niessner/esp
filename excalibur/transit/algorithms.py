@@ -27,7 +27,7 @@ fltrs = [t.strip() for t in fltrs if (len(t.replace(' ', '')) > 0)]
 class normalization(dawgie.Algorithm):
     def __init__(self):
         self._version_ = dawgie.VERSION(1,1,0)
-        self.__type = 'transit'
+        self._type = 'transit'
         self.__cal = datalg.calibration()
         self.__tme = datalg.timing()
         self.__fin = sysalg.finalize()
@@ -70,7 +70,7 @@ class normalization(dawgie.Algorithm):
         return
     
     def _norm(self, cal, tme, fin, out):
-        normed = trncore.norm(cal, tme, fin, out, self.__type,
+        normed = trncore.norm(cal, tme, fin, out, self._type,
                               verbose=verbose, debug=debug)
         return normed
     
