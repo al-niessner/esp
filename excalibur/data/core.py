@@ -570,32 +570,6 @@ def scancal(collect, tid, flttype, out,
     if caled: out['STATUS'].append(True)
     return caled
 # ------------------------- ------------------------------------------
-# -- TIMING -- -------------------------------------------------------
-def timing(selfstart, calibrate, out,
-           verbose=False, debug=False):
-    timed = False
-    inherit = ['LOC', 'TIME']
-    for key in inherit: out['data'][key] = calibrate['data'][key]
-    starID = [sid for sid in selfstart['starID'].keys()]
-    candidates = selfstart['candidates']
-    for c in candidates:
-        if c in selfstart['starID'][starID[0]]:
-            stringmtt = selfstart['starID'][starID[0]][c]['t0'][0]
-            if len(stringmtt) > 0:
-                mtt = float(stringmtt)
-                out['data'][c] = {'transit':[], 'eclipse':[],
-                                  'phasecurve':[],
-                                  'visit':[], 'orbit':[]}
-                pass
-            pass
-        pass
-    for key in out['data']:
-        if key not in inherit:
-            
-            pass
-        pass
-    return timed
-# ------------ -------------------------------------------------------
 # -- DETECTOR PLATE SCALE -- -----------------------------------------
 def dps(flttype):
     '''
@@ -900,8 +874,8 @@ def timing(force, cal, out, verbose=False, debug=False):
         tmetod = [np.diff(tmeto)[0]]
         tmetod.extend(list(np.diff(tmeto)))
         tmetod = np.array(tmetod)
-        thrs = np.median(tmetod)
-        thro = np.median(tmetod[tmetod > 3*thrs])
+        thrs = np.percentile(tmetod, 75)
+        thro = np.percentile(tmetod[tmetod > 3*thrs], 75)
         # VISIT NUMBERING --------------------------------------------
         whereo = np.where(tmetod > 3*thrs)[0]
         wherev = np.where(tmetod > 3*thro)[0]
@@ -948,12 +922,20 @@ def timing(force, cal, out, verbose=False, debug=False):
         for v in set(visto):
             selv = (visto == v)
             trlim = 1e0 - rpors
-            if np.max(abs(zto[selv])) > (smaors - rpors):
-                out['phasecurve'].append(int(v))
-                pass
-            select = (abs(zto[selv]) < trlim)
             posphsto = phsto.copy()
             posphsto[posphsto < 0] = posphsto[posphsto < 0] + 1e0
+            pcconde = False
+            if ((np.max(posphsto[selv]) - np.min(posphsto[selv])) >
+                (1e0 - 2e0*abs(np.arcsin(trlim/smaors))/(2e0*np.pi))):
+                pcconde = True
+                pass
+            pccondt = False
+            if ((np.max(phsto[selv]) - np.min(phsto[selv])) >
+                (1e0 - 2e0*abs(np.arcsin(trlim/smaors))/(2e0*np.pi))):
+                pccondt = True
+                pass
+            if pcconde and pccondt: out['phasecurve'].append(int(v))
+            select = (abs(zto[selv]) < trlim)
             if (np.any(select) and
                 (np.min(abs(posphsto[selv][select] - 0.5)) <
                  abs(np.arcsin(trlim/smaors))/(2e0*np.pi))):

@@ -9,6 +9,7 @@ class NormSV(dawgie.StateVector):
         self._version_ = dawgie.VERSION(1,1,0)
         self.__name = name
         self['STATUS'] = excalibur.ValuesList()
+        self['data'] = excalibur.ValuesDict()
         self['STATUS'].append(False)
         return
     

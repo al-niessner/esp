@@ -10,6 +10,8 @@ import excalibur.eclipse.states as eclstates
 
 import excalibur.data as dat
 import excalibur.data.algorithms as datalg
+import excalibur.system.algorithms as sysalg
+import excalibur.transit.states as trnstates
 import excalibur.target.edit as trgedit
 # ------------- ------------------------------------------------------
 # -- ALGO RUN OPTIONS -- ---------------------------------------------
@@ -21,25 +23,14 @@ fltrs = (trgedit.activefilters.__doc__).split('\n')
 fltrs = [t.strip() for t in fltrs if (len(t.replace(' ', '')) > 0)]
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
-class normalization(dawgie.Algorithm):
+class normalization(trnalg.normalization):
     def __init__(self):
         self._version_ = dawgie.VERSION(1,1,0)
+        self.__type = 'eclipse'
         self.__cal = datalg.calibration()
         self.__tme = datalg.timing()
-        self.__out = [eclstates.NormSV(ext) for ext in fltrs]
-        return
-    
-    def name(self):
-        return 'normalization'
-
-    def previous(self):
-        return [dawgie.ALG_REF(dat.factory, self.__cal),
-                dawgie.ALG_REF(dat.factory, self.__tme)]
-
-    def state_vectors(self):
-        return self.__out
-
-    def run(self, ds, ps):
+        self.__fin = sysalg.finalize()
+        self.__out = [trnstates.NormSV(ext) for ext in fltrs]
         return
     pass
 # ---------------- ---------------------------------------------------

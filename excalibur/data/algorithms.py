@@ -140,7 +140,6 @@ class timing(dawgie.Algorithm):
         return self.__out
 
     def run(self, ds, ps):
-        update = False
         fin = self.__fin.sv_as_dict()['parameters']
         valid, errstring = datcore.checksv(fin)
         svupdate = []
@@ -155,12 +154,7 @@ class timing(dawgie.Algorithm):
             else:
                 message = [m for m in [errstring, verr]
                            if m is not None]
-                if len(message) > 1:
-                    message = message[0] + ' / ' + message[1]
-                    pass
-                if len(message) < 1: message = 'NO VALID INPUTS'
-                if len(message) == 1: message = message[0]
-                self._failure(message)
+                self._failure(message[0])
                 pass
             if update: svupdate.append(self.__out[index])
             pass
