@@ -10,7 +10,7 @@ post_state "$context" "$description" "$state"
 
 if current_state
 then
-    python3 -m dawgie.tools.compliant
+    python3 -m dawgie.tools.compliant --ae-dir $PWD/excalibur --ae-pkg excalibur
     state=`get_state`
 fi
 
