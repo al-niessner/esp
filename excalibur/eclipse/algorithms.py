@@ -11,6 +11,7 @@ import excalibur.eclipse.states as eclstates
 import excalibur.data as dat
 import excalibur.data.algorithms as datalg
 import excalibur.system.algorithms as sysalg
+import excalibur.transit.algorithms as trnalg
 import excalibur.transit.states as trnstates
 import excalibur.target.edit as trgedit
 # ------------- ------------------------------------------------------
