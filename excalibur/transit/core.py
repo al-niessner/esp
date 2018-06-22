@@ -1,7 +1,7 @@
 # -- IMPORTS -- ------------------------------------------------------
 import pdb
 
-import exo.spec.ae.system.core as syscore
+import excalibur.system.core as syscore
 
 import numpy as np
 import matplotlib.pyplot as plt
