@@ -6,7 +6,7 @@ import dawgie
 import dawgie.context
 
 import excalibur.transit as trn
-import excaliburtransit.core as trncore
+import excalibur.transit.core as trncore
 import excalibur.transit.states as trnstates
 
 import excalibur.data as dat
