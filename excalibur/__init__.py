@@ -3,6 +3,15 @@ import dawgie
 import numpy
 import scipy.stats
 
+import os
+
+context = {'data_cal':os.environ.get ('DATA_CALIBR', '/proj/sdp/data/cal'),
+           'data_sci':os.environ.get ('DATA_SCIENC', '/proj/sdp/data/sci'),
+           'ldtk_root':os.environ.get('LDTK_ROOT', '/proj/sdp/data/ldtk'),
+           'target_list':os.environ.get
+           ('TARGET_LIST','/proj/sdp/data/WFC3_target_list.xlsx')}
+os.environ['LDTK_ROOT'] = context['ldtk_root']
+
 '''Algorithm Engine
 
 The algirthm engine has N goals:
