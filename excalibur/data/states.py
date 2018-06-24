@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 class CalibrateSV(dawgie.StateVector):
     def __init__(self, name):
         self.__name = name
-        self._version_ = dawgie.VERSION(1,1,0)
+        self._version_ = dawgie.VERSION(1,1,1)
         self['data'] = excalibur.ValuesDict()
         self['STATUS'] = excalibur.ValuesList()
         self['STATUS'].append(False)
@@ -140,10 +140,11 @@ class CalibrateSV(dawgie.StateVector):
             pass
         return
     pass
-
+# -------------- -----------------------------------------------------
+# -- TIMING -- -------------------------------------------------------
 class TimingSV(dawgie.StateVector):
     def __init__(self, name):
-        self._version_ = dawgie.VERSION(1,1,0)
+        self._version_ = dawgie.VERSION(1,1,1)
         self.__name = name
         self['STATUS'] = excalibur.ValuesList()
         self['data'] = excalibur.ValuesDict()
@@ -229,5 +230,4 @@ class TimingSV(dawgie.StateVector):
             pass
         return
     pass
-# -------------- -----------------------------------------------------
-
+# ------------ -------------------------------------------------------

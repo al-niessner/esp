@@ -6,7 +6,7 @@ import excalibur
 # -- TARGET -- -------------------------------------------------------
 class TargetSV(dawgie.StateVector):
     def __init__(self, name):
-        self._version_ = dawgie.VERSION(1,1,0)
+        self._version_ = dawgie.VERSION(1,1,1)
         self.__name = name
         self['STATUS'] = excalibur.ValuesList()
         self['starID'] = excalibur.ValuesDict()
@@ -107,7 +107,7 @@ class TargetSV(dawgie.StateVector):
 # -- FILTER -- -------------------------------------------------------
 class FilterSV(dawgie.StateVector):
     def __init__(self, name):
-        self._version_ = dawgie.VERSION(1,1,0)
+        self._version_ = dawgie.VERSION(1,1,1)
         self.__name = name
         self['STATUS'] = excalibur.ValuesList()
         self['activefilters'] = excalibur.ValuesDict()
@@ -149,7 +149,7 @@ class FilterSV(dawgie.StateVector):
 # -- DATABASE -- -----------------------------------------------------
 class DatabaseSV(dawgie.StateVector):
     def __init__(self, name):
-        self._version_ = dawgie.VERSION(1,1,0)
+        self._version_ = dawgie.VERSION(1,1,1)
         self.__name = name
         self['STATUS'] = excalibur.ValuesList()
         self['name'] = excalibur.ValuesDict()
