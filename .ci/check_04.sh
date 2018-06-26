@@ -4,7 +4,7 @@
 
 state="pending" # "success" "pending" "failure" "error"
 description="Coverage analysis and checks of excalibur"
-context="continuous-integration/06/esp-coverage"
+context="continuous-integration/04/esp-coverage"
 
 post_state "$context" "$description" "$state"
 

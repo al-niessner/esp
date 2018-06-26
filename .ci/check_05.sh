@@ -4,7 +4,7 @@
 
 state="pending" # "success" "pending" "failure" "error"
 description="Compliancy check to ensure DAWGIE is satisfied"
-context="continuous-integration/03/esp-dawgie-compliance"
+context="continuous-integration/05/esp-dawgie-compliance"
 
 post_state "$context" "$description" "$state"
 

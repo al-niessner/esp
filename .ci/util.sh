@@ -1,7 +1,7 @@
 
 basedir=$(cd "$(dirname "$0")"/..; pwd)
 GHE4JPL_API_URL=https://github-fn.jpl.nasa.gov/api/v3
-GHE4JPL_TOKEN=fe03c6cd731021805fc89fde8fb1be6b3432ae51
+GHE4JPL_TOKEN=fbf04b881c8b6a73b37d99f3e33bcab6a1e65d3e
 ghrVersion=${ghrVersion:-"`git describe --tags`"}
 PATH=/usr/local/python3/bin:${PATH}
 REPO=EXCALIBUR/esp
