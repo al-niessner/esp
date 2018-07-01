@@ -12,7 +12,8 @@ import excalibur.transit.algorithms as trnalg
 class Actor(dawgie.Task):
     def list(self)->[dawgie.Task]:
         return [
-            trnalg.normalization()
+            trnalg.normalization(),
+            trnalg.whitelight()
         ]
     pass
 # --------- ----------------------------------------------------------

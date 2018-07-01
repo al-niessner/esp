@@ -904,7 +904,11 @@ def timing(force, cal, out, verbose=False, debug=False):
             if len(~ignto[selv]) < 4: ignto[selv] = True
             else:
                 select = np.where(tmetod[selv] > 3*thrs)[0]
-                for indice in select: orbto[selv][indice:] += 1
+                incorb = orbto[selv]
+                for indice in select:
+                    incorb[indice:] = incorb[indice:] + 1
+                    pass
+                orbto[selv] = incorb
                 for o in set(orbto[selv]):
                     selo = (orbto[selv] == o)
                     if len(~ignto[selv][selo]) < 4:
@@ -945,6 +949,37 @@ def timing(force, cal, out, verbose=False, debug=False):
                 (np.min(abs(posphsto[selv][select])) <
                  abs(np.arcsin(trlim/smaors))/(2e0*np.pi))):
                 out['transit'].append(int(v))
+                pass
+            pass
+        out['data'][p]['transit'] = []
+        out['data'][p]['eclipse'] = []
+        out['data'][p]['phasecurve'] = []        
+        for v in set(dvisto):
+            selv = (dvisto == v)
+            trlim = 1e0 - rpors
+            posphsto = phsto.copy()
+            posphsto[posphsto < 0] = posphsto[posphsto < 0] + 1e0
+            pcconde = False
+            if ((np.max(posphsto[selv]) - np.min(posphsto[selv])) >
+                (1e0 - 2e0*abs(np.arcsin(trlim/smaors))/(2e0*np.pi))):
+                pcconde = True
+                pass
+            pccondt = False
+            if ((np.max(phsto[selv]) - np.min(phsto[selv])) >
+                (1e0 - 2e0*abs(np.arcsin(trlim/smaors))/(2e0*np.pi))):
+                pccondt = True
+                pass
+            if pcconde and pccondt: out['data'][p]['phasecurve'].append(int(v))
+            select = (abs(zto[selv]) < trlim)
+            if (np.any(select) and
+                (np.min(abs(posphsto[selv][select] - 0.5)) <
+                 abs(np.arcsin(trlim/smaors))/(2e0*np.pi))):
+                out['data'][p]['eclipse'].append(int(v))
+                pass
+            if (np.any(select) and
+                (np.min(abs(posphsto[selv][select])) <
+                 abs(np.arcsin(trlim/smaors))/(2e0*np.pi))):
+                out['data'][p]['transit'].append(int(v))
                 pass
             pass
         vis[ordt] = visto.astype(int)

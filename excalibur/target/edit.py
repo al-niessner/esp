@@ -137,9 +137,11 @@ overwrite[starID] =
 }
     '''
     overwrite = {}
+    overwrite['K2-33'] = {
+        'FEH*':0.0, 'FEH*_uperr':0.13, 'FEH*_lowerr':-0.14,
+        'FEH*_units':'[Fe/H]', 'FEH*_ref':'Mann et al. 2016'}
     overwrite['WASP-43'] = {
         'FEH*':-0.05, 'FEH*_uperr':0.17, 'FEH*_lowerr':-0.17,
-        'FEH*_units':'[Fe/H]', 'FEH*_ref':'Hellier et al. 2011'
-    }
+        'FEH*_units':'[Fe/H]', 'FEH*_ref':'Hellier et al. 2011'}
     return overwrite
 # ---------------------------- ---------------------------------------
