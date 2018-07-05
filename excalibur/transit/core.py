@@ -26,8 +26,8 @@ def norm(cal, tme, fin, ext, out, selftype,
     normed = False
     priors = fin['priors'].copy()
     ssc = syscore.ssconstants()
-    spectra = np.array(cal['data']['SPECTRUM'])
-    wave = np.array(cal['data']['WAVE'])
+    spectra = cal['data']['SPECTRUM']
+    wave = cal['data']['WAVE']
     time = np.array(cal['data']['TIME'])
     disp = np.array(cal['data']['DISPERSION'])
     scanlen = np.array(cal['data']['SCANLENGTH'])
@@ -123,35 +123,39 @@ def norm(cal, tme, fin, ext, out, selftype,
                 selv = selv & (~ignore)
                 selvoot = (selv & (abs(z) > (1e0 + rpors)) &
                            (~nrmignore))
+                voots = [s for s, sv in zip(spectra, selvoot) if sv]
+                vootw = [w for w, sv in zip(wave, selvoot) if sv]
+                viss = [s for s, sv in zip(spectra, selv) if sv]
+                visw = [w for w, sv in zip(wave, selv) if sv]
                 if np.sum(selvoot) > 6:
-                    wt, te = tplbuild(spectra[selvoot], wave[selvoot],
-                                      vrange, disp[selvoot]*1e-4)
+                    wt, te = tplbuild(voots, vootw, vrange,
+                                      disp[selvoot]*1e-4)
                     selfin = np.isfinite(te)
+                    wt = np.array(wt)
+                    te = np.array(te)                    
                     if np.sum(~selfin) > 0:
                         wt = wt[selfin]
                         te = te[selfin]
                         pass
                     ti = itp(wt, te, kind='linear',
                              bounds_error=False, fill_value=np.nan)
-                    nspectra = [s/ti(w)
-                                for s,w in zip(spectra[selv],
-                                               wave[selv])]
+                    nspectra = [s/ti(w) for s,w in zip(viss, visw)]
                     photnoise = [np.sqrt(s)/ti(w)/np.sqrt(l)
-                                 for s,w,l in zip(spectra[selv],
-                                                  wave[selv],
+                                 for s,w,l in zip(viss, visw,
                                                   scanlen[selv])]
                     check = np.array([np.nanstd(s) <
-                                      3e0*np.nanmedian(p)
+                                      9e0*np.nanmedian(p)
                                       for s, p in zip(nspectra,
                                                       photnoise)])
                     if np.sum(check) > 9:
                         vnspec = np.array(nspectra)[check]
                         nphotn = np.array(photnoise)[check]
+                        visw = np.array(visw)
                         out['data'][p]['visits'].append(v)
                         out['data'][p]['wavet'].append(wt)
                         out['data'][p]['spect'].append(te)
                         out['data'][p]['nspec'].append(vnspec)
-                        out['data'][p]['wave'].append(wave[selv][check])
+                        out['data'][p]['wave'].append(visw[check])
                         out['data'][p]['time'].append(time[selv][check])
                         out['data'][p]['orbits'].append(orbits[selv][check])
                         out['data'][p]['dispersion'].append(disp[selv][check])
@@ -160,7 +164,7 @@ def norm(cal, tme, fin, ext, out, selftype,
                         out['data'][p]['photnoise'].append(nphotn)
                         if debug:                        
                             plt.figure()
-                            for w,s in zip(wave[selv][check], vnspec):
+                            for w,s in zip(visw[check], vnspec):
                                 select = ((w > np.min(vrange)) &
                                           (w < np.max(vrange)))
                                 plt.plot(w[select], s[select], 'o')

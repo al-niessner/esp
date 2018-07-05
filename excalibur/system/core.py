@@ -200,6 +200,21 @@ def buildsp(autofill, out, verbose=False, debug=False):
                     pass
                 pass
             pass
+        if (p+':inc' in out['needed']):
+            inc = 90e0
+            out['priors'][p]['inc'] = inc
+            out['autofill'].append(p+':inc')
+            index = out['needed'].index(p+':inc')
+            out['needed'].pop(index)
+            out['priors'][p]['inc_units'] = ['[degree]']
+            out['priors'][p]['inc_ref'] = 'System Prior Auto Fill'
+            for ext in exts:
+                err = inc/1e1
+                if inc + err > 9e1: err = (9e1 - inc)
+                out['priors'][p]['inc'+ext] = err
+                out['autofill'].append(p+':inc'+ext)
+                pass
+            pass
         if (((p+':rp') not in out['needed']) and
             ((p+':mass') not in out['needed'])):
             radplanet = out['priors'][p]['rp']*ssc['Rjup']
@@ -237,8 +252,11 @@ def buildsp(autofill, out, verbose=False, debug=False):
                 pass
             pass
         pass
-    if ((len(out['needed']) > 0) or
-        (len(out['priors']['planets']) < 1)):
+    starneed = False
+    for p in out['needed']:
+        if ':' not in p: starneed = True
+        pass
+    if (starneed or (len(out['priors']['planets']) < 1)):
         out['PP'].append(True)
         pass
     if verbose:
@@ -257,7 +275,9 @@ def forcepar(overwrite, out, verbose=False, debug=False):
     for key in overwrite.keys():
         mainkey = key.split(':')[0]
         if (mainkey not in out.keys()) and (len(mainkey) < 2):
-            out[mainkey] = out['pignore'][mainkey].copy()
+            if mainkey in out['pignore'].keys():
+                out['priors'][mainkey] = out['pignore'][mainkey].copy()
+                pass
             for pkey in overwrite[key].keys():
                 out['priors'][mainkey][pkey] = overwrite.copy()[mainkey][pkey]
                 pass
@@ -266,11 +286,13 @@ def forcepar(overwrite, out, verbose=False, debug=False):
         pass
     ipop = []
     for n in out['needed']:
-        try:
-            test = float(out['priors'][n])
-            out['needed'].pop(out['needed'].index(n))
+        if ':' not in n:
+            try:
+                test = float(out['priors'][n])
+                out['needed'].pop(out['needed'].index(n))
+                pass
+            except: forced = False
             pass
-        except: forced = False
         pass
     ptry = []
     for p in out['pneeded']:
@@ -285,13 +307,24 @@ def forcepar(overwrite, out, verbose=False, debug=False):
         pass
     for p in set(ptry):
         addback = True
-        for pkey in out['pneeded'].keys():
-            if p in pkey: addback = False
+        for pkey in out['pneeded']:
+            if pkey in [p+':mass', p+':rho']:
+                if 'logg' not in out['priors'][p].keys():
+                    addback = False
+                    pass
+                else: out['pneeded'].pop(out['pneeded'].index(pkey))
+                pass
+            else:
+                if p in pkey: addback = False
+                pass
             pass
         if addback: out['priors']['planets'].append(p)
         pass
-    if ((len(out['needed']) > 0) or
-        (len(out['priors']['planets']) < 1)):
+    starneed = False
+    for p in out['needed']:
+        if ':' not in p: starneed = True
+        pass
+    if (starneed or (len(out['priors']['planets']) < 1)):
         forced = False
         if verbose:
             print('>-- MISSING MANDATORY PARAMETERS')

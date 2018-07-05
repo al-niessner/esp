@@ -137,9 +137,69 @@ overwrite[starID] =
 }
     '''
     overwrite = {}
+    overwrite['GJ 9827'] = {
+        'b':{'logg':3.1445742076096161,
+             'logg_uperr':0.11, 'logg_lowerr':-0.11,
+             'logg_ref':'Prieto-Arranz et al. 2018'},
+        'c':{'logg':2.9479236198317262,
+             'logg_uperr':0.18, 'logg_lowerr':-0.18,
+             'logg_ref':'Prieto-Arranz et al. 2018'},
+        'd':{'logg':2.7275412570285562,
+             'logg_uperr':0.15, 'logg_lowerr':-0.15,
+             'logg_ref':'Prieto-Arranz et al. 2018'}}
+    overwrite['HAT-P-38'] = {
+        'FEH*':0.06, 'FEH*_uperr':0.1, 'FEH*_lowerr':-0.1,
+        'FEH*_units':'[Fe/H]', 'FEH*_ref':'Sato et al. 2012'}
+    overwrite['HD 106315'] = {
+        'b':{'logg':2.5081746355417742,
+             'logg_uperr':0.26, 'logg_lowerr':-0.26,
+             'logg_ref':'Crossfield et al. 2017'},
+        'c':{'logg':2.97505059402918,
+             'logg_uperr':0.3, 'logg_lowerr':-0.3,
+             'logg_ref':'Crossfield et al. 2017'}}
+    overwrite['K2-24'] = {
+        'b':{'logg':2.9233923050832749,
+             'logg_uperr':0.28, 'logg_lowerr':-0.28,
+             'logg_ref':'Petigura et al. 2016'},
+        'c':{'logg':3.2300188146519129,
+             'logg_uperr':0.3, 'logg_lowerr':-0.3,
+             'logg_ref':'Petigura et al. 2016'}}
+    overwrite['K2-25'] = {
+        'b':{'logg':3.8403983985773555,
+             'logg_uperr':0.38, 'logg_lowerr':-0.38,
+             'logg_ref':'Mann et al. 2016'}}
+    overwrite['K2-3'] = {
+        'b':{'logg':2.5561945544995859,
+             'logg_uperr':0.26, 'logg_lowerr':-0.26,
+             'logg_ref':'Crossfield et al. 2016'},
+        'c':{'logg':2.659331865218967,
+             'logg_uperr':0.27, 'logg_lowerr':-0.27,
+             'logg_ref':'Crossfield et al. 2016'},
+        'd':{'logg':2.7703749486490246,
+             'logg_uperr':0.28, 'logg_lowerr':-0.28,
+             'logg_ref':'Crossfield et al. 2016'}}
     overwrite['K2-33'] = {
         'FEH*':0.0, 'FEH*_uperr':0.13, 'FEH*_lowerr':-0.14,
         'FEH*_units':'[Fe/H]', 'FEH*_ref':'Mann et al. 2016'}
+    overwrite['K2-93'] = {
+        'b':{'logg':3.26,
+             'logg_lowerr':0.07, 'logg_uperr':-0.07,
+             'logg_ref':'Dressing et al. 2015'}}
+    overwrite['KELT-1'] = {
+        'FEH*':0.009, 'FEH*_uperr':0.073, 'FEH*_lowerr':-0.073,
+        'FEH*_units':'[Fe/H]', 'FEH*_ref':'Siverd et al. 2012'}
+    overwrite['Kepler-16'] = {
+        'R*':0.6679689998646066, 'R*_uperr':0.0013, 'R*_lowerr':-0.0013,
+        'R*_ref':'Oroz + dilution factor',
+        'b':{'inc':89.776139764168605,
+             'inc_uperr':0.0323, 'inc_lowerr':-0.04,
+             'inc_ref':'Oroz',
+             't0':2457914.235774331,
+             't0_uperr':0.004, 't0_lowerr':-0.004,
+             't0_ref':'Oroz'}}
+    overwrite['WASP-39'] = {
+        'FEH*':-0.10, 'FEH*_uperr':0.1, 'FEH*_lowerr':-0.1,
+        'FEH*_units':'[Fe/H]', 'FEH*_ref':'Faedi et al. 2011'}
     overwrite['WASP-43'] = {
         'FEH*':-0.05, 'FEH*_uperr':0.17, 'FEH*_lowerr':-0.17,
         'FEH*_units':'[Fe/H]', 'FEH*_ref':'Hellier et al. 2011'}
