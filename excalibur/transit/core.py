@@ -127,6 +127,8 @@ def norm(cal, tme, fin, ext, out, selftype,
                     wt, te = tplbuild(spectra[selvoot], wave[selvoot],
                                       vrange, disp[selvoot]*1e-4)
                     selfin = np.isfinite(te)
+                    wt = np.array(wt)
+                    te = np.array(te)                    
                     if np.sum(~selfin) > 0:
                         wt = wt[selfin]
                         te = te[selfin]
@@ -141,7 +143,7 @@ def norm(cal, tme, fin, ext, out, selftype,
                                                   wave[selv],
                                                   scanlen[selv])]
                     check = np.array([np.nanstd(s) <
-                                      3e0*np.nanmedian(p)
+                                      9e0*np.nanmedian(p)
                                       for s, p in zip(nspectra,
                                                       photnoise)])
                     if np.sum(check) > 9:

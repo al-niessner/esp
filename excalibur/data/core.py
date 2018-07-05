@@ -196,6 +196,7 @@ def scancal(collect, tid, flttype, out,
         if not(ignore):
             targetn = 0
             if tid in dtlist:
+                if tid in ['XO-2']: targetn = -1
                 pass
             minlocs = []
             maxlocs = []
@@ -270,6 +271,7 @@ def scancal(collect, tid, flttype, out,
             mltord = thispstamp.copy()
             targetn = 0
             if tid in dtlist:
+                if tid in ['XO-2']: targetn = -1
                 pass
             minx, maxx = isolate(mltord, psmin, spectrace, scanwpi,
                                  targetn, tid, dtlist, fldthr,
@@ -449,9 +451,8 @@ def scancal(collect, tid, flttype, out,
             spectrum[spectrum < cutoff] = np.nan
             spectrum = abs(spectrum)
             w, d, s, si = wavesol(spectrum, tt, wavett, disper,
-                                  verbose=verbose, debug=debug)
+                                  verbose=False, debug=False)
             if (d > ldisp) and (d < udisp): spectralindex.append(si)
-            else: data['TRIAL'][index] = ('Dispersion Out Of Bounds')
             pass
         pass
     siv = np.nanmedian(spectralindex)
@@ -604,7 +605,7 @@ G141 http://www.stsci.edu/hst/wfc3/documents/ISRs/WFC3-2009-17.pdf
     wvrng = None
     disp = None
     if fltr == 'G141':
-        wvrng = [1075e1, 17e3] # Angstroms
+        wvrng = [1085e1, 17e3] # Angstroms
         disp = 46.5 # Angstroms/Pixel
         llim = 45
         ulim = 47.5
