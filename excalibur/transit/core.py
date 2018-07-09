@@ -144,7 +144,7 @@ def norm(cal, tme, fin, ext, out, selftype,
                                  for s,w,l in zip(viss, visw,
                                                   scanlen[selv])]
                     check = np.array([np.nanstd(s) <
-                                      9e0*np.nanmedian(p)
+                                      27e0*np.nanmedian(p)
                                       for s, p in zip(nspectra,
                                                       photnoise)])
                     if np.sum(check) > 9:
@@ -245,7 +245,9 @@ def whitelight(nrm, fin, out, selftype,
     wl = False
     priors = fin['priors'].copy()
     ssc = syscore.ssconstants()
-    for p in nrm['data'].keys():
+    planetloop = [p for p in nrm['data'].keys()
+                  if (len(nrm['data'][p]['visits']) > 0)]
+    for p in planetloop:
         rpors = priors[p]['rp']/priors['R*']*ssc['Rjup/Rsun']
         visits = nrm['data'][p]['visits']
         orbits = nrm['data'][p]['orbits']
@@ -402,7 +404,7 @@ def whitelight(nrm, fin, out, selftype,
                               mu=orbital,
                               tau=1e0/((np.median(flaterrwhite))**2),
                               value=flatwhite, observed=True)
-        nodes = [rprs]
+        nodes = [whitedata, rprs]
         nodes.extend(allvslope)
         nodes.extend(allvitcp)
         nodes.extend(alloslope)

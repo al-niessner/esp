@@ -68,7 +68,18 @@ def buildsp(autofill, out, verbose=False, debug=False):
                 value = autofill['starID'][target][lbl+ext].copy()
                 value = value[-1]
                 if len(value) > 0:
-                    out['priors'][lbl+ext] = float(value)
+                    fillvalue = float(value)
+                    if 'lowerr' in ext:
+                        if fillvalue == 0:
+                            fillvalue = out['priors'][lbl]*(-1e-1)
+                            pass
+                        pass
+                    if 'uperr' in ext:
+                        if fillvalue == 0:
+                            fillvalue = out['priors'][lbl]*(1e-1)
+                            pass
+                        pass
+                    out['priors'][lbl+ext] = fillvalue
                     pass
                 else:
                     out['priors'][lbl+ext] = out['priors'][lbl]/1e1
