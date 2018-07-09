@@ -92,6 +92,8 @@ XO-2 : XO-2 N
 # G ROUDIER May 27 2018
 def targetondisk():
     '''
+HD 106315 : HD106315
+K2-96 : K296
 Kepler-16 : KEPLER16
 Kepler-51 : Kepler51
     '''
