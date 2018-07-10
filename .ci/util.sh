@@ -10,8 +10,7 @@ export GHE4JPL_API_URL PATH
 
 current_state ()
 {
-    #test `cat ${basedir}/.ci/status.txt` == "success"
-    test 'a' == 'a'
+    test `cat ${basedir}/.ci/status.txt` == "success"
 }
 
 destinations ()
