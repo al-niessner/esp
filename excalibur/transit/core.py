@@ -8,9 +8,13 @@ import pymc as pm
 import numpy as np
 import lmfit as lm
 import matplotlib.pyplot as plt
+
 from scipy.interpolate import interp1d as itp
 from ldtk.ldmodel import *
 from ldtk import LDPSetCreator, BoxcarFilter
+from pymc import Normal as pmnd
+from pymc import Uniform as pmud
+from pymc.distributions import TruncatedNormal as pmtnd
 # ------------- ------------------------------------------------------
 # -- SV VALIDITY -- --------------------------------------------------
 def checksv(sv):
@@ -361,60 +365,90 @@ def whitelight(nrm, fin, out, selftype,
         smaors = priors[p]['sma']/priors['R*']/ssc['Rsun/AU']
         flatoot = abs(flatz) > 1e0 + rpors
         ootstd = np.nanstd(flatwhite[flatoot])
+        taurprs = 1e0/(rpors*1e-2)**2
+        rprs = pmnd('rprs', rpors, taurprs)
+        nodes = [rprs]
+        ttrdur = np.arcsin((1e0+rpors)/smaors)
+        trdura = priors[p]['period']*ttrdur/np.pi
         alltknot = np.empty(len(ttv), dtype=object)
         for i in range(len(ttv)):
-            alltknot[i] = pm.Uniform('dtk%i'%ttv[i],
-                                     tmjd - period/36e2,
-                                     tmjd + period/36e2)
+            tautknot = 1e0/(trdura*1e-1)**2
+            tknotmin = tmjd - trdura/2e0
+            tknotmax = tmjd + trdura/2e0            
+            alltknot[i] = pmtnd('dtk%i'%ttv[i], tmjd, tautknot,
+                                tknotmin, tknotmax)
             pass
-        sigrprs = rpors/1e1
-        rprs = pm.Normal('rprs', rpors, 1e0/(sigrprs**2))
+        nodes.extend(alltknot)
+        if priors[p]['inc'] != 9e1:
+            if priors[p]['inc'] > 9e1:
+                lowinc = 9e1
+                upinc = 9e1 + 18e1*np.arcsin(1e0/smaors)/np.pi
+                pass
+            if priors[p]['inc'] < 9e1:
+                lowinc = 9e1 - 18e1*np.arcsin(1e0/smaors)/np.pi
+                upinc = 9e1
+                pass
+            tauinc = 1e0/(priors[p]['inc']*1e-2)**2
+            inc = pmtnd('inc', priors[p]['inc'], tauinc,
+                        lowinc, upinc)
+            nodes.append(inc)
+            pass
+        # INSTRUMENT MODEL PRIORS ------------------------------------
+        tauvs = 1e0/((1e-2/trdura)**2)
+        tauvi = 1e0/(ootstd**2)
         allvslope = np.empty(len(visits), dtype=object)
         allvitcp = np.empty(len(visits), dtype=object)
         alloslope = np.empty(len(visits), dtype=object)
+        allologtau = np.empty(len(visits), dtype=object)
+        allologdelay = np.empty(len(visits), dtype=object)
         for i in range(len(visits)):
-            allvslope[i] = pm.Uniform('vslope%i'%visits[i], -5e-1, 5e-1)
-            allvitcp[i] = pm.Normal('vitcp%i'%visits[i], 1e0,
-                                    1e0/(ootstd**2))
-            alloslope[i] = pm.Uniform('oslope%i'%visits[i], -5e-1, 5e-1)
+            allvslope[i] = pmtnd('vslope%i'%visits[i], 0e0, tauvs,
+                                 -1e-1, 1e-1)
+            allvitcp[i] = pmnd('vitcp%i'%visits[i], 1e0, tauvi)
+            alloslope[i] = pmnd('oslope%i'%visits[i], 0e0, tauvs)
+            allologtau[i] = pmud('ologtau%i'%visits[i], -1e0, 5e0)
+            allologdelay[i] = pmud('ologdelay%i'%visits[i], -1e0, 5e0)
             pass
+        nodes.extend(allvslope)
+        nodes.extend(allvitcp)
+        nodes.extend(alloslope)
+        nodes.extend(allologtau)
+        nodes.extend(allologdelay)
         # ORBITAL MODEL ----------------------------------------------
         @pm.deterministic
-        def orbital(r=rprs, atk=alltknot,
+        def orbital(r=rprs, icln=inc, atk=alltknot,
                     avs=allvslope, avi=allvitcp,
-                    aos=alloslope):
+                    aos=alloslope,
+                    aolt=allologtau, aold=allologdelay):
             out = []
             for v in visits:
                 omt = time[visits.index(v)]
                 if v in ttv: omtk = float(atk[ttv.index(v)])
                 else: omtk = tmjd
-                omz, pmph = datcore.time2z(omt, inc, omtk, smaors,
-                                           period, ecc)
+                omz, pmph = datcore.time2z(omt, float(icln),
+                                           omtk, smaors, period, ecc)
                 lcout = tldlc(abs(omz), float(r),
                               g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0])
-                imout = timlc(omt, omtk, period, 
-                              orbits[visits.index(v)],
-                              float(avs[visits.index(v)]),
-                              float(avi[visits.index(v)]),
-                              float(aos[visits.index(v)]))
+                imout = timlc(omt, orbits[visits.index(v)],
+                              vslope=float(avs[visits.index(v)]),
+                              vitcp=float(avi[visits.index(v)]),
+                              oslope=float(aos[visits.index(v)]),
+                              ologtau=float(aolt[visits.index(v)]),
+                              ologdelay=float(aold[visits.index(v)]))
                 out.extend(lcout*imout)
                 pass
             return out
-        whitedata = pm.Normal('whitedata',
-                              mu=orbital,
-                              tau=1e0/((np.median(flaterrwhite))**2),
-                              value=flatwhite, observed=True)
-        nodes = [whitedata, rprs]
-        nodes.extend(allvslope)
-        nodes.extend(allvitcp)
-        nodes.extend(alloslope)
-        nodes.extend(alltknot)
-        allnodes = [n.__name__ for n in nodes]
+        tauwhite = 1e0/((np.median(flaterrwhite))**2)
+        whitedata = pmnd('whitedata', mu=orbital, tau=tauwhite,
+                         value=flatwhite, observed=True)
+        nodes.append(whitedata)
+        allnodes = [n.__name__ for n in nodes if not n.observed]
         if verbose: print('MCMC nodes:', allnodes)
         model = pm.Model(nodes)
         mcmc = pm.MCMC(model)
-        burnin = int(np.sqrt(chainlen))
+        burnin = int(chainlen/2)
         mcmc.sample(chainlen, burn=burnin, progress_bar=verbose)
+        if verbose: print('')
         mcpost = mcmc.stats()
         mctrace = {}
         for key in allnodes: mctrace[key] = mcmc.trace(key)[:]
@@ -427,8 +461,15 @@ def whitelight(nrm, fin, out, selftype,
             postt = time[visits.index(v)]
             if v in ttv: posttk = mcpost['dtk%i'%v]['quantiles'][50]
             else: posttk = tmjd
-            postz, postph = datcore.time2z(postt, inc, posttk, smaors,
-                                           period, ecc)
+            if 'inc' in allnodes:
+                postinc = mcpost['inc']['quantiles'][50]
+                postz, postph = datcore.time2z(postt, postinc, posttk,
+                                               smaors, period, ecc)
+                pass
+            else:
+                postz, postph = datcore.time2z(postt, inc, posttk,
+                                               smaors, period, ecc)
+                pass
             postsep.extend(postz)
             postphase.append(postph)
             postflatphase.extend(postph)
@@ -436,11 +477,12 @@ def whitelight(nrm, fin, out, selftype,
                                 mcpost['rprs']['quantiles'][50],
                                 g1=g1[0], g2=g2[0],
                                 g3=g3[0], g4=g4[0]))
-            postim.append(timlc(postt, posttk, period, 
-                                orbits[visits.index(v)],
-                                mcpost['vslope%i'%v]['quantiles'][50],
-                                mcpost['vitcp%i'%v]['quantiles'][50],
-                                mcpost['oslope%i'%v]['quantiles'][50]))
+            postim.append(timlc(postt, orbits[visits.index(v)],
+                                vslope=mcpost['vslope%i'%v]['quantiles'][50],
+                                vitcp=mcpost['vitcp%i'%v]['quantiles'][50],
+                                oslope=mcpost['oslope%i'%v]['quantiles'][50],
+                                ologtau=mcpost['ologtau%i'%v]['quantiles'][50],
+                                ologdelay=mcpost['ologdelay%i'%v]['quantiles'][50]))
             pass        
         out['data'][p]['postlc'] = postlc
         out['data'][p]['postim'] = postim
@@ -468,6 +510,20 @@ def whitelight(nrm, fin, out, selftype,
                        loc=5, ncol=ncol, mode='expand', numpoints=1,
                        borderaxespad=0., frameon=False)
             plt.tight_layout(rect=[0,0,(1 - 0.1*ncol),1])
+            plt.show()
+            
+            allpost = []
+            alllbl = []
+            allpval = []
+            for key in allnodes:
+                allpost.append(mctrace[key])
+                allpval.append(np.median(mctrace[key]))
+                alllbl.append(key)
+                pass
+            allpost = np.array(allpost).T
+            import corner
+            corner.corner(allpost, labels=alllbl, truths=allpval,
+                          quantiles=[0.16, 0.5, 0.84])
             plt.show()
             pass
         pass    
@@ -731,14 +787,20 @@ def nlldx(params, x, data=None, weights=None):
     return (data - model)/weights
 # ----------- --------------------------------------------------------
 # -- INSTRUMENT MODEL -- ---------------------------------------------
-def timlc(vtime, vtknot, period, orbits, vslope, vintcp, oslope):
-    xout = np.array(vtime - vtknot)%period
-    vout = vslope*xout + vintcp
+def timlc(vtime, orbits,
+          vslope=0, vitcp=1e0,
+          oslope=0, ologtau=0, ologdelay=0):
+    xout = np.array(vtime) - np.mean(vtime)
+    vout = vslope*xout + vitcp
     oout = np.ones(vout.size)
     for o in set(orbits):
         select = orbits == o
         otime = xout[select] - np.mean(xout[select])
-        oout[select] = oslope*vslope + 1e0
+        olin = oslope*otime + 1e0
+        otimerp = (xout[select] - min(xout[select]))*(36e2)*(24e0) #s  
+        orbramp = (1e0 - np.exp(-(otimerp + (1e1)**ologdelay)/
+                                ((1e1)**ologtau)))
+        oout[select] = orbramp*olin
         pass
     return vout*oout
 # ---------------------- ---------------------------------------------

@@ -76,8 +76,9 @@ class WhiteLightSV(dawgie.StateVector):
                 postlc = self['data'][p]['postlc']
                 postflatphase = self['data'][p]['postflatphase']
                 mcpost = self['data'][p]['mcpost']
-                for kn in ['inc', 'rprs',
-                           'dtk', 'vslope', 'vitcp', 'oslope']:
+                for kn in ['inc', 'rprs', 'dtk',
+                           'vslope', 'vitcp',
+                           'oslope', 'ologtau', 'ologdelay']:
                     showme = ' '.join(sorted([k for k in mcpost.keys()
                                             if kn in k]))
                     visitor.add_declaration(showme)

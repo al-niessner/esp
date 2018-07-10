@@ -21,7 +21,7 @@ import excalibur.system.algorithms as sysalg
 verbose = False
 debug = False
 # MINIMUM NUMBER OF COLLECTED DATA TO BE CONSIDERED
-threshold = 30
+threshold = 0
 # FILTERS
 fltrs = (trgedit.activefilters.__doc__).split('\n')
 fltrs = [t.strip() for t in fltrs if (len(t.replace(' ', '')) > 0)]
