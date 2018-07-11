@@ -115,7 +115,7 @@ def autofill(ident, thistarget, out,
         pidlist = [pid for pid in set(pidlist)]
         aliaslist = [alias for alias in set(aliaslist)]
         out['starID'][thistarget]['aliases'].extend(aliaslist)
-        out['starID'][thistarget]['PID'].extend(pidlist)        
+        out['starID'][thistarget]['PID'].extend(pidlist)
         solved = True
         out['STATUS'].append(True)
         pass
@@ -438,7 +438,7 @@ def disk(selfstart, out, diskloc, dbs, verbose=False, debug=False):
             folders = folders.split(',')
             folders = [f.strip() for f in folders]
             locations = [os.path.join(diskloc, fold)
-                        for fold in folders]
+                         for fold in folders]
             pass
         pass
     if locations is not None: merge = dbscp(locations, dbs, out)
@@ -471,7 +471,7 @@ def dbscp(locations, dbs, out):
         md5 = m[0]
         sha = s[0]
         filedict['md5'] = md5
-        filedict['sha'] = sha            
+        filedict['sha'] = sha
         filedict['loc'] = fitsfile
         with pyfits.open(fitsfile) as pf:
             mainheader = pf[0].header
@@ -496,13 +496,11 @@ def dbscp(locations, dbs, out):
                         pass
                     else: filedict['mode'] = 'STARE'
                     pass
-                if (('FOCUS' in keys) and
-                    (filedict['detector'] is None)):
+                if ('FOCUS' in keys) and (filedict['detector'] is None):
                     filedict['detector'] = mainheader['FOCUS']
                     filedict['mode'] = 'IMAGE'
                     pass
                 pass
-            else: pass
             pass
         out['name'][mainheader['ROOTNAME']] = filedict
         mastout = os.path.join(dbs, md5+'_'+sha)

@@ -8,8 +8,8 @@ import dawgie.context
 
 import excalibur.system as sys
 import excalibur.system.algorithms as sysalg
-#import excalibur.extrasolar as makepriors
-#import excalibur.extrasolar.algorithms as mkpalg
+import excalibur.transit as trn
+import excalibur.transit.algorithms as trnalg
 
 import excalibur.cerberus as cerberus
 import excalibur.cerberus.states as crbstates
@@ -21,7 +21,7 @@ verbose = False
 debug = False
 # MCMC
 resolution = 'high'
-mclen = int(4e4) # 4e4
+mclen = int(4e4)  # 4e4
 eclipse = False
 # FINESSE
 finesse = False
@@ -40,13 +40,13 @@ atmosdtev = False
 class xslib(dawgie.Algorithm):
     def __init__(self):
         self._version_ = dawgie.VERSION(1,5,1)
-        self.__mcmc = sysalg.force()
-        self.__priors = sysalg.prior()
+        self.__mcmc = trnalg.whitelight()
+        self.__priors = sysalg.finalize()
         self.__xslib = crbstates.xslibSV()
         self.__fxslib = crbstates.xslibSV('FINESSE')
         self.__jwsxslib = crbstates.xslibSV('JWST_sims')
         return
-    
+
     def name(self):
         return 'xslib'
     def previous(self):
@@ -66,7 +66,7 @@ class xslib(dawgie.Algorithm):
                 jwsmcmc = self.__mcmc.sv_as_dict()['JWST_sims']
                 pass
             valid, errcode = crb.checksvin(mcmc)
-            jwsvalid, jwserrcode = crb.checksvin(jwsmcmc)        
+            jwsvalid, jwserrcode = crb.checksvin(jwsmcmc)
             if dtev:
                 valid = False
                 jwsvalid = False
@@ -89,7 +89,7 @@ class xslib(dawgie.Algorithm):
             if update: ds.update()
             pass
         return
-    
+
     def _failure(self, errcode, verbose=verbose):
         errstr = crb.errcode2errstr(errcode)
         errmess = ' '.join(('CERBERUS.xslib:', errstr))
@@ -116,17 +116,17 @@ class xslib(dawgie.Algorithm):
 class hazelib(dawgie.Algorithm):
     def __init__(self):
         self._version_ = dawgie.VERSION(1,2,1)
-        self.__mcmc = lzzalg.mcmc()
-        self.__priors = mkpalg.NBB()
+        self.__mcmc = trnalg.whitelight()
+        self.__priors = sysalg.finalize()
         self.__hzlib = crbstates.hazelibSV()
         self.__jwshzlib = crbstates.hazelibSV('JWST_sims')
         return
-    
+
     def name(self):
         return 'hazelib'
     def previous(self):
-        return [dawgie.ALG_REF(mcmclzz.factory, self.__mcmc),
-                dawgie.ALG_REF(makepriors.factory, self.__priors)]
+        return [dawgie.ALG_REF(trn.factory, self.__mcmc),
+                dawgie.ALG_REF(sys.factory, self.__priors)]
     def state_vectors(self):
         return [self.__hzlib, self.__jwshzlib]
     def run(self, ds, ps):
@@ -153,7 +153,7 @@ class hazelib(dawgie.Algorithm):
         else: self._failure(errcode)
         if update: ds.update()
         return
-    
+
     def _failure(self, errcode):
         errstr = crb.errcode2errstr(errcode)
         errmess = ' '.join(('CERBERUS.hazelib:', errstr))
@@ -169,20 +169,20 @@ class hazelib(dawgie.Algorithm):
 class atmos(dawgie.Algorithm):
     def __init__(self):
         self._version_ = dawgie.VERSION(1,5,1)
-        self.__mcmc = lzzalg.mcmc()
-        self.__priors = mkpalg.NBB()
+        self.__mcmc = trnalg.whitelight()
+        self.__priors = sysalg.finalize()
         self.__xslib = xslib()
         self.__hzlib = hazelib()
         self.__atmos = crbstates.atmosSV()
         self.__fatmos = crbstates.atmosSV('FINESSE')
         self.__jwsatmos = crbstates.atmosSV('JWST_sims')
         return
-    
+
     def name(self):
         return 'atmos'
     def previous(self):
-        return [dawgie.ALG_REF(mcmclzz.factory, self.__mcmc),
-                dawgie.ALG_REF(makepriors.factory, self.__priors),
+        return [dawgie.ALG_REF(trn.factory, self.__mcmc),
+                dawgie.ALG_REF(sys.factory, self.__priors),
                 dawgie.ALG_REF(cerberus.factory, self.__xslib),
                 dawgie.ALG_REF(cerberus.factory, self.__hzlib)]
     def state_vectors(self):
@@ -193,7 +193,7 @@ class atmos(dawgie.Algorithm):
         mcmc = self.__mcmc.sv_as_dict()['ima']
         xslib = self.__xslib.sv_as_dict()['lines']
         hzlib = self.__hzlib.sv_as_dict()['vdensity']
-        jwsmcmc = self.__mcmc.sv_as_dict()['JWST_sims']        
+        jwsmcmc = self.__mcmc.sv_as_dict()['JWST_sims']
         jwsxslib = self.__xslib.sv_as_dict()['JWST_sims']
         jwshzlib = self.__hzlib.sv_as_dict()['JWST_sims']
         valid, errcode = crb.checksvin(mcmc)
@@ -219,7 +219,7 @@ class atmos(dawgie.Algorithm):
         else: self._failure(errcode)
         if update: ds.update()
         return
-    
+
     def _failure(self, errcode, verbose=verbose):
         errstr = crb.errcode2errstr(errcode)
         errmess = ' '.join(('CERBERUS.atmos:', errstr))

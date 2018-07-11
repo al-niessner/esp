@@ -12,8 +12,8 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d as itp
 from ldtk.ldmodel import *
 from ldtk import LDPSetCreator, BoxcarFilter
-from pymc import Normal as pmnd
-from pymc import Uniform as pmud
+from pymc.distributions import Normal as pmnd
+from pymc.distributions import Uniform as pmud
 from pymc.distributions import TruncatedNormal as pmtnd
 # ------------- ------------------------------------------------------
 # -- SV VALIDITY -- --------------------------------------------------
@@ -124,7 +124,7 @@ def norm(cal, tme, fin, ext, out, selftype,
                         pass
                     pass
                 # OUT OF TRANSIT SELECTION ---------------------------
-                selv = selv & (~ignore)
+                selv = selv & (~ignore.astype(bool))
                 selvoot = (selv & (abs(z) > (1e0 + rpors)) &
                            (~nrmignore))
                 voots = [s for s, sv in zip(spectra, selvoot) if sv]
@@ -136,7 +136,7 @@ def norm(cal, tme, fin, ext, out, selftype,
                                       disp[selvoot]*1e-4)
                     selfin = np.isfinite(te)
                     wt = np.array(wt)
-                    te = np.array(te)                    
+                    te = np.array(te)
                     if np.sum(~selfin) > 0:
                         wt = wt[selfin]
                         te = te[selfin]
@@ -166,7 +166,7 @@ def norm(cal, tme, fin, ext, out, selftype,
                         out['data'][p]['z'].append(z[selv][check])
                         out['data'][p]['phase'].append(phase[selv][check])
                         out['data'][p]['photnoise'].append(nphotn)
-                        if debug:                        
+                        if debug:
                             plt.figure()
                             for w,s in zip(visw[check], vnspec):
                                 select = ((w > np.min(vrange)) &
@@ -205,7 +205,7 @@ def norm(cal, tme, fin, ext, out, selftype,
 # ------------------- ------------------------------------------------
 # -- TEMPLATE BUILDER -- ---------------------------------------------
 '''
-Builds a spectrum template according to the peak in population 
+Builds a spectrum template according to the peak in population
 density per wavelength bins
 '''
 def tplbuild(spectra, wave, vrange, disp,
@@ -374,8 +374,8 @@ def whitelight(nrm, fin, out, selftype,
         for i in range(len(ttv)):
             tautknot = 1e0/(trdura*1e-1)**2
             tknotmin = tmjd - trdura/2e0
-            tknotmax = tmjd + trdura/2e0            
-            alltknot[i] = pmtnd('dtk%i'%ttv[i], tmjd, tautknot,
+            tknotmax = tmjd + trdura/2e0
+            alltknot[i] = pmtnd('dtk%i' % ttv[i], tmjd, tautknot,
                                 tknotmin, tknotmax)
             pass
         nodes.extend(alltknot)
@@ -402,12 +402,12 @@ def whitelight(nrm, fin, out, selftype,
         allologtau = np.empty(len(visits), dtype=object)
         allologdelay = np.empty(len(visits), dtype=object)
         for i in range(len(visits)):
-            allvslope[i] = pmtnd('vslope%i'%visits[i], 0e0, tauvs,
+            allvslope[i] = pmtnd('vslope%i' % visits[i], 0e0, tauvs,
                                  -1e-1, 1e-1)
-            allvitcp[i] = pmnd('vitcp%i'%visits[i], 1e0, tauvi)
-            alloslope[i] = pmnd('oslope%i'%visits[i], 0e0, tauvs)
-            allologtau[i] = pmud('ologtau%i'%visits[i], -1e0, 5e0)
-            allologdelay[i] = pmud('ologdelay%i'%visits[i], -1e0, 5e0)
+            allvitcp[i] = pmnd('vitcp%i' % visits[i], 1e0, tauvi)
+            alloslope[i] = pmnd('oslope%i' % visits[i], 0e0, tauvs)
+            allologtau[i] = pmud('ologtau%i' % visits[i], -1e0, 5e0)
+            allologdelay[i] = pmud('ologdelay%i' % visits[i], -1e0, 5e0)
             pass
         nodes.extend(allvslope)
         nodes.extend(allvitcp)
@@ -459,7 +459,7 @@ def whitelight(nrm, fin, out, selftype,
         postflatphase = []
         for v in visits:
             postt = time[visits.index(v)]
-            if v in ttv: posttk = mcpost['dtk%i'%v]['quantiles'][50]
+            if v in ttv: posttk = mcpost['dtk%i' % v]['quantiles'][50]
             else: posttk = tmjd
             if 'inc' in allnodes:
                 postinc = mcpost['inc']['quantiles'][50]
@@ -478,19 +478,19 @@ def whitelight(nrm, fin, out, selftype,
                                 g1=g1[0], g2=g2[0],
                                 g3=g3[0], g4=g4[0]))
             postim.append(timlc(postt, orbits[visits.index(v)],
-                                vslope=mcpost['vslope%i'%v]['quantiles'][50],
-                                vitcp=mcpost['vitcp%i'%v]['quantiles'][50],
-                                oslope=mcpost['oslope%i'%v]['quantiles'][50],
-                                ologtau=mcpost['ologtau%i'%v]['quantiles'][50],
-                                ologdelay=mcpost['ologdelay%i'%v]['quantiles'][50]))
-            pass        
+                                vslope=mcpost['vslope%i' % v]['quantiles'][50],
+                                vitcp=mcpost['vitcp%i' % v]['quantiles'][50],
+                                oslope=mcpost['oslope%i' % v]['quantiles'][50],
+                                ologtau=mcpost['ologtau%i' % v]['quantiles'][50],
+                                ologdelay=mcpost['ologdelay%i' % v]['quantiles'][50]))
+            pass
         out['data'][p]['postlc'] = postlc
         out['data'][p]['postim'] = postim
         out['data'][p]['postsep'] = postsep
         out['data'][p]['postphase'] = postphase
-        out['data'][p]['postflatphase'] = postflatphase        
-        out['data'][p]['mcpost'] = mcpost        
-        out['data'][p]['mctrace'] = mctrace        
+        out['data'][p]['postflatphase'] = postflatphase
+        out['data'][p]['mcpost'] = mcpost
+        out['data'][p]['mctrace'] = mctrace
         out['STATUS'].append(True)
         wl = True
         if verbose:
@@ -511,7 +511,7 @@ def whitelight(nrm, fin, out, selftype,
                        borderaxespad=0., frameon=False)
             plt.tight_layout(rect=[0,0,(1 - 0.1*ncol),1])
             plt.show()
-            
+
             allpost = []
             alllbl = []
             allpval = []
@@ -521,12 +521,12 @@ def whitelight(nrm, fin, out, selftype,
                 alllbl.append(key)
                 pass
             allpost = np.array(allpost).T
-            import corner
-            corner.corner(allpost, labels=alllbl, truths=allpval,
-                          quantiles=[0.16, 0.5, 0.84])
-            plt.show()
+#            import corner
+#            corner.corner(allpost, labels=alllbl, truths=allpval,
+#                          quantiles=[0.16, 0.5, 0.84])
+#            plt.show()
             pass
-        pass    
+        pass
     return wl
 # ----------------------- --------------------------------------------
 # -- TRANSIT LIMB DARKENED LIGHT CURVE -- ----------------------------
@@ -584,15 +584,13 @@ def vecoccs(z, xrs, rprs):
     select = (~select1) & (~select2) & selx
     zzero = veczsel == 0e0
     if (True in select1 & zzero):
-        out[select1 & zzero] = np.pi*(np.square(vecxrs[select1 &
-                                                       zzero]))
+        out[select1 & zzero] = np.pi*(np.square(vecxrs[select1 & zzero]))
     if (True in select2 & zzero):
         out[select2 & zzero] = np.pi*(rprs**2)
     if (True in select & zzero):
         out[select & zzero] = np.pi*(rprs**2)
     if (True in select1 & ~zzero):
-        out[select1 & ~zzero] = np.pi*(np.square(vecxrs[select1 &
-                                                        ~zzero]))
+        out[select1 & ~zzero] = np.pi*(np.square(vecxrs[select1 & ~zzero]))
     if (True in select2):
         out[select2 & ~zzero] = np.pi*(rprs**2)
     if (True in select & ~zzero):
@@ -674,7 +672,7 @@ def createldgrid(minmu, maxmu, orbp,
             thiscl = allcl.T[i]
             thisel = allel.T[i]
             plt.errorbar(avmu, thiscl, yerr=thisel)
-            plt.plot(avmu, thiscl, '*', label='$\gamma$ %i'%i)
+            plt.plot(avmu, thiscl, '*', label='$\gamma$ %i' % i)
             pass
         plt.xlabel('Wavelength [$\mu$m]')
         plt.legend(bbox_to_anchor=(1, 0.5),
@@ -797,7 +795,8 @@ def timlc(vtime, orbits,
         select = orbits == o
         otime = xout[select] - np.mean(xout[select])
         olin = oslope*otime + 1e0
-        otimerp = (xout[select] - min(xout[select]))*(36e2)*(24e0) #s  
+        # SECONDS
+        otimerp = (xout[select] - min(xout[select]))*(36e2)*(24e0)
         orbramp = (1e0 - np.exp(-(otimerp + (1e1)**ologdelay)/
                                 ((1e1)**ologtau)))
         oout[select] = orbramp*olin

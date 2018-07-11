@@ -28,7 +28,7 @@ class normalization(dawgie.Algorithm):
         self.__tme = datalg.timing()
         self.__out = [phcstates.NormSV(ext) for ext in fltrs]
         return
-    
+
     def name(self):
         return 'normalization'
 

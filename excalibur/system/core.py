@@ -95,7 +95,7 @@ def buildsp(autofill, out, verbose=False, debug=False):
             pass
         else:
             out['priors'][lbl] = ''
-            for ext in out['exts']: out['priors'][lbl+ext] = ''     
+            for ext in out['exts']: out['priors'][lbl+ext] = ''
             out['needed'].append(lbl)
             pass
         pass
@@ -185,9 +185,10 @@ def buildsp(autofill, out, verbose=False, debug=False):
                 out['autofill'].append(p+':ecc'+ext)
                 pass
             pass
-        if ((p+':inc' in out['needed']) and
-            (p+':sma' not in out['needed']) and
-            ('R*' not in out['needed'])):
+        pincnd = (p+':inc') in out['needed']
+        psmain = (p+':sma') not in out['needed']
+        rstarin = 'R*' not in out['needed']
+        if pincnd and psmain and rstarin:
             value = autofill['starID'][target][p]['impact'].copy()
             value = value[-1]
             if len(value) > 0:
@@ -226,8 +227,9 @@ def buildsp(autofill, out, verbose=False, debug=False):
                 out['autofill'].append(p+':inc'+ext)
                 pass
             pass
-        if (((p+':rp') not in out['needed']) and
-            ((p+':mass') not in out['needed'])):
+        prpin = (p+':rp') not in out['needed']
+        pmassin = (p+':mass') not in out['needed']
+        if prpin and pmassin:
             radplanet = out['priors'][p]['rp']*ssc['Rjup']
             mass = out['priors'][p]['mass']*ssc['Mjup']
             g = (ssc['G'])*mass/(radplanet**2)

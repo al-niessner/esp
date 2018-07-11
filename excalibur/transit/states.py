@@ -17,7 +17,7 @@ class NormSV(dawgie.StateVector):
         self['data'] = excalibur.ValuesDict()
         self['STATUS'].append(False)
         return
-    
+
     def name(self):
         return self.__name
 
@@ -52,7 +52,7 @@ class NormSV(dawgie.StateVector):
             pass
         pass
     pass
-    
+
 class WhiteLightSV(dawgie.StateVector):
     def __init__(self, name):
         self._version_ = dawgie.VERSION(1,1,0)
@@ -61,7 +61,7 @@ class WhiteLightSV(dawgie.StateVector):
         self['data'] = excalibur.ValuesDict()
         self['STATUS'].append(False)
         return
-    
+
     def name(self):
         return self.__name
 
@@ -80,9 +80,9 @@ class WhiteLightSV(dawgie.StateVector):
                            'vslope', 'vitcp',
                            'oslope', 'ologtau', 'ologdelay']:
                     showme = ' '.join(sorted([k for k in mcpost.keys()
-                                            if kn in k]))
+                                              if kn in k]))
                     visitor.add_declaration(showme)
-                    pass        
+                    pass
                 myfig = plt.figure(figsize=(10, 6))
                 for v in visits:
                     index = visits.index(v)

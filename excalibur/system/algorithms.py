@@ -23,7 +23,7 @@ class validate(dawgie.Algorithm):
         self.__autofill = trgalg.autofill()
         self.__out = sysstates.PriorsSV('parameters')
         return
-    
+
     def name(self):
         return 'validate'
 
@@ -46,7 +46,7 @@ class validate(dawgie.Algorithm):
         afilled = syscore.buildsp(autofill, out,
                                   verbose=verbose, debug=debug)
         return afilled
-    
+
     def _failure(self, errstr):
         errmess = '--< SYSTEM VALIDATE: ' + errstr + ' >--'
         if verbose: print(errmess)
@@ -59,7 +59,7 @@ class finalize(dawgie.Algorithm):
         self.__val = validate()
         self.__out = sysstates.PriorsSV('parameters')
         return
-    
+
     def name(self):
         return 'finalize'
 
@@ -96,7 +96,7 @@ class finalize(dawgie.Algorithm):
         ffill = syscore.forcepar(overwrite, out,
                                  verbose=verbose, debug=debug)
         return ffill
-    
+
     def _failure(self, errstr):
         errmess = '--< SYSTEM FINALIZE: ' + errstr + ' >--'
         if verbose: print(errmess)

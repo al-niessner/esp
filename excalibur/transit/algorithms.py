@@ -33,7 +33,7 @@ class normalization(dawgie.Algorithm):
         self.__fin = sysalg.finalize()
         self.__out = [trnstates.NormSV(ext) for ext in fltrs]
         return
-    
+
     def name(self):
         return 'normalization'
 
@@ -70,12 +70,12 @@ class normalization(dawgie.Algorithm):
         self.__out = svupdate
         if len(self.__out) > 0: ds.update()
         return
-    
+
     def _norm(self, cal, tme, fin, ext, out):
         normed = trncore.norm(cal, tme, fin, ext, out, self._type,
                               verbose=verbose, debug=debug)
         return normed
-    
+
     def _failure(self, errstr):
         errmess = '--< TRANSIT NORMALIZATION: ' + errstr + ' >--'
         if verbose: print(errmess)
@@ -90,7 +90,7 @@ class whitelight(dawgie.Algorithm):
         self.__fin = sysalg.finalize()
         self.__out = [trnstates.WhiteLightSV(ext) for ext in fltrs]
         return
-    
+
     def name(self):
         return 'whitelight'
 
@@ -122,12 +122,12 @@ class whitelight(dawgie.Algorithm):
         self.__out = svupdate
         if len(self.__out) > 0: ds.update()
         return
-    
+
     def _whitelight(self, nrm, fin, out):
         wl = trncore.whitelight(nrm, fin, out, self._type,
                                 verbose=verbose, debug=debug)
         return wl
-    
+
     def _failure(self, errstr):
         errmess = '--< TRANSIT WHITE LIGHT: ' + errstr + ' >--'
         if verbose: print(errmess)

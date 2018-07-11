@@ -17,10 +17,10 @@ class CalibrateSV(dawgie.StateVector):
         self['STATUS'] = excalibur.ValuesList()
         self['STATUS'].append(False)
         return
-    
+
     def name(self):
         return self.__name
-    
+
     def view(self, visitor:dawgie.Visitor)->None:
         if len(self['STATUS']) == 2:
             data = self['data']
@@ -59,13 +59,13 @@ class CalibrateSV(dawgie.StateVector):
             allerr = allerr[select]
             allerr = allerr[allerr > 0.9]
             vldi = np.random.uniform()
-            vldi = int(vldi*(np.sum(~allignore) - 1))
-            vldi = allindex[allignore == False][vldi]
-            
+            vldi = int(vldi*(np.sum(~allignore.astype(bool)) - 1))
+            vldi = allindex[~allignore.astype(bool)][vldi]
+
             strignore = (str(np.nansum(allignore)) + ' / ' +
                          str(len(allignore)))
             visitor.add_declaration('IGNORED: ' + strignore)
-            
+
             myfig = plt.figure()
             plt.imshow(data['MEXP'][vldi])
             plt.colorbar()
@@ -78,7 +78,7 @@ class CalibrateSV(dawgie.StateVector):
             if np.sum(allignore) > 0:
                 gbgi = np.random.uniform()
                 gbgi = int(gbgi*(np.sum(allignore) - 1))
-                gbgi = allindex[allignore == True][gbgi]
+                gbgi = allindex[allignore][gbgi]
                 myfig = plt.figure()
                 plt.imshow(data['MEXP'][gbgi])
                 plt.colorbar()
@@ -89,7 +89,7 @@ class CalibrateSV(dawgie.StateVector):
                 visitor.add_image('...', ' ', buf.getvalue())
                 plt.close(myfig)
                 pass
-            
+
             myfig = plt.figure()
             for spectrum in data['SPECTRUM']: plt.plot(spectrum)
             plt.xlabel('Pixel Number')
@@ -110,7 +110,7 @@ class CalibrateSV(dawgie.StateVector):
             myfig.savefig(buf, format='png')
             visitor.add_image('...', ' ', buf.getvalue())
             plt.close(myfig)
-            
+
             myfig = plt.figure()
             plt.hist(allerr)
             plt.xlabel('Error Distribution [Noise Model Units]')
@@ -148,15 +148,15 @@ class TimingSV(dawgie.StateVector):
         self.__name = name
         self['STATUS'] = excalibur.ValuesList()
         self['data'] = excalibur.ValuesDict()
-        self['transit'] = excalibur.ValuesList()        
-        self['eclipse'] = excalibur.ValuesList()        
+        self['transit'] = excalibur.ValuesList()
+        self['eclipse'] = excalibur.ValuesList()
         self['phasecurve'] = excalibur.ValuesList()
         self['STATUS'].append(False)
         return
 
     def name(self):
         return self.__name
-    
+
     def view(self, visitor:dawgie.Visitor)->None:
         if self['STATUS'][-1]:
             for p in self['data'].keys():
@@ -176,22 +176,20 @@ class TimingSV(dawgie.StateVector):
                 thrs = self['data'][p]['thrs']
                 whereo = self['data'][p]['whereo']
                 wherev = self['data'][p]['wherev']
-                ordt = self['data'][p]['ordt']
                 phase = self['data'][p]['phase']
                 ignore = self['data'][p]['ignore']
                 dvis = self['data'][p]['dvisits']
-                vis = self['data'][p]['visits']
-                phsto = phase.copy()[ordt]
-                ignto = ignore.copy()[ordt]
-                dvisto = dvis.copy()[ordt]
-                
+                phsto = phase.copy()[self['data'][p]['ordt']]
+                ignto = ignore.copy()[self['data'][p]['ordt']]
+                dvisto = dvis.copy()[self['data'][p]['ordt']]
+
                 myfig = plt.figure()
                 plt.plot(phsto, 'k.')
                 plt.plot(np.arange(phsto.size)[~ignto],
                          phsto[~ignto], 'bo')
                 for i in wherev: plt.axvline(i, ls='--', color='r')
                 for i in whereo: plt.axvline(i, ls='-.', color='g')
-                plt.xlim(0, tmetod.size - 1)
+                plt.xlim(0, phsto.size - 1)
                 plt.ylim(-0.5, 0.5)
                 plt.xlabel('Time index')
                 plt.ylabel('Orbital Phase [2pi rad]')
@@ -205,7 +203,7 @@ class TimingSV(dawgie.StateVector):
                 plt.plot(tmetod*0+3*thro, 'r--')
                 plt.plot(tmetod*0+3*thrs, 'g-.')
                 for i in wherev: plt.axvline(i, ls='--', color='r')
-                for i in whereo: plt.axvline(i, ls='-.', color='g')            
+                for i in whereo: plt.axvline(i, ls='-.', color='g')
                 plt.xlim(0, tmetod.size - 1)
                 plt.xlabel('Time index')
                 plt.ylabel('Frame Separation [Days]')
@@ -214,12 +212,12 @@ class TimingSV(dawgie.StateVector):
                 myfig.savefig(buf, format='png')
                 visitor.add_image('...', ' ', buf.getvalue())
                 plt.close(myfig)
-                
-                if np.max(dvis) > np.max(vis):
+
+                if np.max(dvis) > np.max(self['data'][p]['visits']):
                     myfig = plt.figure()
                     plt.plot(dvisto, 'o')
                     plt.xlim(0, tmetod.size - 1)
-                    plt.xlabel('Time index')            
+                    plt.xlabel('Time index')
                     plt.ylabel('Double Scan Visit Number')
                     buf = io.BytesIO()
                     myfig.savefig(buf, format='png')

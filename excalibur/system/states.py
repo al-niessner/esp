@@ -29,7 +29,7 @@ class PriorsSV(dawgie.StateVector):
         self['STATUS'].append(False)
         self['PP'].append(False)
         return
-    
+
     def name(self):
         return self.__name
 
@@ -53,14 +53,11 @@ class PriorsSV(dawgie.StateVector):
             table.get_cell(3, 1).add_primitive(self['ignore'])
             table.get_cell(4, 0).add_primitive(vlabels[4])
             table.get_cell(4, 1).add_primitive(self['autofill'])
-            
-            starinfo = self['priors']
-            skeys = self['starmdt']
-            exts = self['exts']
+
             allstar = []
-            for key in skeys:
+            for key in self['starmdt']:
                 listkeys = [key]
-                listkeys.extend([key+x for x in exts])
+                listkeys.extend([key+x for x in self['exts']])
                 allstar.append(listkeys)
                 pass
             pkeys = self['planetmdt']
@@ -69,10 +66,11 @@ class PriorsSV(dawgie.StateVector):
             allplanet = []
             for key in pkeys:
                 listkeys = [key]
-                listkeys.extend([key+x for x in exts])
+                listkeys.extend([key+x for x in self['exts']])
                 allplanet.append(listkeys)
                 pass
-            labels = ['STAR', 'UPPER ERR', 'LOWER ERR', 'UNITS', 'REF']
+            labels = ['STAR', 'UPPER ERR', 'LOWER ERR',
+                      'UNITS', 'REF']
             table = visitor.add_table(clabels=labels,
                                       rows=len(allstar))
             for starlabels in allstar:
@@ -80,12 +78,13 @@ class PriorsSV(dawgie.StateVector):
                 for l in starlabels:
                     j = starlabels.index(l)
                     table.get_cell(i, j).add_primitive(l)
-                    elem = starinfo[l]
+                    elem = self['priors'][l]
                     table.get_cell(i, j).add_primitive(elem)
                     pass
                 pass
-            for c in starinfo['planets']:
-                labels = ['PLANET '+c, 'UPPER ERR', 'LOWER ERR', 'UNITS', 'REF']
+            for c in self['priors']['planets']:
+                labels = ['PLANET '+c, 'UPPER ERR', 'LOWER ERR',
+                          'UNITS', 'REF']
                 table = visitor.add_table(clabels=labels,
                                           rows=len(allplanet))
                 for starlabels in allplanet:
@@ -93,7 +92,7 @@ class PriorsSV(dawgie.StateVector):
                     for l in starlabels:
                         j = starlabels.index(l)
                         table.get_cell(i, j).add_primitive(l)
-                        elem = starinfo[c][l]
+                        elem = self['priors'][c][l]
                         table.get_cell(i, j).add_primitive(elem)
                         pass
                     pass

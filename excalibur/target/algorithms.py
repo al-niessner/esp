@@ -31,7 +31,7 @@ class create(dawgie.Analyzer):
         self.__out = [trgstates.TargetSV('starIDs'),
                       trgstates.FilterSV('filters')]
         return
-    
+
     def name(self):
         return 'create'
 
@@ -57,7 +57,7 @@ class autofill(dawgie.Algorithm):
         self.__create = create()
         self.__out = trgstates.TargetSV('parameters')
         return
-    
+
     def name(self):
         return 'autofill'
 
@@ -82,7 +82,7 @@ class autofill(dawgie.Algorithm):
         solved = trgcore.autofill(create, thistarget, out,
                                   verbose=verbose, debug=debug)
         return solved
-    
+
     def _failure(self, errstr):
         if errstr is None: errstr = 'TARGET NOT EXPECTED'
         errmess = '--< TARGET AUTOFILL: ' + errstr + ' >--'
@@ -96,7 +96,7 @@ class scrape(dawgie.Algorithm):
         self.__autofill = autofill()
         self.__out = trgstates.DatabaseSV('databases')
         return
-    
+
     def name(self):
         return 'scrape'
 
@@ -121,7 +121,7 @@ class scrape(dawgie.Algorithm):
         umast = trgcore.mast(autofill, out, dbs, queryform,
                              mirror1, alt=mirror2,
                              verbose=verbose, debug=debug)
-        udisk = trgcore.disk(autofill, out, diskloc, dbs, 
+        udisk = trgcore.disk(autofill, out, diskloc, dbs,
                              verbose=verbose, debug=debug)
         update = umast or udisk
         return update

@@ -35,4 +35,3 @@ class normalization(trnalg.normalization):
         return
     pass
 # ---------------- ---------------------------------------------------
-

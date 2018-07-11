@@ -19,7 +19,7 @@ class TargetSV(dawgie.StateVector):
         self['exts'] = excalibur.ValuesList()
         self['STATUS'].append(False)
         return
-    
+
     def name(self):
         return self.__name
 
@@ -76,7 +76,7 @@ class TargetSV(dawgie.StateVector):
                             pass
                         else:
                             table.get_cell(i, j).add_primitive('NA')
-                            pass                        
+                            pass
                         pass
                     pass
                 for c in self['starID'][targetlist[0]]['planets']:
@@ -140,7 +140,7 @@ class FilterSV(dawgie.StateVector):
                     number = len(self['activefilters'][flt]['TOTAL'])
                     table.get_cell(i, 0).add_primitive(flt)
                     table.get_cell(i, 1).add_primitive(number)
-                    pass            
+                    pass
                 pass
             pass
         return
@@ -155,7 +155,7 @@ class DatabaseSV(dawgie.StateVector):
         self['name'] = excalibur.ValuesDict()
         self['STATUS'].append(False)
         return
-    
+
     def name(self):
         return self.__name
 

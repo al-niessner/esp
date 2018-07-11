@@ -11,7 +11,7 @@ class NormSV(dawgie.StateVector):
         self['STATUS'] = excalibur.ValuesList()
         self['STATUS'].append(False)
         return
-    
+
     def name(self):
         return self.__name
 
