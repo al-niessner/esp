@@ -286,7 +286,7 @@ ignored-classes=optparse.Values,thread._local,_thread._local
 # List of members which are set dynamically and missed by pylint inference
 # system, and so shouldn't trigger E1101 when accessed. Python regular
 # expressions are accepted.
-generated-members=numpy.double,numpy.float*,numpy.int*,numpy.uint*,numpy.string_,numpy.log,numpy.isfinite,numpy.random.uniform,numpy.arcsin,numpy.random.normal,numpy.arctan2,numpy.arctan,numpy.random.randn,np.log,np.isfinite,np.random.uniform,np.arcsin,np.random.normal,np.arctan2,np.arctan,np.random.randn,numpy.arccos,np.arccos,numpy.square,np.square,HDUList.header,pyfits.HDUList.header,astropy.io.fits.HDUList.header,pf.header
+generated-members=numpy.double,numpy.float*,numpy.int*,numpy.uint*,numpy.string_,numpy.log,numpy.isfinite,numpy.random.uniform,numpy.arcsin,numpy.random.normal,numpy.arctan2,numpy.arctan,numpy.random.randn,np.log,np.isfinite,np.random.uniform,np.arcsin,np.random.normal,np.arctan2,np.arctan,np.random.randn,numpy.arccos,np.arccos,numpy.square,np.square,HDUList[0].header,pyfits.HDUList.header,astropy.io.fits.HDUList.header,pf[0].header
 
 # List of decorators that produce context managers, such as
 # contextlib.contextmanager. Add to this list to register other decorators that
