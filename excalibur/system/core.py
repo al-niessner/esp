@@ -55,29 +55,25 @@ def buildsp(autofill, out, verbose=False, debug=False):
     out['starkeys'].extend(autofill['starkeys'])
     out['planetkeys'].extend(autofill['planetkeys'])
     out['exts'].extend(autofill['exts'])
-    planets = out['priors']['planets']
-    starmndt = out['starmdt']
-    planetmndt = out['planetmdt']
-    exts = out['extsmdt']
-    for lbl in starmndt:
+    out['starmdt'].extend(['R*', 'T*', 'FEH*', 'LOGG*'])
+    out['planetmdt'].extend(['inc', 'period', 'ecc', 'rp',
+                             't0', 'sma', 'mass'])
+    out['extsmdt'].extend(['_lowerr', '_uperr'])
+    for lbl in out['starmdt']:
         value = autofill['starID'][target][lbl].copy()
         value = value[-1]
-        if len(value) > 0:
+        if value.__len__() > 0:
             out['priors'][lbl] = float(value)
-            for ext in exts:
+            for ext in out['extsmdt']:
                 value = autofill['starID'][target][lbl+ext].copy()
                 value = value[-1]
-                if len(value) > 0:
+                if value.__len__() > 0:
                     fillvalue = float(value)
-                    if 'lowerr' in ext:
-                        if fillvalue == 0:
-                            fillvalue = out['priors'][lbl]*(-1e-1)
-                            pass
+                    if ('lowerr' in ext) and (fillvalue == 0):
+                        fillvalue = out['priors'][lbl]*(-1e-1)
                         pass
-                    if 'uperr' in ext:
-                        if fillvalue == 0:
-                            fillvalue = out['priors'][lbl]*(1e-1)
-                            pass
+                    if ('uperr' in ext) and (fillvalue == 0):
+                        fillvalue = out['priors'][lbl]*(1e-1)
                         pass
                     out['priors'][lbl+ext] = fillvalue
                     pass
@@ -95,7 +91,7 @@ def buildsp(autofill, out, verbose=False, debug=False):
             pass
         else:
             out['priors'][lbl] = ''
-            for ext in out['exts']: out['priors'][lbl+ext] = ''     
+            for ext in out['exts']: out['priors'][lbl+ext] = ''
             out['needed'].append(lbl)
             pass
         pass
@@ -104,14 +100,14 @@ def buildsp(autofill, out, verbose=False, debug=False):
         radstar = (out['priors']['R*'])*(ssc['Rsun'])
         value = autofill['starID'][target]['RHO*'].copy()
         value = value[-1]
-        if len(value) > 0:
+        if value.__len__() > 0:
             rho = float(value)
             g = 4e0*np.pi*(ssc['G'])*rho*radstar/3e0
             out['priors']['LOGG*'] = np.log10(g)
             out['autofill'].append('LOGG*')
             index = out['needed'].index('LOGG*')
             out['needed'].pop(index)
-            for ext in exts:
+            for ext in out['extsmdt']:
                 out['priors']['LOGG*'+ext] = np.log10(g)/1e1
                 out['autofill'].append('LOGG*'+ext)
                 pass
@@ -122,14 +118,14 @@ def buildsp(autofill, out, verbose=False, debug=False):
             pass
         value = autofill['starID'][target]['M*'].copy()
         value = value[-1]
-        if (len(value) > 0) and ('LOGG*' in out['needed']):
+        if (value.__len__() > 0) and ('LOGG*' in out['needed']):
             mass = float(value)*ssc['Msun']
             g = (ssc['G'])*mass/(radstar**2)
             out['priors']['LOGG*'] = np.log10(g)
             out['autofill'].append('LOGG*')
             index = out['needed'].index('LOGG*')
             out['needed'].pop(index)
-            for ext in exts:
+            for ext in out['extsmdt']:
                 out['priors']['LOGG*'+ext] = np.log10(g)/1e1
                 out['autofill'].append('LOGG*'+ext)
                 pass
@@ -139,16 +135,16 @@ def buildsp(autofill, out, verbose=False, debug=False):
             out['priors']['LOGG*_ref'] = 'System Prior Auto Fill'
             pass
         pass
-    for p in planets:
-        for lbl in planetmndt:
+    for p in out['priors']['planets']:
+        for lbl in out['planetmdt']:
             value = autofill['starID'][target][p][lbl].copy()
             value = value[-1]
-            if len(value) > 0:
+            if value.__len__() > 0:
                 out['priors'][p][lbl] = float(value)
-                for ext in exts:
+                for ext in out['extsmdt']:
                     value = autofill['starID'][target][p][lbl+ext].copy()
                     value = value[-1]
-                    if len(value) > 0:
+                    if value.__len__() > 0:
                         out['priors'][p][lbl+ext] = float(value)
                         pass
                     else:
@@ -170,7 +166,7 @@ def buildsp(autofill, out, verbose=False, debug=False):
                 out['needed'].append(p+':'+lbl)
                 pass
             pass
-        if (p+':ecc') in out['needed']:
+        if p+':ecc' in out['needed']:
             out['priors'][p]['ecc'] = 0e0
             out['autofill'].append(p+':ecc')
             index = out['needed'].index(p+':ecc')
@@ -179,18 +175,19 @@ def buildsp(autofill, out, verbose=False, debug=False):
             strval = strval[-1]
             out['priors'][p]['ecc_units'] = strval
             out['priors'][p]['ecc_ref'] = 'System Prior Auto Fill'
-            for ext in exts:
+            for ext in out['extsmdt']:
                 err = 1e-10
                 out['priors'][p]['ecc'+ext] = err
                 out['autofill'].append(p+':ecc'+ext)
                 pass
             pass
-        if ((p+':inc' in out['needed']) and
-            (p+':sma' not in out['needed']) and
-            ('R*' not in out['needed'])):
+        pincnd = (p+':inc') in out['needed']
+        psmain = (p+':sma') not in out['needed']
+        rstarin = 'R*' not in out['needed']
+        if pincnd and psmain and rstarin:
             value = autofill['starID'][target][p]['impact'].copy()
             value = value[-1]
-            if len(value) > 0:
+            if value.__len__() > 0:
                 sininc = (float(value)*(out['priors']['R*'])*
                           ssc['Rsun/AU']/
                           (out['priors'][p]['sma']))
@@ -203,7 +200,7 @@ def buildsp(autofill, out, verbose=False, debug=False):
                 strval = strval[-1]
                 out['priors'][p]['inc_units'] = strval
                 out['priors'][p]['inc_ref'] = 'System Prior Auto Fill'
-                for ext in exts:
+                for ext in out['extsmdt']:
                     err = inc/1e1
                     if inc + err > 9e1: err = (9e1 - inc)
                     out['priors'][p]['inc'+ext] = err
@@ -211,7 +208,7 @@ def buildsp(autofill, out, verbose=False, debug=False):
                     pass
                 pass
             pass
-        if (p+':inc' in out['needed']):
+        if p+':inc' in out['needed']:
             inc = 90e0
             out['priors'][p]['inc'] = inc
             out['autofill'].append(p+':inc')
@@ -219,21 +216,22 @@ def buildsp(autofill, out, verbose=False, debug=False):
             out['needed'].pop(index)
             out['priors'][p]['inc_units'] = ['[degree]']
             out['priors'][p]['inc_ref'] = 'System Prior Auto Fill'
-            for ext in exts:
+            for ext in out['extsmdt']:
                 err = inc/1e1
                 if inc + err > 9e1: err = (9e1 - inc)
                 out['priors'][p]['inc'+ext] = err
                 out['autofill'].append(p+':inc'+ext)
                 pass
             pass
-        if (((p+':rp') not in out['needed']) and
-            ((p+':mass') not in out['needed'])):
+        prpin = (p+':rp') not in out['needed']
+        pmassin = (p+':mass') not in out['needed']
+        if prpin and pmassin:
             radplanet = out['priors'][p]['rp']*ssc['Rjup']
             mass = out['priors'][p]['mass']*ssc['Mjup']
             g = (ssc['G'])*mass/(radplanet**2)
             out['priors'][p]['logg'] = np.log10(g)
             out['autofill'].append(p+':logg')
-            for ext in exts:
+            for ext in out['extsmdt']:
                 out['priors'][p]['logg'+ext] = np.log10(g)/1e1
                 out['autofill'].append(p+':logg'+ext)
                 pass
@@ -267,10 +265,10 @@ def buildsp(autofill, out, verbose=False, debug=False):
     for p in out['needed']:
         if ':' not in p: starneed = True
         pass
-    if (starneed or (len(out['priors']['planets']) < 1)):
+    if starneed or (len(out['priors']['planets']) < 1):
         out['PP'].append(True)
         pass
-    if verbose:
+    if verbose or debug:
         print('>-- FORCE PARAMETER:', out['PP'][-1])
         print('>-- MISSING MANDATORY PARAMETERS:', out['needed'])
         print('>-- MISSING PLANET PARAMETERS:', out['pneeded'])
@@ -295,18 +293,30 @@ def forcepar(overwrite, out, verbose=False, debug=False):
             pass
         else: out['priors'][key] = overwrite.copy()[key]
         pass
-    ipop = []
-    for n in out['needed']:
+    for n in out['needed'].copy():
         if ':' not in n:
             try:
                 test = float(out['priors'][n])
                 out['needed'].pop(out['needed'].index(n))
                 pass
-            except: forced = False
+            except (ValueError, KeyError): forced = False
+            pass
+        else:                        
+            try:
+                pnet = n.split(':')[0]
+                pkey = n.split(':')[1]
+                test = float(out['priors'][pnet][pkey])
+                out['needed'].pop(out['needed'].index(n))
+                pass
+            except (ValueError, KeyError):
+                if ('mass' not in n) and ('rho' not in n):
+                    forced = False
+                    pass
+                pass
             pass
         pass
     ptry = []
-    for p in out['pneeded']:
+    for p in out['pneeded'].copy():
         pnet = p.split(':')[0]
         pkey = p.split(':')[1]
         ptry.append(pnet)
@@ -314,7 +324,9 @@ def forcepar(overwrite, out, verbose=False, debug=False):
             test = float(out['priors'][pnet][pkey])
             out['pneeded'].pop(out['pneeded'].index(p))
             pass
-        except: forced = False
+        except (ValueError, KeyError):
+            if ('mass' not in p) and ('rho' not in p): forced = False
+            pass
         pass
     for p in set(ptry):
         addback = True
@@ -335,7 +347,7 @@ def forcepar(overwrite, out, verbose=False, debug=False):
     for p in out['needed']:
         if ':' not in p: starneed = True
         pass
-    if (starneed or (len(out['priors']['planets']) < 1)):
+    if starneed or (len(out['priors']['planets']) < 1):
         forced = False
         if verbose:
             print('>-- MISSING MANDATORY PARAMETERS')
@@ -343,6 +355,7 @@ def forcepar(overwrite, out, verbose=False, debug=False):
             pass
         pass
     else:
+        forced = True
         if verbose: print('>-- PRIORITY PARAMETERS SUCCESSFUL')
         pass
     return forced

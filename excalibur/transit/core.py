@@ -1,6 +1,4 @@
 # -- IMPORTS -- ------------------------------------------------------
-import pdb
-
 import excalibur.data.core as datcore
 import excalibur.system.core as syscore
 
@@ -12,8 +10,8 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d as itp
 from ldtk.ldmodel import *
 from ldtk import LDPSetCreator, BoxcarFilter
-from pymc import Normal as pmnd
-from pymc import Uniform as pmud
+from pymc.distributions import Normal as pmnd
+from pymc.distributions import Uniform as pmud
 from pymc.distributions import TruncatedNormal as pmtnd
 # ------------- ------------------------------------------------------
 # -- SV VALIDITY -- --------------------------------------------------
@@ -68,16 +66,14 @@ def norm(cal, tme, fin, ext, out, selftype,
                 selv = (dvisits == v)
                 # ORBIT REJECTION ------------------------------------
                 if selftype in ['transit', 'phasecurve']:
-                    select = ((phase[selv] > 0.25) |
-                              (phase[selv] < -0.25))
+                    select = (phase[selv] > 0.25) | (phase[selv] < -0.25)
                     vzoot = zoot[selv]
                     vzoot[select] = vzoot[select] + 666
                     zoot[selv] = vzoot
                     pass
                 if selftype in ['eclipse']:
                     vzoot = zoot[selv]
-                    select = ((phase[selv] < 0.25) &
-                              (phase[selv] > -0.25))
+                    select = (phase[selv] < 0.25) & (phase[selv] > -0.25)
                     vzoot[select] = vzoot[select] + 666
                     zoot[selv] = vzoot
                     pass
@@ -102,13 +98,11 @@ def norm(cal, tme, fin, ext, out, selftype,
                 trash = []
                 if len(ootplus) > 1:
                     keep = ootplus[ootpv.index(min(ootpv))]
-                    trash.extend([i for i in ootplus
-                                  if i != keep])
+                    trash.extend([i for i in ootplus if i != keep])
                     pass
                 if len(ootminus) > 1:
                     keep = ootminus[ootmv.index(max(ootmv))]
-                    trash.extend([i for i in ootminus
-                                  if i != keep])
+                    trash.extend([i for i in ootminus if i != keep])
                     pass
                 if len(trash) > 0:
                     for o in trash:
@@ -124,33 +118,28 @@ def norm(cal, tme, fin, ext, out, selftype,
                         pass
                     pass
                 # OUT OF TRANSIT SELECTION ---------------------------
-                selv = selv & (~ignore)
-                selvoot = (selv & (abs(z) > (1e0 + rpors)) &
-                           (~nrmignore))
+                selv = selv & (~ignore.astype(bool))
+                selvoot = selv & (abs(z) > (1e0 + rpors)) & (~nrmignore)
                 voots = [s for s, sv in zip(spectra, selvoot) if sv]
                 vootw = [w for w, sv in zip(wave, selvoot) if sv]
                 viss = [s for s, sv in zip(spectra, selv) if sv]
                 visw = [w for w, sv in zip(wave, selv) if sv]
                 if np.sum(selvoot) > 6:
-                    wt, te = tplbuild(voots, vootw, vrange,
-                                      disp[selvoot]*1e-4)
+                    wt, te = tplbuild(voots, vootw, vrange, disp[selvoot]*1e-4)
                     selfin = np.isfinite(te)
                     wt = np.array(wt)
-                    te = np.array(te)                    
+                    te = np.array(te)
                     if np.sum(~selfin) > 0:
                         wt = wt[selfin]
                         te = te[selfin]
                         pass
-                    ti = itp(wt, te, kind='linear',
-                             bounds_error=False, fill_value=np.nan)
+                    ti = itp(wt, te,
+                             kind='linear', bounds_error=False, fill_value=np.nan)
                     nspectra = [s/ti(w) for s,w in zip(viss, visw)]
                     photnoise = [np.sqrt(s)/ti(w)/np.sqrt(l)
-                                 for s,w,l in zip(viss, visw,
-                                                  scanlen[selv])]
-                    check = np.array([np.nanstd(s) <
-                                      27e0*np.nanmedian(p)
-                                      for s, p in zip(nspectra,
-                                                      photnoise)])
+                                 for s,w,l in zip(viss, visw, scanlen[selv])]
+                    check = np.array([np.nanstd(s) < 27e0*np.nanmedian(p)
+                                      for s, p in zip(nspectra, photnoise)])
                     if np.sum(check) > 9:
                         vnspec = np.array(nspectra)[check]
                         nphotn = np.array(photnoise)[check]
@@ -166,11 +155,10 @@ def norm(cal, tme, fin, ext, out, selftype,
                         out['data'][p]['z'].append(z[selv][check])
                         out['data'][p]['phase'].append(phase[selv][check])
                         out['data'][p]['photnoise'].append(nphotn)
-                        if debug:                        
+                        if debug:
                             plt.figure()
                             for w,s in zip(visw[check], vnspec):
-                                select = ((w > np.min(vrange)) &
-                                          (w < np.max(vrange)))
+                                select = (w > np.min(vrange)) & (w < np.max(vrange))
                                 plt.plot(w[select], s[select], 'o')
                                 pass
                             plt.ylabel('Normalized Spectra')
@@ -190,8 +178,7 @@ def norm(cal, tme, fin, ext, out, selftype,
                     pass
                 pass
             if verbose:
-                for v, m in zip(out['data'][p]['vignore'],
-                                out['data'][p]['trial']):
+                for v, m in zip(out['data'][p]['vignore'], out['data'][p]['trial']):
                     print(v, m)
                     pass
                 pass
@@ -205,7 +192,7 @@ def norm(cal, tme, fin, ext, out, selftype,
 # ------------------- ------------------------------------------------
 # -- TEMPLATE BUILDER -- ---------------------------------------------
 '''
-Builds a spectrum template according to the peak in population 
+Builds a spectrum template according to the peak in population
 density per wavelength bins
 '''
 def tplbuild(spectra, wave, vrange, disp,
@@ -244,8 +231,7 @@ def tplbuild(spectra, wave, vrange, disp,
 # ---------------------- ---------------------------------------------
 # -- WHITE LIGHT CURVE -- --------------------------------------------
 def whitelight(nrm, fin, out, selftype,
-               chainlen=int(1e5),
-               verbose=False, debug=False):
+               chainlen=int(1e5), verbose=False, debug=False):
     wl = False
     priors = fin['priors'].copy()
     ssc = syscore.ssconstants()
@@ -333,8 +319,7 @@ def whitelight(nrm, fin, out, selftype,
             plt.figure(figsize=(10, 6))
             for v in visits:
                 index = visits.index(v)
-                plt.plot(phase[index], allwhite[index], 'o',
-                         label=str(v))
+                plt.plot(phase[index], allwhite[index], 'o', label=str(v))
                 pass
             if len(visits) > 14: ncol = 2
             else: ncol = 1
@@ -352,8 +337,7 @@ def whitelight(nrm, fin, out, selftype,
         for v in visits:
             index = visits.index(v)
             zvis = sep[index]
-            select = ((abs(zvis) < (1e0 + rpors)) &
-                      (abs(zvis) > (1e0 - rpors)))
+            select = ((abs(zvis) < (1e0 + rpors)) & (abs(zvis) > (1e0 - rpors)))
             if True in select: ttv.append(v)
             pass
         # PRIORS -----------------------------------------------------
@@ -374,8 +358,8 @@ def whitelight(nrm, fin, out, selftype,
         for i in range(len(ttv)):
             tautknot = 1e0/(trdura*1e-1)**2
             tknotmin = tmjd - trdura/2e0
-            tknotmax = tmjd + trdura/2e0            
-            alltknot[i] = pmtnd('dtk%i'%ttv[i], tmjd, tautknot,
+            tknotmax = tmjd + trdura/2e0
+            alltknot[i] = pmtnd('dtk%i' % ttv[i], tmjd, tautknot,
                                 tknotmin, tknotmax)
             pass
         nodes.extend(alltknot)
@@ -402,12 +386,12 @@ def whitelight(nrm, fin, out, selftype,
         allologtau = np.empty(len(visits), dtype=object)
         allologdelay = np.empty(len(visits), dtype=object)
         for i in range(len(visits)):
-            allvslope[i] = pmtnd('vslope%i'%visits[i], 0e0, tauvs,
+            allvslope[i] = pmtnd('vslope%i' % visits[i], 0e0, tauvs,
                                  -1e-1, 1e-1)
-            allvitcp[i] = pmnd('vitcp%i'%visits[i], 1e0, tauvi)
-            alloslope[i] = pmnd('oslope%i'%visits[i], 0e0, tauvs)
-            allologtau[i] = pmud('ologtau%i'%visits[i], -1e0, 5e0)
-            allologdelay[i] = pmud('ologdelay%i'%visits[i], -1e0, 5e0)
+            allvitcp[i] = pmnd('vitcp%i' % visits[i], 1e0, tauvi)
+            alloslope[i] = pmnd('oslope%i' % visits[i], 0e0, tauvs)
+            allologtau[i] = pmud('ologtau%i' % visits[i], -1e0, 5e0)
+            allologdelay[i] = pmud('ologdelay%i' % visits[i], -1e0, 5e0)
             pass
         nodes.extend(allvslope)
         nodes.extend(allvitcp)
@@ -459,7 +443,7 @@ def whitelight(nrm, fin, out, selftype,
         postflatphase = []
         for v in visits:
             postt = time[visits.index(v)]
-            if v in ttv: posttk = mcpost['dtk%i'%v]['quantiles'][50]
+            if v in ttv: posttk = mcpost['dtk%i' % v]['quantiles'][50]
             else: posttk = tmjd
             if 'inc' in allnodes:
                 postinc = mcpost['inc']['quantiles'][50]
@@ -478,19 +462,19 @@ def whitelight(nrm, fin, out, selftype,
                                 g1=g1[0], g2=g2[0],
                                 g3=g3[0], g4=g4[0]))
             postim.append(timlc(postt, orbits[visits.index(v)],
-                                vslope=mcpost['vslope%i'%v]['quantiles'][50],
-                                vitcp=mcpost['vitcp%i'%v]['quantiles'][50],
-                                oslope=mcpost['oslope%i'%v]['quantiles'][50],
-                                ologtau=mcpost['ologtau%i'%v]['quantiles'][50],
-                                ologdelay=mcpost['ologdelay%i'%v]['quantiles'][50]))
-            pass        
+                                vslope=mcpost['vslope%i' % v]['quantiles'][50],
+                                vitcp=mcpost['vitcp%i' % v]['quantiles'][50],
+                                oslope=mcpost['oslope%i' % v]['quantiles'][50],
+                                ologtau=mcpost['ologtau%i' % v]['quantiles'][50],
+                                ologdelay=mcpost['ologdelay%i' % v]['quantiles'][50]))
+            pass
         out['data'][p]['postlc'] = postlc
         out['data'][p]['postim'] = postim
         out['data'][p]['postsep'] = postsep
         out['data'][p]['postphase'] = postphase
-        out['data'][p]['postflatphase'] = postflatphase        
-        out['data'][p]['mcpost'] = mcpost        
-        out['data'][p]['mctrace'] = mctrace        
+        out['data'][p]['postflatphase'] = postflatphase
+        out['data'][p]['mcpost'] = mcpost
+        out['data'][p]['mctrace'] = mctrace
         out['STATUS'].append(True)
         wl = True
         if verbose:
@@ -511,7 +495,7 @@ def whitelight(nrm, fin, out, selftype,
                        borderaxespad=0., frameon=False)
             plt.tight_layout(rect=[0,0,(1 - 0.1*ncol),1])
             plt.show()
-            
+
             allpost = []
             alllbl = []
             allpval = []
@@ -521,12 +505,12 @@ def whitelight(nrm, fin, out, selftype,
                 alllbl.append(key)
                 pass
             allpost = np.array(allpost).T
-            import corner
-            corner.corner(allpost, labels=alllbl, truths=allpval,
-                          quantiles=[0.16, 0.5, 0.84])
-            plt.show()
+#            import corner
+#            corner.corner(allpost, labels=alllbl, truths=allpval,
+#                          quantiles=[0.16, 0.5, 0.84])
+#            plt.show()
             pass
-        pass    
+        pass
     return wl
 # ----------------------- --------------------------------------------
 # -- TRANSIT LIMB DARKENED LIGHT CURVE -- ----------------------------
@@ -584,15 +568,13 @@ def vecoccs(z, xrs, rprs):
     select = (~select1) & (~select2) & selx
     zzero = veczsel == 0e0
     if (True in select1 & zzero):
-        out[select1 & zzero] = np.pi*(np.square(vecxrs[select1 &
-                                                       zzero]))
+        out[select1 & zzero] = np.pi*(np.square(vecxrs[select1 & zzero]))
     if (True in select2 & zzero):
         out[select2 & zzero] = np.pi*(rprs**2)
     if (True in select & zzero):
         out[select & zzero] = np.pi*(rprs**2)
     if (True in select1 & ~zzero):
-        out[select1 & ~zzero] = np.pi*(np.square(vecxrs[select1 &
-                                                        ~zzero]))
+        out[select1 & ~zzero] = np.pi*(np.square(vecxrs[select1 & ~zzero]))
     if (True in select2):
         out[select2 & ~zzero] = np.pi*(rprs**2)
     if (True in select & ~zzero):
@@ -674,7 +656,7 @@ def createldgrid(minmu, maxmu, orbp,
             thiscl = allcl.T[i]
             thisel = allel.T[i]
             plt.errorbar(avmu, thiscl, yerr=thisel)
-            plt.plot(avmu, thiscl, '*', label='$\gamma$ %i'%i)
+            plt.plot(avmu, thiscl, '*', label='$\gamma$ %i' % i)
             pass
         plt.xlabel('Wavelength [$\mu$m]')
         plt.legend(bbox_to_anchor=(1, 0.5),
@@ -797,10 +779,130 @@ def timlc(vtime, orbits,
         select = orbits == o
         otime = xout[select] - np.mean(xout[select])
         olin = oslope*otime + 1e0
-        otimerp = (xout[select] - min(xout[select]))*(36e2)*(24e0) #s  
+        # SECONDS
+        otimerp = (xout[select] - min(xout[select]))*(36e2)*(24e0)
         orbramp = (1e0 - np.exp(-(otimerp + (1e1)**ologdelay)/
                                 ((1e1)**ologtau)))
         oout[select] = orbramp*olin
         pass
     return vout*oout
 # ---------------------- ---------------------------------------------
+# -- SPECTRUM -- -----------------------------------------------------
+def spectrum(fin, nrm, wht, out, selftype,
+             chainlen=int(4e4), verbose=False, debug=False):
+    exospec = False
+    priors = fin['priors'].copy()
+    planetloop = [p for p in nrm['data'].keys() if (len(nrm['data'][p]['visits']) > 0)]
+    for p in planetloop:
+        out['data'][p] = {'LD':[]}
+        wave = nrm['data'][p]['wavet']
+        nspec = nrm['data'][p]['nspec']
+        photnoise = nrm['data'][p]['photnoise']
+        im = wht['data'][p]['postim']
+        allz = wht['data'][p]['postsep']
+        whiterprs = wht['data'][p]['mcpost']['rprs']['quantiles'][50]
+        allwave = []
+        allspec = []
+        allim = []
+        allpnoise = []
+        for w, s, i, n in zip(nrm['data'][p]['wave'], nspec, im, photnoise):
+            allwave.extend(w)
+            allspec.extend(s)
+            allim.extend(i)
+            allpnoise.extend(n)
+            pass
+        allim = np.array(allim)
+        allz = np.array(allz)
+        disp = np.median([np.median(np.diff(w)) for w in wave])
+        nbin = np.min([len(w) for w in wave])
+        wavel = [np.min(w) for w in wave]
+        wavec = np.arange(nbin)*disp + np.mean([np.max(wavel), np.min(wavel)])
+        lwavec = wavec - disp/2e0
+        hwavec = wavec + disp/2e0
+        # LOOP OVER WAVELENGTH BINS ----------------------------------
+        out['data'][p]['WB'] = []
+        out['data'][p]['WBlow'] = []
+        out['data'][p]['WBup'] = []
+        out['data'][p]['ES'] = []
+        out['data'][p]['ESerr'] = []
+        out['data'][p]['LD'] = []
+        out['data'][p]['MCPOST'] = []
+        for wl, wh in zip(lwavec[1:-1], hwavec[1:-1]):
+            out['data'][p]['WBlow'].append(wl)
+            out['data'][p]['WBup'].append(wh)
+            out['data'][p]['WB'].append(np.mean([wl, wh]))
+            select = [(w > wl) & (w < wh) for w in allwave]
+            data = np.array([np.median(d[s]) for d, s in zip(allspec, select)])
+            dnoise = np.array([np.median(n[s]) for n, s in zip(allpnoise, select)])
+            valid = np.isfinite(data)
+            if selftype == 'transit':
+                bld = createldgrid([wl], [wh], priors,
+                                   segmentation=int(10), verbose=debug, debug=debug)
+                g1, g2, g3, g4 = bld['LD']
+                out['data'][p]['LD'].append([g1[0], g2[0], g3[0], g4[0]])
+                model = tldlc(abs(allz), whiterprs,
+                              g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0])
+                pass
+            else: model = tldlc(abs(allz), whiterprs)
+            if debug:
+                plt.figure()
+                plt.title(str(int(1e3*np.mean([wl, wh])))+' nm')
+                plt.plot(allz[valid], data[valid]/allim[valid], 'o')
+                plt.plot(allz[valid], model[valid], '^')
+                plt.xlabel('Separation [R*]')
+                plt.show()
+                pass
+            # PRIORS -------------------------------------------------
+            oot = (abs(allz) > (1e0 + whiterprs)) & valid
+            iot = ~oot
+            ootstd = np.std(data[oot])
+            taurprs = 1e0/(whiterprs*1e-1)**2
+            rprs = pmnd('rprs', whiterprs, taurprs)
+            sim = pmnd('immag', 1e0, 1e2)
+            iim = pmnd('imnorm', 0e0, 1e2)
+            nodes = [rprs, sim, iim]
+            # LIGHT CURVE MODEL --------------------------------------
+            @pm.deterministic
+            def lcmodel(r=rprs, s=sim, i=iim):
+                if selftype == 'transit':
+                    out = tldlc(abs(allz), float(r),
+                                g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0])
+                    pass
+                else: out = tldlc(abs(allz), float(r))
+                out = out*(allim*float(s) + float(i))
+                return out[valid]
+            tauwbdata = 1e0/dnoise**2
+            wbdata = pmnd('wbdata', mu=lcmodel,
+                          tau=tauwbdata[valid], value=data[valid], observed=True)
+            nodes.append(wbdata)
+            allnodes = [n.__name__ for n in nodes if not n.observed]
+            model = pm.Model(nodes)
+            mcmc = pm.MCMC(model)
+            burnin = int(chainlen/2)
+            mcmc.sample(chainlen, burn=burnin, progress_bar=verbose)
+            if verbose: print('')
+            mcpost = mcmc.stats()
+            out['data'][p]['ES'].append(mcpost['rprs']['quantiles'][50])
+            out['data'][p]['ESerr'].append(mcpost['rprs']['standard deviation'])
+            out['data'][p]['MCPOST'].append(mcpost)
+            pass
+        exospec = True
+        out['STATUS'].append(True)
+        pass
+    if verbose:
+        for p in out['data'].keys():
+            spectrum = np.array(out['data'][p]['ES'])
+            specerr = np.array(out['data'][p]['ESerr'])
+            specwave = np.array(out['data'][p]['WB'])
+            specerr = abs(spectrum**2 - (spectrum + specerr)**2)
+            spectrum = spectrum**2
+            plt.figure(figsize=(8,6))
+            plt.title(p)
+            plt.errorbar(specwave, 1e2*spectrum, fmt='.', yerr=1e2*specerr)
+            plt.xlabel(str('Wavelength [$\mu m$]'))
+            plt.ylabel(str('$(R_p/R_*)^2$ [%]'))
+            plt.show()
+            pass
+        pass
+    return exospec
+# ----------- -- -----------------------------------------------------

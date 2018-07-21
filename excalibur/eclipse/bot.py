@@ -1,6 +1,5 @@
 # -- IMPORTS -- ------------------------------------------------------
 import os
-import platform
 
 import dawgie
 import dawgie.db

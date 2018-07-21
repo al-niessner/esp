@@ -1,6 +1,5 @@
 # -- IMPORTS -- ------------------------------------------------------
 import os
-import platform
 
 import dawgie
 import dawgie.db
@@ -13,7 +12,8 @@ class Actor(dawgie.Task):
     def list(self)->[dawgie.Task]:
         return [
             trnalg.normalization(),
-            trnalg.whitelight()
+            trnalg.whitelight(),
+            trnalg.spectrum()
         ]
     pass
 # --------- ----------------------------------------------------------

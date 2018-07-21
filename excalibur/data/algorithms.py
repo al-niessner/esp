@@ -34,7 +34,7 @@ class collect(dawgie.Algorithm):
         self.__scrape = trgalg.scrape()
         self.__out = trgstates.FilterSV('frames')
         return
-    
+
     def name(self):
         return 'collect'
 
@@ -56,7 +56,7 @@ class collect(dawgie.Algorithm):
                 ok = self._collect(name, scrape, self.__out)
                 update = update or ok
                 pass
-            if update: ds.update()                
+            if update: ds.update()
             pass
         else: self._failure(errstring)
         return
@@ -66,7 +66,7 @@ class collect(dawgie.Algorithm):
                                     threshold=threshold,
                                     verbose=verbose, debug=debug)
         return collected
-    
+
     def _failure(self, errstr):
         errmess = '--< DATA COLLECT: ' + errstr + ' >--'
         if verbose: print(errmess)
@@ -79,7 +79,7 @@ class calibration(dawgie.Algorithm):
         self.__collect = collect()
         self.__out = [datstates.CalibrateSV(ext) for ext in fltrs]
         return
-    
+
     def name(self):
         return 'calibration'
 
@@ -114,7 +114,7 @@ class calibration(dawgie.Algorithm):
         caled = datcore.scancal(collect, tid, flttype, out,
                                 verbose=verbose, debug=debug)
         return caled
-    
+
     def _failure(self, errstr):
         errmess = '--< DATA CALIBRATION: ' + errstr + ' >--'
         if verbose: print(errmess)
@@ -128,7 +128,7 @@ class timing(dawgie.Algorithm):
         self.__calib = calibration()
         self.__out = [datstates.TimingSV(ext) for ext in fltrs]
         return
-    
+
     def name(self):
         return 'timing'
 
@@ -166,7 +166,7 @@ class timing(dawgie.Algorithm):
         chunked = datcore.timing(fin, cal, out,
                                  verbose=verbose, debug=debug)
         return chunked
-    
+
     def _failure(self, errstr):
         errmess = '--< DATA TIMING: ' + errstr + ' >--'
         if verbose: print(errmess)

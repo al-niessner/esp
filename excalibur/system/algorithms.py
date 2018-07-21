@@ -1,6 +1,4 @@
 # -- IMPORTS -- ------------------------------------------------------
-import pdb
-
 import dawgie
 
 import excalibur.system as sys
@@ -20,10 +18,11 @@ debug = False
 class validate(dawgie.Algorithm):
     def __init__(self):
         self._version_ = dawgie.VERSION(1,1,0)
+        self.__verbose = verbose
         self.__autofill = trgalg.autofill()
         self.__out = sysstates.PriorsSV('parameters')
         return
-    
+
     def name(self):
         return 'validate'
 
@@ -44,22 +43,24 @@ class validate(dawgie.Algorithm):
 
     def _validate(self, autofill, out):
         afilled = syscore.buildsp(autofill, out,
-                                  verbose=verbose, debug=debug)
+                                  verbose=self.__verbose,
+                                  debug=debug)
         return afilled
-    
+
     def _failure(self, errstr):
         errmess = '--< SYSTEM VALIDATE: ' + errstr + ' >--'
-        if verbose: print(errmess)
+        if self.__verbose: print(errmess)
         return
     pass
 
 class finalize(dawgie.Algorithm):
     def __init__(self):
         self._version_ = dawgie.VERSION(1,1,0)
+        self.__verbose = verbose
         self.__val = validate()
         self.__out = sysstates.PriorsSV('parameters')
         return
-    
+
     def name(self):
         return 'finalize'
 
@@ -80,7 +81,7 @@ class finalize(dawgie.Algorithm):
                 update = self._priority(overwrite[ds._tn()],
                                         self.__out)
                 pass
-            elif not(self.__out['PP'][-1]): update = True
+            elif not self.__out['PP'][-1]: update = True
             else:
                 if verbose:
                     print('>-- MISSING DICT INFO')
@@ -94,12 +95,13 @@ class finalize(dawgie.Algorithm):
 
     def _priority(self, overwrite, out):
         ffill = syscore.forcepar(overwrite, out,
-                                 verbose=verbose, debug=debug)
+                                 verbose=self.__verbose,
+                                 debug=debug)
         return ffill
-    
+
     def _failure(self, errstr):
         errmess = '--< SYSTEM FINALIZE: ' + errstr + ' >--'
-        if verbose: print(errmess)
+        if self.__verbose: print(errmess)
         return
     pass
 # ---------------- ---------------------------------------------------
