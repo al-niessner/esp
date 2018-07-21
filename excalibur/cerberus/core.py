@@ -1,6 +1,5 @@
 # -- IMPORTS -- ------------------------------------------------------
 import os
-import pdb
 import time
 import pymc as pm
 from pymc.distributions import Uniform as Uniform
@@ -8,11 +7,8 @@ from pymc.distributions import Normal as Normal
 import numpy as np
 import matplotlib.pyplot as plt
 
-from scipy import signal as sgn
-from scipy import constants as cst
 from lmfit import Parameters, minimize
-from scipy.interpolate import UnivariateSpline as spl
-from scipy.interpolate import PchipInterpolator as xspl
+import scipy.constants as cst
 from scipy.interpolate import interp1d as bspl
 # ------------- ------------------------------------------------------
 # -- CHECK INPUT STATE VECTORS -- ------------------------------------
@@ -47,8 +43,8 @@ def xsecs(mcmc, priors, sv,
           cialist=['H2-H', 'H2-H2', 'H2-He', 'He-H'],
           xmspecies=['TIO', 'CH4', 'H2O', 'H2CO', 'HCN', 'CO', 'CO2', 'NH3'],
           res='high', finesse=False,
-          fnsdir='/proj/sdp/data/CERBERUS/FINESSE',
           verbose=False, debug=False):
+    fnsdir = '/proj/sdp/data/CERBERUS/FINESSE'
     tbxsecs = time.time()
     if verbose: print('- Building Cross Sections Library ...')
     if not(finesse): wgrid = mcmc[res][0]['MU']
@@ -102,7 +98,7 @@ def xsecs(mcmc, priors, sv,
             sortme = np.argsort(x)
             x = x[sortme]
             y = y[sortme]
-            myspl = xspl(x, y, extrapolate=False)
+            myspl = bspl(x, y, extrapolate=False)
             library[myexomol]['SPL'].append(myspl)
             library[myexomol]['SPLNU'].append(iline)
             if debug:
@@ -181,7 +177,7 @@ def xsecs(mcmc, priors, sv,
                 sortme = np.argsort(x)
                 x = x[sortme]
                 y = y[sortme]
-                myspl = xspl(x, y, extrapolate=False)
+                myspl = bspl(x, y, extrapolate=False)
                 library[mycia]['SPL'].append(myspl)
                 library[mycia]['SPLNU'].append(iline)
                 if debug:
@@ -290,7 +286,7 @@ def gettpf(tips, knownspecies, debug=False):
                 pass
             pass
         for y in grid[ks]['Q']:
-            myspl = spl(tempgrid, y, s=0)
+            myspl = bspl(tempgrid, y)
             grid[ks]['SPL'].append(myspl)
             if debug:
                 plt.plot(tempgrid, myspl(tempgrid))
@@ -342,11 +338,11 @@ def hzlib(mcmc, priors, sv,
     sortme = np.argsort(pressure)
     x = pressure[sortme]
     y = jmax[sortme]
-    jmaxspl = spl(x, y, s=0, ext=1)
+    jmaxspl = bspl(x, y, s=0, ext=1)
     y = jmed[sortme]
-    jmedspl = spl(x, y, s=0, ext=1)
+    jmedspl = bspl(x, y, s=0, ext=1)
     y = jav[sortme]
-    javspl = spl(x, y, s=0, ext=1)
+    javspl = bspl(x, y, s=0, ext=1)
     if verbose:
         plt.figure()
         plt.plot(1e6*jmax, pressure, label='Jupiter $d_{max}(\Phi)$')
@@ -799,10 +795,8 @@ def atmos(mcmc, priors, xsecs, qtgrid, hzlib, sv,
         return cmodel
     # CERBERUS MCMC
     sigma = np.sqrt(np.nanmean(tspecerr[cleanup]**2))
-    mcdata = Normal('mcdata',
-                       mu=ccerberus, tau=1./(sigma**2),
-                       value=tspectrum[cleanup],
-                       observed=True)
+    mcdata = Normal('mcdata', mu=ccerberus, tau=1./(sigma**2),
+                    value=tspectrum[cleanup], observed=True)
     nodes = [mcdata, atmtp, rayleigh, cloud]
     if preference[0]:
         nodes.append(mtlct)
@@ -848,7 +842,7 @@ def atmos(mcmc, priors, xsecs, qtgrid, hzlib, sv,
     for thiskey in mcpost:
         thischain = markovc.trace(thiskey)[:]
         chains[thiskey] = thischain
-        chainout = ffcme(thischain, title=thiskey, verbose=debug)
+        chainout = np.median(thischain)
         bestparams[thiskey].value = chainout['mostlikely']
         bestvalues[thiskey] = chainout
         nbbn = int(np.sqrt(len(thischain)))
@@ -999,7 +993,7 @@ def crbmodel(mixratio, rayleigh, cloudtp, rp0, orbp, xsecs, qtgrid,
     if not(all(~selectcloud)) and not(blocked):
         cloudindex = np.max(np.arange(len(p))[selectcloud])+1
         for index in np.arange(wtau.size):
-            myspl = spl(reversep, tau[:,index], s=0)
+            myspl = bspl(reversep, tau[:,index])
             tau[cloudindex,index] = myspl(10.**cloudtp)
             tau[:cloudindex,index] = 0.
             pass
@@ -1202,7 +1196,7 @@ def gettau(orbp, xsecs, qtgrid, temp, mixratio,
             hzshift = hztop - np.log10(refhzp)
             splp = np.log10(p[::-1]) + hzshift
             splrh = rh[::-1]
-            thisfrh = spl(splp, splrh, s=0)
+            thisfrh = bspl(splp, splrh)
             rh = thisfrh(np.log10(p))
             rh[rh < 0] = 0.
             pass
@@ -1477,9 +1471,9 @@ def getwgrid(fnsdir, res, filename='wavegrid.txt',
     thisres = float(res.replace('R', ''))
     scaleres = fnsres*(thisres/np.min(fnsres))
     refpoint = float(wgrid[fnsres == np.min(fnsres)])
-    splscale = spl(wgrid, scaleres, s=0)
-    splsnr = spl(wgrid, starsnr, s=0)
-    spldw = spl(wgrid, dwgrid, s=0)
+    splscale = bspl(wgrid, scaleres)
+    splsnr = bspl(wgrid, starsnr)
+    spldw = bspl(wgrid, dwgrid)
     newgrid = [np.min(wgrid)]
     appendme = True
     while appendme:
@@ -1522,16 +1516,10 @@ def getwgrid(fnsdir, res, filename='wavegrid.txt',
 # -------------------------- -----------------------------------------
 # -- ATMOS FOR FINESSE -- --------------------------------------------
 def fatmos(priors, xsecs, qtgrid, hzlib, sv,
-           lbroadening=False, lshifting=False,
            res='R60',
-           mixratio={'H2O':-10., 'CH4':-10., 'HCN':-10., 'H2CO':-10.,
-                     'CO2':-10., 'CO':-10., 'NH3':-10., 'C2H2':-10.,
-                     'N2':-10., 'N2O':-10., 'O3':-10., 'O2':-10.},
            cialist=['H2-H2', 'H2-He', 'H2-H', 'He-H'],
            xmollist=['CH4', 'H2O', 'HCN', 'H2CO', 'CO', 'CO2', 'NH3'],
-           cloudtp=1., rayleigh=0.,
            mclen=int(1e4),
-           fnsdir='/proj/sdp/data/CERBERUS/FINESSE',
            snrdir='/proj/sdp/data/CERBERUS/FINESSE/SNR',
            verbose=False, debug=False, domcmc=False):
     orbp = priors['orbpar'][0]
@@ -1574,11 +1562,10 @@ def fatmos(priors, xsecs, qtgrid, hzlib, sv,
         mcmcnrch = Normal('CtoO', 0., 1./1.**2)
         # CERBERUS MODEL
         @pm.deterministic
-        def ccerberus(mtlct=mcmcmtlct, nrch=mcmcnrch,
-                      solidr=rp0hss, tpr=temp,
-                      crborbp=orbp, crbxsecs=xsecs,
+        def ccerberus(mtlct=mcmcmtlct, nrch=mcmcnrch, solidr=rp0hss,
+                      tpr=temp, crborbp=orbp, crbxsecs=xsecs,
                       crbqtgrid=qtgrid, crbwgrid=wgrid,
-                      crbhzlib=hzlib, hzp='SPLJAV',
+                      crbhzlib=hzlib,
                       crbcialist=cialist, crbxmollist=xmollist):
             tceq = {'CtoO':float(nrch), 'XtoH':float(mtlct)}
             cmodel = crbmodel(None, -10., 1., solidr,
@@ -1590,9 +1577,8 @@ def fatmos(priors, xsecs, qtgrid, hzlib, sv,
             return cmodel
         # CERBERUS MCMC
         mcdata = Normal('mcdata',
-                           mu=ccerberus, tau=1./(np.mean(dataerr**2)),
-                           value=shapedata,
-                           observed=True)
+                        mu=ccerberus, tau=1./(np.mean(dataerr**2)),
+                        value=shapedata, observed=True)
         mcmcmodel = pm.Model([mcdata, mcmcmtlct, mcmcnrch])
         markovc = pm.MCMC(mcmcmodel)
         markovc.sample(mclen, burn=2*int(mclen/1e1), progress_bar=verbose)
@@ -1603,7 +1589,7 @@ def fatmos(priors, xsecs, qtgrid, hzlib, sv,
         for thiskey in mcpost:
             thischain = markovc.trace(thiskey)[:]
             chains[thiskey] = thischain
-            chainout = ffcme(thischain, verbose=verbose)
+            chainout = np.median(thischain)
             bestvalues[thiskey] = chainout
             pass
         sv['MODEL'].append(bestvalues)
@@ -1627,66 +1613,5 @@ def fatmos(priors, xsecs, qtgrid, hzlib, sv,
         pass
     return
 # ----------------------- --------------------------------------------
-# -- CERBERUS EXOFURNACE MODEL -- ------------------------------------
-def exofurnace(mixratio, xsecs, qtgrid, tx, tdx, tprofile, pressure,
-               wgrid, lbroadening, lshifting, cretinus=False,
-               verbose=False, debug=False):
-    rho = pressure*1e5/(cst.Boltzmann*tprofile)
-    vectauelem = []
-    for thisdx, thisrho in zip(tdx, rho):
-        tauelem = thisrho*thisdx
-        vectauelem.append(tauelem)
-        pass
-    vectauelem = np.array([vectauelem]).T
-    firstelem = True
-    for elem in mixratio:
-        sigmaelem = []
-        mmr = 10.**(mixratio[elem]-6.)
-        for thistpr in tprofile:
-            sigma, lsig = absorb(xsecs[elem], qtgrid[elem],
-                                 thistpr, np.array([pressure]),
-                                 None, mmr,
-                                 lbroadening, lshifting, wgrid,
-                                 verbose=verbose,
-                                 debug=debug)  # cm^2/mol
-            sigma = np.array(sigma)*1e-4  # m^2/mol
-            sigmaelem.append(sigma[0])
-            pass
-        if firstelem:
-            sigmatot = np.array(sigmaelem)*mmr
-            firstelem = False
-            pass
-        else: sigmatot = sigmatot + np.array(sigmaelem)*mmr
-        pass
-    tau = vectauelem*sigmatot
-    tau *= 2.  # Exofurnace Symmetry
-    if verbose:
-        plt.figure()
-        plt.imshow(np.log10(tau), aspect='auto')
-        plt.title('Total Optical Depth / Temperature Layer')
-        plt.colorbar()
-        plt.show()
-        pass
-    tau = np.sum(tau, axis=0)
-    if cretinus: model = np.exp(tau)
-    else: model = 1 - np.exp(-tau)
-    # SLIT WINDOW FUNCTION
-    slitwidth = 2.5e-1/np.mean(np.diff(lsig))
-    slitwidth = 1e0/np.mean(np.diff(lsig))
-    gws = slitwidth/(2.*(np.sqrt(2.*np.log(2.))))
-    gwindow = sgn.gaussian(lsig.size, gws)
-    mconv = sgn.convolve(model, gwindow, mode='same')/np.sum(gwindow)
-    if cretinus: mconv[mconv < 1.] = 1.
-    else: mconv[mconv < 0.] = 0.
-    if debug:
-        plt.figure()
-        plt.plot(lsig, model, '.')
-        plt.plot(lsig, mconv)
-        plt.xlabel('Wave Number [$cm^{-1}$]')
-        plt.show()
-        pass
-    mconv = mconv[::-1]
-    return mconv
-# ------------------------------- ------------------------------------
 if __name__ == "__main__":
     pass

@@ -1,6 +1,5 @@
 # -- IMPORTS -- ------------------------------------------------------
 import os
-import pdb
 
 import dawgie
 
@@ -107,7 +106,7 @@ def scancal(collect, tid, flttype, out,
                     fmax.append(float(fits.header['GOODMAX']))
                     del fits.data
                     pass
-                if ('EXTNAME' in fits.header):
+                if 'EXTNAME' in fits.header:
                     if (fits.header['EXTNAME'] == 'ERR'):
                         fitsdata = np.empty(fits.data.shape)
                         fitsdata[:] = fits.data[:]
@@ -125,7 +124,7 @@ def scancal(collect, tid, flttype, out,
                                             fits.header['PIXVALUE'])))
                         pass
                     pass
-                if ('EXTNAME' in fits.header):
+                if 'EXTNAME' in fits.header:
                     if (fits.header['EXTNAME'] == 'DQ'):
                         fitsdata = np.empty(fits.data.shape)
                         fitsdata[:] = fits.data[:]
@@ -243,7 +242,7 @@ def scancal(collect, tid, flttype, out,
             thispstamp[thispstamp <= psmin] = np.nan
             thispstamp[thispstamp == 0] = np.nan
             # PLOTS --------------------------------------------------
-            if debug:
+            if False:
                 show = thispstamp.copy()
                 valid = np.isfinite(show)
                 show[~valid] = 0
@@ -489,7 +488,7 @@ def scancal(collect, tid, flttype, out,
         data['IGNORED'][index] = ignore
         pass
     # PLOTS ----------------------------------------------------------
-    if verbose:
+    if verbose and not(np.all(ignore)):
         timing = np.array([d for d,i in zip(data['TIME'],
                                             data['IGNORED'])
                            if not(i)])
@@ -512,9 +511,6 @@ def scancal(collect, tid, flttype, out,
                                              data['IGNORED'])
                             if not(i)])
         torder = np.argsort(timing)
-        allignore = data['IGNORED']
-        allculprits = data['TRIAL']
-        allindex = np.arange(len(data['LOC']))
         vrange = data['VRANGE']
         allerr = []
         for s, e, w in zip(spec, errspec, wave):
@@ -554,7 +550,11 @@ def scancal(collect, tid, flttype, out,
         plt.xlabel('Time Ordered Frame Number')
         plt.ylabel('Shift [Pixels]')
         plt.show()
-
+        pass
+    if verbose:
+        allignore = data['IGNORED']
+        allculprits = data['TRIAL']
+        allindex = np.arange(len(data['LOC']))
         print('>-- IGNORED:', np.nansum(allignore),
               '/', len(allignore))
         for index in allindex:
@@ -925,7 +925,7 @@ def timing(force, cal, out, verbose=False, debug=False):
         # TRANSIT VISIT PHASECURVE -----------------------------------
         for v in set(visto):
             selv = (visto == v)
-            trlim = 1e0 - rpors
+            trlim = 1e0
             posphsto = phsto.copy()
             posphsto[posphsto < 0] = posphsto[posphsto < 0] + 1e0
             pcconde = False
@@ -954,7 +954,7 @@ def timing(force, cal, out, verbose=False, debug=False):
         out['data'][p]['phasecurve'] = []
         for v in set(dvisto):
             selv = (dvisto == v)
-            trlim = 1e0 - rpors
+            trlim = 1e0
             posphsto = phsto.copy()
             posphsto[posphsto < 0] = posphsto[posphsto < 0] + 1e0
             pcconde = False

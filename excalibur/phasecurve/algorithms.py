@@ -1,11 +1,7 @@
 # -- IMPORTS -- ------------------------------------------------------
-import os
-import pdb
-
 import dawgie
 import dawgie.context
 
-import excalibur.phasecurve as phc
 import excalibur.phasecurve.states as phcstates
 
 import excalibur.data as dat
@@ -18,7 +14,7 @@ verbose = False
 debug = False
 # FILTERS
 fltrs = (trgedit.activefilters.__doc__).split('\n')
-fltrs = [t.strip() for t in fltrs if (len(t.replace(' ', '')) > 0)]
+fltrs = [t.strip() for t in fltrs if len(t.replace(' ', '')) > 0]
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class normalization(dawgie.Algorithm):

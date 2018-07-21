@@ -22,10 +22,6 @@ class PriorsSV(dawgie.StateVector):
         self['starkeys'] = excalibur.ValuesList()
         self['planetkeys'] = excalibur.ValuesList()
         self['exts'] = excalibur.ValuesList()
-        self['starmdt'].extend(['R*', 'T*', 'FEH*', 'LOGG*'])
-        self['planetmdt'].extend(['inc', 'period', 'ecc', 'rp',
-                                  't0', 'sma', 'mass'])
-        self['extsmdt'].extend(['_lowerr', '_uperr'])
         self['STATUS'].append(False)
         self['PP'].append(False)
         return
@@ -38,8 +34,7 @@ class PriorsSV(dawgie.StateVector):
             vlabels = ['FORCE PARAMETER',
                        'MISSING MANDATORY PARAMETERS',
                        'MISSING PLANET PARAMETERS',
-                       'PLANETS IGNORED',
-                       'AUTOFILL']
+                       'PLANETS IGNORED', 'AUTOFILL']
             hlabels = ['/', 'VALUE']
             table = visitor.add_table(clabels=hlabels,
                                       rows=len(vlabels))
@@ -76,10 +71,8 @@ class PriorsSV(dawgie.StateVector):
             for starlabels in allstar:
                 i = allstar.index(starlabels)
                 for l in starlabels:
-                    j = starlabels.index(l)
-                    table.get_cell(i, j).add_primitive(l)
-                    elem = self['priors'][l]
-                    table.get_cell(i, j).add_primitive(elem)
+                    table.get_cell(i, starlabels.index(l)).add_primitive(l)
+                    table.get_cell(i, starlabels.index(l)).add_primitive(self['priors'][l])
                     pass
                 pass
             for c in self['priors']['planets']:
@@ -90,10 +83,8 @@ class PriorsSV(dawgie.StateVector):
                 for starlabels in allplanet:
                     i = allplanet.index(starlabels)
                     for l in starlabels:
-                        j = starlabels.index(l)
-                        table.get_cell(i, j).add_primitive(l)
-                        elem = self['priors'][c][l]
-                        table.get_cell(i, j).add_primitive(elem)
+                        table.get_cell(i, starlabels.index(l)).add_primitive(l)
+                        table.get_cell(i, starlabels.index(l)).add_primitive(self['priors'][c][l])
                         pass
                     pass
                 pass

@@ -1,6 +1,4 @@
 # -- IMPORTS -- ------------------------------------------------------
-import pdb
-
 import excalibur.data.core as datcore
 import excalibur.system.core as syscore
 
@@ -68,16 +66,14 @@ def norm(cal, tme, fin, ext, out, selftype,
                 selv = (dvisits == v)
                 # ORBIT REJECTION ------------------------------------
                 if selftype in ['transit', 'phasecurve']:
-                    select = ((phase[selv] > 0.25) |
-                              (phase[selv] < -0.25))
+                    select = (phase[selv] > 0.25) | (phase[selv] < -0.25)
                     vzoot = zoot[selv]
                     vzoot[select] = vzoot[select] + 666
                     zoot[selv] = vzoot
                     pass
                 if selftype in ['eclipse']:
                     vzoot = zoot[selv]
-                    select = ((phase[selv] < 0.25) &
-                              (phase[selv] > -0.25))
+                    select = (phase[selv] < 0.25) & (phase[selv] > -0.25)
                     vzoot[select] = vzoot[select] + 666
                     zoot[selv] = vzoot
                     pass
@@ -102,13 +98,11 @@ def norm(cal, tme, fin, ext, out, selftype,
                 trash = []
                 if len(ootplus) > 1:
                     keep = ootplus[ootpv.index(min(ootpv))]
-                    trash.extend([i for i in ootplus
-                                  if i != keep])
+                    trash.extend([i for i in ootplus if i != keep])
                     pass
                 if len(ootminus) > 1:
                     keep = ootminus[ootmv.index(max(ootmv))]
-                    trash.extend([i for i in ootminus
-                                  if i != keep])
+                    trash.extend([i for i in ootminus if i != keep])
                     pass
                 if len(trash) > 0:
                     for o in trash:
@@ -125,15 +119,13 @@ def norm(cal, tme, fin, ext, out, selftype,
                     pass
                 # OUT OF TRANSIT SELECTION ---------------------------
                 selv = selv & (~ignore.astype(bool))
-                selvoot = (selv & (abs(z) > (1e0 + rpors)) &
-                           (~nrmignore))
+                selvoot = selv & (abs(z) > (1e0 + rpors)) & (~nrmignore)
                 voots = [s for s, sv in zip(spectra, selvoot) if sv]
                 vootw = [w for w, sv in zip(wave, selvoot) if sv]
                 viss = [s for s, sv in zip(spectra, selv) if sv]
                 visw = [w for w, sv in zip(wave, selv) if sv]
                 if np.sum(selvoot) > 6:
-                    wt, te = tplbuild(voots, vootw, vrange,
-                                      disp[selvoot]*1e-4)
+                    wt, te = tplbuild(voots, vootw, vrange, disp[selvoot]*1e-4)
                     selfin = np.isfinite(te)
                     wt = np.array(wt)
                     te = np.array(te)
@@ -141,16 +133,13 @@ def norm(cal, tme, fin, ext, out, selftype,
                         wt = wt[selfin]
                         te = te[selfin]
                         pass
-                    ti = itp(wt, te, kind='linear',
-                             bounds_error=False, fill_value=np.nan)
+                    ti = itp(wt, te,
+                             kind='linear', bounds_error=False, fill_value=np.nan)
                     nspectra = [s/ti(w) for s,w in zip(viss, visw)]
                     photnoise = [np.sqrt(s)/ti(w)/np.sqrt(l)
-                                 for s,w,l in zip(viss, visw,
-                                                  scanlen[selv])]
-                    check = np.array([np.nanstd(s) <
-                                      27e0*np.nanmedian(p)
-                                      for s, p in zip(nspectra,
-                                                      photnoise)])
+                                 for s,w,l in zip(viss, visw, scanlen[selv])]
+                    check = np.array([np.nanstd(s) < 27e0*np.nanmedian(p)
+                                      for s, p in zip(nspectra, photnoise)])
                     if np.sum(check) > 9:
                         vnspec = np.array(nspectra)[check]
                         nphotn = np.array(photnoise)[check]
@@ -169,8 +158,7 @@ def norm(cal, tme, fin, ext, out, selftype,
                         if debug:
                             plt.figure()
                             for w,s in zip(visw[check], vnspec):
-                                select = ((w > np.min(vrange)) &
-                                          (w < np.max(vrange)))
+                                select = (w > np.min(vrange)) & (w < np.max(vrange))
                                 plt.plot(w[select], s[select], 'o')
                                 pass
                             plt.ylabel('Normalized Spectra')
@@ -190,8 +178,7 @@ def norm(cal, tme, fin, ext, out, selftype,
                     pass
                 pass
             if verbose:
-                for v, m in zip(out['data'][p]['vignore'],
-                                out['data'][p]['trial']):
+                for v, m in zip(out['data'][p]['vignore'], out['data'][p]['trial']):
                     print(v, m)
                     pass
                 pass
@@ -244,8 +231,7 @@ def tplbuild(spectra, wave, vrange, disp,
 # ---------------------- ---------------------------------------------
 # -- WHITE LIGHT CURVE -- --------------------------------------------
 def whitelight(nrm, fin, out, selftype,
-               chainlen=int(1e5),
-               verbose=False, debug=False):
+               chainlen=int(1e5), verbose=False, debug=False):
     wl = False
     priors = fin['priors'].copy()
     ssc = syscore.ssconstants()
@@ -333,8 +319,7 @@ def whitelight(nrm, fin, out, selftype,
             plt.figure(figsize=(10, 6))
             for v in visits:
                 index = visits.index(v)
-                plt.plot(phase[index], allwhite[index], 'o',
-                         label=str(v))
+                plt.plot(phase[index], allwhite[index], 'o', label=str(v))
                 pass
             if len(visits) > 14: ncol = 2
             else: ncol = 1
@@ -352,8 +337,7 @@ def whitelight(nrm, fin, out, selftype,
         for v in visits:
             index = visits.index(v)
             zvis = sep[index]
-            select = ((abs(zvis) < (1e0 + rpors)) &
-                      (abs(zvis) > (1e0 - rpors)))
+            select = ((abs(zvis) < (1e0 + rpors)) & (abs(zvis) > (1e0 - rpors)))
             if True in select: ttv.append(v)
             pass
         # PRIORS -----------------------------------------------------
@@ -803,3 +787,122 @@ def timlc(vtime, orbits,
         pass
     return vout*oout
 # ---------------------- ---------------------------------------------
+# -- SPECTRUM -- -----------------------------------------------------
+def spectrum(fin, nrm, wht, out, selftype,
+             chainlen=int(4e4), verbose=False, debug=False):
+    exospec = False
+    priors = fin['priors'].copy()
+    planetloop = [p for p in nrm['data'].keys() if (len(nrm['data'][p]['visits']) > 0)]
+    for p in planetloop:
+        out['data'][p] = {'LD':[]}
+        wave = nrm['data'][p]['wavet']
+        nspec = nrm['data'][p]['nspec']
+        photnoise = nrm['data'][p]['photnoise']
+        im = wht['data'][p]['postim']
+        allz = wht['data'][p]['postsep']
+        whiterprs = wht['data'][p]['mcpost']['rprs']['quantiles'][50]
+        allwave = []
+        allspec = []
+        allim = []
+        allpnoise = []
+        for w, s, i, n in zip(nrm['data'][p]['wave'], nspec, im, photnoise):
+            allwave.extend(w)
+            allspec.extend(s)
+            allim.extend(i)
+            allpnoise.extend(n)
+            pass
+        allim = np.array(allim)
+        allz = np.array(allz)
+        disp = np.median([np.median(np.diff(w)) for w in wave])
+        nbin = np.min([len(w) for w in wave])
+        wavel = [np.min(w) for w in wave]
+        wavec = np.arange(nbin)*disp + np.mean([np.max(wavel), np.min(wavel)])
+        lwavec = wavec - disp/2e0
+        hwavec = wavec + disp/2e0
+        # LOOP OVER WAVELENGTH BINS ----------------------------------
+        out['data'][p]['WB'] = []
+        out['data'][p]['WBlow'] = []
+        out['data'][p]['WBup'] = []
+        out['data'][p]['ES'] = []
+        out['data'][p]['ESerr'] = []
+        out['data'][p]['LD'] = []
+        out['data'][p]['MCPOST'] = []
+        for wl, wh in zip(lwavec[1:-1], hwavec[1:-1]):
+            out['data'][p]['WBlow'].append(wl)
+            out['data'][p]['WBup'].append(wh)
+            out['data'][p]['WB'].append(np.mean([wl, wh]))
+            select = [(w > wl) & (w < wh) for w in allwave]
+            data = np.array([np.median(d[s]) for d, s in zip(allspec, select)])
+            dnoise = np.array([np.median(n[s]) for n, s in zip(allpnoise, select)])
+            valid = np.isfinite(data)
+            if selftype == 'transit':
+                bld = createldgrid([wl], [wh], priors,
+                                   segmentation=int(10), verbose=debug, debug=debug)
+                g1, g2, g3, g4 = bld['LD']
+                out['data'][p]['LD'].append([g1[0], g2[0], g3[0], g4[0]])
+                model = tldlc(abs(allz), whiterprs,
+                              g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0])
+                pass
+            else: model = tldlc(abs(allz), whiterprs)
+            if debug:
+                plt.figure()
+                plt.title(str(int(1e3*np.mean([wl, wh])))+' nm')
+                plt.plot(allz[valid], data[valid]/allim[valid], 'o')
+                plt.plot(allz[valid], model[valid], '^')
+                plt.xlabel('Separation [R*]')
+                plt.show()
+                pass
+            # PRIORS -------------------------------------------------
+            oot = (abs(allz) > (1e0 + whiterprs)) & valid
+            iot = ~oot
+            ootstd = np.std(data[oot])
+            taurprs = 1e0/(whiterprs*1e-1)**2
+            rprs = pmnd('rprs', whiterprs, taurprs)
+            sim = pmnd('immag', 1e0, 1e2)
+            iim = pmnd('imnorm', 0e0, 1e2)
+            nodes = [rprs, sim, iim]
+            # LIGHT CURVE MODEL --------------------------------------
+            @pm.deterministic
+            def lcmodel(r=rprs, s=sim, i=iim):
+                if selftype == 'transit':
+                    out = tldlc(abs(allz), float(r),
+                                g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0])
+                    pass
+                else: out = tldlc(abs(allz), float(r))
+                out = out*(allim*float(s) + float(i))
+                return out[valid]
+            tauwbdata = 1e0/dnoise**2
+            wbdata = pmnd('wbdata', mu=lcmodel,
+                          tau=tauwbdata[valid], value=data[valid], observed=True)
+            nodes.append(wbdata)
+            allnodes = [n.__name__ for n in nodes if not n.observed]
+            model = pm.Model(nodes)
+            mcmc = pm.MCMC(model)
+            burnin = int(chainlen/2)
+            mcmc.sample(chainlen, burn=burnin, progress_bar=verbose)
+            if verbose: print('')
+            mcpost = mcmc.stats()
+            out['data'][p]['ES'].append(mcpost['rprs']['quantiles'][50])
+            out['data'][p]['ESerr'].append(mcpost['rprs']['standard deviation'])
+            out['data'][p]['MCPOST'].append(mcpost)
+            pass
+        exospec = True
+        out['STATUS'].append(True)
+        pass
+    if verbose:
+        for p in out['data'].keys():
+            spectrum = np.array(out['data'][p]['ES'])
+            specerr = np.array(out['data'][p]['ESerr'])
+            specwave = np.array(out['data'][p]['WB'])
+            specerr = abs(spectrum**2 - (spectrum + specerr)**2)
+            spectrum = spectrum**2
+            plt.figure(figsize=(8,6))
+            plt.title(p)
+            plt.errorbar(specwave, 1e2*spectrum, fmt='.', yerr=1e2*specerr)
+            plt.xlabel(str('Wavelength [$\mu m$]'))
+            plt.ylabel(str('$(R_p/R_*)^2$ [%]'))
+            plt.show()
+            pass
+        pass
+    return exospec
+# ----------- -- -----------------------------------------------------

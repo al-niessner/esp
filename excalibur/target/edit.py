@@ -29,6 +29,7 @@ HAT-P-32 :
 HAT-P-38 :
 HAT-P-41 :
 HATS-7 :
+HD 97658 :
 HD 106315 :
 HD 149026 :
 HD 189733 :
@@ -96,6 +97,7 @@ HD 106315 : HD106315
 K2-96 : K296
 Kepler-16 : KEPLER16
 Kepler-51 : Kepler51
+WASP-33 : WASP33
     '''
     return
 # -------------------- -----------------------------------------------
@@ -169,7 +171,11 @@ overwrite[starID] =
     overwrite['K2-25'] = {
         'b':{'logg':3.8403983985773555,
              'logg_uperr':0.38, 'logg_lowerr':-0.38,
-             'logg_ref':'Mann et al. 2016'}}
+             'logg_ref':'Mann et al. 2016',
+             'sma':0.029535117574370662,
+             'sma_uperr':0.0021173577439160705,
+             'sma_lowerr':-0.0021173577439160705,
+             'sma_ref':'Mann et al. 2016'}}
     overwrite['K2-3'] = {
         'b':{'logg':2.5561945544995859,
              'logg_uperr':0.26, 'logg_lowerr':-0.26,
@@ -186,7 +192,11 @@ overwrite[starID] =
     overwrite['K2-93'] = {
         'b':{'logg':3.26,
              'logg_lowerr':0.07, 'logg_uperr':-0.07,
-             'logg_ref':'Dressing et al. 2015'}}
+             'logg_ref':'Dressing et al. 2015',
+             'sma':0.08135713445017638,
+             'sma_uperr':9.765981248020531e-05,
+             'sma_lowerr':-9.765981248020531e-05,
+             'sma_ref':'Dressing et al. 2015'}}
     overwrite['KELT-1'] = {
         'FEH*':0.009, 'FEH*_uperr':0.073, 'FEH*_lowerr':-0.073,
         'FEH*_units':'[Fe/H]', 'FEH*_ref':'Siverd et al. 2012'}
@@ -205,5 +215,18 @@ overwrite[starID] =
     overwrite['WASP-43'] = {
         'FEH*':-0.05, 'FEH*_uperr':0.17, 'FEH*_lowerr':-0.17,
         'FEH*_units':'[Fe/H]', 'FEH*_ref':'Hellier et al. 2011'}
+    overwrite['WASP-6'] = {
+        'b':{'inc':88.47,
+             'inc_uperr':0.65, 'inc_lowerr':-0.47,
+             'inc_ref':'Gillon et al. 2009',
+             't0':2454596.433,
+             't0_uperr':0.00015, 't0_lowerr':-0.00015,
+             't0_ref':'Gillon et al. 2009',
+             'sma':0.0421,
+             'sma_uperr':0.0008,
+             'sma_lowerr':-0.0008,
+             'sma_ref':'Gillon et al. 2009',
+             'period':3.3610060,
+             'period_ref':'Gillon et al. 2009'}}
     return overwrite
 # ---------------------------- ---------------------------------------

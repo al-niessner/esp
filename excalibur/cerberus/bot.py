@@ -1,7 +1,5 @@
 # -- IMPORTS -- ------------------------------------------------------
 import os
-import sys
-import pdb
 
 import dawgie
 import dawgie.db
