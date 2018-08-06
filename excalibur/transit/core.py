@@ -842,14 +842,14 @@ def timlc(vtime, orbits,
         otime = xout[select] - np.mean(xout[select])
         if ooto is None:
             olin = oslope*otime + 1e0
-            otimerp = (xout[select] - min(xout[select]))*(36e2)*(24e0) # SECONDS
+            otimerp = (xout[select] - min(xout[select]))*(36e2)*(24e0)  # SECONDS
             orbramp = (1e0 - np.exp(-(otimerp + (1e1)**ologdelay)/((1e1)**ologtau)))
             oout[select] = orbramp*olin
             pass
         else:
             if o in ooto:
                 olin = oslope[orbinc]*otime + 1e0
-                otimerp = (xout[select] - min(xout[select]))*(36e2)*(24e0) # SECONDS
+                otimerp = (xout[select] - min(xout[select]))*(36e2)*(24e0)  # SECONDS
                 orbramp = (1e0 - np.exp(-(otimerp + (1e1)**ologdelay[orbinc])/
                                         ((1e1)**ologtau[orbinc])))
                 oout[select] = orbramp*olin
@@ -857,7 +857,7 @@ def timlc(vtime, orbits,
                 pass
             else:
                 olin = oslope[-1]*otime + 1e0
-                otimerp = (xout[select] - min(xout[select]))*(36e2)*(24e0) # SECONDS
+                otimerp = (xout[select] - min(xout[select]))*(36e2)*(24e0)  # SECONDS
                 orbramp = (1e0 - np.exp(-(otimerp + (1e1)**ologdelay[-1])/
                                         ((1e1)**ologtau[-1])))
                 oout[select] = orbramp*olin
