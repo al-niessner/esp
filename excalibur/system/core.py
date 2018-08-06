@@ -301,7 +301,7 @@ def forcepar(overwrite, out, verbose=False, debug=False):
                 pass
             except (ValueError, KeyError): forced = False
             pass
-        else:                        
+        else:
             try:
                 pnet = n.split(':')[0]
                 pkey = n.split(':')[1]

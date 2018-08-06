@@ -231,12 +231,11 @@ def tplbuild(spectra, wave, vrange, disp,
 # ---------------------- ---------------------------------------------
 # -- WHITE LIGHT CURVE -- --------------------------------------------
 def whitelight(nrm, fin, out, selftype,
-               chainlen=int(1e5), verbose=False, debug=False):
+               chainlen=int(8e4), verbose=False, debug=False):
     wl = False
     priors = fin['priors'].copy()
     ssc = syscore.ssconstants()
-    planetloop = [p for p in nrm['data'].keys()
-                  if (len(nrm['data'][p]['visits']) > 0)]
+    planetloop = [p for p in nrm['data'].keys() if (len(nrm['data'][p]['visits']) > 0)]
     for p in planetloop:
         rpors = priors[p]['rp']/priors['R*']*ssc['Rjup/Rsun']
         visits = nrm['data'][p]['visits']
@@ -254,6 +253,7 @@ def whitelight(nrm, fin, out, selftype,
         out['data'][p]['nspec'] = nspec
         out['data'][p]['wave'] = wave
         out['data'][p]['visits'] = visits
+        out['data'][p]['orbits'] = orbits
         allwhite = []
         allerrwhite = []
         flatminww = []
@@ -264,8 +264,7 @@ def whitelight(nrm, fin, out, selftype,
             vwavet = np.array(wavet[index])
             white = []
             errwhite = []
-            for w, s, e in zip(wave[index],
-                               nspec[index], photnoise[index]):
+            for w, s, e in zip(wave[index], nspec[index], photnoise[index]):
                 select = ((w > (min(vwavet) + vdisp/2e0)) &
                           (w < (max(vwavet) - vdisp/2e0)))
                 if np.any(~np.isfinite(s[select])):
@@ -274,8 +273,7 @@ def whitelight(nrm, fin, out, selftype,
                     pass
                 else:
                     white.append(np.median(s[select]))
-                    errwhite.append(np.median(e[select])/
-                                    np.sqrt(np.sum(select)))
+                    errwhite.append(np.median(e[select])/np.sqrt(np.sum(select)))
                     pass
                 flatminww.append(min(w[select]))
                 flatmaxww.append(max(w[select]))
@@ -306,8 +304,7 @@ def whitelight(nrm, fin, out, selftype,
                                    segmentation=int(10),
                                    verbose=verbose, debug=debug)
             g1, g2, g3, g4 = whiteld['LD']
-            wlmod = tldlc(abs(flatz), rpors,
-                          g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0])
+            wlmod = tldlc(abs(flatz), rpors, g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0])
             pass
         else:
             wlmod = tldlc(abs(flatz), rpors)
@@ -359,8 +356,7 @@ def whitelight(nrm, fin, out, selftype,
             tautknot = 1e0/(trdura*1e-1)**2
             tknotmin = tmjd - trdura/2e0
             tknotmax = tmjd + trdura/2e0
-            alltknot[i] = pmtnd('dtk%i' % ttv[i], tmjd, tautknot,
-                                tknotmin, tknotmax)
+            alltknot[i] = pmtnd('dtk%i' % ttv[i], tmjd, tautknot, tknotmin, tknotmax)
             pass
         nodes.extend(alltknot)
         if priors[p]['inc'] != 9e1:
@@ -373,25 +369,59 @@ def whitelight(nrm, fin, out, selftype,
                 upinc = 9e1
                 pass
             tauinc = 1e0/(priors[p]['inc']*1e-2)**2
-            inc = pmtnd('inc', priors[p]['inc'], tauinc,
-                        lowinc, upinc)
+            inc = pmtnd('inc', priors[p]['inc'], tauinc, lowinc, upinc)
             nodes.append(inc)
+            pass
+        # OOT ORBITS
+        ootorbits = []
+        ootoindex = []
+        totalindex = 0
+        for i in range(len(visits)):
+            oot2append = []
+            ooti2append = []
+            for j in set(np.sort(orbits[i])):
+                select = orbits[i] == j
+                if abs(np.median(sep[i][select])) > (1e0 + rpors):
+                    oot2append.append(j)
+                    ooti2append.append(totalindex)
+                    totalindex += 1
+                    pass
+                pass
+            ootorbits.append(oot2append)
+            ootoindex.append(ooti2append)
             pass
         # INSTRUMENT MODEL PRIORS ------------------------------------
         tauvs = 1e0/((1e-2/trdura)**2)
         tauvi = 1e0/(ootstd**2)
         allvslope = np.empty(len(visits), dtype=object)
         allvitcp = np.empty(len(visits), dtype=object)
-        alloslope = np.empty(len(visits), dtype=object)
-        allologtau = np.empty(len(visits), dtype=object)
-        allologdelay = np.empty(len(visits), dtype=object)
+        if len(visits) > 20:
+            alloslope = np.empty(len(visits), dtype=object)
+            allologtau = np.empty(len(visits), dtype=object)
+            allologdelay = np.empty(len(visits), dtype=object)
+            commonoim = True
+            pass
+        else:
+            alloslope = np.empty(totalindex, dtype=object)
+            allologtau = np.empty(totalindex, dtype=object)
+            allologdelay = np.empty(totalindex, dtype=object)
+            commonoim = False
+            pass
         for i in range(len(visits)):
-            allvslope[i] = pmtnd('vslope%i' % visits[i], 0e0, tauvs,
-                                 -1e-1, 1e-1)
+            allvslope[i] = pmtnd('vslope%i' % visits[i], 0e0, tauvs, -1e-1, 1e-1)
             allvitcp[i] = pmnd('vitcp%i' % visits[i], 1e0, tauvi)
-            alloslope[i] = pmnd('oslope%i' % visits[i], 0e0, tauvs)
-            allologtau[i] = pmud('ologtau%i' % visits[i], -1e0, 5e0)
-            allologdelay[i] = pmud('ologdelay%i' % visits[i], -1e0, 5e0)
+            if commonoim:
+                alloslope[i] = pmnd('oslope%i' % visits[i], 0e0, tauvs)
+                allologtau[i] = pmud('ologtau%i' % visits[i], -1e0, 5e0)
+                allologdelay[i] = pmud('ologdelay%i' % visits[i], -1e0, 5e0)
+                pass
+            pass
+        if not commonoim:
+            for i in range(totalindex):
+                alloslope[i] = pmnd('oslope%i' % i, 0e0, tauvs)
+                allologtau[i] = pmud('ologtau%i' % i, -1e0, 5e0)
+                allologdelay[i] = pmud('ologdelay%i' % i, -1e0, 5e0)
+                pass
             pass
         nodes.extend(allvslope)
         nodes.extend(allvitcp)
@@ -402,8 +432,7 @@ def whitelight(nrm, fin, out, selftype,
         @pm.deterministic
         def orbital(r=rprs, icln=inc, atk=alltknot,
                     avs=allvslope, avi=allvitcp,
-                    aos=alloslope,
-                    aolt=allologtau, aold=allologdelay):
+                    aos=alloslope, aolt=allologtau, aold=allologdelay):
             out = []
             for v in visits:
                 omt = time[visits.index(v)]
@@ -413,12 +442,27 @@ def whitelight(nrm, fin, out, selftype,
                                            omtk, smaors, period, ecc)
                 lcout = tldlc(abs(omz), float(r),
                               g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0])
-                imout = timlc(omt, orbits[visits.index(v)],
-                              vslope=float(avs[visits.index(v)]),
-                              vitcp=float(avi[visits.index(v)]),
-                              oslope=float(aos[visits.index(v)]),
-                              ologtau=float(aolt[visits.index(v)]),
-                              ologdelay=float(aold[visits.index(v)]))
+                if commonoim:
+                    imout = timlc(omt, orbits[visits.index(v)],
+                                  vslope=float(avs[visits.index(v)]),
+                                  vitcp=float(avi[visits.index(v)]),
+                                  oslope=float(aos[visits.index(v)]),
+                                  ologtau=float(aolt[visits.index(v)]),
+                                  ologdelay=float(aold[visits.index(v)]))
+                    pass
+                else:
+                    ooti = ootoindex[visits.index(v)]
+                    oslopetable = [float(aos[i]) for i in ooti]
+                    ologtautable = [float(aolt[i]) for i in ooti]
+                    ologdelaytable = [float(aold[i]) for i in ooti]
+                    imout = timlc(omt, orbits[visits.index(v)],
+                                  vslope=float(avs[visits.index(v)]),
+                                  vitcp=float(avi[visits.index(v)]),
+                                  oslope=oslopetable,
+                                  ologtau=ologtautable,
+                                  ologdelay=ologdelaytable,
+                                  ooto=ootorbits[visits.index(v)])
+                    pass
                 out.extend(lcout*imout)
                 pass
             return out
@@ -461,12 +505,30 @@ def whitelight(nrm, fin, out, selftype,
                                 mcpost['rprs']['quantiles'][50],
                                 g1=g1[0], g2=g2[0],
                                 g3=g3[0], g4=g4[0]))
-            postim.append(timlc(postt, orbits[visits.index(v)],
-                                vslope=mcpost['vslope%i' % v]['quantiles'][50],
-                                vitcp=mcpost['vitcp%i' % v]['quantiles'][50],
-                                oslope=mcpost['oslope%i' % v]['quantiles'][50],
-                                ologtau=mcpost['ologtau%i' % v]['quantiles'][50],
-                                ologdelay=mcpost['ologdelay%i' % v]['quantiles'][50]))
+            if commonoim:
+                postim.append(timlc(postt, orbits[visits.index(v)],
+                                    vslope=mcpost['vslope%i' % v]['quantiles'][50],
+                                    vitcp=mcpost['vitcp%i' % v]['quantiles'][50],
+                                    oslope=mcpost['oslope%i' % v]['quantiles'][50],
+                                    ologtau=mcpost['ologtau%i' % v]['quantiles'][50],
+                                    ologdelay=mcpost['ologdelay%i' % v]['quantiles'][50]))
+                pass
+            else:
+                ooti = ootoindex[visits.index(v)]
+                oslopetable = [mcpost['oslope%i' % i]['quantiles'][50]
+                               for i in ooti]
+                ologtautable = [mcpost['ologtau%i' % i]['quantiles'][50]
+                                for i in ooti]
+                ologdelaytable = [mcpost['ologdelay%i' % i]['quantiles'][50]
+                                  for i in ooti]
+                postim.append(timlc(postt, orbits[visits.index(v)],
+                                    vslope=mcpost['vslope%i' % v]['quantiles'][50],
+                                    vitcp=mcpost['vitcp%i' % v]['quantiles'][50],
+                                    oslope=oslopetable,
+                                    ologtau=ologtautable,
+                                    ologdelay=ologdelaytable,
+                                    ooto=ootorbits[visits.index(v)]))
+                pass
             pass
         out['data'][p]['postlc'] = postlc
         out['data'][p]['postim'] = postim
@@ -475,6 +537,9 @@ def whitelight(nrm, fin, out, selftype,
         out['data'][p]['postflatphase'] = postflatphase
         out['data'][p]['mcpost'] = mcpost
         out['data'][p]['mctrace'] = mctrace
+        out['data'][p]['ootorbits'] = ootorbits
+        out['data'][p]['ootoindex'] = ootoindex
+        out['data'][p]['commonoim'] = commonoim
         out['STATUS'].append(True)
         wl = True
         if verbose:
@@ -505,10 +570,6 @@ def whitelight(nrm, fin, out, selftype,
                 alllbl.append(key)
                 pass
             allpost = np.array(allpost).T
-#            import corner
-#            corner.corner(allpost, labels=alllbl, truths=allpval,
-#                          quantiles=[0.16, 0.5, 0.84])
-#            plt.show()
             pass
         pass
     return wl
@@ -605,6 +666,7 @@ def createldgrid(minmu, maxmu, orbp,
                  verbose=False, debug=False):
     tstar = orbp['T*']
     terr = np.sqrt(abs(orbp['T*_uperr']*orbp['T*_lowerr']))
+    if terr < (3e0*tstar/1e2): terr = 3e0*tstar/1e2
     fehstar = orbp['FEH*']
     feherr = np.sqrt(abs(orbp['FEH*_uperr']*orbp['FEH*_lowerr']))
     loggstar = orbp['LOGG*']
@@ -762,34 +824,51 @@ def nlldx(params, x, data=None, weights=None):
     gamma2 = params['gamma2'].value
     gamma3 = params['gamma3'].value
     gamma4 = params['gamma4'].value
-    model = NonlinearModel.evaluate(x,
-                                    [gamma1, gamma2, gamma3, gamma4])
+    model = NonlinearModel.evaluate(x, [gamma1, gamma2, gamma3, gamma4])
     if data is None: return model
     if weights is None: return data - model
     return (data - model)/weights
 # ----------- --------------------------------------------------------
 # -- INSTRUMENT MODEL -- ---------------------------------------------
 def timlc(vtime, orbits,
-          vslope=0, vitcp=1e0,
-          oslope=0, ologtau=0, ologdelay=0):
+          vslope=0, vitcp=1e0, oslope=0, ologtau=0, ologdelay=0,
+          ooto=None):
     xout = np.array(vtime) - np.mean(vtime)
     vout = vslope*xout + vitcp
     oout = np.ones(vout.size)
-    for o in set(orbits):
+    orbinc = 0
+    for o in set(np.sort(orbits)):
         select = orbits == o
         otime = xout[select] - np.mean(xout[select])
-        olin = oslope*otime + 1e0
-        # SECONDS
-        otimerp = (xout[select] - min(xout[select]))*(36e2)*(24e0)
-        orbramp = (1e0 - np.exp(-(otimerp + (1e1)**ologdelay)/
-                                ((1e1)**ologtau)))
-        oout[select] = orbramp*olin
+        if ooto is None:
+            olin = oslope*otime + 1e0
+            otimerp = (xout[select] - min(xout[select]))*(36e2)*(24e0) # SECONDS
+            orbramp = (1e0 - np.exp(-(otimerp + (1e1)**ologdelay)/((1e1)**ologtau)))
+            oout[select] = orbramp*olin
+            pass
+        else:
+            if o in ooto:
+                olin = oslope[orbinc]*otime + 1e0
+                otimerp = (xout[select] - min(xout[select]))*(36e2)*(24e0) # SECONDS
+                orbramp = (1e0 - np.exp(-(otimerp + (1e1)**ologdelay[orbinc])/
+                                        ((1e1)**ologtau[orbinc])))
+                oout[select] = orbramp*olin
+                orbinc += 1
+                pass
+            else:
+                olin = oslope[-1]*otime + 1e0
+                otimerp = (xout[select] - min(xout[select]))*(36e2)*(24e0) # SECONDS
+                orbramp = (1e0 - np.exp(-(otimerp + (1e1)**ologdelay[-1])/
+                                        ((1e1)**ologtau[-1])))
+                oout[select] = orbramp*olin
+                pass
+            pass
         pass
     return vout*oout
 # ---------------------- ---------------------------------------------
 # -- SPECTRUM -- -----------------------------------------------------
 def spectrum(fin, nrm, wht, out, selftype,
-             chainlen=int(4e4), verbose=False, debug=False):
+             chainlen=int(8e4), verbose=False, debug=False):
     exospec = False
     priors = fin['priors'].copy()
     planetloop = [p for p in nrm['data'].keys() if (len(nrm['data'][p]['visits']) > 0)]
@@ -859,17 +938,18 @@ def spectrum(fin, nrm, wht, out, selftype,
             taurprs = 1e0/(whiterprs*1e-1)**2
             rprs = pmnd('rprs', whiterprs, taurprs)
             sim = pmnd('immag', 1e0, 1e2)
+            scolor = pmnd('imsc', 1e0, 1e2)
             iim = pmnd('imnorm', 0e0, 1e2)
-            nodes = [rprs, sim, iim]
+            nodes = [rprs, sim, iim, scolor]
             # LIGHT CURVE MODEL --------------------------------------
             @pm.deterministic
-            def lcmodel(r=rprs, s=sim, i=iim):
+            def lcmodel(r=rprs, s=sim, i=iim, sc=scolor):
                 if selftype == 'transit':
                     out = tldlc(abs(allz), float(r),
                                 g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0])
                     pass
                 else: out = tldlc(abs(allz), float(r))
-                out = out*(allim*float(s) + float(i))
+                out = out*(allim*float(s) + float(i))*(float(sc)*allz)
                 return out[valid]
             tauwbdata = 1e0/dnoise**2
             wbdata = pmnd('wbdata', mu=lcmodel,
