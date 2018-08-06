@@ -319,9 +319,7 @@ def scancal(collect, tid, flttype, out,
             plt.colorbar()
             if frame2png:
                 if not(os.path.exists('TEST')): os.mkdir('TEST')
-                if not(os.path.exists('TEST/'+tid)):
-                    os.mkdir('TEST/'+tid)
-                    pass
+                if not(os.path.exists('TEST/'+tid)): os.mkdir('TEST/'+tid)
                 fname = 'TEST/'+tid+'/'+nm+'.png'
                 plt.savefig(fname)
                 plt.close()
@@ -339,20 +337,16 @@ def scancal(collect, tid, flttype, out,
         floodlevel = data['FLOODLVL'][index]
         if not(ignore):
             frame = data['MEXP'][index].copy()
-            frame = [line for line in frame if
-                     not(np.all(~np.isfinite(line)))]
+            frame = [line for line in frame if not(np.all(~np.isfinite(line)))]
             # OVERSIZED MASK -----------------------------------------
             for line in frame:
                 if np.nanmax(line) < floodlevel: line *= np.nan
                 pass
-            frame = [line for line in frame if
-                     not(np.all(~np.isfinite(line)))]
+            frame = [line for line in frame if not(np.all(~np.isfinite(line)))]
             # SCAN RATE CORRECTION -----------------------------------
             template = []
             for col in np.array(frame).T:
-                if not(np.all(~np.isfinite(col))):
-                    template.append(np.nanmedian(col))
-                    pass
+                if not(np.all(~np.isfinite(col))): template.append(np.nanmedian(col))
                 else: template.append(np.nan)
                 pass
             template = np.array(template)
@@ -361,29 +355,23 @@ def scancal(collect, tid, flttype, out,
                 line /= template
                 refline = np.nanmedian(line)
                 select = np.isfinite(line)
-                minok = (abs(line[select] - refline) <
-                         3*np.nanmin(errref[select]))
-                ok = (abs(line[select] - refline) <
-                      3*errref[select])
+                minok = (abs(line[select] - refline) < 3e0*np.nanmin(errref[select]))
+                ok = (abs(line[select] - refline) < 3e0*errref[select])
                 if np.nansum(minok) > 0:
-                    alpha = (np.nansum(minok)/
-                             np.nansum(line[select][minok]))
+                    alpha = np.nansum(minok)/np.nansum(line[select][minok])
                     line *= alpha
                     line *= template
                     line[select][~ok] = np.nan
                     pass
                 else: line *= np.nan
                 pass
-            frame = [line for line in frame if
-                     not(np.all(~np.isfinite(line)))]
+            frame = [line for line in frame if not(np.all(~np.isfinite(line)))]
             spectrum = []
             specerr = []
             nspectrum = []
             vtemplate = []
             for row in np.array(frame):
-                if not(np.all(~np.isfinite(row))):
-                    vtemplate.append(np.nanmedian(row))
-                    pass
+                if not(np.all(~np.isfinite(row))): vtemplate.append(np.nanmedian(row))
                 else: vtemplate.append(np.nan)
                 pass
             vtemplate = np.array(vtemplate)
