@@ -1,42 +1,46 @@
-## EXCALIBUR
+## --< EXCALIBUR >--
 
-###The Exoplanet Calibration Bayesian Unified Retrieval Pipeline.
+Exoplanet Calibration Bayesian Unified Retrieval Pipeline.
 
-EXCALIBUR is event driven where the events are defined as changes in data or algorithms; when events are detected, dependencies affected by the changes are re-processed. Calibration steps are transparent and quantified using a combination of accessible intermediate state vectors, auto-generation of calibration step documentation, and statistical metrics. EXCALIBUR implements a unified marginalization over both science and instrument model parameters coupled with a Bayesian, evidence-based, model selection capability.
+EXCALIBUR reduces extrasolar system data into an exoplanet spectrum.
+It includes CERBERUS, a line by line, plane parallel radiative transfer code modeling exoplanet atmospheres and a Bayesian parameter retrievial / model selection package. 
 
-### Organization
+EXCALIBUR is an event driven pipeline where the events are defined as changes in data or algorithms; when events are detected, dependencies affected by the changes are re-processed. Calibration steps are transparent and quantified using a combination of accessible intermediate products and auto-generation of visual diagnostics.
 
-#### Data
+### --< Organization >--
 
-Some of the items we do not maintain or are simply static. Executables and libraries that we do not maintain are kept out of the code management (here). Instead, the data and binary tool dependencies have been delivered in the following directories:
+#### --< Data >--
 
-- /proj/sdp/bin --> tool executables
-- /proj/sdp/lib --> tool libraries
-- /proj/sdp/pkg --> tool source and build area
+Some of the items we do not maintain (external) are static. Static executables and libraries are kept out of the code management.
 
-- /proj/sdp/data/cal --> calibration data for processing data sets
-- /proj/sdp/data/res --> resource files
-- /proj/sdp/data/sci --> actual science data to be processed
+- /proj/sdp/bin (external executables such as pymc, ...)
+- /proj/sdp/lib (external libraries)
+- /proj/sdp/pkg (external source code and build area)
+- /proj/sdp/data/cal (instrument reference calibration files such as STSCI files, ...)
+- /proj/sdp/data/res (resource files such as web interface tools, ...)
+- /proj/sdp/data/sci (on-disk data to be processed such as private datasets, ...)
 
-Calibration data are calibration files from STSCI
+#### --< TASKS / algorithms >--
 
-Resource data is that which the program needs every time it runs. An example would be the icon for a button in a GUI interface.
+TARGET
+- create (IDs and filters)
+- autofill (prior system information from NEXSCI)
+- scrape (download and save available data)
+SYSTEM
+- validate (checks for system parameters completeness)
+- finalize (delivers a comprehensive set of system parameters uniformly formatted, allows parameters over-ride)
+DATA
+- collect (sort data according to filters)
+- calibration (extraction, wavelength solution, noise assessment)
+- timing (transit, eclipse, full phase curve detection)
+TRANSIT
+- normalization (scaling of stellar spectrum to Out Of Transit relative quantities)
+- whitelight (orbital solution and instrumental behavior recovery)
+- spectrum (exoplanet spectrum recovery)
+ECLIPSE
+PHASECURVE
+CERBERUS
 
-Science data is the primary information from a instrument.
+### --< Source Code >--
 
-#### Souce Code
-
-The source code is then organized by language:
-- Bash : used to make Python elements more accessible to the command line
-- C : used for github hooks
-- Python : bulk of the code
-
-The Python has view key packages:
-- exo.spec.ae : the algorithm engine developed by the scientists
-
-### Documentation
-
-[Fundamental Magic](https://github.jpl.nasa.gov/pages/niessner/sdp/Notebook/Fundamentals-Magic.slides.html) is a manager level explanation of what the pipeline does and how it can help development.
-
-### [FAQ](https://github.jpl.nasa.gov/niessner/sdp/wiki/FAQs)
-### [How To](https://github.jpl.nasa.gov/niessner/sdp/wiki/HOWTOs)
+[Github](https://github-fn.jpl.nasa.gov/EXCALIBUR/esp)

@@ -28,6 +28,7 @@ class normalization(trnalg.normalization):
     def __init__(self):
         self._version_ = dawgie.VERSION(1,1,0)
         self._type = 'eclipse'
+        self.__verbose = verbose
         self.__cal = datalg.calibration()
         self.__tme = datalg.timing()
         self.__fin = sysalg.finalize()
