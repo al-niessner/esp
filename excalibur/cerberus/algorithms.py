@@ -1,115 +1,73 @@
 # -- IMPORTS -- ------------------------------------------------------
-import os
-import sys
-import pdb
-
 import dawgie
 import dawgie.context
+
+import excalibur.cerberus as crb
+import excalibur.cerberus.core as crbcore
+import excalibur.cerberus.states as crbstates
 
 import excalibur.system as sys
 import excalibur.system.algorithms as sysalg
 import excalibur.transit as trn
 import excalibur.transit.algorithms as trnalg
-
-import excalibur.cerberus as cerberus
-import excalibur.cerberus.states as crbstates
-import excalibur.cerberus.core as crb
+import excalibur.target.edit as trgedit
 # ------------- ------------------------------------------------------
 # -- ALGOS RUN OPTIONS -- --------------------------------------------
-# PLOTS
+# VERBOSE AND DEBUG
 verbose = False
 debug = False
-# MCMC
-resolution = 'high'
-mclen = int(4e4)  # 4e4
-eclipse = False
-# FINESSE
-finesse = False
-rfnslist = ['R10', 'R20', 'R30', 'R40','R50',
-            'R60', 'R70', 'R80', 'R90', 'R100']
-# VALIDATION
-atmosmc = False
-lbroadening = False
-lshifting = False
-# DEACTIVATE TASKS ENABLE VIEW
-dtev = False
-atmosdtev = False
+# FILTERS
+fltrs = (trgedit.activefilters.__doc__).split('\n')
+fltrs = [t.strip() for t in fltrs if len(t.replace(' ', '')) > 0]
 # ----------------------- --------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
-# -- CROSS SECTION LIBRARY
 class xslib(dawgie.Algorithm):
     def __init__(self):
-        self._version_ = dawgie.VERSION(1,5,1)
-        self.__mcmc = trnalg.whitelight()
-        self.__priors = sysalg.finalize()
-        self.__xslib = crbstates.xslibSV()
-        self.__fxslib = crbstates.xslibSV('FINESSE')
-        self.__jwsxslib = crbstates.xslibSV('JWST_sims')
+        self._version_ = dawgie.VERSION(1,1,0)
+        self.__verbose = verbose
+        self.__spc = trnalg.spectrum()
+        self.__fin = sysalg.finalize()
+        self.__out = [crbstates.xslibSV(ext) for ext in fltrs]        
         return
 
     def name(self):
         return 'xslib'
+    
     def previous(self):
-        return [dawgie.ALG_REF(sys.factory, self.__mcmc),
-                dawgie.ALG_REF(sys.factory, self.__priors)]
+        return [dawgie.ALG_REF(trn.factory, self.__spc),
+                dawgie.ALG_REF(sys.factory, self.__fin)]
+
     def state_vectors(self):
-        return [self.__xslib, self.__fxslib, self.__jwsxslib]
+        return self.__out
+    
     def run(self, ds, ps):
-        if False:
-            priors = self.__priors.sv_as_dict()['parameters']
-            if eclipse:
-                mcmc = self.__mcmc.sv_as_dict()['ecl_ima']
-                jwsmcmc = self.__mcmc.sv_as_dict()['ecl_JWST_sims']
+        svupdate = []
+        vfin, sfin = crbcore.checksv(self.__fin.sv_as_dict()['parameters'])
+        for ext in fltrs:
+            update = False
+            vspc, sspc = crbcore.checksv(self.__spc.sv_as_dict()[ext])
+            if vspc and vfin:
+                update = self._xslib(self.__spc.sv_as_dict()[ext],
+                                     self.__fin.sv_as_dict()['parameters'],
+                                     fltrs.index(ext))
                 pass
             else:
-                mcmc = self.__mcmc.sv_as_dict()['ima']
-                jwsmcmc = self.__mcmc.sv_as_dict()['JWST_sims']
+                errstr = [m for m in [sspc, sfin] if m is not None]
+                self._failure(errstr[0])
                 pass
-            valid, errcode = crb.checksvin(mcmc)
-            jwsvalid, jwserrcode = crb.checksvin(jwsmcmc)
-            if dtev:
-                valid = False
-                jwsvalid = False
-                pass
-            # WFC3 SCAN
-            update = False
-            if valid:
-                out = self.__xslib
-                update = self._xslib(mcmc, priors, out)
-                pass
-            else: self._failure(errcode)
-            if update: ds.update()
-            # JWST SIM
-            update = False
-            if jwsvalid:
-                out = self.__jwsxslib
-                update = self._xslib(jwsmcmc, priors, out)
-                pass
-            else: self._failure(errcode)
-            if update: ds.update()
+            if update: svupdate.append(self.__out[fltrs.index(ext)])
             pass
         return
 
-    def _failure(self, errcode, verbose=verbose):
-        errstr = crb.errcode2errstr(errcode)
-        errmess = ' '.join(('CERBERUS.xslib:', errstr))
-        if verbose: print(errmess)
+    def _xslib(self, spc, fin, index):
+        cs = crbcore.xsecs(spc, fin, self.__out[index],
+                           verbose=self.__verbose, debug=debug)
+        return cs
+
+    def _failure(self, errstr):
+        errmess = '--< CERBERUS XSLIB: ' + errstr + ' >--'
+        if self.__verbose: print(errmess)
         return
-    def _xslib(self, mcmc, priors, out):
-        resollist = [res for res in mcmc.keys() if (len(mcmc[res]) > 0)]
-        for myresol in resollist:
-            crb.xsecs(mcmc, priors, out,
-                      res=myresol, finesse=False,
-                      verbose=verbose, debug=debug)
-            pass
-        if finesse:
-            for myresol in rfnslist:
-                crb.xsecs(mcmc, priors, self.__fxslib,
-                          res=myresol, finesse=True,
-                          verbose=verbose, debug=debug)
-                pass
-            pass
-        return True
     pass
 
 # -- HAZE DENSITY PROFILE LIBRARY

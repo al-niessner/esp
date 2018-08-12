@@ -57,8 +57,7 @@ class normalization(dawgie.Algorithm):
                                     fltrs.index(ext))
                 pass
             else:
-                errstr = [m for m in [scal, stme, sfin]
-                          if m is not None]
+                errstr = [m for m in [scal, stme, sfin] if m is not None]
                 self._failure(errstr[0])
                 pass
             if update: svupdate.append(self.__out[fltrs.index(ext)])
