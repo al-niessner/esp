@@ -160,7 +160,7 @@ def xsecs(spc, fin, out,
                     sortme = np.argsort(x)
                     x = x[sortme]
                     y = y[sortme]
-                    myspl = itp(x, y, bounds_error=False, fill_value=0))
+                    myspl = itp(x, y, bounds_error=False, fill_value=0)
                     library[mycia]['SPL'].append(myspl)
                     library[mycia]['SPLNU'].append(iline)
                     if debug:
