@@ -23,8 +23,7 @@ def checksv(sv):
     return valid, errstring
 # ----------------- --------------------------------------------------
 # -- NORMALIZATION -- ------------------------------------------------
-def norm(cal, tme, fin, ext, out, selftype,
-         verbose=False, debug=False):
+def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
     normed = False
     priors = fin['priors'].copy()
     ssc = syscore.ssconstants()
@@ -231,7 +230,7 @@ def tplbuild(spectra, wave, vrange, disp,
 # ---------------------- ---------------------------------------------
 # -- WHITE LIGHT CURVE -- --------------------------------------------
 def whitelight(nrm, fin, out, selftype,
-               chainlen=int(8e4), verbose=False, debug=False):
+               chainlen=int(4e4), verbose=False, debug=False):
     wl = False
     priors = fin['priors'].copy()
     ssc = syscore.ssconstants()
@@ -641,21 +640,16 @@ def vecoccs(z, xrs, rprs):
     if (True in select & ~zzero):
         redxrs = vecxrs[select & ~zzero]
         redz = veczsel[select & ~zzero]
-        s1 = ((np.square(redz) + np.square(redxrs) - rprs**2)/
-              (2e0*redz*redxrs))
+        s1 = ((np.square(redz) + np.square(redxrs) - rprs**2)/(2e0*redz*redxrs))
         s1[s1 > 1e0] = 1e0
-        s2 = ((np.square(redz) + rprs**2 - np.square(redxrs))/
-              (2e0*redz*rprs))
+        s2 = ((np.square(redz) + rprs**2 - np.square(redxrs))/(2e0*redz*rprs))
         s2[s2 > 1e0] = 1e0
-        s3 = ((-redz + redxrs + rprs)*
-              (redz + redxrs - rprs)*
-              (redz - redxrs + rprs)*
-              (redz + redxrs + rprs))
+        s3 = ((-redz + redxrs + rprs)*(redz + redxrs - rprs)*
+              (redz - redxrs + rprs)*(redz + redxrs + rprs))
         zselect = s3 < 0e0
         if (True in zselect): s3[zselect] = 0e0
         out[select & ~zzero] = (np.square(redxrs)*np.arccos(s1) +
-                                (rprs**2)*np.arccos(s2) -
-                                (5e-1)*np.sqrt(s3))
+                                (rprs**2)*np.arccos(s2) - (5e-1)*np.sqrt(s3))
         pass
     return out
 # --------------------------------- ----------------------------------
@@ -868,7 +862,7 @@ def timlc(vtime, orbits,
 # ---------------------- ---------------------------------------------
 # -- SPECTRUM -- -----------------------------------------------------
 def spectrum(fin, nrm, wht, out, selftype,
-             chainlen=int(8e4), verbose=False, debug=False):
+             chainlen=int(4e4), verbose=False, debug=False):
     exospec = False
     priors = fin['priors'].copy()
     planetloop = [p for p in nrm['data'].keys() if (len(nrm['data'][p]['visits']) > 0)]
@@ -949,7 +943,7 @@ def spectrum(fin, nrm, wht, out, selftype,
                                 g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0])
                     pass
                 else: out = tldlc(abs(allz), float(r))
-                out = out*(allim*float(s) + float(i))*(float(sc)*allz)
+                out = out*(allim*float(s) + float(i))*(float(sc)*allz + 1e0)
                 return out[valid]
             tauwbdata = 1e0/dnoise**2
             wbdata = pmnd('wbdata', mu=lcmodel,

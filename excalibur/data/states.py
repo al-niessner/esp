@@ -24,26 +24,16 @@ class CalibrateSV(dawgie.StateVector):
     def view(self, visitor:dawgie.Visitor)->None:
         if len(self['STATUS']) == 2:
             data = self['data']
-            timing = np.array([d for d,i in zip(data['TIME'],
-                                                data['IGNORED'])
-                               if not(i)])
-            dispersion = np.array([d for d,i in zip(data['DISPERSION'],
-                                                    data['IGNORED'])
+            timing = np.array([d for d,i in zip(data['TIME'], data['IGNORED']) if not(i)])
+            dispersion = np.array([d for d,i in zip(data['DISPERSION'], data['IGNORED'])
                                    if not(i)])
-            shift = np.array([d for d,i in zip(data['SHIFT'],
-                                               data['IGNORED'])
-                              if not(i)])
-            spec = np.array([d for d,i in zip(data['SPECTRUM'],
-                                              data['IGNORED'])
+            shift = np.array([d for d,i in zip(data['SHIFT'], data['IGNORED']) if not(i)])
+            spec = np.array([d for d,i in zip(data['SPECTRUM'], data['IGNORED'])
                              if not(i)])
-            photoc = np.array([d for d,i in zip(data['PHT2CNT'],
-                                                data['IGNORED'])
+            photoc = np.array([d for d,i in zip(data['PHT2CNT'], data['IGNORED'])
                                if not(i)])
-            wave = np.array([d for d,i in zip(data['WAVE'],
-                                              data['IGNORED'])
-                             if not(i)])
-            errspec = np.array([d for d,i in zip(data['SPECERR'],
-                                                 data['IGNORED'])
+            wave = np.array([d for d,i in zip(data['WAVE'], data['IGNORED']) if not(i)])
+            errspec = np.array([d for d,i in zip(data['SPECERR'], data['IGNORED'])
                                 if not(i)])
             allignore = np.array(data['IGNORED'])
             allindex = np.arange(len(data['LOC']))
@@ -62,8 +52,7 @@ class CalibrateSV(dawgie.StateVector):
             vldi = int(vldi*(np.sum(~allignore.astype(bool)) - 1))
             vldi = allindex[~allignore.astype(bool)][vldi]
 
-            strignore = (str(np.nansum(allignore)) + ' / ' +
-                         str(len(allignore)))
+            strignore = (str(np.nansum(allignore))+' / '+str(len(allignore)))
             visitor.add_declaration('IGNORED: ' + strignore)
 
             myfig = plt.figure()
@@ -82,8 +71,7 @@ class CalibrateSV(dawgie.StateVector):
                 myfig = plt.figure()
                 plt.imshow(data['MEXP'][gbgi])
                 plt.colorbar()
-                plt.title('Frame Index: ' + str(gbgi) +
-                          ' Ignored: ' + data['TRIAL'][gbgi])
+                plt.title('Frame Index: '+str(gbgi)+' Ignored: '+data['TRIAL'][gbgi])
                 buf = io.BytesIO()
                 myfig.savefig(buf, format='png')
                 visitor.add_image('...', ' ', buf.getvalue())
@@ -162,14 +150,13 @@ class TimingSV(dawgie.StateVector):
             for p in self['data'].keys():
                 vlabels = ['TRANSIT', 'ECLIPSE', 'PHASE CURVE']
                 hlabels = ['PLANET: '+p, 'VISIT NUMBER']
-                table = visitor.add_table(clabels=hlabels,
-                                          rows=len(vlabels))
+                table = visitor.add_table(clabels=hlabels, rows=len(vlabels))
                 table.get_cell(0, 0).add_primitive(vlabels[0])
-                table.get_cell(0, 1).add_primitive(self['transit'])
+                table.get_cell(0, 1).add_primitive(self['data'][p]['transit'])
                 table.get_cell(1, 0).add_primitive(vlabels[1])
-                table.get_cell(1, 1).add_primitive(self['eclipse'])
+                table.get_cell(1, 1).add_primitive(self['data'][p]['eclipse'])
                 table.get_cell(2, 0).add_primitive(vlabels[2])
-                table.get_cell(2, 1).add_primitive(self['phasecurve'])
+                table.get_cell(2, 1).add_primitive(self['data'][p]['phasecurve'])
 
                 tmetod = self['data'][p]['tmetod']
                 thro = self['data'][p]['thro']
@@ -185,8 +172,7 @@ class TimingSV(dawgie.StateVector):
 
                 myfig = plt.figure()
                 plt.plot(phsto, 'k.')
-                plt.plot(np.arange(phsto.size)[~ignto],
-                         phsto[~ignto], 'bo')
+                plt.plot(np.arange(phsto.size)[~ignto], phsto[~ignto], 'bo')
                 for i in wherev: plt.axvline(i, ls='--', color='r')
                 for i in whereo: plt.axvline(i, ls='-.', color='g')
                 plt.xlim(0, phsto.size - 1)

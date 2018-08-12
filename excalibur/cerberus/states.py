@@ -2,32 +2,37 @@
 import io
 
 import dawgie
+
 import excalibur
 
 import numpy as np
-from matplotlib import image as img
-from matplotlib import pyplot as plt
+import matplotlib.image as img
+import matplotlib.pyplot as plt
 # ------------- ------------------------------------------------------
 # -- SV -- -----------------------------------------------------------
 class xslibSV(dawgie.StateVector):
-    def __init__(self, name='lines'):
-        self.__name = name
+    def __init__(self, name):
         self._version_ = dawgie.VERSION(1,2,0)
-        self['XSECS'] = excalibur.ValuesList()
-        self['QTGRID'] = excalibur.ValuesList()
-        self['RES'] = excalibur.ValuesList()
+        self.__name = name
+        self['STATUS'] = excalibur.ValuesList()
+        self['data'] = excalibur.ValuesDict()
+        self['STATUS'].append(False)
         return
+
     def name(self):
         return self.__name
+
     def view(self, visitor:dawgie.Visitor)->None:
-        myfig = plt.figure()
-        crblogo = img.imread('/proj/sdp/data/CERBERUS/cerberus.png')
-        plt.imshow(crblogo)
-        plt.axis('off')
-        buf = io.BytesIO()
-        myfig.savefig(buf, format='png')
-        visitor.add_image('...', 'Cerberus ', buf.getvalue())
-        plt.close(myfig)
+        if self['STATUS'][-1]:
+            myfig = plt.figure()
+            crblogo = img.imread('/proj/sdp/data/CERBERUS/cerberus.png')
+            plt.imshow(crblogo)
+            plt.axis('off')
+            buf = io.BytesIO()
+            myfig.savefig(buf, format='png')
+            visitor.add_image('...', 'Cerberus ', buf.getvalue())
+            plt.close(myfig)
+            pass
         return
     pass
 
@@ -37,8 +42,10 @@ class hazelibSV(dawgie.StateVector):
         self._version_ = dawgie.VERSION(1,1,0)
         self['PROFILE'] = excalibur.ValuesList()
         return
+    
     def name(self):
         return self.__name
+
     def view(self, visitor:dawgie.Visitor)->None:
         myfig = plt.figure()
         crblogo = img.imread('/proj/sdp/data/CERBERUS/cerberus.png')
@@ -61,8 +68,10 @@ class atmosSV(dawgie.StateVector):
         self['MCPOST'] = excalibur.ValuesList()
         self['MCCHAINS'] = excalibur.ValuesList()
         return
+
     def name(self):
         return self.__name
+
     def view(self, visitor:dawgie.Visitor)->None:
         myfig = plt.figure()
         crblogo = img.imread('/proj/sdp/data/CERBERUS/cerberus.png')

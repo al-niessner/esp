@@ -7,13 +7,13 @@ import dawgie.security
 
 import excalibur.cerberus.algorithms as crbalg
 # ------------- ------------------------------------------------------
-# -- TASK -- ---------------------------------------------------------
+# -- A&A -- ----------------------------------------------------------
 class Actor(dawgie.Task):
-    def list(self):
+    def list(self)->[dawgie.Task]:
         return [
             crbalg.xslib(),
-            crbalg.hazelib(),
-            crbalg.atmos()
+#            crbalg.hazelib(),
+#            crbalg.atmos()
         ]
     pass
 # ---------- ---------------------------------------------------------
@@ -26,7 +26,7 @@ if __name__ == '__main__':
                                (os.path.expanduser
                                 (dawgie.context.gpg_home)))
     dawgie.db.reopen()
-    Actor('transit', 4, rid, tn).do()
+    Actor('cerberus', 4, rid, tn).do()
     dawgie.db.close()
     dawgie.security.finalize()
     pass

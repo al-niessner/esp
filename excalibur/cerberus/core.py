@@ -1,40 +1,25 @@
 # -- IMPORTS -- ------------------------------------------------------
 import os
-import time
 import pymc as pm
-from pymc.distributions import Uniform as Uniform
-from pymc.distributions import Normal as Normal
 import numpy as np
+import lmfit as lm
+import scipy.constants as cst
 import matplotlib.pyplot as plt
 
-from lmfit import Parameters, minimize
-import scipy.constants as cst
-from scipy.interpolate import interp1d as bspl
+from pymc.distributions import Uniform as Uniform
+from pymc.distributions import Normal as Normal
+from scipy.interpolate import interp1d as itp
 # ------------- ------------------------------------------------------
-# -- CHECK INPUT STATE VECTORS -- ------------------------------------
-def checksvin(sv):
-    valid = True
-    errcode = None
-    if len(sv['high']) == 0:
-        valid = False
-        errcode = 1
-        pass
-    else:
-        if len(sv['high'][0]['MU']) == 0:
-            valid = False
-            errcode = 1
-            pass
-        pass
-    return valid, errcode
-# ------------------------------- ------------------------------------
-# -- ERROR CODE TO ERROR STRING -- -----------------------------------
-def errcode2errstr(errcode):
-    errstr = ''
-    if errcode == 1: errstr = 'input SV is empty'
-    return errstr
-# -------------------------------- -----------------------------------
+# -- SV VALIDITY -- --------------------------------------------------
+def checksv(sv):
+    valid = False
+    errstring = None
+    if sv['STATUS'][-1]: valid = True
+    else: errstring = sv.name()+' IS EMPTY'
+    return valid, errstring
+# ----------------- --------------------------------------------------
 # -- X SECTIONS LIBRARY -- -------------------------------------------
-def xsecs(mcmc, priors, sv,
+def xsecs(spc, fin, out,
           hitemp='/proj/sdp/data/CERBERUS/HITEMP',
           tips='/proj/sdp/data/CERBERUS/TIPS',
           ciadir='/proj/sdp/data/CERBERUS/HITRAN/CIA',
@@ -42,234 +27,231 @@ def xsecs(mcmc, priors, sv,
           knownspecies=['NO', 'OH', 'C2H2', 'N2', 'N2O', 'O3', 'O2'],
           cialist=['H2-H', 'H2-H2', 'H2-He', 'He-H'],
           xmspecies=['TIO', 'CH4', 'H2O', 'H2CO', 'HCN', 'CO', 'CO2', 'NH3'],
-          res='high', finesse=False,
           verbose=False, debug=False):
-    fnsdir = '/proj/sdp/data/CERBERUS/FINESSE'
-    tbxsecs = time.time()
-    if verbose: print('- Building Cross Sections Library ...')
-    if not(finesse): wgrid = mcmc[res][0]['MU']
-    else: wgrid, starsnr = getwgrid(fnsdir, res, verbose=verbose)
-    qtgrid = gettpf(tips, knownspecies, debug=debug)
-    library = {}
-    nugrid = (1e4/np.copy(wgrid))[::-1]
-    dwnu = np.concatenate((np.array([np.diff(nugrid)[0]]), np.diff(nugrid)))
-    for myexomol in xmspecies:
-        if verbose: print(myexomol)
-        library[myexomol] = {'I':[], 'nu':[], 'T':[],
-                             'Itemp':[], 'nutemp':[], 'Ttemp':[],
-                             'SPL':[], 'SPLNU':[]}
-        thisxmdir = os.path.join(exomoldir, myexomol)
-        myfiles = [f for f in os.listdir(thisxmdir) if f.endswith('K')]
-        for mf in myfiles:
-            xmtemp = float(mf.split('K')[0])
-            with open(os.path.join(thisxmdir, mf), 'r') as fp:
-                data = fp.readlines()
-                fp.close()
-                for line in data:
-                    line = np.array(line.split(' '))
-                    line = line[line != '']
-                    library[myexomol]['nutemp'].append(float(line[0]))
-                    library[myexomol]['Itemp'].append(float(line[1]))
-                    library[myexomol]['Ttemp'].append(xmtemp)
+    cs = False
+    for p in spc['data'].keys():
+        out['data'][p] = {}
+        wgrid = np.array(spc['data'][p]['WB'])
+        qtgrid = gettpf(tips, knownspecies, debug=debug)
+        library = {}
+        nugrid = (1e4/np.copy(wgrid))[::-1]
+        dwnu = np.concatenate((np.array([np.diff(nugrid)[0]]), np.diff(nugrid)))
+        for myexomol in xmspecies:
+            if verbose: print(myexomol)
+            library[myexomol] = {'I':[], 'nu':[], 'T':[],
+                                 'Itemp':[], 'nutemp':[], 'Ttemp':[],
+                                 'SPL':[], 'SPLNU':[]}
+            thisxmdir = os.path.join(exomoldir, myexomol)
+            myfiles = [f for f in os.listdir(thisxmdir) if f.endswith('K')]
+            for mf in myfiles:
+                xmtemp = float(mf.split('K')[0])
+                with open(os.path.join(thisxmdir, mf), 'r') as fp:
+                    data = fp.readlines()
+                    fp.close()
+                    for line in data:
+                        line = np.array(line.split(' '))
+                        line = line[line != '']
+                        library[myexomol]['nutemp'].append(float(line[0]))
+                        library[myexomol]['Itemp'].append(float(line[1]))
+                        library[myexomol]['Ttemp'].append(xmtemp)
+                        pass
                     pass
                 pass
-            pass
-        for mytemp in set(library[myexomol]['Ttemp']):
-            select = np.array(library[myexomol]['Ttemp']) == mytemp
-            bini = []
-            bint = []
-            matnu = np.array(library[myexomol]['nutemp'])[select]
-            sigma2 = np.array(library[myexomol]['Itemp'])[select]
-            mattemp = np.array(library[myexomol]['Ttemp'])[select]
-            for nubin, mydw in zip(nugrid, dwnu):
-                select = ((matnu > (nubin-mydw/2.)) &
-                          (matnu <= nubin+mydw/2.))
-                bini.append(np.sum(sigma2[select]))
-                pass
-            bini = np.array(bini)/dwnu
-            library[myexomol]['nu'].extend(list(nugrid))
-            library[myexomol]['I'].extend(list(bini))
-            library[myexomol]['T'].extend(list(np.ones(nugrid.size)*mytemp))
-            pass
-        for iline in set(library[myexomol]['nu']):
-            select = np.array(library[myexomol]['nu']) == iline
-            y = np.array(library[myexomol]['I'])[select]
-            x = np.array(library[myexomol]['T'])[select]
-            sortme = np.argsort(x)
-            x = x[sortme]
-            y = y[sortme]
-            myspl = bspl(x, y, extrapolate=False)
-            library[myexomol]['SPL'].append(myspl)
-            library[myexomol]['SPLNU'].append(iline)
-            if debug:
-                plt.plot(x, y, 'o')
-                xp = np.arange(101)/100.*(3000. - np.min(x))+np.min(x)
-                plt.plot(xp, myspl(xp))
-                plt.show()
-                pass
-            pass
-        if debug:
-            fts = 20
-            plt.figure(figsize=(16,12))
-            haha = [huhu for huhu in set(library[myexomol]['T'])]
-            haha = np.sort(np.array(haha))
-            haha = haha[::-1]
-            for temp in haha:
-                select = np.array(library[myexomol]['T']) == temp
-                plt.semilogy(1e4/(np.array(library[myexomol]['nu'])[select]),
-                             np.array(library[myexomol]['I'])[select],
-                             label=str(int(temp))+'K')
-                pass
-            plt.title(myexomol)
-            plt.xlabel('Wavelength $\lambda$[$\mu m$]',
-                       fontsize=fts+4)
-            plt.ylabel('Cross Section [$cm^{2}.molecule^{-1}$]',
-                       fontsize=fts+4)
-            plt.tick_params(axis='both', labelsize=fts)
-            plt.legend(bbox_to_anchor=(0.95, 0., 0.12, 1),
-                       loc=5, ncol=1, mode='expand', numpoints=1,
-                       borderaxespad=0., frameon=True)
-            plt.savefig(myexomol+'_xslib.png', dpi=200)
-            plt.show()
-            pass
-        pass
-    for mycia in cialist:
-        if verbose: print(mycia)
-        myfile = '_'.join((os.path.join(ciadir, mycia), '2011.cia'))
-        library[mycia] = {'I':[], 'nu':[], 'T':[],
-                          'Itemp':[], 'nutemp':[], 'Ttemp':[],
-                          'SPL':[], 'SPLNU':[]}
-        with open(myfile, 'r') as fp:
-            data = fp.readlines()
-            fp.close()
-            # Richard et Al. 2012
-            for line in data:
-                line = np.array(line.split(' '))
-                line = line[line != '']
-                if line.size > 2: tmprtr = float(line[4])
-                if line.size == 2:
-                    library[mycia]['nutemp'].append(float(line[0]))
-                    library[mycia]['Itemp'].append(float(line[1]))
-                    library[mycia]['Ttemp'].append(tmprtr)
-                    pass
-                pass
-            for mytemp in set(library[mycia]['Ttemp']):
-                select = np.array(library[mycia]['Ttemp']) == mytemp
+            for mytemp in set(library[myexomol]['Ttemp']):
+                select = np.array(library[myexomol]['Ttemp']) == mytemp
                 bini = []
                 bint = []
-                matnu = np.array(library[mycia]['nutemp'])[select]
-                sigma2 = np.array(library[mycia]['Itemp'])[select]
-                mattemp = np.array(library[mycia]['Ttemp'])[select]
+                matnu = np.array(library[myexomol]['nutemp'])[select]
+                sigma2 = np.array(library[myexomol]['Itemp'])[select]
+                mattemp = np.array(library[myexomol]['Ttemp'])[select]
                 for nubin, mydw in zip(nugrid, dwnu):
                     select = ((matnu > (nubin-mydw/2.)) &
                               (matnu <= nubin+mydw/2.))
                     bini.append(np.sum(sigma2[select]))
                     pass
                 bini = np.array(bini)/dwnu
-                library[mycia]['nu'].extend(list(nugrid))
-                library[mycia]['I'].extend(list(bini))
-                library[mycia]['T'].extend(list(np.ones(nugrid.size)*mytemp))
+                library[myexomol]['nu'].extend(list(nugrid))
+                library[myexomol]['I'].extend(list(bini))
+                library[myexomol]['T'].extend(list(np.ones(nugrid.size)*mytemp))
                 pass
-            for iline in set(library[mycia]['nu']):
-                select = np.array(library[mycia]['nu']) == iline
-                y = np.array(library[mycia]['I'])[select]
-                x = np.array(library[mycia]['T'])[select]
+            for iline in set(library[myexomol]['nu']):
+                select = np.array(library[myexomol]['nu']) == iline
+                y = np.array(library[myexomol]['I'])[select]
+                x = np.array(library[myexomol]['T'])[select]
                 sortme = np.argsort(x)
                 x = x[sortme]
                 y = y[sortme]
-                myspl = bspl(x, y, extrapolate=False)
-                library[mycia]['SPL'].append(myspl)
-                library[mycia]['SPLNU'].append(iline)
+                myspl = itp(x, y, bounds_error=False, fill_value=0)
+                library[myexomol]['SPL'].append(myspl)
+                library[myexomol]['SPLNU'].append(iline)
                 if debug:
                     plt.plot(x, y, 'o')
-                    xp = np.arange(101)/100.*(np.max(x) - np.min(x))+np.min(x)
+                    xp = np.arange(101)/100.*(3000. - np.min(x))+np.min(x)
                     plt.plot(xp, myspl(xp))
                     plt.show()
                     pass
                 pass
-            pass
-        if debug:
-            for temp in set(library[mycia]['T']):
-                select = np.array(library[mycia]['T']) == temp
-                plt.semilogy(1e4/(np.array(library[mycia]['nu'])[select]),
-                             np.array(library[mycia]['I'])[select])
+            if debug:
+                fts = 20
+                plt.figure(figsize=(16,12))
+                haha = [huhu for huhu in set(library[myexomol]['T'])]
+                haha = np.sort(np.array(haha))
+                haha = haha[::-1]
+                for temp in haha:
+                    select = np.array(library[myexomol]['T']) == temp
+                    plt.semilogy(1e4/(np.array(library[myexomol]['nu'])[select]),
+                                 np.array(library[myexomol]['I'])[select],
+                                 label=str(int(temp))+'K')
+                    pass
+                plt.title(myexomol)
+                plt.xlabel('Wavelength $\lambda$[$\mu m$]',
+                           fontsize=fts+4)
+                plt.ylabel('Cross Section [$cm^{2}.molecule^{-1}$]',
+                           fontsize=fts+4)
+                plt.tick_params(axis='both', labelsize=fts)
+                plt.legend(bbox_to_anchor=(0.95, 0., 0.12, 1),
+                           loc=5, ncol=1, mode='expand', numpoints=1,
+                           borderaxespad=0., frameon=True)
+                plt.savefig(myexomol+'_xslib.png', dpi=200)
+                plt.show()
                 pass
-            plt.title(mycia)
-            plt.xlabel('Wavelength $\lambda$[$\mu m$]')
-            plt.ylabel('Line intensity $S(T)$ [$cm^{5}.molecule^{-2}$]')
-            plt.show()
             pass
-        pass
-    for ks in knownspecies:
-        if debug: print(ks)
-        library[ks] = {'MU':[], 'I':[], 'nu':[], 'S':[],
-                       'g_air':[], 'g_self':[],
-                       'Epp':[], 'eta':[], 'delta':[]}
-        myfiles = [f for f in os.listdir(os.path.join(hitemp, ks))
-                   if f.endswith('.par')]
-        dwmin = abs(wgrid[1] - wgrid[0])/2.
-        dwmax = abs(wgrid[-1] - wgrid[-2])/2.
-        for fdata in myfiles:
-            weqname = fdata.split('_')
-            readit = True
-            if len(weqname) > 2:
-                if float(weqname[1].split('-')[0]) != 0:
-                    maxweq = 1e4/float(weqname[1].split('-')[0])
-                else: maxweq = 1e20
-                if maxweq < (np.min(wgrid)-dwmin): readit = False
-                minweq = 1e4/float(weqname[1].split('-')[1])
-                if minweq > (np.max(wgrid)+dwmax): readit = False
-                pass
-            if readit:
-                with open(os.path.join(hitemp, ks, fdata), 'r') as fp:
-                    data = fp.readlines()
-                    fp.close()
-                    # Rothman et Al. 2010
-                    for line in data:
-                        waveeq = (1e4)/float(line[3:3+12])
-                        cotest = True
-                        if ks == 'H2O':
-                            cotest = float(line[15:15+10]) > 1e-27
-                            pass
-                        if ks == 'CO2':
-                            cotest = float(line[15:15+10]) > 1e-29
-                            pass
-                        if ((waveeq < (np.max(wgrid)+dwmax)) and (waveeq > (np.min(wgrid)-dwmin)) and cotest):
-                            library[ks]['MU'].append(waveeq)
-                            library[ks]['I'].append(int(line[2:2+1]))
-                            library[ks]['nu'].append(float(line[3:3+12]))
-                            library[ks]['S'].append(float(line[15:15+10]))
-                            library[ks]['g_air'].append(float(line[35:35+5]))
-                            library[ks]['g_self'].append(float(line[40:40+5]))
-                            library[ks]['Epp'].append(float(line[45:45+10]))
-                            library[ks]['eta'].append(float(line[55:55+4]))
-                            library[ks]['delta'].append(float(line[59:59+8]))
-                            pass
+        for mycia in cialist:
+            if verbose: print(mycia)
+            myfile = '_'.join((os.path.join(ciadir, mycia), '2011.cia'))
+            library[mycia] = {'I':[], 'nu':[], 'T':[],
+                              'Itemp':[], 'nutemp':[], 'Ttemp':[],
+                              'SPL':[], 'SPLNU':[]}
+            with open(myfile, 'r') as fp:
+                data = fp.readlines()
+                fp.close()
+                # Richard et Al. 2012
+                for line in data:
+                    line = np.array(line.split(' '))
+                    line = line[line != '']
+                    if line.size > 2: tmprtr = float(line[4])
+                    if line.size == 2:
+                        library[mycia]['nutemp'].append(float(line[0]))
+                        library[mycia]['Itemp'].append(float(line[1]))
+                        library[mycia]['Ttemp'].append(tmprtr)
+                        pass
+                    pass
+                for mytemp in set(library[mycia]['Ttemp']):
+                    select = np.array(library[mycia]['Ttemp']) == mytemp
+                    bini = []
+                    bint = []
+                    matnu = np.array(library[mycia]['nutemp'])[select]
+                    sigma2 = np.array(library[mycia]['Itemp'])[select]
+                    mattemp = np.array(library[mycia]['Ttemp'])[select]
+                    for nubin, mydw in zip(nugrid, dwnu):
+                        select = ((matnu > (nubin-mydw/2.)) &
+                                  (matnu <= nubin+mydw/2.))
+                        bini.append(np.sum(sigma2[select]))
+                        pass
+                    bini = np.array(bini)/dwnu
+                    library[mycia]['nu'].extend(list(nugrid))
+                    library[mycia]['I'].extend(list(bini))
+                    library[mycia]['T'].extend(list(np.ones(nugrid.size)*mytemp))
+                    pass
+                for iline in set(library[mycia]['nu']):
+                    select = np.array(library[mycia]['nu']) == iline
+                    y = np.array(library[mycia]['I'])[select]
+                    x = np.array(library[mycia]['T'])[select]
+                    sortme = np.argsort(x)
+                    x = x[sortme]
+                    y = y[sortme]
+                    myspl = itp(x, y, bounds_error=False, fill_value=0))
+                    library[mycia]['SPL'].append(myspl)
+                    library[mycia]['SPLNU'].append(iline)
+                    if debug:
+                        plt.plot(x, y, 'o')
+                        xp = np.arange(101)/100.*(np.max(x) - np.min(x))+np.min(x)
+                        plt.plot(xp, myspl(xp))
+                        plt.show()
                         pass
                     pass
                 pass
-            else:
-                if debug: print(':'.join(('Skipping', fdata)))
+            if debug:
+                for temp in set(library[mycia]['T']):
+                    select = np.array(library[mycia]['T']) == temp
+                    plt.semilogy(1e4/(np.array(library[mycia]['nu'])[select]),
+                                 np.array(library[mycia]['I'])[select])
+                    pass
+                plt.title(mycia)
+                plt.xlabel('Wavelength $\lambda$[$\mu m$]')
+                plt.ylabel('Line intensity $S(T)$ [$cm^{5}.molecule^{-2}$]')
+                plt.show()
                 pass
             pass
-        if debug:
-            for i in set(library[ks]['I']):
-                select = np.array(library[ks]['I']) == i
-                plt.semilogy(np.array(library[ks]['MU'])[select],
-                             np.array(library[ks]['S'])[select], '.')
+        for ks in knownspecies:
+            if debug: print(ks)
+            library[ks] = {'MU':[], 'I':[], 'nu':[], 'S':[],
+                           'g_air':[], 'g_self':[],
+                           'Epp':[], 'eta':[], 'delta':[]}
+            myfiles = [f for f in os.listdir(os.path.join(hitemp, ks))
+                       if f.endswith('.par')]
+            dwmin = abs(wgrid[1] - wgrid[0])/2.
+            dwmax = abs(wgrid[-1] - wgrid[-2])/2.
+            for fdata in myfiles:
+                weqname = fdata.split('_')
+                readit = True
+                if len(weqname) > 2:
+                    if float(weqname[1].split('-')[0]) != 0:
+                        maxweq = 1e4/float(weqname[1].split('-')[0])
+                    else: maxweq = 1e20
+                    if maxweq < (np.min(wgrid)-dwmin): readit = False
+                    minweq = 1e4/float(weqname[1].split('-')[1])
+                    if minweq > (np.max(wgrid)+dwmax): readit = False
+                    pass
+                if readit:
+                    with open(os.path.join(hitemp, ks, fdata), 'r') as fp:
+                        data = fp.readlines()
+                        fp.close()
+                        # Rothman et Al. 2010
+                        for line in data:
+                            waveeq = (1e4)/float(line[3:3+12])
+                            cotest = True
+                            if ks == 'H2O':
+                                cotest = float(line[15:15+10]) > 1e-27
+                                pass
+                            if ks == 'CO2':
+                                cotest = float(line[15:15+10]) > 1e-29
+                                pass
+                            if ((waveeq < (np.max(wgrid)+dwmax)) and (waveeq > (np.min(wgrid)-dwmin)) and cotest):
+                                library[ks]['MU'].append(waveeq)
+                                library[ks]['I'].append(int(line[2:2+1]))
+                                library[ks]['nu'].append(float(line[3:3+12]))
+                                library[ks]['S'].append(float(line[15:15+10]))
+                                library[ks]['g_air'].append(float(line[35:35+5]))
+                                library[ks]['g_self'].append(float(line[40:40+5]))
+                                library[ks]['Epp'].append(float(line[45:45+10]))
+                                library[ks]['eta'].append(float(line[55:55+4]))
+                                library[ks]['delta'].append(float(line[59:59+8]))
+                                pass
+                            pass
+                        pass
+                    pass
+                else:
+                    if debug: print(':'.join(('Skipping', fdata)))
+                    pass
                 pass
-            plt.title(ks)
-            plt.xlabel('Wavelength $\lambda$[$\mu m$]')
-            plt.ylabel('Line intensity $S_{296K}$ [$cm.molecule^{-1}$]')
-            plt.show()
+            if debug:
+                for i in set(library[ks]['I']):
+                    select = np.array(library[ks]['I']) == i
+                    plt.semilogy(np.array(library[ks]['MU'])[select],
+                                 np.array(library[ks]['S'])[select], '.')
+                    pass
+                plt.title(ks)
+                plt.xlabel('Wavelength $\lambda$[$\mu m$]')
+                plt.ylabel('Line intensity $S_{296K}$ [$cm.molecule^{-1}$]')
+                plt.show()
+                pass
             pass
+        out['data'][p]['XSECS'] = library
+        out['data'][p]['QTGRID'] = qtgrid
         pass
-    sv['XSECS'].append(library)
-    sv['QTGRID'].append(qtgrid)
-    sv['RES'].append(res)
-    texsecs = time.time()
-    if verbose: print('- Done in', texsecs - tbxsecs, 's')
-    return
+    if len(out['data'].keys()) > 0: out['STATUS'].append(True) 
+    return cs
 # ------------------------ -------------------------------------------
 # -- TOTAL PARTITION FUNCTION -- -------------------------------------
 def gettpf(tips, knownspecies, debug=False):
@@ -286,7 +268,7 @@ def gettpf(tips, knownspecies, debug=False):
                 pass
             pass
         for y in grid[ks]['Q']:
-            myspl = bspl(tempgrid, y)
+            myspl = itp(tempgrid, y)
             grid[ks]['SPL'].append(myspl)
             if debug:
                 plt.plot(tempgrid, myspl(tempgrid))
@@ -338,11 +320,11 @@ def hzlib(mcmc, priors, sv,
     sortme = np.argsort(pressure)
     x = pressure[sortme]
     y = jmax[sortme]
-    jmaxspl = bspl(x, y, s=0, ext=1)
+    jmaxspl = itp(x, y, s=0, ext=1)
     y = jmed[sortme]
-    jmedspl = bspl(x, y, s=0, ext=1)
+    jmedspl = itp(x, y, s=0, ext=1)
     y = jav[sortme]
-    javspl = bspl(x, y, s=0, ext=1)
+    javspl = itp(x, y, s=0, ext=1)
     if verbose:
         plt.figure()
         plt.plot(1e6*jmax, pressure, label='Jupiter $d_{max}(\Phi)$')
@@ -363,7 +345,7 @@ def hzlib(mcmc, priors, sv,
         pass
     latvdp = []
     for dprofile in density.T:
-        latvdp.append(bspl(pressure, dprofile,
+        latvdp.append(itp(pressure, dprofile,
                            kind='cubic', bounds_error=False,
                            fill_value=0))
         pass
@@ -993,7 +975,7 @@ def crbmodel(mixratio, rayleigh, cloudtp, rp0, orbp, xsecs, qtgrid,
     if not(all(~selectcloud)) and not(blocked):
         cloudindex = np.max(np.arange(len(p))[selectcloud])+1
         for index in np.arange(wtau.size):
-            myspl = bspl(reversep, tau[:,index])
+            myspl = itp(reversep, tau[:,index])
             tau[cloudindex,index] = myspl(10.**cloudtp)
             tau[:cloudindex,index] = 0.
             pass
@@ -1196,7 +1178,7 @@ def gettau(orbp, xsecs, qtgrid, temp, mixratio,
             hzshift = hztop - np.log10(refhzp)
             splp = np.log10(p[::-1]) + hzshift
             splrh = rh[::-1]
-            thisfrh = bspl(splp, splrh)
+            thisfrh = itp(splp, splrh)
             rh = thisfrh(np.log10(p))
             rh[rh < 0] = 0.
             pass
@@ -1471,9 +1453,9 @@ def getwgrid(fnsdir, res, filename='wavegrid.txt',
     thisres = float(res.replace('R', ''))
     scaleres = fnsres*(thisres/np.min(fnsres))
     refpoint = float(wgrid[fnsres == np.min(fnsres)])
-    splscale = bspl(wgrid, scaleres)
-    splsnr = bspl(wgrid, starsnr)
-    spldw = bspl(wgrid, dwgrid)
+    splscale = itp(wgrid, scaleres)
+    splsnr = itp(wgrid, starsnr)
+    spldw = itp(wgrid, dwgrid)
     newgrid = [np.min(wgrid)]
     appendme = True
     while appendme:
