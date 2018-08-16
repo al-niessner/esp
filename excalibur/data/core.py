@@ -154,8 +154,7 @@ def scancal(collect, tid, flttype, out,
         maskedexp = []
         masks = []
         ignore = False
-        for dd, ff in zip(data['EXP'][index].copy(),
-                          data['EXPFLAG'][index].copy()):
+        for dd, ff in zip(data['EXP'][index].copy(), data['EXPFLAG'][index].copy()):
             select = ff > 0
             if np.sum(select) > 0:
                 dd[select] = np.nan
@@ -207,16 +206,23 @@ def scancal(collect, tid, flttype, out,
                 if np.nansum(select) > 0: de[valid][select] = 0
                 sqplate = de.shape[0]*de.shape[1]
                 srcprct = spectrace*scanwpi/sqplate
-                if tid in dtlist: srcprct *= 2
-                fldlvl = np.nanpercentile(de, 1e2*(1e0 - srcprct))
+                if tid in dtlist: srcprct *= 2                
+                perfldlist = [np.nanpercentile(de, i) for i in range(101)]
+                indperfld = list(np.diff(perfldlist)).index(np.max(np.diff(perfldlist)))
+                fldlvl = np.nanmax([np.nanpercentile(de, indperfld),
+                                    np.nanpercentile(de, 1e2*(1e0 - srcprct))/2e0])
                 floodlist.append(fldlvl)
                 pass
-            fldthr = np.nanmedian(floodlist)
-            for de, md in zip(psdiff.copy()[::-1],
-                              data['MIN'][index][::-1]):
+            fldthr = np.nanmax(floodlist)
+            for de, md in zip(psdiff.copy()[::-1], data['MIN'][index][::-1]):
                 lmn, lmx = isolate(de, md, spectrace, scanwpi,
                                    targetn, tid, dtlist, fldthr,
                                    verbose=verbose, debug=debug)
+                if np.any(~np.isfinite([lmn, lmx])):
+                    lmn, lmx = isolate(de, md, spectrace, int(scanwpi/2),
+                                       targetn, tid, dtlist, fldthr,
+                                       verbose=verbose, debug=debug)
+                    pass
                 minlocs.append(lmn)
                 maxlocs.append(lmx)
                 pass
@@ -242,7 +248,7 @@ def scancal(collect, tid, flttype, out,
             thispstamp[thispstamp <= psmin] = np.nan
             thispstamp[thispstamp == 0] = np.nan
             # PLOTS --------------------------------------------------
-            if False:
+            if debug:
                 show = thispstamp.copy()
                 valid = np.isfinite(show)
                 show[~valid] = 0
@@ -278,7 +284,7 @@ def scancal(collect, tid, flttype, out,
                 minx -= 1.5*12
                 maxx += 1.5*12
                 if minx < 0: minx = 10
-                if maxx > (thispstamp.shape[1] - 1): maxx = -10
+                if maxx > (thispstamp.shape[1] - 1): maxx = thispstamp.shape[1] - 11
                 if (maxx - minx) < spectrace:
                     data['TRIAL'][index] = 'Could Not Find Full Spectrum'
                     ignore = True
@@ -341,6 +347,7 @@ def scancal(collect, tid, flttype, out,
             # OVERSIZED MASK -----------------------------------------
             for line in frame:
                 if np.nanmax(line) < floodlevel: line *= np.nan
+                if np.sum(np.isfinite(line)) < spectrace: line *= np.nan
                 pass
             frame = [line for line in frame if not(np.all(~np.isfinite(line)))]
             # SCAN RATE CORRECTION -----------------------------------
@@ -668,12 +675,15 @@ G ROUDIER: Based on Minkowski functionnals decomposition algorithm
         plt.title('Isolate Flood Level')
         plt.imshow(show)
         plt.colorbar()
-
-        plt.figure()
-        plt.title('Isolation Level')
-        plt.plot(diffloc)
-        plt.plot(np.array(diffloc)*0 + thr)
         plt.show()
+
+        if np.isfinite(mn):
+            plt.figure()
+            plt.title('Isolation Level')
+            plt.plot(diffloc)
+            plt.plot(np.array(diffloc)*0 + thr)
+            plt.show()
+            pass
         pass
     return mn, mx
 # ------------- ------------------------------------------------------
