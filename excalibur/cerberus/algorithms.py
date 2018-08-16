@@ -27,19 +27,19 @@ class xslib(dawgie.Algorithm):
         self.__verbose = verbose
         self.__spc = trnalg.spectrum()
         self.__fin = sysalg.finalize()
-        self.__out = [crbstates.xslibSV(ext) for ext in fltrs]        
+        self.__out = [crbstates.xslibSV(ext) for ext in fltrs]
         return
 
     def name(self):
         return 'xslib'
-    
+
     def previous(self):
         return [dawgie.ALG_REF(trn.factory, self.__spc),
                 dawgie.ALG_REF(sys.factory, self.__fin)]
 
     def state_vectors(self):
         return self.__out
-    
+
     def run(self, ds, ps):
         svupdate = []
         vfin, sfin = crbcore.checksv(self.__fin.sv_as_dict()['parameters'])

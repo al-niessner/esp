@@ -250,7 +250,7 @@ def xsecs(spc, fin, out,
         out['data'][p]['XSECS'] = library
         out['data'][p]['QTGRID'] = qtgrid
         pass
-    if len(out['data'].keys()) > 0: out['STATUS'].append(True) 
+    if len(out['data'].keys()) > 0: out['STATUS'].append(True)
     return cs
 # ------------------------ -------------------------------------------
 # -- TOTAL PARTITION FUNCTION -- -------------------------------------

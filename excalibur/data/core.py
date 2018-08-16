@@ -206,7 +206,7 @@ def scancal(collect, tid, flttype, out,
                 if np.nansum(select) > 0: de[valid][select] = 0
                 sqplate = de.shape[0]*de.shape[1]
                 srcprct = spectrace*scanwpi/sqplate
-                if tid in dtlist: srcprct *= 2                
+                if tid in dtlist: srcprct *= 2
                 perfldlist = [np.nanpercentile(de, i) for i in range(101)]
                 indperfld = list(np.diff(perfldlist)).index(np.max(np.diff(perfldlist)))
                 fldlvl = np.nanmax([np.nanpercentile(de, indperfld),
