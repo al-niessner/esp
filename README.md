@@ -26,19 +26,25 @@ TARGET
 - create (IDs and filters)
 - autofill (prior system information from NEXSCI)
 - scrape (download and save available data)
+
 SYSTEM
 - validate (checks for system parameters completeness)
 - finalize (delivers a comprehensive set of system parameters uniformly formatted, allows parameters over-ride)
+
 DATA
 - collect (sort data according to filters)
 - calibration (extraction, wavelength solution, noise assessment)
 - timing (transit, eclipse, full phase curve detection)
+
 TRANSIT
 - normalization (scaling of stellar spectrum to Out Of Transit relative quantities)
 - whitelight (orbital solution and instrumental behavior recovery)
 - spectrum (exoplanet spectrum recovery)
+
 ECLIPSE
+
 PHASECURVE
+
 CERBERUS
 
 ### --< Source Code >--
