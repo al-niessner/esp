@@ -42,7 +42,7 @@ class hazelibSV(dawgie.StateVector):
         self._version_ = dawgie.VERSION(1,1,0)
         self['PROFILE'] = excalibur.ValuesList()
         return
-    
+
     def name(self):
         return self.__name
 

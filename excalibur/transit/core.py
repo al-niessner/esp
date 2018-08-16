@@ -929,11 +929,10 @@ def spectrum(fin, nrm, wht, out, selftype,
             oot = (abs(allz) > (1e0 + whiterprs)) & valid
             iot = ~oot
             ootstd = np.std(data[oot])
-            taurprs = 1e0/(whiterprs*1e-1)**2
-            rprs = pmnd('rprs', whiterprs, taurprs)
-            sim = pmnd('immag', 1e0, 1e2)
-            scolor = pmnd('imsc', 1e0, 1e2)
-            iim = pmnd('imnorm', 0e0, 1e2)
+            rprs = pmud('rprs', 0, 2e0*whiterprs)
+            sim = pmnd('immag', 1e0, 1e0/(whiterprs**(2e0)))
+            scolor = pmnd('imsc', 1e0, 1e0/(whiterprs**(2e0)))
+            iim = pmnd('imnorm', 0e0, 1e0/(whiterprs**(2e0)))
             nodes = [rprs, sim, iim, scolor]
             # LIGHT CURVE MODEL --------------------------------------
             @pm.deterministic
