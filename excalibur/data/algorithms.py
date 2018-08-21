@@ -20,8 +20,6 @@ import excalibur.system.algorithms as sysalg
 # VERBOSE AND DEBUG
 verbose = False
 debug = False
-# MINIMUM NUMBER OF COLLECTED DATA TO BE CONSIDERED
-threshold = 0
 # FILTERS
 fltrs = (trgedit.activefilters.__doc__).split('\n')
 fltrs = [t.strip() for t in fltrs if (len(t.replace(' ', '')) > 0)]
@@ -30,6 +28,7 @@ fltrs = [t.strip() for t in fltrs if (len(t.replace(' ', '')) > 0)]
 class collect(dawgie.Algorithm):
     def __init__(self):
         self._version_ = dawgie.VERSION(1,1,0)
+        self.__verbose = verbose
         self.__create = trgalg.create()
         self.__scrape = trgalg.scrape()
         self.__out = trgstates.FilterSV('frames')
@@ -63,19 +62,19 @@ class collect(dawgie.Algorithm):
 
     def _collect(self, name, scrape, out):
         collected = datcore.collect(name, scrape, out,
-                                    threshold=threshold,
-                                    verbose=verbose, debug=debug)
+                                    verbose=self.__verbose, debug=debug)
         return collected
 
     def _failure(self, errstr):
         errmess = '--< DATA COLLECT: ' + errstr + ' >--'
-        if verbose: print(errmess)
+        if self.__verbose: print(errmess)
         return
     pass
 
 class calibration(dawgie.Algorithm):
     def __init__(self):
         self._version_ = dawgie.VERSION(1,1,0)
+        self.__verbose = verbose
         self.__collect = collect()
         self.__out = [datstates.CalibrateSV(ext) for ext in fltrs]
         return
@@ -101,8 +100,7 @@ class calibration(dawgie.Algorithm):
         for datatype in validtype:
             collectin = collect['activefilters'][datatype]
             index = fltrs.index(datatype)
-            update = self._calib(collectin, ds._tn(),
-                                 datatype, self.__out[index])
+            update = self._calib(collectin, ds._tn(), datatype, self.__out[index])
             if update: svupdate.append(self.__out[index])
             pass
         self.__out = svupdate
@@ -112,18 +110,19 @@ class calibration(dawgie.Algorithm):
 
     def _calib(self, collect, tid, flttype, out):
         caled = datcore.scancal(collect, tid, flttype, out,
-                                verbose=verbose, debug=debug)
+                                verbose=self.__verbose, debug=debug)
         return caled
 
     def _failure(self, errstr):
         errmess = '--< DATA CALIBRATION: ' + errstr + ' >--'
-        if verbose: print(errmess)
+        if self.__verbose: print(errmess)
         return
     pass
 
 class timing(dawgie.Algorithm):
     def __init__(self):
         self._version_ = dawgie.VERSION(1,1,0)
+        self.__verbose = verbose
         self.__fin = sysalg.finalize()
         self.__calib = calibration()
         self.__out = [datstates.TimingSV(ext) for ext in fltrs]
@@ -148,12 +147,9 @@ class timing(dawgie.Algorithm):
             vext, verr = datcore.checksv(cal)
             index = fltrs.index(ext)
             update = False
-            if valid and vext:
-                update = self._timing(fin, cal, self.__out[index])
-                pass
+            if valid and vext: update = self._timing(fin, cal, self.__out[index])
             else:
-                message = [m for m in [errstring, verr]
-                           if m is not None]
+                message = [m for m in [errstring, verr] if m is not None]
                 self._failure(message[0])
                 pass
             if update: svupdate.append(self.__out[index])
@@ -164,12 +160,12 @@ class timing(dawgie.Algorithm):
 
     def _timing(self, fin, cal, out):
         chunked = datcore.timing(fin, cal, out,
-                                 verbose=verbose, debug=debug)
+                                 verbose=self.__verbose, debug=debug)
         return chunked
 
     def _failure(self, errstr):
         errmess = '--< DATA TIMING: ' + errstr + ' >--'
-        if verbose: print(errmess)
+        if self.__verbose: print(errmess)
         return
     pass
 # ---------------- ---------------------------------------------------
