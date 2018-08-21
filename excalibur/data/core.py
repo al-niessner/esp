@@ -184,7 +184,7 @@ def scancal(clc, tid, flttype, out,
                                     np.nanpercentile(de, 1e2*(1e0 - srcprct))/2e0])
                 floodlist.append(fldlvl)
                 pass
-            if len(floodlist) > 2: fldthr = np.nanmedian(floodlist)
+            if len(floodlist) > 3: fldthr = np.nanmedian(floodlist)
             else: fldthr = np.nanmax(floodlist)
             for de, md in zip(psdiff.copy()[::-1], data['MIN'][index][::-1]):
                 lmn, lmx = isolate(de, md, spectrace, scanwpi,
@@ -874,12 +874,16 @@ def timing(force, cal, out, verbose=False, debug=False):
                 for o in set(orbto[selv]):
                     selo = (orbto[selv] == o)
                     if len(~ignto[selv][selo]) < 4:
-                        ignto[selv][selo] = True
+                        visignto = ignto[selv]
+                        visignto[selo] = True
+                        ignto[selv] = visignto
                         pass
                     ref = np.median(exlto[selv][selo])
                     if len(set(exlto[selv][selo])) > 1:
                         rej = (exlto[selv][selo] != ref)
-                        ignto[selv][selo][rej] = True
+                        ovignto = ignto[selv][selo]
+                        ovignto[rej] = True
+                        ignto[selv][selo] = ovignto
                         pass
                     pass
                 pass
