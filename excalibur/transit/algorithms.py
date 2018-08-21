@@ -155,17 +155,16 @@ class spectrum(dawgie.Algorithm):
 
     def run(self, ds, ps):
         svupdate = []
-        fin = self.__fin.sv_as_dict()['parameters']
-        vfin, sfin = trncore.checksv(fin)
-        for ext in fltrs:
+        vfin, sfin = trncore.checksv(self.__fin.sv_as_dict()['parameters'])
+        for index, ext in enumerate(fltrs):
             update = False
-            index = fltrs.index(ext)
-            nrm = self.__nrm.sv_as_dict()[ext]
-            vnrm, snrm = trncore.checksv(nrm)
-            wht = self.__wht.sv_as_dict()[ext]
-            vwht, swht = trncore.checksv(wht)
+            vnrm, snrm = trncore.checksv(self.__nrm.sv_as_dict()[ext])
+            vwht, swht = trncore.checksv(self.__wht.sv_as_dict()[ext])
             if vfin and vnrm and vwht:
-                update = self._spectrum(fin, nrm, wht, self.__out[index])
+                update = self._spectrum(self.__fin.sv_as_dict()['parameters'],
+                                        self.__nrm.sv_as_dict()[ext],
+                                        self.__wht.sv_as_dict()[ext],
+                                        self.__out[index])
                 pass
             else:
                 errstr = [m for m in [sfin, snrm, swht] if m is not None]

@@ -21,38 +21,32 @@ def checksv(sv):
 # ----------------- --------------------------------------------------
 # -- COLLECT DATA -- -------------------------------------------------
 def collect(name, scrape, out,
-            threshold=0, verbose=False, debug=False):
+            verbose=False, debug=False):
     collected = False
     obs, ins, det, fil, mod = name.split('-')
     for rootname in scrape['name'].keys():
-        oc = scrape['name'][rootname]['observatory'] in [obs.strip()]
-        ic = scrape['name'][rootname]['instrument'] in [ins.strip()]
-        dc = scrape['name'][rootname]['detector'] in [det.strip()]
-        fc = scrape['name'][rootname]['filter'] in [fil.strip()]
-        mc = scrape['name'][rootname]['mode'] in [mod.strip()]
-        cond = oc and ic and dc and fc and mc
-        if cond:
+        ok = scrape['name'][rootname]['observatory'] in [obs.strip()]
+        ok = ok and (scrape['name'][rootname]['instrument'] in [ins.strip()])
+        ok = ok and (scrape['name'][rootname]['detector'] in [det.strip()])
+        ok = ok and (scrape['name'][rootname]['filter'] in [fil.strip()])
+        ok = ok and (scrape['name'][rootname]['mode'] in [mod.strip()])
+        if ok:
             out['activefilters'][name]['ROOTNAME'].append(rootname)
-            sha = scrape['name'][rootname]['sha']
-            md5 = scrape['name'][rootname]['md5']
-            loc = md5+'_'+sha
+            loc = scrape['name'][rootname]['md5']+'_'+scrape['name'][rootname]['sha']
             out['activefilters'][name]['LOC'].append(loc)
             out['activefilters'][name]['TOTAL'].append(True)
             collected = True
             pass
         pass
-    if collected:
-        if len(out['activefilters'][name]['TOTAL']) < threshold:
-            out['activefilters'].pop(name, None)
-            collected = False
-            pass
-        pass
-    else: out['activefilters'].pop(name, None)
     if collected: out['STATUS'].append(True)
+    else: out['activefilters'].pop(name, None)
+    if verbose or debug:
+        for af in out['activefilters']: print(af)
+        pass
     return collected
 # ------------------ -------------------------------------------------
 # -- CALIBRATE SCAN DATA -- ------------------------------------------
-def scancal(collect, tid, flttype, out,
+def scancal(clc, tid, flttype, out,
             dtlist=['XO-2', 'WASP-19'],
             frame2png=False, verbose=False, debug=False):
     # DATA TYPE ------------------------------------------------------
@@ -66,30 +60,21 @@ def scancal(collect, tid, flttype, out,
             'SCANRATE':[], 'SCANLENGTH':[], 'SCANANGLE':[],
             'EXP':[], 'EXPERR':[], 'EXPFLAG':[], 'VRANGE':vrange,
             'TIME':[], 'EXPLEN':[], 'MIN':[], 'MAX':[], 'TRIAL':[]}
-    for loc in sorted(collect['LOC']):
+    for loc in sorted(clc['LOC']):
         fullloc = os.path.join(dbs, loc)
         with pyfits.open(fullloc) as hdulist:
             header0 = hdulist[0].header
             test = header0['UNITCORR']
             eps = False
-            if (test in ['COMPLETE','PERFORM']): eps = True
+            if (test in ['COMPLETE', 'PERFORM']): eps = True
             data['EPS'].append(eps)
-            if 'SCAN_RAT' in header0:
-                data['SCANRATE'].append(header0['SCAN_RAT'])
-                pass
+            if 'SCAN_RAT' in header0: data['SCANRATE'].append(header0['SCAN_RAT'])
             else: data['SCANRATE'].append(np.nan)
-            if 'SCAN_LEN' in header0:
-                data['SCANLENGTH'].append(header0['SCAN_LEN'])
-                pass
+            if 'SCAN_LEN' in header0: data['SCANLENGTH'].append(header0['SCAN_LEN'])
             else: data['SCANLENGTH'].append(np.nan)
-            if 'SCAN_ANG' in header0:
-                data['SCANANGLE'].append(header0['SCAN_ANG'])
-                pass
-            elif 'PA_V3' in header0:
-                data['SCANANGLE'].append(header0['PA_V3'])
-                pass
+            if 'SCAN_ANG' in header0: data['SCANANGLE'].append(header0['SCAN_ANG'])
+            elif 'PA_V3' in header0: data['SCANANGLE'].append(header0['PA_V3'])
             else: data['SCANANGLE'].append(666)
-            pass
             frame = []
             errframe = []
             dqframe = []
@@ -97,7 +82,7 @@ def scancal(collect, tid, flttype, out,
             fmin = []
             fmax = []
             for fits in hdulist:
-                if ((fits.size != 0) and ('DELTATIM' in fits.header.keys())):
+                if (fits.size != 0) and ('DELTATIM' in fits.header.keys()):
                     fitsdata = np.empty(fits.data.shape)
                     fitsdata[:] = fits.data[:]
                     frame.append(fitsdata)
@@ -107,29 +92,18 @@ def scancal(collect, tid, flttype, out,
                     del fits.data
                     pass
                 if 'EXTNAME' in fits.header:
-                    if (fits.header['EXTNAME'] == 'ERR'):
+                    if (fits.header['EXTNAME'] in ['ERR', 'DQ']):
                         fitsdata = np.empty(fits.data.shape)
                         fitsdata[:] = fits.data[:]
-                        errframe.append(fitsdata)
+                        if fits.header['EXTNAME'] == 'ERR': errframe.append(fitsdata)
+                        if fits.header['EXTNAME'] == 'DQ': dqframe.append(fitsdata)
                         del fits.data
                         pass
-                    pass
-                if (eps and ('EXTNAME' in fits.header)):
-                    if (fits.header['EXTNAME'] == 'TIME'):
+                    if eps and (fits.header['EXTNAME'] == 'TIME'):
                         frame[-1] = (frame[-1]*
-                                     np.array(float(
-                                         fits.header['PIXVALUE'])))
+                                     np.array(float(fits.header['PIXVALUE'])))
                         errframe[-1] = (errframe[-1]*
-                                        np.array(float(
-                                            fits.header['PIXVALUE'])))
-                        pass
-                    pass
-                if 'EXTNAME' in fits.header:
-                    if (fits.header['EXTNAME'] == 'DQ'):
-                        fitsdata = np.empty(fits.data.shape)
-                        fitsdata[:] = fits.data[:]
-                        dqframe.append(fitsdata)
-                        del fits.data
+                                        np.array(float(fits.header['PIXVALUE'])))
                         pass
                     pass
                 pass
@@ -149,12 +123,11 @@ def scancal(collect, tid, flttype, out,
     data['IGNORED'] = [False]*len(data['LOC'])
     data['FLOODLVL'] = [np.nan]*len(data['LOC'])
     data['TRIAL'] = ['']*len(data['LOC'])
-    for nm in data['LOC']:
-        index = data['LOC'].index(nm)
+    for index, nm in enumerate(data['LOC']):
         maskedexp = []
         masks = []
         ignore = False
-        for dd, ff in zip(data['EXP'][index].copy(), data['EXPFLAG'][index].copy()):
+        for dd, ff in zip(data['EXP'][index], data['EXPFLAG'][index]):
             select = ff > 0
             if np.sum(select) > 0:
                 dd[select] = np.nan
@@ -174,8 +147,7 @@ def scancal(collect, tid, flttype, out,
         data['IGNORED'][index] = ignore
         pass
     # DATA CUBE ------------------------------------------------------
-    for nm in data['LOC']:
-        index = data['LOC'].index(nm)
+    for index, nm in enumerate(data['LOC']):
         ignore = data['IGNORED'][index]
         # ISOLATE SCAN Y ---------------------------------------------
         psdiff = np.diff(data['MEXP'][index][::-1].copy(), axis=0)
@@ -190,7 +162,7 @@ def scancal(collect, tid, flttype, out,
             data['TRIAL'][index] = 'Subexposure Scan Length < 1 Pixel'
             ignore = True
             pass
-        if not(ignore):
+        if not ignore:
             targetn = 0
             if tid in dtlist:
                 if tid in ['XO-2']: targetn = -1
@@ -198,8 +170,7 @@ def scancal(collect, tid, flttype, out,
             minlocs = []
             maxlocs = []
             floodlist = []
-            for de, md in zip(psdiff.copy()[::-1],
-                              data['MIN'][index][::-1]):
+            for de, md in zip(psdiff[::-1], data['MIN'][index][::-1]):
                 valid = np.isfinite(de)
                 if np.nansum(~valid) > 0: de[~valid] = 0
                 select = de[valid] < md
@@ -213,7 +184,8 @@ def scancal(collect, tid, flttype, out,
                                     np.nanpercentile(de, 1e2*(1e0 - srcprct))/2e0])
                 floodlist.append(fldlvl)
                 pass
-            fldthr = np.nanmax(floodlist)
+            if len(floodlist) > 3: fldthr = np.nanmedian(floodlist)
+            else: fldthr = np.nanmax(floodlist)
             for de, md in zip(psdiff.copy()[::-1], data['MIN'][index][::-1]):
                 lmn, lmx = isolate(de, md, spectrace, scanwpi,
                                    targetn, tid, dtlist, fldthr,
@@ -234,7 +206,7 @@ def scancal(collect, tid, flttype, out,
             pass
         ignore = ignore or not((np.any(np.isfinite(minlocs))) and
                                (np.any(np.isfinite(maxlocs))))
-        if not(ignore):
+        if not ignore:
             minl = np.nanmin(minlocs)
             maxl = np.nanmax(maxlocs)
             if minl < 0: minl = 10
@@ -324,8 +296,8 @@ def scancal(collect, tid, flttype, out,
             plt.imshow(thispstamp)
             plt.colorbar()
             if frame2png:
-                if not(os.path.exists('TEST')): os.mkdir('TEST')
-                if not(os.path.exists('TEST/'+tid)): os.mkdir('TEST/'+tid)
+                if not os.path.exists('TEST'): os.mkdir('TEST')
+                if not os.path.exists('TEST/'+tid): os.mkdir('TEST/'+tid)
                 fname = 'TEST/'+tid+'/'+nm+'.png'
                 plt.savefig(fname)
                 plt.close()
@@ -337,23 +309,27 @@ def scancal(collect, tid, flttype, out,
     data['SPECTRUM'] = [np.nan]*len(data['LOC'])
     data['SPECERR'] = [np.nan]*len(data['LOC'])
     data['NSPEC'] = [np.nan]*len(data['LOC'])
-    for loc in data['LOC']:
-        index = data['LOC'].index(loc)
-        ignore = data['IGNORED'][index]
+    emptythr = 1e3
+    for index, loc in enumerate(data['LOC']):
         floodlevel = data['FLOODLVL'][index]
-        if not(ignore):
+        if floodlevel < emptythr:
+            data['IGNORED'][index] = True
+            data['TRIAL'][index] = 'Empty Frame'
+            pass
+        ignore = data['IGNORED'][index]
+        if not ignore:
             frame = data['MEXP'][index].copy()
-            frame = [line for line in frame if not(np.all(~np.isfinite(line)))]
+            frame = [line for line in frame if not np.all(~np.isfinite(line))]
             # OVERSIZED MASK -----------------------------------------
             for line in frame:
                 if np.nanmax(line) < floodlevel: line *= np.nan
                 if np.sum(np.isfinite(line)) < spectrace: line *= np.nan
                 pass
-            frame = [line for line in frame if not(np.all(~np.isfinite(line)))]
+            frame = [line for line in frame if not np.all(~np.isfinite(line))]
             # SCAN RATE CORRECTION -----------------------------------
             template = []
             for col in np.array(frame).T:
-                if not(np.all(~np.isfinite(col))): template.append(np.nanmedian(col))
+                if not np.all(~np.isfinite(col)): template.append(np.nanmedian(col))
                 else: template.append(np.nan)
                 pass
             template = np.array(template)
@@ -372,21 +348,20 @@ def scancal(collect, tid, flttype, out,
                     pass
                 else: line *= np.nan
                 pass
-            frame = [line for line in frame if not(np.all(~np.isfinite(line)))]
+            frame = [line for line in frame if not np.all(~np.isfinite(line))]
             spectrum = []
             specerr = []
             nspectrum = []
             vtemplate = []
             for row in np.array(frame):
-                if not(np.all(~np.isfinite(row))): vtemplate.append(np.nanmedian(row))
+                if not np.all(~np.isfinite(row)): vtemplate.append(np.nanmedian(row))
                 else: vtemplate.append(np.nan)
                 pass
             vtemplate = np.array(vtemplate)
             for col in np.array(frame).T:
                 ignorecol = False
-                if not(np.all(~np.isfinite(col))):
-                    errref = (np.sqrt(abs(np.nanmedian(col)))/
-                              abs(vtemplate))
+                if not np.all(~np.isfinite(col)):
+                    errref = (np.sqrt(abs(np.nanmedian(col)))/abs(vtemplate))
                     ratio = col/vtemplate
                     refline = np.nanmedian(ratio)
                     select = np.isfinite(col)
@@ -435,8 +410,7 @@ def scancal(collect, tid, flttype, out,
     data['DISPERSION'] = [np.nan]*len(data['LOC'])
     data['SHIFT'] = [np.nan]*len(data['LOC'])
     spectralindex = []
-    for loc in data['LOC']:
-        index = data['LOC'].index(loc)
+    for index, loc in enumerate(data['LOC']):
         ignore = data['IGNORED'][index]
         if not ignore:
             spectrum = data['SPECTRUM'][index].copy()
@@ -449,8 +423,7 @@ def scancal(collect, tid, flttype, out,
             pass
         pass
     siv = np.nanmedian(spectralindex)
-    for loc in data['LOC']:
-        index = data['LOC'].index(loc)
+    for index, loc in enumerate(data['LOC']):
         ignore = data['IGNORED'][index]
         if not ignore:
             spectrum = data['SPECTRUM'][index].copy()
@@ -483,29 +456,22 @@ def scancal(collect, tid, flttype, out,
         data['IGNORED'][index] = ignore
         pass
     # PLOTS ----------------------------------------------------------
-    if verbose and not(np.all(ignore)):
-        timing = np.array([d for d,i in zip(data['TIME'],
-                                            data['IGNORED'])
-                           if not(i)])
-        dispersion = np.array([d for d,i in zip(data['DISPERSION'],
-                                                data['IGNORED'])
-                               if not(i)])
-        shift = np.array([d for d,i in zip(data['SHIFT'],
-                                           data['IGNORED'])
-                          if not(i)])
-        spec = np.array([d for d,i in zip(data['SPECTRUM'],
-                                          data['IGNORED'])
-                         if not(i)])
-        photoc = np.array([d for d,i in zip(data['PHT2CNT'],
-                                            data['IGNORED'])
-                           if not(i)])
-        wave = np.array([d for d,i in zip(data['WAVE'],
-                                          data['IGNORED'])
-                         if not(i)])
-        errspec = np.array([d for d,i in zip(data['SPECERR'],
-                                             data['IGNORED'])
-                            if not(i)])
-        torder = np.argsort(timing)
+    if verbose and not np.all(ignore):
+        alltime = np.array([d for d,i in zip(data['TIME'], data['IGNORED'])
+                            if not i])
+        dispersion = np.array([d for d,i in zip(data['DISPERSION'], data['IGNORED'])
+                               if not i])
+        shift = np.array([d for d,i in zip(data['SHIFT'], data['IGNORED'])
+                          if not i])
+        spec = np.array([d for d,i in zip(data['SPECTRUM'], data['IGNORED'])
+                         if not i])
+        photoc = np.array([d for d,i in zip(data['PHT2CNT'], data['IGNORED'])
+                           if not i])
+        wave = np.array([d for d,i in zip(data['WAVE'], data['IGNORED'])
+                         if not i])
+        errspec = np.array([d for d,i in zip(data['SPECERR'], data['IGNORED'])
+                            if not i])
+        torder = np.argsort(alltime)
         vrange = data['VRANGE']
         allerr = []
         for s, e, w in zip(spec, errspec, wave):
@@ -528,7 +494,7 @@ def scancal(collect, tid, flttype, out,
             plt.plot(w[select], s[select]/p[select])
             pass
         plt.ylabel('Stellar Spectra [Photons]')
-        plt.xlabel('Wavelength [$\mu$m]')
+        plt.xlabel('Wavelength [microns]')
 
         plt.figure()
         plt.hist(allerr)
@@ -550,18 +516,17 @@ def scancal(collect, tid, flttype, out,
         allignore = data['IGNORED']
         allculprits = data['TRIAL']
         allindex = np.arange(len(data['LOC']))
-        print('>-- IGNORED:', np.nansum(allignore),
-              '/', len(allignore))
+        print('>-- IGNORED:', np.nansum(allignore), '/', len(allignore))
         for index in allindex:
             if len(allculprits[index]) > 0:
-                print('Frame: ', index, allculprits[index])
+                print('Frame #', index, ':', allculprits[index])
                 pass
             pass
         pass
     data.pop('EXP', None)
     data.pop('EXPFLAG', None)
     for key in data: out['data'][key] = data[key]
-    caled = not(np.all(data['IGNORED']))
+    caled = not np.all(data['IGNORED'])
     if caled: out['STATUS'].append(True)
     return caled
 # ------------------------- ------------------------------------------
@@ -645,11 +610,11 @@ G ROUDIER: Based on Minkowski functionnals decomposition algorithm
             thrw = int(spectrace - 12)
             pass
         for dl,c in zip(diffloc, np.arange(len(loc))):
-            if ((dl > thr) and not((cvcount > thrw))):
+            if (dl > thr) and (cvcount <= thrw):
                 poop = minlocs.pop(-1)
                 minlocs.append(loc[c])
                 pass
-            if ((dl > thr) and (cvcount > thrw)):
+            if (dl > thr) and (cvcount > thrw):
                 maxlocs.append(loc[c - 1])
                 minlocs.append(loc[c])
                 cvcount = 0
@@ -668,7 +633,7 @@ G ROUDIER: Based on Minkowski functionnals decomposition algorithm
         mn = np.nan
         mx = np.nan
         pass
-    if debug:
+    if verbose or debug:
         show = thisdiff.copy()
         show[show < floodlevel] = np.nan
         plt.figure()
@@ -761,7 +726,7 @@ def bttf(lightpath, verbose=False, debug=False):
 
         plt.subplot(212)
         plt.plot(muref, ttp, 'o--')
-        plt.xlabel('$\lambda$ [Angstroms]')
+        plt.xlabel('Wavelength [angstroms]')
         plt.ylabel('Total Throughput')
         plt.xlim([min(muref), max(muref)])
         plt.show()
@@ -774,7 +739,7 @@ def loadcalf(name, muref, calloc='/proj/sdp/data/cal'):
     data = pyfits.getdata(fitsfile)
     muin = np.array(data.WAVELENGTH)
     tin = np.array(data.THROUGHPUT)
-    if (False in np.isfinite(muref)): muref = muin
+    if False in np.isfinite(muref): muref = muin
     f = itp.interp1d(muin, tin, bounds_error=False, fill_value=0)
     t = f(muref)
     return muref, t
@@ -862,7 +827,6 @@ def timing(force, cal, out, verbose=False, debug=False):
     for p in planets:
         out['data'][p] = {}
         smaors = priors[p]['sma']/priors['R*']/ssc['Rsun/AU']
-        rpors = priors[p]['rp']/priors['R*']*ssc['Rjup/Rsun']
         tmjd = priors[p]['t0']
         if tmjd > 2400000.5: tmjd -= 2400000.5
         z, phase = time2z(time, priors[p]['inc'], tmjd, smaors,
@@ -886,7 +850,7 @@ def timing(force, cal, out, verbose=False, debug=False):
         for v in set(visto):
             selv = (visto == v)
             vordsa = scato[selv].copy()
-            if (len(set(vordsa)) > 1):
+            if len(set(vordsa)) > 1:
                 dvisto[visto > v] = dvisto[visto > v] + 1
                 dbthr = np.mean(list(set(vordsa)))
                 vdbvisto = dvisto[selv].copy()
@@ -910,12 +874,16 @@ def timing(force, cal, out, verbose=False, debug=False):
                 for o in set(orbto[selv]):
                     selo = (orbto[selv] == o)
                     if len(~ignto[selv][selo]) < 4:
-                        ignto[selv][selo] = True
+                        visignto = ignto[selv]
+                        visignto[selo] = True
+                        ignto[selv] = visignto
                         pass
                     ref = np.median(exlto[selv][selo])
                     if len(set(exlto[selv][selo])) > 1:
                         rej = (exlto[selv][selo] != ref)
-                        ignto[selv][selo][rej] = True
+                        ovignto = ignto[selv][selo]
+                        ovignto[rej] = True
+                        ignto[selv][selo] = ovignto
                         pass
                     pass
                 pass
@@ -927,23 +895,21 @@ def timing(force, cal, out, verbose=False, debug=False):
             posphsto = phsto.copy()
             posphsto[posphsto < 0] = posphsto[posphsto < 0] + 1e0
             pcconde = False
-            if ((np.max(posphsto[selv]) - np.min(posphsto[selv])) > (1e0 - 2e0*abs(np.arcsin(trlim/smaors))/(2e0*np.pi))):
+            if (np.max(posphsto[selv]) - np.min(posphsto[selv])) > (1e0 - 2e0*abs(np.arcsin(trlim/smaors))/(2e0*np.pi)):
                 pcconde = True
                 pass
             pccondt = False
-            if ((np.max(phsto[selv]) - np.min(phsto[selv])) > (1e0 - 2e0*abs(np.arcsin(trlim/smaors))/(2e0*np.pi))):
+            if (np.max(phsto[selv]) - np.min(phsto[selv])) > (1e0 - 2e0*abs(np.arcsin(trlim/smaors))/(2e0*np.pi)):
                 pccondt = True
                 pass
             if pcconde and pccondt: out['phasecurve'].append(int(v))
             select = (abs(zto[selv]) < trlim)
-            if (np.any(select) and
-                (np.min(abs(posphsto[selv][select] - 0.5)) <
-                 abs(np.arcsin(trlim/smaors))/(2e0*np.pi))):
+            if (np.any(select) and (np.min(abs(posphsto[selv][select] - 0.5)) <
+                                    abs(np.arcsin(trlim/smaors))/(2e0*np.pi))):
                 out['eclipse'].append(int(v))
                 pass
-            if (np.any(select) and
-                (np.min(abs(posphsto[selv][select])) <
-                 abs(np.arcsin(trlim/smaors))/(2e0*np.pi))):
+            if (np.any(select) and (np.min(abs(posphsto[selv][select])) <
+                                    abs(np.arcsin(trlim/smaors))/(2e0*np.pi))):
                 out['transit'].append(int(v))
                 pass
             pass
@@ -956,25 +922,21 @@ def timing(force, cal, out, verbose=False, debug=False):
             posphsto = phsto.copy()
             posphsto[posphsto < 0] = posphsto[posphsto < 0] + 1e0
             pcconde = False
-            if ((np.max(posphsto[selv]) - np.min(posphsto[selv])) > (1e0 - 2e0*abs(np.arcsin(trlim/smaors))/(2e0*np.pi))):
+            if (np.max(posphsto[selv]) - np.min(posphsto[selv])) > (1e0 - 2e0*abs(np.arcsin(trlim/smaors))/(2e0*np.pi)):
                 pcconde = True
                 pass
             pccondt = False
-            if ((np.max(phsto[selv]) - np.min(phsto[selv])) > (1e0 - 2e0*abs(np.arcsin(trlim/smaors))/(2e0*np.pi))):
+            if (np.max(phsto[selv]) - np.min(phsto[selv])) > (1e0 - 2e0*abs(np.arcsin(trlim/smaors))/(2e0*np.pi)):
                 pccondt = True
                 pass
-            if pcconde and pccondt:
-                out['data'][p]['phasecurve'].append(int(v))
-                pass
+            if pcconde and pccondt: out['data'][p]['phasecurve'].append(int(v))
             select = (abs(zto[selv]) < trlim)
-            if (np.any(select) and
-                (np.min(abs(posphsto[selv][select] - 0.5)) <
-                 abs(np.arcsin(trlim/smaors))/(2e0*np.pi))):
+            if (np.any(select) and (np.min(abs(posphsto[selv][select] - 0.5)) <
+                                    abs(np.arcsin(trlim/smaors))/(2e0*np.pi))):
                 out['data'][p]['eclipse'].append(int(v))
                 pass
-            if (np.any(select) and
-                (np.min(abs(posphsto[selv][select])) <
-                 abs(np.arcsin(trlim/smaors))/(2e0*np.pi))):
+            if (np.any(select) and (np.min(abs(posphsto[selv][select])) <
+                                    abs(np.arcsin(trlim/smaors))/(2e0*np.pi))):
                 out['data'][p]['transit'].append(int(v))
                 pass
             pass
@@ -983,7 +945,7 @@ def timing(force, cal, out, verbose=False, debug=False):
         dvis[ordt] = dvisto.astype(int)
         ignore[ordt] = ignto
         # PLOTS ------------------------------------------------------
-        if verbose:
+        if verbose or debug:
             print('>-- TRANSIT:', out['transit'])
             print('>-- ECLIPSE:', out['eclipse'])
             print('>-- PHASE CURVE:', out['phasecurve'])
@@ -1035,25 +997,24 @@ def timing(force, cal, out, verbose=False, debug=False):
         out['data'][p]['ignore'] = ignore
         out['STATUS'].append(True)
         pass
-    if ((len(out['transit']) > 0) or
-        (len(out['eclipse']) > 0) or
-        (len(out['phasecurve']) > 0)): chunked = True
+    if ((out['transit'].__len__() > 0) or
+        (out['eclipse'].__len__() > 0) or
+        (out['phasecurve'].__len__() > 0)): chunked = True
     return chunked
 # ------------ -------------------------------------------------------
 # -- TIME TO Z -- ----------------------------------------------------
 def time2z(time, ipct, tknot, sma, orbperiod, ecc,
            tperi=None, epsilon=1e-10):
-    ipctrad = ipct*np.pi/180e0
-    if (tperi is not None):
+    if tperi is not None:
         ft0 = (tperi - tknot) % orbperiod
         ft0 /= orbperiod
-        if (ft0 > 0.5): ft0 += -1e0
+        if ft0 > 0.5: ft0 += -1e0
         M0 = 2e0*np.pi*ft0
         E0 = solveme(M0, ecc, epsilon)
         realf = np.sqrt(1e0 - ecc)*np.cos(E0/2e0)
         imagf = np.sqrt(1e0 + ecc)*np.sin(E0/2e0)
         w = np.angle(np.complex(realf, imagf))
-        if (abs(ft0) < epsilon):
+        if abs(ft0) < epsilon:
             w = np.pi/2e0
             tperi = tknot
             pass
@@ -1077,7 +1038,7 @@ def time2z(time, ipct, tknot, sma, orbperiod, ecc,
         pass
     f = np.array(f)
     r = sma*(1e0 - ecc**2)/(1e0 + ecc*np.cos(f))
-    z = r*np.sqrt(1e0**2 - (np.sin(w+f)**2)*(np.sin(ipctrad))**2)
+    z = r*np.sqrt(1e0**2 - (np.sin(w+f)**2)*(np.sin(ipct*np.pi/180e0))**2)
     z[sft < 0] *= -1e0
     return z, sft
 # --------------- ----------------------------------------------------
@@ -1085,7 +1046,7 @@ def time2z(time, ipct, tknot, sma, orbperiod, ecc,
 def solveme(M, e, eps):
     E = np.copy(M)
     for i in np.arange(M.shape[0]):
-        while(abs(E[i] - e*np.sin(E[i]) - M[i]) > eps):
+        while abs(E[i] - e*np.sin(E[i]) - M[i]) > eps:
             num = E[i] - e*np.sin(E[i]) - M[i]
             den = 1. - e*np.cos(E[i])
             E[i] = E[i] - num/den
