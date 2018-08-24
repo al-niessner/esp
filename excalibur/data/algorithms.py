@@ -22,7 +22,7 @@ verbose = False
 debug = False
 # FILTERS
 fltrs = (trgedit.activefilters.__doc__).split('\n')
-fltrs = [t.strip() for t in fltrs if (len(t.replace(' ', '')) > 0)]
+fltrs = [t.strip() for t in fltrs if t.replace(' ', '').__len__() > 0]
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class collect(dawgie.Algorithm):
@@ -90,26 +90,26 @@ class calibration(dawgie.Algorithm):
 
     def run(self, ds, ps):
         update = False
-        collect = self.__collect.sv_as_dict()['frames']
+        cll = self.__collect.sv_as_dict()['frames']
         validtype = []
-        for test in collect['activefilters'].keys():
+        for test in cll['activefilters'].keys():
             if 'SCAN' in test: validtype.append(test)
             pass
         errstring = 'NO DATA'
         svupdate = []
         for datatype in validtype:
-            collectin = collect['activefilters'][datatype]
+            collectin = cll['activefilters'][datatype]
             index = fltrs.index(datatype)
             update = self._calib(collectin, ds._tn(), datatype, self.__out[index])
             if update: svupdate.append(self.__out[index])
             pass
         self.__out = svupdate
-        if len(self.__out) > 0: ds.update()
+        if self.__out.__len__() > 0: ds.update()
         else: self._failure(errstring)
         return
 
-    def _calib(self, collect, tid, flttype, out):
-        caled = datcore.scancal(collect, tid, flttype, out,
+    def _calib(self, cll, tid, flttype, out):
+        caled = datcore.scancal(cll, tid, flttype, out,
                                 verbose=self.__verbose, debug=debug)
         return caled
 
@@ -155,7 +155,7 @@ class timing(dawgie.Algorithm):
             if update: svupdate.append(self.__out[index])
             pass
         self.__out = svupdate
-        if len(self.__out) > 0: ds.update()
+        if self.__out.__len__() > 0: ds.update()
         return
 
     def _timing(self, fin, cal, out):

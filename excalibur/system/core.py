@@ -1,8 +1,5 @@
 # -- IMPORTS -- ------------------------------------------------------
-import pdb
-
 import numpy as np
-import matplotlib.pyplot as plt
 # ------------- ------------------------------------------------------
 # -- SOLAR SYSTEM CONSTANTS -- ---------------------------------------
 def ssconstants(mks=False, cgs=False):
@@ -309,9 +306,7 @@ def forcepar(overwrite, out, verbose=False, debug=False):
                 out['needed'].pop(out['needed'].index(n))
                 pass
             except (ValueError, KeyError):
-                if ('mass' not in n) and ('rho' not in n):
-                    forced = False
-                    pass
+                if ('mass' not in n) and ('rho' not in n): forced = False
                 pass
             pass
         pass
@@ -349,14 +344,14 @@ def forcepar(overwrite, out, verbose=False, debug=False):
         pass
     if starneed or (len(out['priors']['planets']) < 1):
         forced = False
-        if verbose:
+        if verbose or debug:
             print('>-- MISSING MANDATORY PARAMETERS')
             print('>-- ADD THEM TO TARGET/EDIT.PY PPAR()')
             pass
         pass
     else:
         forced = True
-        if verbose: print('>-- PRIORITY PARAMETERS SUCCESSFUL')
+        if verbose or debug: print('>-- PRIORITY PARAMETERS SUCCESSFUL')
         pass
     return forced
 # ---------------------------- ---------------------------------------
