@@ -1,14 +1,7 @@
 # -- IMPORTS -- ------------------------------------------------------
-import os
-import pdb
-
 import dawgie
 import dawgie.context
 
-import excalibur.eclipse as ecl
-import excalibur.eclipse.states as eclstates
-
-import excalibur.data as dat
 import excalibur.data.algorithms as datalg
 import excalibur.system.algorithms as sysalg
 import excalibur.transit.algorithms as trnalg
@@ -21,7 +14,7 @@ verbose = False
 debug = False
 # FILTERS
 fltrs = (trgedit.activefilters.__doc__).split('\n')
-fltrs = [t.strip() for t in fltrs if (len(t.replace(' ', '')) > 0)]
+fltrs = [t.strip() for t in fltrs if t.replace(' ', '').__len__() > 0]
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class normalization(trnalg.normalization):

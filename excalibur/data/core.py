@@ -20,8 +20,7 @@ def checksv(sv):
     return valid, errstring
 # ----------------- --------------------------------------------------
 # -- COLLECT DATA -- -------------------------------------------------
-def collect(name, scrape, out,
-            verbose=False, debug=False):
+def collect(name, scrape, out, verbose=False, debug=False):
     collected = False
     obs, ins, det, fil, mod = name.split('-')
     for rootname in scrape['name'].keys():
@@ -40,15 +39,12 @@ def collect(name, scrape, out,
         pass
     if collected: out['STATUS'].append(True)
     else: out['activefilters'].pop(name, None)
-    if verbose or debug:
-        for af in out['activefilters']: print(af)
-        pass
+    if verbose or debug: pass
     return collected
 # ------------------ -------------------------------------------------
 # -- CALIBRATE SCAN DATA -- ------------------------------------------
 def scancal(clc, tid, flttype, out,
-            dtlist=['XO-2', 'WASP-19'],
-            frame2png=False, verbose=False, debug=False):
+            emptythr=1e3, frame2png=False, verbose=False, debug=False):
     # DATA TYPE ------------------------------------------------------
     arcsec2pix = dps(flttype)
     vrange = validrange(flttype)
@@ -100,8 +96,7 @@ def scancal(clc, tid, flttype, out,
                         del fits.data
                         pass
                     if eps and (fits.header['EXTNAME'] == 'TIME'):
-                        frame[-1] = (frame[-1]*
-                                     np.array(float(fits.header['PIXVALUE'])))
+                        frame[-1] = frame[-1]*np.array(float(fits.header['PIXVALUE']))
                         errframe[-1] = (errframe[-1]*
                                         np.array(float(fits.header['PIXVALUE'])))
                         pass
@@ -164,9 +159,7 @@ def scancal(clc, tid, flttype, out,
             pass
         if not ignore:
             targetn = 0
-            if tid in dtlist:
-                if tid in ['XO-2']: targetn = -1
-                pass
+            if tid in ['XO-2']: targetn = -1
             minlocs = []
             maxlocs = []
             floodlist = []
@@ -175,28 +168,29 @@ def scancal(clc, tid, flttype, out,
                 if np.nansum(~valid) > 0: de[~valid] = 0
                 select = de[valid] < md
                 if np.nansum(select) > 0: de[valid][select] = 0
-                sqplate = de.shape[0]*de.shape[1]
-                srcprct = spectrace*scanwpi/sqplate
-                if tid in dtlist: srcprct *= 2
-                perfldlist = [np.nanpercentile(de, i) for i in range(101)]
-                indperfld = list(np.diff(perfldlist)).index(np.max(np.diff(perfldlist)))
-                fldlvl = np.nanmax([np.nanpercentile(de, indperfld),
-                                    np.nanpercentile(de, 1e2*(1e0 - srcprct))/2e0])
-                floodlist.append(fldlvl)
+                perfldlist = np.nanpercentile(de, np.arange(1001)/1e1)
+                perfldlist = np.diff(perfldlist)
+                perfldlist[:100] = 0
+                perfldlist[-1] = 0
+                indperfld = list(perfldlist).index(np.max(perfldlist))*1e-1
+                floodlist.append(np.nanpercentile(de, indperfld))
                 pass
-            if len(floodlist) > 3: fldthr = np.nanmedian(floodlist)
-            else: fldthr = np.nanmax(floodlist)
+            fldthr = np.nanmax(floodlist)
+            if 'G102' in flttype: fldthr /= 3e0
             for de, md in zip(psdiff.copy()[::-1], data['MIN'][index][::-1]):
-                lmn, lmx = isolate(de, md, spectrace, scanwpi,
-                                   targetn, tid, dtlist, fldthr,
-                                   verbose=verbose, debug=debug)
-                if np.any(~np.isfinite([lmn, lmx])):
-                    lmn, lmx = isolate(de, md, spectrace, int(scanwpi/2),
-                                       targetn, tid, dtlist, fldthr,
-                                       verbose=verbose, debug=debug)
-                    pass
+                lmn, lmx = isolate(de, md, spectrace, scanwpi, targetn, fldthr,
+                                   verbose=debug, debug=debug)
                 minlocs.append(lmn)
                 maxlocs.append(lmx)
+                pass
+            # HEAVILY FLAGGED SCAN -----------------------------------
+            if np.all(~np.isfinite(minlocs)) or np.all(~np.isfinite(maxlocs)):
+                for de, md in zip(psdiff.copy()[::-1], data['MIN'][index][::-1]):
+                    lmn, lmx = isolate(de, md, spectrace, scanwpi/2, targetn, fldthr,
+                                       verbose=debug, debug=debug)
+                    minlocs.append(lmn)
+                    maxlocs.append(lmx)
+                    pass
                 pass
             data['FLOODLVL'][index] = fldthr
             pass
@@ -246,12 +240,9 @@ def scancal(clc, tid, flttype, out,
             # ISOLATE SCAN X -----------------------------------------
             mltord = thispstamp.copy()
             targetn = 0
-            if tid in dtlist:
-                if tid in ['XO-2']: targetn = -1
-                pass
-            minx, maxx = isolate(mltord, psmin, spectrace, scanwpi,
-                                 targetn, tid, dtlist, fldthr,
-                                 axis=0, verbose=verbose, debug=debug)
+            if tid in ['XO-2']: targetn = -1
+            minx, maxx = isolate(mltord, psmin, spectrace, scanwpi, targetn, fldthr,
+                                 axis=0, verbose=debug, debug=debug)
             if np.isfinite(minx*maxx):
                 minx -= 1.5*12
                 maxx += 1.5*12
@@ -289,6 +280,7 @@ def scancal(clc, tid, flttype, out,
         data['TIME'][index] = np.nanmean(data['TIME'][index].copy())
         data['IGNORED'][index] = ignore
         data['EXPERR'][index] = pstamperr
+        if verbose: print(index, '/', len(data['LOC'])-1)
         # PLOTS ------------------------------------------------------
         if debug or frame2png:
             plt.figure()
@@ -309,7 +301,6 @@ def scancal(clc, tid, flttype, out,
     data['SPECTRUM'] = [np.nan]*len(data['LOC'])
     data['SPECERR'] = [np.nan]*len(data['LOC'])
     data['NSPEC'] = [np.nan]*len(data['LOC'])
-    emptythr = 1e3
     for index, loc in enumerate(data['LOC']):
         floodlevel = data['FLOODLVL'][index]
         if floodlevel < emptythr:
@@ -339,12 +330,10 @@ def scancal(clc, tid, flttype, out,
                 refline = np.nanmedian(line)
                 select = np.isfinite(line)
                 minok = (abs(line[select] - refline) < 3e0*np.nanmin(errref[select]))
-                ok = (abs(line[select] - refline) < 3e0*errref[select])
                 if np.nansum(minok) > 0:
                     alpha = np.nansum(minok)/np.nansum(line[select][minok])
                     line *= alpha
                     line *= template
-                    line[select][~ok] = np.nan
                     pass
                 else: line *= np.nan
                 pass
@@ -365,19 +354,16 @@ def scancal(clc, tid, flttype, out,
                     ratio = col/vtemplate
                     refline = np.nanmedian(ratio)
                     select = np.isfinite(col)
-                    ok = (abs(ratio[select] - refline) <
-                          3e0*errref[select])
+                    ok = (abs(ratio[select] - refline) < 3e0*errref[select])
                     if np.nansum(ok) > 0:
-                        alpha = (np.nansum(ok)/
-                                 np.nansum(ratio[select][ok]))
-                        valid = (abs(col[select]*alpha -
-                                     vtemplate[select]) <
+                        alpha = np.nansum(ok)/np.nansum(ratio[select][ok])
+                        valid = (abs(col[select]*alpha - vtemplate[select]) <
                                  3*np.sqrt(abs(vtemplate[select])))
                         pass
                     else: valid = [False]
                     if np.nansum(valid) > 0:
-                        spectrum.append(np.mean(col[select][valid]))
-                        specerr.append(np.std(col[select][valid]))
+                        spectrum.append(np.nanmean(col[select][valid]))
+                        specerr.append(np.nanstd(col[select][valid]))
                         nspectrum.append(np.nansum(valid))
                         pass
                     else: ignorecol = True
@@ -388,7 +374,11 @@ def scancal(clc, tid, flttype, out,
                     nspectrum.append(0)
                     pass
                 pass
-            spectrum = np.array(spectrum) - np.nanmin(spectrum)
+            spectrum = np.array(spectrum)
+            template[~np.isfinite(template)] = np.nanmin(template)
+            nanme = (abs(spectrum - template)/template) > 1e0
+            if True in nanme: spectrum[nanme] = np.nan
+            spectrum -= np.nanmin(spectrum)
             data['SPECTRUM'][index] = np.array(spectrum)
             data['SPECERR'][index] = np.array(specerr)
             data['NSPEC'][index] = np.array(nspectrum)
@@ -430,23 +420,19 @@ def scancal(clc, tid, flttype, out,
             cutoff = np.nanmax(spectrum)/scaleco
             spectrum[spectrum < cutoff] = np.nan
             spectrum = abs(spectrum)
-            wave, disp, shift, si = wavesol(spectrum, tt, wavett,
-                                            disper, siv=siv,
-                                            verbose=verbose,
-                                            debug=debug)
+            wave, disp, shift, si = wavesol(spectrum, tt, wavett, disper,
+                                            siv=siv, verbose=verbose, debug=debug)
             if (disp < ldisp) or (disp > udisp):
                 data['TRIAL'][index] = 'Dispersion Out Of Bounds'
                 ignore = True
                 pass
-            if abs(disp - disper) < 1e-5:
+            if abs(disp - disper) < 1e-7:
                 data['TRIAL'][index] = 'Dispersion Fit Failure'
                 ignore = True
                 pass
             pass
         if not ignore:
-            liref = itp.interp1d(wavett*1e-4, tt,
-                                 bounds_error=False,
-                                 fill_value=np.nan)
+            liref = itp.interp1d(wavett*1e-4, tt, bounds_error=False, fill_value=np.nan)
             phot2counts = liref(wave)
             data['PHT2CNT'][index] = phot2counts
             data['WAVE'][index] = wave  # MICRONS
@@ -519,7 +505,7 @@ def scancal(clc, tid, flttype, out,
         print('>-- IGNORED:', np.nansum(allignore), '/', len(allignore))
         for index in allindex:
             if len(allculprits[index]) > 0:
-                print('Frame #', index, ':', allculprits[index])
+                print('Frame', index, ':', allculprits[index])
                 pass
             pass
         pass
@@ -567,7 +553,7 @@ G141 http://www.stsci.edu/hst/wfc3/documents/ISRs/WFC3-2009-17.pdf
         wvrng = [1085e1, 17e3]  # Angstroms
         disp = 46.5  # Angstroms/Pixel
         llim = 45
-        ulim = 47.5
+        ulim = 47.7  # HD 189733 TRANSIT VS 47.5 STSCI
         pass
     if fltr == 'G102':
         wvrng = [8e3, 115e2]  # Angstroms
@@ -578,8 +564,7 @@ G141 http://www.stsci.edu/hst/wfc3/documents/ISRs/WFC3-2009-17.pdf
     return wvrng, disp, llim, ulim
 # ------------------------ -------------------------------------------
 # -- ISOLATE -- ------------------------------------------------------
-def isolate(thisdiff, psmin, spectrace, scanwdw,
-            targetn, tid, dtlist, floodlevel,
+def isolate(thisdiff, psmin, spectrace, scanwdw, targetn, floodlevel,
             axis=1, verbose=False, debug=False):
     '''
 G ROUDIER: Based on Minkowski functionnals decomposition algorithm
@@ -682,12 +667,8 @@ G ROUDIER: The first element of the returned list defines the default
 interpolation grid, filter/grism file is suited.
     '''
     lightpath = []
-    if grism == 'G141':
-        lightpath.append('WFC3/wfc3_ir_g141_src_004_syn.fits')
-        pass
-    if grism == 'G102':
-        lightpath.append('WFC3/wfc3_ir_g102_src_003_syn.fits')
-        pass
+    if grism == 'G141': lightpath.append('WFC3/wfc3_ir_g141_src_004_syn.fits')
+    if grism == 'G102': lightpath.append('WFC3/wfc3_ir_g102_src_003_syn.fits')
     if detector == 'IR':
         lightpath.extend(['WFC3/wfc3_ir_rcp_001_syn.fits',
                           'WFC3/wfc3_ir_mask_001_syn.fits',
@@ -771,8 +752,7 @@ edges, approximating the log(stellar spectrum) with a linear model
     params.add('scale', value=scale)
     params.add('disper', value=disper)
     params.add('shift', value=shift)
-    out = lm.minimize(wcme, params,
-                      args=(logspec, mutt, logtt,False))
+    out = lm.minimize(wcme, params, args=(logspec, mutt, logtt,False))
     disper = out.params['disper'].value
     shift = out.params['shift'].value
     slope = out.params['slope'].value
@@ -793,8 +773,7 @@ def wcme(params, data, refmu=None, reftt=None, forward=True):
     scale = params['scale'].value
     disper = params['disper'].value
     shift = params['shift'].value
-    liref = itp.interp1d(refmu, reftt,
-                         bounds_error=False, fill_value=np.nan)
+    liref = itp.interp1d(refmu, reftt, bounds_error=False, fill_value=np.nan)
     wave = np.arange(data.size)*disper*1e-4 + shift
     model = liref(wave) + scale + slope*wave
     select = (np.isfinite(model)) & (np.isfinite(data))
@@ -867,9 +846,7 @@ def timing(force, cal, out, verbose=False, debug=False):
             else:
                 select = np.where(tmetod[selv] > 3*thrs)[0]
                 incorb = orbto[selv]
-                for indice in select:
-                    incorb[indice:] = incorb[indice:] + 1
-                    pass
+                for indice in select: incorb[indice:] = incorb[indice:] + 1
                 orbto[selv] = incorb
                 for o in set(orbto[selv]):
                     selo = (orbto[selv] == o)
