@@ -1,1 +1,1 @@
-FROM py:ghrVersion
+FROM esp_py:ghrVersion
