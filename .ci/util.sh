@@ -65,10 +65,10 @@ which_port ()
     python3 <<EOF
 v = "${1:-${ghrVersion}}".split ('.')
 if len (v) == 3:
-    if v[0].isdigit() and v[1].isdigit() and v[2].isdigit(): port = 16003
-    elif v[0].isdigit() and v[1].isdigit() and 0 < v[2].find ('-rc') and v[2].split('-')[0].isdigit(): port = 16002
-    else: port = 16001
-else: port = 16001
+    if v[0].isdigit() and v[1].isdigit() and v[2].isdigit(): port = 16003  #  release port
+    elif v[0].isdigit() and v[1].isdigit() and 0 < v[2].find ('-rc') and v[2].split('-')[0].isdigit(): port = 16002  # staging port
+    else: port = 16001  #  devel port
+else: port = 16001  # devel port
 
 print (port)
 EOF
