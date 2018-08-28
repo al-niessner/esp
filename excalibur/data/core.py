@@ -504,7 +504,7 @@ def scancal(clc, tid, flttype, out,
         allindex = np.arange(len(data['LOC']))
         print('>-- IGNORED:', np.nansum(allignore), '/', len(allignore))
         for index in allindex:
-            if len(allculprits[index]) > 0:
+            if allculprits[index].__len__() > 0:
                 print('Frame', index, ':', allculprits[index])
                 pass
             pass
@@ -578,7 +578,7 @@ G ROUDIER: Based on Minkowski functionnals decomposition algorithm
     eachprofile = np.nansum(flooded, axis=axis)
     eachpixels = np.arange(eachprofile.size)
     loc = eachpixels[eachprofile > 0]
-    if len(loc) > 0:
+    if loc.__len__() > 0:
         diffloc = [0]
         diffloc.extend(np.diff(loc))
         minlocs = [np.nanmin(loc)]
@@ -597,6 +597,7 @@ G ROUDIER: Based on Minkowski functionnals decomposition algorithm
         for dl,c in zip(diffloc, np.arange(len(loc))):
             if (dl > thr) and (cvcount <= thrw):
                 poop = minlocs.pop(-1)
+                if debug: print(poop)
                 minlocs.append(loc[c])
                 pass
             if (dl > thr) and (cvcount > thrw):
@@ -641,7 +642,6 @@ G ROUDIER: Based on Minkowski functionnals decomposition algorithm
 def ag2ttf(flttype, verbose=False, debug=False):
     detector = flttype.split('-')[2]
     grism = flttype.split('-')[3]
-    wvrng, disp, llim, ulim = fng(flttype)
     lightpath = ag2lp(detector, grism)
     mu, ttp = bttf(lightpath, verbose=verbose, debug=debug)
     if grism == 'G141':
@@ -665,6 +665,9 @@ ftp://ftp.stsci.edu/cdbs/comp/wfc3/
 
 G ROUDIER: The first element of the returned list defines the default
 interpolation grid, filter/grism file is suited.
+
+['Grism source', 'Refractive correction plate', 'Cold mask', 'Mirror 1', 'Mirror 2', 
+'Fold mirror', 'Channel select mechanism', 'Pick off mirror', 'OTA']
     '''
     lightpath = []
     if grism == 'G141': lightpath.append('WFC3/wfc3_ir_g141_src_004_syn.fits')
@@ -679,15 +682,6 @@ interpolation grid, filter/grism file is suited.
                           'WFC3/wfc3_pom_001_syn.fits',
                           'WFC3/hst_ota_007_syn.fits'])
         pass
-    references = ['Grism source',
-                  'Refractive correction plate',
-                  'Cold mask',
-                  'Mirror 1',
-                  'Mirror 2',
-                  'Fold mirror',
-                  'Channel select mechanism',
-                  'Pick off mirror',
-                  'OTA']
     return lightpath
 # --------------------------------------- ----------------------------
 # -- BUILD TOTAL TRANSMISSION FILTER -- ------------------------------
@@ -700,7 +694,7 @@ def bttf(lightpath, verbose=False, debug=False):
         ttp *= t
         if debug: plt.plot(muref, t, 'o--')
         pass
-    if debug:
+    if verbose or debug:
         plt.xlim([min(muref), max(muref)])
         plt.ylim([0.5, 1])
         plt.ylabel('Transmission Curves')
@@ -726,8 +720,7 @@ def loadcalf(name, muref, calloc='/proj/sdp/data/cal'):
     return muref, t
 # ------------------- ------------------------------------------------
 # -- WAVELENGTH SOLUTION -- ------------------------------------------
-def wavesol(spectrum, tt, wavett, disper, siv=None,
-            verbose=False, debug=False):
+def wavesol(spectrum, tt, wavett, disper, siv=None, verbose=False, debug=False):
     '''
 G ROUDIER: Wavelength calibration on log10 spectrum to emphasize the
 edges, approximating the log(stellar spectrum) with a linear model
@@ -759,7 +752,7 @@ edges, approximating the log(stellar spectrum) with a linear model
     scale = out.params['scale'].value
     wave = wcme(out.params, logspec, refmu=mutt, reftt=logtt)
     # PLOTS
-    if debug:
+    if verbose or debug:
         plt.figure()
         plt.plot(mutt, logtt, 'o--')
         plt.plot(wave, logspec - (scale+wave*slope), 'o--')
