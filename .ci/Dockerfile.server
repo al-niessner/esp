@@ -1,1 +1,10 @@
 FROM dawgie:ghrVersion
+ENTRYPOINT ["python3", "-m", "dawgie.pl.start"]
+CMD ["--context-db-impl=post", \
+     "--context-db-name=ops", \
+     "--context-db-path='sdppipded:goaway4me!'" \
+     "--context-db-port=5263" \
+     "--context-ae-dir=/proj/sdppiped/ops/excalibur" \
+     "--context-ae-pkg='excalibur'" \
+     "--context='excalibur.context'" \
+     "--context-fe-path=/proj/sdppiped/front-end"]
