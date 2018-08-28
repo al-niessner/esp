@@ -2,7 +2,9 @@
 import excalibur.data.core as datcore
 import excalibur.system.core as syscore
 
-import pymc3 as pm
+try: import pymc as pm
+except ImportError: import pymc3 as pm
+
 import numpy as np
 import lmfit as lm
 import matplotlib.pyplot as plt
@@ -10,9 +12,17 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d as itp
 from ldtk.ldmodel import *
 from ldtk import LDPSetCreator, BoxcarFilter
-from pymc3.distributions import Normal as pmnd
-from pymc3.distributions import Uniform as pmud
-from pymc3.distributions import TruncatedNormal as pmtnd
+
+try:
+    from pymc.distributions import Normal as pmnd
+    from pymc.distributions import Uniform as pmud
+    from pymc.distributions import TruncatedNormal as pmtnd
+except ImportError:
+    from pymc3.distributions import Normal as pmnd
+    from pymc3.distributions import Uniform as pmud
+    from pymc3.distributions import TruncatedNormal as pmtnd
+    pass
+
 # ------------- ------------------------------------------------------
 # -- SV VALIDITY -- --------------------------------------------------
 def checksv(sv):
