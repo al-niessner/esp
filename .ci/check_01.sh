@@ -20,4 +20,3 @@ then
 fi
 
 post_state "$context" "$description" "$state"
-git checkout .ci/status.txt
