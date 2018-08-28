@@ -162,7 +162,7 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
                                 plt.plot(w[select], s[select], 'o')
                                 pass
                             plt.ylabel('Normalized Spectra')
-                            plt.xlabel('Wavelength [$\mu$m]')
+                            plt.xlabel('Wavelength [$\\mu$m]')
                             plt.xlim(np.min(vrange), np.max(vrange))
                             plt.show()
                             pass
@@ -439,6 +439,7 @@ def whitelight(nrm, fin, out, selftype,
         nodes.extend(allologtau)
         nodes.extend(allologdelay)
         selectfit = np.isfinite(flatwhite)
+
         # ORBITAL MODEL ----------------------------------------------
         @pm.deterministic
         def orbital(r=rprs, icln=inc, atk=alltknot,
@@ -701,9 +702,9 @@ def createldgrid(minmu, maxmu, orbp,
             thiscl = allcl.T[i]
             thisel = allel.T[i]
             plt.errorbar(avmu, thiscl, yerr=thisel)
-            plt.plot(avmu, thiscl, '*', label='$\gamma$ %i' % i)
+            plt.plot(avmu, thiscl, '*', label='$\\gamma$ %i' % i)
             pass
-        plt.xlabel('Wavelength [$\mu$m]')
+        plt.xlabel('Wavelength [$\\mu$m]')
         plt.legend(bbox_to_anchor=(1, 0.5),
                    loc=5, ncol=1, mode='expand', numpoints=1,
                    borderaxespad=0., frameon=False)
@@ -777,8 +778,8 @@ def ldx(psmu, psmean, psstd,
             pass
         pass
     if debug:
-        plt.ylabel('$I(\mu)$')
-        plt.xlabel('$\mu$')
+        plt.ylabel('$I(\\mu)$')
+        plt.xlabel('$\\mu$')
         plt.title(model)
         plt.show()
         pass
@@ -961,6 +962,7 @@ def spectrum(fin, nrm, wht, out, selftype,
             nodes.extend(allvslope)
             nodes.extend(allvitcp)
             nodes.extend(alloslope)
+
             # LIGHT CURVE MODEL --------------------------------------
             @pm.deterministic
             def lcmodel(r=rprs, avs=allvslope, avi=allvitcp, aos=alloslope):
@@ -1020,7 +1022,7 @@ def spectrum(fin, nrm, wht, out, selftype,
             plt.figure(figsize=(8,6))
             plt.title(p)
             plt.errorbar(specwave, 1e2*vspectrum, fmt='.', yerr=1e2*specerr)
-            plt.xlabel(str('Wavelength [$\mu m$]'))
+            plt.xlabel(str('Wavelength [$\\mu m$]'))
             plt.ylabel(str('$(R_p/R_*)^2$ [%]'))
             plt.show()
             pass

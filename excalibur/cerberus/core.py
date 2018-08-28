@@ -104,7 +104,7 @@ def xsecs(spc, fin, out,
                                  label=str(int(temp))+'K')
                     pass
                 plt.title(myexomol)
-                plt.xlabel('Wavelength $\lambda$[$\mu m$]',
+                plt.xlabel('Wavelength $\\lambda$[$\\mu m$]',
                            fontsize=fts+4)
                 plt.ylabel('Cross Section [$cm^{2}.molecule^{-1}$]',
                            fontsize=fts+4)
@@ -178,7 +178,7 @@ def xsecs(spc, fin, out,
                                  np.array(library[mycia]['I'])[select])
                     pass
                 plt.title(mycia)
-                plt.xlabel('Wavelength $\lambda$[$\mu m$]')
+                plt.xlabel('Wavelength $\\lambda$[$\\mu m$]')
                 plt.ylabel('Line intensity $S(T)$ [$cm^{5}.molecule^{-2}$]')
                 plt.show()
                 pass
@@ -242,7 +242,7 @@ def xsecs(spc, fin, out,
                                  np.array(library[ks]['S'])[select], '.')
                     pass
                 plt.title(ks)
-                plt.xlabel('Wavelength $\lambda$[$\mu m$]')
+                plt.xlabel('Wavelength $\\lambda$[$\\mu m$]')
                 plt.ylabel('Line intensity $S_{296K}$ [$cm.molecule^{-1}$]')
                 plt.show()
                 pass
@@ -327,9 +327,9 @@ def hzlib(mcmc, priors, sv,
     javspl = itp(x, y, s=0, ext=1)
     if verbose:
         plt.figure()
-        plt.plot(1e6*jmax, pressure, label='Jupiter $d_{max}(\Phi)$')
-        plt.plot(1e6*jmed, pressure, label='Jupiter $d_{median}(\Phi)$')
-        plt.plot(1e6*jav, pressure, label='Jupiter $d_{mean}(\Phi)$')
+        plt.plot(1e6*jmax, pressure, label='Jupiter $d_{max}(\\Phi)$')
+        plt.plot(1e6*jmed, pressure, label='Jupiter $d_{median}(\\Phi)$')
+        plt.plot(1e6*jav, pressure, label='Jupiter $d_{mean}(\\Phi)$')
         plt.plot(1e6*isobar, pressure, label='Jupiter isobar')
         plt.legend(loc=3, frameon=False)
         plt.plot(1e6*jmaxspl(pressure), pressure, 'k+')
@@ -426,7 +426,7 @@ def atmos(mcmc, priors, xsecs, qtgrid, hzlib, sv,
             plt.figure()
             plt.errorbar(wgrid, 1e2*tspectrum, yerr=1e2*tspecerr, fmt='*')
             plt.plot(wgrid, 1e2*mcmodel, linewidth=3.)
-            plt.xlabel('Wavelength $\lambda$[$\mu m$]')
+            plt.xlabel('Wavelength $\\lambda$[$\\mu m$]')
             plt.ylabel('Transit Depth [%]')
             plt.show()
             pass
@@ -558,7 +558,7 @@ def atmos(mcmc, priors, xsecs, qtgrid, hzlib, sv,
                          linewidth=5,
                          label='H2O NE '+str(mwlike))
                 pass
-            plt.xlabel('Wavelength [$\mu m$]', fontsize=fts)
+            plt.xlabel('Wavelength [$\\mu m$]', fontsize=fts)
             plt.ylabel('$(R_p/R_*)^2$ [%]', fontsize=fts)
             plt.tick_params(axis='both', labelsize=fts-4)
             plt.title(orbp['sn'], fontsize=fts)
@@ -713,6 +713,7 @@ def atmos(mcmc, priors, xsecs, qtgrid, hzlib, sv,
         if verbose: print(scores, ' --< NE >--')
         pass
     cleanup = np.isfinite(tspectrum) & svtspec
+
     # CERBERUS FM CALL
     @pm.deterministic
     def ccerberus(mtlct=mtlct, nrch=nrch,
@@ -882,7 +883,7 @@ def atmos(mcmc, priors, xsecs, qtgrid, hzlib, sv,
                      yerr=1e2*tspecerr[cleanup], fmt='*')
         if atmosmc: plt.plot(wgrid, 1e2*mcmodel, '--', linewidth=3.)
         plt.plot(wgrid[cleanup], 1e2*crbbest[cleanup], linewidth=3.)
-        plt.xlabel('Wavelength $\lambda$[$\mu m$]')
+        plt.xlabel('Wavelength $\\lambda$[$\\mu m$]')
         plt.ylabel('Transit Depth [%]')
         plt.show()
         pass
@@ -1000,7 +1001,7 @@ def crbmodel(mixratio, rayleigh, cloudtp, rp0, orbp, xsecs, qtgrid,
         axes[-1].patch.set_visible(False)
         axes[0].plot(wtau, 1e2*model)
         axes[0].plot(wtau, model*0+1e2*noatm, '--')
-        axes[0].set_xlabel('Wavelength $\lambda$[$\mu m$]')
+        axes[0].set_xlabel('Wavelength $\\lambda$[$\\mu m$]')
         axes[0].set_ylabel('Transit Depth [%]')
         axes[0].get_yaxis().get_major_formatter().set_useOffset(False)
         yaxmin, yaxmax = axes[0].get_ylim()
@@ -1270,7 +1271,7 @@ def absorb(xsecs, qtgrid, T, p, dp, mmr, lbroadening, lshifting, wgrid,
     if debug:
         plt.semilogy(1e4/matnu.T, sigma, '.')
         plt.semilogy(wgrid[::-1], binsigma, 'o')
-        plt.xlabel('Wavelength $\lambda$[$\mu m$]')
+        plt.xlabel('Wavelength $\\lambda$[$\\mu m$]')
         plt.ylabel('Absorption Coeff [$cm^{2}.molecule^{-1}$]')
         plt.show()
         pass
@@ -1472,7 +1473,7 @@ def getwgrid(fnsdir, res, filename='wavegrid.txt',
         plt.plot(wgrid, splscale(wgrid), 'g', label=res+' Scaled')
         plt.plot(newgrid, newgrid/dnewgrid, 'g+', label=res+' New Grid')
         plt.legend(frameon=False, loc=4)
-        plt.xlabel('Wavelength $\lambda$[$\mu m$]')
+        plt.xlabel('Wavelength $\\lambda$[$\\mu m$]')
         plt.ylabel('Resolving Power $R$')
         plt.yscale('log')
         plt.show()
@@ -1489,7 +1490,7 @@ def getwgrid(fnsdir, res, filename='wavegrid.txt',
         plt.plot(wgrid, starsnr, 'k+', label='Reference')
         plt.plot(newgrid, newstarsnr, 'g+', label=res)
         plt.legend(frameon=False, loc=4)
-        plt.xlabel('Wavelength $\lambda$[$\mu m$]')
+        plt.xlabel('Wavelength $\\lambda$[$\\mu m$]')
         plt.ylabel('Stellar SNR')
         plt.yscale('log')
         plt.show()
@@ -1534,7 +1535,7 @@ def fatmos(priors, xsecs, qtgrid, hzlib, sv,
         plt.figure()
         plt.errorbar(wgrid, 1e2*data, yerr=1e2*dataerr, fmt='*')
         plt.plot(wgrid, 1e2*model, linewidth=3.)
-        plt.xlabel('Wavelength $\lambda$[$\mu m$]')
+        plt.xlabel('Wavelength $\\lambda$[$\\mu m$]')
         plt.ylabel('Transit Depth [%]')
         plt.show()
         pass
@@ -1542,6 +1543,7 @@ def fatmos(priors, xsecs, qtgrid, hzlib, sv,
         # PRIORS
         mcmcmtlct = Normal('XtoH', 0., 1./1.**2)
         mcmcnrch = Normal('CtoO', 0., 1./1.**2)
+
         # CERBERUS MODEL
         @pm.deterministic
         def ccerberus(mtlct=mcmcmtlct, nrch=mcmcnrch, solidr=rp0hss,

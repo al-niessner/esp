@@ -92,7 +92,7 @@ class CalibrateSV(dawgie.StateVector):
                 select = (w > vrange[0]) & (w < vrange[1])
                 plt.plot(w[select], s[select]/p[select])
                 pass
-            plt.xlabel('Wavelength [$\mu$m]')
+            plt.xlabel('Wavelength [$\\mu$m]')
             plt.ylabel('Stellar Spectra [Photons]')
             buf = io.BytesIO()
             myfig.savefig(buf, format='png')
