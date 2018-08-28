@@ -11,8 +11,8 @@ export GHE4JPL_API_URL PATH
 cit_version ()
 {
     lv="$(layer_versions)"
-    rm .ci/Dockerfile.1 .ci/Dockerfile.2 .ci/Dockerfile.3
-    echo "${lv:34:16}"
+    rm .ci/Dockerfile.1 .ci/Dockerfile.2
+    echo "${lv:17:16}"
 }
 
 current_state ()

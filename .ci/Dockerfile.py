@@ -6,4 +6,6 @@ RUN set -ex && \
                           matplotlib==2.2.3 \
                           pymc3==3.5 \
                           scipy==1.1.0 && \
-   rm -rf ${HOME}/.cache
+   rm -rf ${HOME}/.cache && \
+   mkdir /.theano && chmod 777 /.theano && \
+   mkdir -p /proj/sdp/data/ldtk && chmod 777 /proj/sdp/data/ldtk
