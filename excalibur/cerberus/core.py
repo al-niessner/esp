@@ -1,13 +1,13 @@
 # -- IMPORTS -- ------------------------------------------------------
 import os
-import pymc as pm
+import pymc3 as pm
 import numpy as np
 import lmfit as lm
 import scipy.constants as cst
 import matplotlib.pyplot as plt
 
-from pymc.distributions import Uniform as Uniform
-from pymc.distributions import Normal as Normal
+from pymc3.distributions import Uniform as Uniform
+from pymc3.distributions import Normal as Normal
 from scipy.interpolate import interp1d as itp
 # ------------- ------------------------------------------------------
 # -- SV VALIDITY -- --------------------------------------------------
