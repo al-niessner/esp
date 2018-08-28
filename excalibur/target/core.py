@@ -421,7 +421,7 @@ def disk(selfstart, out, diskloc, dbs, verbose=False, debug=False):
     targetID = [t for t in selfstart['starID'].keys()]
     targets = trgedit.targetondisk.__doc__
     targets = targets.split('\n')
-    targets = [t.strip() for t in targets if (t.replace(' ', '')).__len__() > 0)]
+    targets = [t.strip() for t in targets if (t.replace(' ', '')).__len__() > 0]
     locations = None
     for t in targets:
         parsedstr = t.split(':')

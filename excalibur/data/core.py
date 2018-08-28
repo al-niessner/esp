@@ -666,7 +666,7 @@ ftp://ftp.stsci.edu/cdbs/comp/wfc3/
 G ROUDIER: The first element of the returned list defines the default
 interpolation grid, filter/grism file is suited.
 
-['Grism source', 'Refractive correction plate', 'Cold mask', 'Mirror 1', 'Mirror 2', 
+['Grism source', 'Refractive correction plate', 'Cold mask', 'Mirror 1', 'Mirror 2',
 'Fold mirror', 'Channel select mechanism', 'Pick off mirror', 'OTA']
     '''
     lightpath = []
