@@ -10,7 +10,7 @@ post_state "$context" "$description" "$state"
 
 if current_state
 then
-    if [ -n "$(docker images | grep esp_worker:latest)" ]
+    if [ -n "$(docker images | grep esp_worker | grep latest)" ]
     then
         docker rmi esp_worker:latest
     fi
@@ -21,7 +21,7 @@ then
     rm .ci/Dockerfile.1 .ci/Dockerfile.2
     python3 <<EOF
 with open ('.ci/Dockerfile.worker', 'rt') as f: text = f.read()
-with open ('.ci/Dockerfile.1', 'tw') as f: f.write (text.replace ("ghrVersion", "${version}"))
+with open ('.ci/Dockerfile.1', 'tw') as f: f.write (text.replace ("ghrVersion", "${version}").replace ('esp-git-rev', "${esp_git_rev}"))
 with open ('setup.py', 'rt') as f: text = f.read()
 with open ('setup.py', 'tw') as f: f.write (text.replace ('esp-git-rev', "${esp_git_rev}"))
 EOF

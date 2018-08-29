@@ -1,9 +1,14 @@
 FROM esp_py:ghrVersion
+ENV DOCKER_GIT_REVISION esp-git-rev
 RUN set -ex && \
     mkdir /tmp/esp && \
     /bin/dcp.py --port DCP_PORT_NUMBER -r setup.py excalibur /tmp/esp/ && \
     cd /tmp/esp && \
-    python3 setup.py build install && \
+    python3 setup.py install && \
     cd /tmp && rm -rf esp
-ENTRYPOINT
-CMD
+ENTRYPOINT ["python3", "-m", "dawgie.pl.worker"]
+CMD ["-a", "/usr/local/lib/python3.6/dist-packages/excalibur-0.0.0-py3.6.egg/excalibur", \
+     "-b", "excalibur", \
+     "-i", "0", \
+     "-n", "mentor.jpl.nasa.gov", \
+     "-p", "8081"]
