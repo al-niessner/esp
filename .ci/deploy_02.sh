@@ -23,7 +23,7 @@ then
 with open ('.ci/Dockerfile.worker', 'rt') as f: text = f.read()
 with open ('.ci/Dockerfile.1', 'tw') as f: f.write (text.replace ("ghrVersion", "${version}"))
 with open ('setup.py', 'rt') as f: text = f.read()
-with open ('setup.py', 'tw') as f: f.write (text.replace ('esp-git-rev', "${esp-git-rev}"))
+with open ('setup.py', 'tw') as f: f.write (text.replace ('esp-git-rev', "${esp_git_rev}"))
 EOF
     .ci/dcp.py --server .ci/Dockerfile.1 &
     while [ ! -f .ci/Dockerfile.1.dcp ]
