@@ -439,6 +439,7 @@ def scancal(clc, tid, flttype, out,
             data['DISPERSION'][index] = disp  # ANGSTROMS/PIXEL
             data['SHIFT'][index] = shift*1e4/disp  # PIXELS
             pass
+        else: data['WAVE'][index] = (data['SPECTRUM'][index])*np.nan
         data['IGNORED'][index] = ignore
         pass
     # PLOTS ----------------------------------------------------------
@@ -865,11 +866,15 @@ def timing(force, cal, out, verbose=False, debug=False):
             posphsto = phsto.copy()
             posphsto[posphsto < 0] = posphsto[posphsto < 0] + 1e0
             pcconde = False
-            if (np.max(posphsto[selv]) - np.min(posphsto[selv])) > (1e0 - 2e0*abs(np.arcsin(trlim/smaors))/(2e0*np.pi)):
+            if (np.max(posphsto[selv]) -
+                np.min(posphsto[selv])) > (1e0 -
+                                           2e0*abs(np.arcsin(trlim/smaors))/(2e0*np.pi)):
                 pcconde = True
                 pass
             pccondt = False
-            if (np.max(phsto[selv]) - np.min(phsto[selv])) > (1e0 - 2e0*abs(np.arcsin(trlim/smaors))/(2e0*np.pi)):
+            if (np.max(phsto[selv]) -
+                np.min(phsto[selv])) > (1e0 -
+                                        2e0*abs(np.arcsin(trlim/smaors))/(2e0*np.pi)):
                 pccondt = True
                 pass
             if pcconde and pccondt: out['phasecurve'].append(int(v))
@@ -892,11 +897,15 @@ def timing(force, cal, out, verbose=False, debug=False):
             posphsto = phsto.copy()
             posphsto[posphsto < 0] = posphsto[posphsto < 0] + 1e0
             pcconde = False
-            if (np.max(posphsto[selv]) - np.min(posphsto[selv])) > (1e0 - 2e0*abs(np.arcsin(trlim/smaors))/(2e0*np.pi)):
+            if (np.max(posphsto[selv]) -
+                np.min(posphsto[selv])) > (1e0 -
+                                           2e0*abs(np.arcsin(trlim/smaors))/(2e0*np.pi)):
                 pcconde = True
                 pass
             pccondt = False
-            if (np.max(phsto[selv]) - np.min(phsto[selv])) > (1e0 - 2e0*abs(np.arcsin(trlim/smaors))/(2e0*np.pi)):
+            if (np.max(phsto[selv]) -
+                np.min(phsto[selv])) > (1e0 -
+                                        2e0*abs(np.arcsin(trlim/smaors))/(2e0*np.pi)):
                 pccondt = True
                 pass
             if pcconde and pccondt: out['data'][p]['phasecurve'].append(int(v))
@@ -922,8 +931,7 @@ def timing(force, cal, out, verbose=False, debug=False):
 
             plt.figure()
             plt.plot(phsto, 'k.')
-            plt.plot(np.arange(phsto.size)[~ignto],
-                     phsto[~ignto], 'bo')
+            plt.plot(np.arange(phsto.size)[~ignto], phsto[~ignto], 'bo')
             for i in wherev: plt.axvline(i, ls='--', color='r')
             for i in whereo: plt.axvline(i, ls='-.', color='g')
             plt.xlim(0, tmetod.size - 1)
