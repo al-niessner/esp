@@ -1,1 +1,9 @@
 FROM esp_py:ghrVersion
+RUN set -ex && \
+    mkdir /tmp/esp && \
+    /bin/dcp.py --port DCP_PORT_NUMBER -r setup.py excalibur /tmp/esp/ && \
+    cd /tmp/esp && \
+    python3 setup.py build install && \
+    cd /tmp && rm -rf esp
+ENTRYPOINT
+CMD

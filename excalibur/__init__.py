@@ -11,6 +11,7 @@ context = {'data_cal':os.environ.get ('DATA_CALIBR', '/proj/sdp/data/cal'),
            'target_list':os.environ.get('TARGET_LIST',
                                         '/proj/sdp/data/WFC3_target_list.xlsx')}
 os.environ['LDTK_ROOT'] = context['ldtk_root']
+__version__ = '${UNDEFINED}'
 
 '''Algorithm Engine
 
