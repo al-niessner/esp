@@ -1,6 +1,5 @@
 # -- IMPORTS -- ------------------------------------------------------
 import os
-import pdb
 import shutil
 import tempfile
 import subprocess
@@ -399,17 +398,12 @@ def mast(selfstart, out, dbs, queryurl, mirror,
     tempdir = tempfile.mkdtemp(dir=temploc, prefix=targetID[0])
     for name in namelist:
         outfile = os.path.join(tempdir, name+ext)
-        try:
-            urlrequest.urlretrieve(mirror+name+ext, outfile)
-            pass
+        try: urlrequest.urlretrieve(mirror+name+ext, outfile)
         except:
             if debug: print(mirror, name, ' NOT FOUND')
             pass
         if (not(found) and (alt is not None)):
-            try:
-                urlrequest.urlretrieve(alt+name.upper()+ext.upper(),
-                                       outfile)
-                pass
+            try: urlrequest.urlretrieve(alt+name.upper()+ext.upper(), outfile)
             except:
                 if debug: print(alt, name, 'NOT FOUND')
                 pass
@@ -427,8 +421,7 @@ def disk(selfstart, out, diskloc, dbs, verbose=False, debug=False):
     targetID = [t for t in selfstart['starID'].keys()]
     targets = trgedit.targetondisk.__doc__
     targets = targets.split('\n')
-    targets = [t.strip() for t in targets
-               if (len(t.replace(' ', '')) > 0)]
+    targets = [t.strip() for t in targets if (t.replace(' ', '')).__len__() > 0]
     locations = None
     for t in targets:
         parsedstr = t.split(':')

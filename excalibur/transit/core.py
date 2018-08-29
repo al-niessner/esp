@@ -2,26 +2,22 @@
 import excalibur.data.core as datcore
 import excalibur.system.core as syscore
 
-try: import pymc as pm
-except ImportError: import pymc3 as pm
+try:
+    import pymc as pm
+    from pymc.distributions import Normal as pmnd, Uniform as pmud, TruncatedNormal as pmtnd
+except ImportError:
+    import pymc3 as pm
+    from pymc3.distributions import Normal as pmnd, Uniform as pmud, TruncatedNormal as pmtnd
+    pass
 
 import numpy as np
 import lmfit as lm
 import matplotlib.pyplot as plt
 
-from scipy.interpolate import interp1d as itp
-from ldtk.ldmodel import *
+from ldtk.ldmodel import LinearModel, QuadraticModel, NonlinearModel
 from ldtk import LDPSetCreator, BoxcarFilter
 
-try:
-    from pymc.distributions import Normal as pmnd
-    from pymc.distributions import Uniform as pmud
-    from pymc.distributions import TruncatedNormal as pmtnd
-except ImportError:
-    from pymc3.distributions import Normal as pmnd
-    from pymc3.distributions import Uniform as pmud
-    from pymc3.distributions import TruncatedNormal as pmtnd
-    pass
+from scipy.interpolate import interp1d as itp
 
 # ------------- ------------------------------------------------------
 # -- SV VALIDITY -- --------------------------------------------------
@@ -201,12 +197,11 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
     return normed
 # ------------------- ------------------------------------------------
 # -- TEMPLATE BUILDER -- ---------------------------------------------
-'''
+def tplbuild(spectra, wave, vrange, disp, verbose=False, debug=False):
+    '''
 Builds a spectrum template according to the peak in population
 density per wavelength bins
-'''
-def tplbuild(spectra, wave, vrange, disp,
-             verbose=False, debug=False):
+    '''
     allspec = []
     for s in spectra.copy(): allspec.extend(s)
     allwave = []
@@ -241,8 +236,7 @@ def tplbuild(spectra, wave, vrange, disp,
     return wavet, template
 # ---------------------- ---------------------------------------------
 # -- WHITE LIGHT CURVE -- --------------------------------------------
-def whitelight(nrm, fin, out, selftype,
-               chainlen=int(8e4), verbose=False, debug=False):
+def whitelight(nrm, fin, out, selftype, chainlen=int(8e4), verbose=False, debug=False):
     wl = False
     priors = fin['priors'].copy()
     ssc = syscore.ssconstants()
@@ -252,7 +246,6 @@ def whitelight(nrm, fin, out, selftype,
         visits = nrm['data'][p]['visits']
         orbits = nrm['data'][p]['orbits']
         time = nrm['data'][p]['time']
-        vrange = nrm['data'][p]['vrange']
         wave = nrm['data'][p]['wave']
         nspec = nrm['data'][p]['nspec']
         sep = nrm['data'][p]['z']
@@ -367,11 +360,11 @@ def whitelight(nrm, fin, out, selftype,
                 maxtscale.append(np.max(tvs[orbits[i] == o]) -
                                  np.min(tvs[orbits[i] == o]))
             pass
-        for i in range(len(ttv)):
+        for i, ttvi in enumerate(ttv):
             tautknot = 1e0/(3e0*np.min(mintscale))**2
             tknotmin = tmjd - np.max(maxtscale)/2e0
             tknotmax = tmjd + np.max(maxtscale)/2e0
-            alltknot[i] = pmtnd('dtk%i' % ttv[i], tmjd, tautknot, tknotmin, tknotmax)
+            alltknot[i] = pmtnd('dtk%i' % ttvi, tmjd, tautknot, tknotmin, tknotmax)
             pass
         nodes.extend(alltknot)
         if priors[p]['inc'] != 9e1:
@@ -578,8 +571,7 @@ def whitelight(nrm, fin, out, selftype,
     return wl
 # ----------------------- --------------------------------------------
 # -- TRANSIT LIMB DARKENED LIGHT CURVE -- ----------------------------
-def tldlc(z, rprs, g1=0, g2=0, g3=0, g4=0,
-          nint=int(8**2), verbose=False, debug=False):
+def tldlc(z, rprs, g1=0, g2=0, g3=0, g4=0, nint=int(8**2)):
     ldlc = np.zeros(z.size)
     xin = z.copy() - rprs
     xin[xin < 0e0] = 0e0
@@ -609,7 +601,7 @@ def tldlc(z, rprs, g1=0, g2=0, g3=0, g4=0,
 # --------------------------------------- ----------------------------
 # -- STELLAR EXTINCTION LAW -- ---------------------------------------
 def vecistar(xrs, g1, g2, g3, g4):
-    norm = (-g1/10e0 - g2/6e0 - 3e0*g3/14e0 - g4/4e0 + 5e-1)*2e0*np.pi
+    ldnorm = (-g1/10e0 - g2/6e0 - 3e0*g3/14e0 - g4/4e0 + 5e-1)*2e0*np.pi
     select = xrs < 1e0
     mu = np.zeros(xrs.shape)
     mu[select] = (1e0 - xrs[select]**2)**(1e0/4e0)
@@ -617,7 +609,7 @@ def vecistar(xrs, g1, g2, g3, g4):
     s2 = g2*(1e0 - mu**2)
     s3 = g3*(1e0 - mu**3)
     s4 = g4*(1e0 - mu**4)
-    outld = (1e0 - (s1+s2+s3+s4))/norm
+    outld = (1e0 - (s1+s2+s3+s4))/ldnorm
     return outld
 # ---------------------------- ---------------------------------------
 # -- STELLAR SURFACE OCCULTATION -- ----------------------------------
@@ -689,10 +681,8 @@ def createldgrid(minmu, maxmu, orbp,
         munmmax = 1e3*np.array(maxmu[loweri:upperi])
         filters = [BoxcarFilter(str(mue), mun, mux)
                    for mue, mun, mux in zip(munm, munmmin, munmmax)]
-        sc = LDPSetCreator(teff=(tstar, terr),
-                           logg=(loggstar, loggerr),
-                           z=(fehstar, feherr),
-                           filters=filters)
+        sc = LDPSetCreator(teff=(tstar, terr), logg=(loggstar, loggerr),
+                           z=(fehstar, feherr), filters=filters)
         ps = sc.create_profiles(nsamples=int(1e4))
         cl, el = ldx(ps._mu, ps._mean, ps._std,
                      mumin=phoenixmin, debug=verbose, model=ldmodel)
@@ -938,7 +928,6 @@ def spectrum(fin, nrm, wht, out, selftype,
                 pass
             # PRIORS -------------------------------------------------
             oot = (abs(allz) > (1e0 + whiterprs)) & valid
-            iot = ~oot
             ootstd = np.std(data[oot])
             rprs = pmud('rprs', 0, 2e0*whiterprs)
             nodes = [rprs]
@@ -977,7 +966,7 @@ def spectrum(fin, nrm, wht, out, selftype,
             @pm.deterministic
             def lcmodel(r=rprs, avs=allvslope, avi=allvitcp, aos=alloslope):
                 allimout = []
-                for iv, v in enumerate(visits):
+                for iv in range(len(visits)):
                     if commonoim:
                         imout = timlc(time[iv], orbits[iv], vslope=float(avs[iv]),
                                       vitcp=float(avi[iv]), oslope=float(aos[iv]),
@@ -1008,7 +997,6 @@ def spectrum(fin, nrm, wht, out, selftype,
             wbdata = pmnd('wbdata', mu=lcmodel,
                           tau=tauwbdata[valid], value=data[valid], observed=True)
             nodes.append(wbdata)
-            allnodes = [n.__name__ for n in nodes if not n.observed]
             model = pm.Model(nodes)
             mcmc = pm.MCMC(model)
             burnin = int(chainlen/2)
