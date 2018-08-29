@@ -42,4 +42,5 @@ setuptools.setup (name='excalibur',
  ******************************************************************************
  ** NTR: 50482''',
                   keywords='baysian mcmc',
-                  url='https://github-fn.jpl.nasa.gov/EXCALIBUR/esp')
+                  url='https://github-fn.jpl.nasa.gov/EXCALIBUR/esp',
+                  zip_safe=False)
