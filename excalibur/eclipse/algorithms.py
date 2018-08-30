@@ -19,6 +19,7 @@ fltrs = [t.strip() for t in fltrs if t.replace(' ', '').__len__() > 0]
 # -- ALGORITHMS -- ---------------------------------------------------
 class normalization(trnalg.normalization):
     def __init__(self):
+        trnalg.normalization.__init__(self)
         self._version_ = dawgie.VERSION(1,1,0)
         self._type = 'eclipse'
         self.__verbose = verbose

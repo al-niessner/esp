@@ -62,8 +62,8 @@ class xslib(dawgie.Algorithm):
         return
 
     def _xslib(self, spc, fin, index):
-        cs = crbcore.xsecs(spc, fin, self.__out[index],
-                           verbose=self.__verbose, debug=debug)
+        cs = crbcore.myxsecs(spc, fin, self.__out[index],
+                             verbose=self.__verbose, debug=debug)
         return cs
 
     def _failure(self, errstr):

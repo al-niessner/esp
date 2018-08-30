@@ -33,6 +33,7 @@ class ValuesList(dawgie.Value, list):
         list.__init__ (self, *args, **kwds)
         self._version_ = dawgie.VERSION(1,1,0)
         return
+    def features (self): return []
     pass
 
 class ValuesDict(dawgie.Value, dict):
@@ -40,6 +41,7 @@ class ValuesDict(dawgie.Value, dict):
         dict.__init__ (self, *args, **kwds)
         self._version_ = dawgie.VERSION(1,1,0)
         return
+    def features (self): return []
     pass
 
 class ValueScalar(dawgie.Value):
@@ -48,5 +50,6 @@ class ValueScalar(dawgie.Value):
         self.__content = content
         self._version_ = dawgie.VERSION(1,1,0)
         return
+    def features (self): return []
     def value(self): return self.__content
     pass
