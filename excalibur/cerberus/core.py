@@ -5,18 +5,18 @@ import os
 
 try:
     import pymc as pm
-    from pymc.distributions import Normal as pmnd, Uniform as pmud, TruncatedNormal as pmtnd
+    from pymc.distributions import Normal as pmnd, Uniform as pmud
 except ImportError:
     import pymc3 as pm
-    from pymc3.distributions import Normal as pmnd, Uniform as pmud, TruncatedNormal as pmtnd
+    from pymc3.distributions import Normal as pmnd, Uniform as pmud
     pass
 
 import numpy as np
-import lmfit as lm
-import scipy.constants as cst
 import matplotlib.pyplot as plt
 
+import scipy.constants as cst
 from scipy.interpolate import interp1d as itp
+
 # ------------- ------------------------------------------------------
 # -- SV VALIDITY -- --------------------------------------------------
 def checksv(sv):
@@ -27,20 +27,20 @@ def checksv(sv):
     return valid, errstring
 # ----------------- --------------------------------------------------
 # -- X SECTIONS LIBRARY -- -------------------------------------------
-def xsecs(spc, fin, out,
-          hitemp='/proj/sdp/data/CERBERUS/HITEMP',
-          tips='/proj/sdp/data/CERBERUS/TIPS',
-          ciadir='/proj/sdp/data/CERBERUS/HITRAN/CIA',
-          exomoldir='/proj/sdp/data/CERBERUS/EXOMOL',
-          knownspecies=['NO', 'OH', 'C2H2', 'N2', 'N2O', 'O3', 'O2'],
-          cialist=['H2-H', 'H2-H2', 'H2-He', 'He-H'],
-          xmspecies=['TIO', 'CH4', 'H2O', 'H2CO', 'HCN', 'CO', 'CO2', 'NH3'],
-          verbose=False, debug=False):
+def myxsecs(spc, out,
+            hitemp='/proj/sdp/data/CERBERUS/HITEMP',
+            tips='/proj/sdp/data/CERBERUS/TIPS',
+            ciadir='/proj/sdp/data/CERBERUS/HITRAN/CIA',
+            exomoldir='/proj/sdp/data/CERBERUS/EXOMOL',
+            knownspecies=['NO', 'OH', 'C2H2', 'N2', 'N2O', 'O3', 'O2'].copy(),
+            cialist=['H2-H', 'H2-H2', 'H2-He', 'He-H'].copy(),
+            xmspecies=['TIO', 'CH4', 'H2O', 'H2CO', 'HCN', 'CO', 'CO2', 'NH3'].copy(),
+            verbose=False, debug=False):
     cs = False
     for p in spc['data'].keys():
         out['data'][p] = {}
         wgrid = np.array(spc['data'][p]['WB'])
-        qtgrid = gettpf(tips, knownspecies, debug=debug)
+        qtgrid = gettpf(tips, knownspecies)
         library = {}
         nugrid = (1e4/np.copy(wgrid))[::-1]
         dwnu = np.concatenate((np.array([np.diff(nugrid)[0]]), np.diff(nugrid)))
@@ -68,10 +68,8 @@ def xsecs(spc, fin, out,
             for mytemp in set(library[myexomol]['Ttemp']):
                 select = np.array(library[myexomol]['Ttemp']) == mytemp
                 bini = []
-                bint = []
                 matnu = np.array(library[myexomol]['nutemp'])[select]
                 sigma2 = np.array(library[myexomol]['Itemp'])[select]
-                mattemp = np.array(library[myexomol]['Ttemp'])[select]
                 for nubin, mydw in zip(nugrid, dwnu):
                     select = ((matnu > (nubin-mydw/2.)) &
                               (matnu <= nubin+mydw/2.))
@@ -147,10 +145,8 @@ def xsecs(spc, fin, out,
                 for mytemp in set(library[mycia]['Ttemp']):
                     select = np.array(library[mycia]['Ttemp']) == mytemp
                     bini = []
-                    bint = []
                     matnu = np.array(library[mycia]['nutemp'])[select]
                     sigma2 = np.array(library[mycia]['Itemp'])[select]
-                    mattemp = np.array(library[mycia]['Ttemp'])[select]
                     for nubin, mydw in zip(nugrid, dwnu):
                         select = (matnu > (nubin-mydw/2.)) & (matnu <= nubin+mydw/2.)
                         bini.append(np.sum(sigma2[select]))
@@ -253,7 +249,7 @@ def xsecs(spc, fin, out,
         out['data'][p]['XSECS'] = library
         out['data'][p]['QTGRID'] = qtgrid
         pass
-    if len(out['data'].keys()) > 0: out['STATUS'].append(True)
+    if out['data'].keys(): out['STATUS'].append(True)
     return cs
 # ------------------------ -------------------------------------------
 # -- TOTAL PARTITION FUNCTION -- -------------------------------------
@@ -287,7 +283,7 @@ def gettpf(tips, knownspecies, verbose=False):
     return grid
 # ------------------------------ -------------------------------------
 # -- ATMOS -- --------------------------------------------------------
-def atmos(fin, xsl, spc, out, mclen=int(1e4), verbose=False, debug=False):
+def atmos(fin, spc, out, mclen=int(1e4), verbose=False):
     am = False
     orbp = fin['priors'].copy()
     ssc = syscore.ssconstants(mks=True)
@@ -331,7 +327,12 @@ def atmos(fin, xsl, spc, out, mclen=int(1e4), verbose=False, debug=False):
 
             # CERBERUS FM CALL
             @pm.deterministic
-            def fmcerberus(cop=compar, mdp=modepar):
+            def fmcerberus(cop=compar, mdp=modelpar,
+                           cleanup=cleanup,
+                           model=model,
+                           p=p,
+                           solidr=solidr,
+                           tspectrum=tspectrum):
                 if model == 'TEC':
                     tceqdict = {}
                     tceqdict['CtoO'] = float(mdp[1])
@@ -375,7 +376,10 @@ def atmos(fin, xsl, spc, out, mclen=int(1e4), verbose=False, debug=False):
             markovc.sample(mclen, burn=burnin, progress_bar=verbose)
             if verbose: print('')
             mctrace = {}
-            for key in allnodes: mctrace[key] = mcmc.trace(key)[:]
+
+            # Interesting: mcmc is not known, therefore this function is
+            # probably dead code but it is not. So, how could it ever pass?
+            # for key in allnodes: mctrace[key] = mcmc.trace(key)[:]
             out['data'][p][model]['MCPOST'] = markovc.stats()
             out['data'][p][model]['MCTRACE'] = mctrace
             pass
@@ -390,8 +394,8 @@ def atmos(fin, xsl, spc, out, mclen=int(1e4), verbose=False, debug=False):
 # -- CERBERUS MODEL -- -----------------------------------------------
 def crbmodel(mixratio, rayleigh, cloudtp, rp0, orbp, xsecs, qtgrid,
              temp, wgrid, lbroadening=False, lshifting=False,
-             cialist=['H2-H', 'H2-H2', 'H2-He', 'He-H'],
-             xmollist=['TIO', 'CH4', 'H2O', 'H2CO', 'HCN', 'CO', 'CO2', 'NH3'],
+             cialist=['H2-H', 'H2-H2', 'H2-He', 'He-H'].copy(),
+             xmollist=['TIO', 'CH4', 'H2O', 'H2CO', 'HCN', 'CO', 'CO2', 'NH3'].copy(),
              nlevels=100, Hsmax=15., solrad=10.,
              hzlib=None, hzp=None, hzslope=-4., hztop=None,
              cheq=None, h2rs=True, logx=False, pnet='b',
@@ -416,19 +420,19 @@ def crbmodel(mixratio, rayleigh, cloudtp, rp0, orbp, xsecs, qtgrid,
     Hs = cst.Boltzmann*temp/(mmw*1e-2*(10.**orbp[pnet]['logg']))  # [m]
     for press, dpress in zip(p[:-1], dp):
         rdz = abs(Hs/2.*np.log(1. + dpress/press))
-        if len(addz) > 0: dz.append(addz[-1]/2. + rdz)
+        if addz: dz.append(addz[-1]/2. + rdz)
         else: dz.append(2.*rdz)
         addz.append(2.*rdz)
         z.append(z[-1]+addz[-1])
         pass
     dz.append(addz[-1])
     rho = p*1e5/(cst.Boltzmann*temp)
-    tau, wtau = gettau(orbp, xsecs, qtgrid, temp, mixratio,
-                       z, dz, rho, rp0, p, dp, wgrid,
+    tau, wtau = gettau(xsecs, qtgrid, temp, mixratio,
+                       z, dz, rho, rp0, p, wgrid,
                        lbroadening, lshifting, cialist, fH2, fHe,
                        xmollist, rayleigh,
                        hzlib, hzp, hzslope, hztop,
-                       mmw, h2rs=h2rs, verbose=verbose, debug=debug)
+                       h2rs=h2rs, debug=debug)
     reversep = np.array(p[::-1])
     selectcloud = p > 10.**cloudtp
     blocked = False
@@ -436,7 +440,7 @@ def crbmodel(mixratio, rayleigh, cloudtp, rp0, orbp, xsecs, qtgrid,
         tau = tau*0
         blocked = True
         pass
-    if not(all(~selectcloud)) and not(blocked):
+    if not all(~selectcloud) and not blocked:
         cloudindex = np.max(np.arange(len(p))[selectcloud])+1
         for index in np.arange(wtau.size):
             myspl = itp(reversep, tau[:,index])
@@ -506,12 +510,12 @@ def getmmw(mixratio, protosolar=True, fH2=None, fHe=None):
     return mmw, mrH2, mrHe
 # --------------------------- ----------------------------------------
 # -- TAU -- ----------------------------------------------------------
-def gettau(orbp, xsecs, qtgrid, temp, mixratio,
-           z, dz, rho, rp0, p, dp, wgrid, lbroadening, lshifting,
+def gettau(xsecs, qtgrid, temp, mixratio,
+           z, dz, rho, rp0, p, wgrid, lbroadening, lshifting,
            cialist, fH2, fHe,
-           xmollist, rayleigh, hzlib, hzp, hzslope, hztop, mmw,
+           xmollist, rayleigh, hzlib, hzp, hzslope, hztop,
            h2rs=True,
-           verbose=False, debug=False):
+           debug=False):
     firstelem = True
     vectauelem = []
     for myz in list(z):
@@ -530,8 +534,8 @@ def gettau(orbp, xsecs, qtgrid, temp, mixratio,
         if elem not in xmollist:
             # Rothman et .al 2010
             sigma, lsig = absorb(xsecs[elem], qtgrid[elem], temp,
-                                 p, dp, mmr, lbroadening, lshifting, wgrid,
-                                 verbose=verbose, debug=debug)  # cm^2/mol
+                                 p, mmr, lbroadening, lshifting, wgrid,
+                                 debug=debug)  # cm^2/mol
             sigma = np.array(sigma)
             if np.sum(sigma < 0) > 0: sigma[sigma < 0] = 0
             if np.sum(~np.isfinite(sigma)) > 0: sigma[~np.isfinite(sigma)] = 0
@@ -540,7 +544,7 @@ def gettau(orbp, xsecs, qtgrid, temp, mixratio,
             pass
         else:
             # Hill et al. 2013
-            sigma, lsig = getxmolxs(temp, xsecs[elem], wgrid)  # cm^2/mol
+            sigma, lsig = getxmolxs(temp, xsecs[elem])  # cm^2/mol
             sigma = np.array(sigma)
             if np.sum(sigma < 0) > 0: sigma[sigma < 0] = 0
             if np.sum(~np.isfinite(sigma)) > 0: sigma[~np.isfinite(sigma)] = 0
@@ -586,7 +590,7 @@ def gettau(orbp, xsecs, qtgrid, temp, mixratio,
             f2 = fH2*2.
             pass
         # Richard et al. 2012
-        sigma, lsig = getciaxs(temp, xsecs[cia], wgrid)  # cm^5/mol^2
+        sigma, lsig = getciaxs(temp, xsecs[cia])  # cm^5/mol^2
         sigma = np.array(sigma)*1e-10  # m^5/mol^2
         if np.sum(sigma < 0) > 0: sigma[sigma < 0] = 0
         if np.sum(~np.isfinite(sigma)) > 0: sigma[~np.isfinite(sigma)] = 0
@@ -630,8 +634,8 @@ def gettau(orbp, xsecs, qtgrid, temp, mixratio,
     return tau, 1e4/lsig
 # --------- ----------------------------------------------------------
 # -- ATTENUATION COEFFICIENT -- --------------------------------------
-def absorb(xsecs, qtgrid, T, p, dp, mmr, lbroadening, lshifting, wgrid,
-           iso=0, Tref=296., verbose=True, debug=False):
+def absorb(xsecs, qtgrid, T, p, mmr, lbroadening, lshifting, wgrid,
+           iso=0, Tref=296., debug=False):
     select = (np.array(xsecs['I']) == iso+1)
     S = np.array(xsecs['S'])[select]
     E = np.array(xsecs['Epp'])[select]
@@ -639,7 +643,6 @@ def absorb(xsecs, qtgrid, T, p, dp, mmr, lbroadening, lshifting, wgrid,
     nu = np.array(xsecs['nu'])[select]
     delta = np.array(xsecs['delta'])[select]
     eta = np.array(xsecs['eta'])[select]
-    MU = np.array(xsecs['MU'])[select]
     gair = np.array(xsecs['g_air'])[select]
     Qref = float(qtgrid['SPL'][iso](Tref))
     Q = float(qtgrid['SPL'][iso](T))
@@ -693,7 +696,7 @@ def intflor(wave, dwave, nu, gamma):
     return f
 # ------------------------- ------------------------------------------
 # -- CIA -- ----------------------------------------------------------
-def getciaxs(temp, xsecs, wgrid):
+def getciaxs(temp, xsecs):
     sigma = np.array([thisspl(temp) for thisspl in xsecs['SPL']])
     nu = np.array(xsecs['SPLNU'])
     select = np.argsort(nu)
@@ -702,7 +705,7 @@ def getciaxs(temp, xsecs, wgrid):
     return sigma, nu
 # --------- ----------------------------------------------------------
 # -- EXOMOL -- -------------------------------------------------------
-def getxmolxs(temp, xsecs, wgrid):
+def getxmolxs(temp, xsecs):
     sigma = np.array([thisspl(temp) for thisspl in xsecs['SPL']])
     nu = np.array(xsecs['SPLNU'])
     select = np.argsort(nu)
