@@ -14,10 +14,25 @@ import numpy as np
 import lmfit as lm
 import matplotlib.pyplot as plt
 
+import ldtk
 from ldtk.ldmodel import LinearModel, QuadraticModel, NonlinearModel
 from ldtk import LDPSetCreator, BoxcarFilter
 
 from scipy.interpolate import interp1d as itp
+
+import collections
+CONTEXT = collections.namedtuple ('CONTEXT', ['allologtau','allologdelay','allz','commonoim', 'ecc', 'g1', 'g2', 'g3', 'g4', 'ootoindex', 'ootorbits', 'orbits', 'period', 'selectfit', 'smaors', 'time', 'tmjd', 'ttv', 'valid', 'visits'])
+
+# ----- inline hack to ldtk.LDPSet
+class LDPSet(ldtk.LDPSet):
+    @staticmethod
+    def is_mime(): return True
+    @property
+    def profile_mu(self): return self._mu
+    pass
+setattr (ldtk, 'LDPSet', LDPSet)
+setattr (ldtk.ldtk, 'LDPSet', LDPSet)
+# -----
 
 # ------------- ------------------------------------------------------
 # -- SV VALIDITY -- --------------------------------------------------
@@ -41,7 +56,7 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
     vrange = cal['data']['VRANGE']
     arcsec2pix = datcore.dps(ext)
     scanlen = np.floor(scanlen/arcsec2pix)
-    if len(tme[selftype]) > 0:
+    if tme[selftype]:
         for p in tme['data'].keys():
             out['data'][p] = {}
             rpors = priors[p]['rp']/priors['R*']*ssc['Rjup/Rsun']
@@ -90,7 +105,7 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
                 for o in set(orbits[selv]):
                     selo = (orbits[selv] == o)
                     zorb = zoot[selv][selo]
-                    if (min(abs(zorb)) > (1 + rpors)):
+                    if min(abs(zorb) > (1 + rpors)):
                         if np.median(zorb) < 0:
                             ootminus.append(o)
                             ootmv.append(np.median(zorb))
@@ -110,7 +125,7 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
                     keep = ootminus[ootmv.index(max(ootmv))]
                     trash.extend([i for i in ootminus if i != keep])
                     pass
-                if len(trash) > 0:
+                if trash:
                     for o in trash:
                         select = orbits[selv] == o
                         if selftype in ['transit', 'eclipse']:
@@ -188,7 +203,7 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
                     print(v, m)
                     pass
                 pass
-            if len(out['data'][p]['visits']) > 0:
+            if out['data'][p]['visits']:
                 normed = True
                 out['STATUS'].append(True)
                 pass
@@ -240,7 +255,7 @@ def whitelight(nrm, fin, out, selftype, chainlen=int(8e4), verbose=False, debug=
     wl = False
     priors = fin['priors'].copy()
     ssc = syscore.ssconstants()
-    planetloop = [p for p in nrm['data'].keys() if (len(nrm['data'][p]['visits']) > 0)]
+    planetloop = [p for p in nrm['data'].keys() if len(nrm['data'][p]['visits'] > 0)]
     for p in planetloop:
         rpors = priors[p]['rp']/priors['R*']*ssc['Rjup/Rsun']
         visits = nrm['data'][p]['visits']
@@ -442,43 +457,61 @@ def whitelight(nrm, fin, out, selftype, chainlen=int(8e4), verbose=False, debug=
         nodes.extend(allologtau)
         nodes.extend(allologdelay)
         selectfit = np.isfinite(flatwhite)
+        ctxt = CONTEXT(allologtau=allologtau,
+                       allologdelay=allologdelay,
+                       allz=None,
+                       commonoim=commonoim,
+                       ecc=ecc,
+                       g1=g1, g2=g2, g3=g3, g4=g4,
+                       ootoindex=ootoindex,
+                       ootorbits=ootorbits,
+                       orbits=orbits,
+                       period=period,
+                       selectfit=selectfit,
+                       smaors=smaors,
+                       time=time,
+                       tmjd=tmjd,
+                       ttv=ttv,
+                       valid=None,
+                       visits=visits)
 
         # ORBITAL MODEL ----------------------------------------------
         @pm.deterministic
         def orbital(r=rprs, icln=inc, atk=alltknot,
                     avs=allvslope, avi=allvitcp,
-                    aos=alloslope, aolt=allologtau, aold=allologdelay):
+                    aos=alloslope, aolt=allologtau, aold=allologdelay,
+                    ctxt=ctxt):
             out = []
-            for v in visits:
-                omt = time[visits.index(v)]
-                if v in ttv: omtk = float(atk[ttv.index(v)])
-                else: omtk = tmjd
-                omz, pmph = datcore.time2z(omt, float(icln), omtk, smaors, period, ecc)
-                lcout = tldlc(abs(omz), float(r), g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0])
-                if commonoim:
-                    imout = timlc(omt, orbits[visits.index(v)],
-                                  vslope=float(avs[visits.index(v)]),
-                                  vitcp=float(avi[visits.index(v)]),
-                                  oslope=float(aos[visits.index(v)]),
-                                  ologtau=float(aolt[visits.index(v)]),
-                                  ologdelay=float(aold[visits.index(v)]))
+            for i,v in enumerate(ctxt.visits):
+                omt = ctxt.time[i]
+                if v in ctxt.ttv: omtk = float(atk[ctxt.ttv.index(v)])
+                else: omtk = ctxt.tmjd
+                omz, _pmph = datcore.time2z(omt, float(icln), omtk, ctxt.smaors, ctxt.period, ctxt.ecc)
+                lcout = tldlc(abs(omz), float(r), g1=ctxt.g1[0], g2=ctxt.g2[0], g3=ctxt.g3[0], g4=ctxt.g4[0])
+                if ctxt.commonoim:
+                    imout = timlc(omt, ctxt.orbits[i],
+                                  vslope=float(avs[i]),
+                                  vitcp=float(avi[i]),
+                                  oslope=float(aos[i]),
+                                  ologtau=float(aolt[i]),
+                                  ologdelay=float(aold[i]))
                     pass
                 else:
-                    ooti = ootoindex[visits.index(v)]
+                    ooti = ctxt.ootoindex[i]
                     oslopetable = [float(aos[i]) for i in ooti]
                     ologtautable = [float(aolt[i]) for i in ooti]
                     ologdelaytable = [float(aold[i]) for i in ooti]
-                    imout = timlc(omt, orbits[visits.index(v)],
-                                  vslope=float(avs[visits.index(v)]),
-                                  vitcp=float(avi[visits.index(v)]),
+                    imout = timlc(omt, ctxt.orbits[i],
+                                  vslope=float(avs[i]),
+                                  vitcp=float(avi[i]),
                                   oslope=oslopetable,
                                   ologtau=ologtautable,
                                   ologdelay=ologdelaytable,
-                                  ooto=ootorbits[visits.index(v)])
+                                  ooto=ctxt.ootorbits[i])
                     pass
                 out.extend(lcout*imout)
                 pass
-            return np.array(out)[selectfit]
+            return np.array(out)[ctxt.selectfit]
         tauwhite = 1e0/((np.median(flaterrwhite))**2)
         whitedata = pmnd('whitedata', mu=orbital, tau=tauwhite,
                          value=flatwhite[selectfit], observed=True)
@@ -498,8 +531,8 @@ def whitelight(nrm, fin, out, selftype, chainlen=int(8e4), verbose=False, debug=
         postsep = []
         postphase = []
         postflatphase = []
-        for v in visits:
-            postt = time[visits.index(v)]
+        for i,v in enumerate(visits):
+            postt = time[i]
             if v in ttv: posttk = mcpost['dtk%i' % v]['quantiles'][50]
             else: posttk = tmjd
             if 'inc' in allnodes:
@@ -514,7 +547,7 @@ def whitelight(nrm, fin, out, selftype, chainlen=int(8e4), verbose=False, debug=
             postlc.extend(tldlc(abs(postz), mcpost['rprs']['quantiles'][50],
                                 g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0]))
             if commonoim:
-                postim.append(timlc(postt, orbits[visits.index(v)],
+                postim.append(timlc(postt, orbits[i],
                                     vslope=mcpost['vslope%i' % v]['quantiles'][50],
                                     vitcp=mcpost['vitcp%i' % v]['quantiles'][50],
                                     oslope=mcpost['oslope%i' % v]['quantiles'][50],
@@ -522,20 +555,20 @@ def whitelight(nrm, fin, out, selftype, chainlen=int(8e4), verbose=False, debug=
                                     ologdelay=mcpost['ologdelay%i' % v]['quantiles'][50]))
                 pass
             else:
-                ooti = ootoindex[visits.index(v)]
+                ooti = ootoindex[i]
                 oslopetable = [mcpost['oslope%i' % i]['quantiles'][50]
                                for i in ooti]
                 ologtautable = [mcpost['ologtau%i' % i]['quantiles'][50]
                                 for i in ooti]
                 ologdelaytable = [mcpost['ologdelay%i' % i]['quantiles'][50]
                                   for i in ooti]
-                postim.append(timlc(postt, orbits[visits.index(v)],
+                postim.append(timlc(postt, orbits[i],
                                     vslope=mcpost['vslope%i' % v]['quantiles'][50],
                                     vitcp=mcpost['vitcp%i' % v]['quantiles'][50],
                                     oslope=oslopetable,
                                     ologtau=ologtautable,
                                     ologdelay=ologdelaytable,
-                                    ooto=ootorbits[visits.index(v)]))
+                                    ooto=ootorbits[i]))
                 pass
             pass
         out['data'][p]['postlc'] = postlc
@@ -578,7 +611,7 @@ def tldlc(z, rprs, g1=0, g2=0, g3=0, g4=0, nint=int(8**2)):
     xout = z.copy() + rprs
     xout[xout > 1e0] = 1e0
     select = xin > 1e0
-    if (True in select): ldlc[select] = 1e0
+    if True in select: ldlc[select] = 1e0
     inldlc = []
     xint = np.linspace(1e0, 0e0, nint)
     znot = z.copy()[~select]
@@ -623,17 +656,17 @@ def vecoccs(z, xrs, rprs):
     select2 = (vecxrs >= rprs + veczsel) & selx
     select = (~select1) & (~select2) & selx
     zzero = veczsel == 0e0
-    if (True in select1 & zzero):
+    if True in select1 & zzero:
         out[select1 & zzero] = np.pi*(np.square(vecxrs[select1 & zzero]))
-    if (True in select2 & zzero):
+    if True in select2 & zzero:
         out[select2 & zzero] = np.pi*(rprs**2)
-    if (True in select & zzero):
+    if True in select & zzero:
         out[select & zzero] = np.pi*(rprs**2)
-    if (True in select1 & ~zzero):
+    if True in select1 & ~zzero:
         out[select1 & ~zzero] = np.pi*(np.square(vecxrs[select1 & ~zzero]))
-    if (True in select2):
+    if True in select2:
         out[select2 & ~zzero] = np.pi*(rprs**2)
-    if (True in select & ~zzero):
+    if True in select & ~zzero:
         redxrs = vecxrs[select & ~zzero]
         redz = veczsel[select & ~zzero]
         s1 = ((np.square(redz) + np.square(redxrs) - rprs**2)/(2e0*redz*redxrs))
@@ -643,7 +676,7 @@ def vecoccs(z, xrs, rprs):
         s3 = ((-redz + redxrs + rprs)*(redz + redxrs - rprs)*
               (redz - redxrs + rprs)*(redz + redxrs + rprs))
         zselect = s3 < 0e0
-        if (True in zselect): s3[zselect] = 0e0
+        if True in zselect: s3[zselect] = 0e0
         out[select & ~zzero] = (np.square(redxrs)*np.arccos(s1) +
                                 (rprs**2)*np.arccos(s2) - (5e-1)*np.sqrt(s3))
         pass
@@ -675,7 +708,7 @@ def createldgrid(minmu, maxmu, orbp,
         if debug: print(str(i)+'/'+str(niter-1))
         loweri = i*segmentation
         upperi = (i+1)*segmentation
-        if (i == (niter-1)): upperi = len(avmu)
+        if i == (niter-1): upperi = len(avmu)
         munm = 1e3*np.array(avmu[loweri:upperi])
         munmmin = 1e3*np.array(minmu[loweri:upperi])
         munmmax = 1e3*np.array(maxmu[loweri:upperi])
@@ -684,7 +717,7 @@ def createldgrid(minmu, maxmu, orbp,
         sc = LDPSetCreator(teff=(tstar, terr), logg=(loggstar, loggerr),
                            z=(fehstar, feherr), filters=filters)
         ps = sc.create_profiles(nsamples=int(1e4))
-        cl, el = ldx(ps._mu, ps._mean, ps._std,
+        cl, el = ldx(ps.profile_mu, ps.profile_averages, ps.profile_uncertainties,
                      mumin=phoenixmin, debug=verbose, model=ldmodel)
         if allcl is None: allcl = cl
         else: allcl = np.concatenate((allcl, cl), axis=0)
@@ -855,7 +888,7 @@ def spectrum(fin, nrm, wht, out, selftype,
     exospec = False
     priors = fin['priors'].copy()
     ssc = syscore.ssconstants()
-    planetloop = [p for p in nrm['data'].keys() if (len(nrm['data'][p]['visits']) > 0)]
+    planetloop = [p for p in nrm['data'].keys() if len(nrm['data'][p]['visits'] > 0)]
     for p in planetloop:
         out['data'][p] = {'LD':[]}
         rpors = priors[p]['rp']/priors['R*']*ssc['Rjup/Rsun']
@@ -961,37 +994,55 @@ def spectrum(fin, nrm, wht, out, selftype,
             nodes.extend(allvslope)
             nodes.extend(allvitcp)
             nodes.extend(alloslope)
+            ctxt = CONTEXT(allologtau=allologtau,
+                           allologdelay=allologdelay,
+                           allz=allz,
+                           commonoim=commonoim,
+                           ecc=None,
+                           g1=g1, g2=g2, g3=g3, g4=g4,
+                           ootoindex=ootoindex,
+                           ootorbits=ootorbits,
+                           orbits=orbits,
+                           period=None,
+                           selectfit=None,
+                           smaors=smaors,
+                           time=time,
+                           tmjd=None,
+                           ttv=None,
+                           valid=valid,
+                           visits=visits)
 
             # LIGHT CURVE MODEL --------------------------------------
             @pm.deterministic
-            def lcmodel(r=rprs, avs=allvslope, avi=allvitcp, aos=alloslope):
+            def lcmodel(r=rprs, avs=allvslope, avi=allvitcp, aos=alloslope,
+                        ctxt=ctxt):
                 allimout = []
-                for iv in range(len(visits)):
-                    if commonoim:
-                        imout = timlc(time[iv], orbits[iv], vslope=float(avs[iv]),
+                for iv in range(len(ctxt.visits)):
+                    if ctxt.commonoim:
+                        imout = timlc(ctxt.time[iv], ctxt.orbits[iv], vslope=float(avs[iv]),
                                       vitcp=float(avi[iv]), oslope=float(aos[iv]),
-                                      ologtau=float(allologtau[iv]),
-                                      ologdelay=float(allologdelay[iv]))
+                                      ologtau=float(ctxt.allologtau[iv]),
+                                      ologdelay=float(ctxt.allologdelay[iv]))
                         pass
                     else:
-                        ooti = ootoindex[iv]
+                        ooti = ctxt.ootoindex[iv]
                         oslopetable = [float(aos[i]) for i in ooti]
                         ologtautable = [float(allologtau[i]) for i in ooti]
                         ologdelaytable = [float(allologdelay[i]) for i in ooti]
-                        imout = timlc(time[iv], orbits[iv],
+                        imout = timlc(ctxt.time[iv], ctxt.orbits[iv],
                                       vslope=float(avs[iv]), vitcp=float(avi[iv]),
                                       oslope=oslopetable, ologtau=ologtautable,
-                                      ologdelay=ologdelaytable, ooto=ootorbits[iv])
+                                      ologdelay=ologdelaytable, ooto=ctxt.ootorbits[iv])
                         pass
                     allimout.extend(imout)
                     pass
                 if selftype == 'transit':
-                    out = tldlc(abs(allz), float(r),
-                                g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0])
+                    out = tldlc(abs(ctxt.allz), float(r),
+                                g1=ctxt.g1[0], g2=ctxt.g2[0], g3=ctxt.g3[0], g4=ctxt.g4[0])
                     pass
-                else: out = tldlc(abs(allz), float(r))
+                else: out = tldlc(abs(ctxt.allz), float(r))
                 out = out*np.array(imout)
-                return out[valid]
+                return out[ctxt.valid]
 
             tauwbdata = 1e0/dnoise**2
             wbdata = pmnd('wbdata', mu=lcmodel,
