@@ -1037,12 +1037,13 @@ def spectrum(fin, nrm, wht, out, selftype,
                     pass
                 if selftype == 'transit':
                     out = tldlc(abs(ctxt.allz), float(r),
-                                g1=ctxt.g1[0], g2=ctxt.g2[0], g3=ctxt.g3[0], g4=ctxt.g4[0])
+                                g1=ctxt.g1[0], g2=ctxt.g2[0],
+                                g3=ctxt.g3[0], g4=ctxt.g4[0])
                     pass
                 else: out = tldlc(abs(ctxt.allz), float(r))
                 out = out*np.array(imout)
                 return out[ctxt.valid]
-
+            
             tauwbdata = 1e0/dnoise**2
             wbdata = pmnd('wbdata', mu=lcmodel,
                           tau=tauwbdata[valid], value=data[valid], observed=True)
