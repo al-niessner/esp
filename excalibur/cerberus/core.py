@@ -16,7 +16,6 @@ import matplotlib.pyplot as plt
 
 import scipy.constants as cst
 from scipy.interpolate import interp1d as itp
-
 # ------------- ------------------------------------------------------
 # -- SV VALIDITY -- --------------------------------------------------
 def checksv(sv):
@@ -328,16 +327,14 @@ def atmos(fin, spc, out, mclen=int(1e4), verbose=False):
             # CERBERUS FM CALL
             @pm.deterministic
             def fmcerberus(cop=compar, mdp=modelpar,
-                           cleanup=cleanup,
-                           model=model,
-                           p=p,
-                           solidr=solidr,
+                           cleanup=cleanup, model=model, p=p, solidr=solidr,
                            tspectrum=tspectrum):
+                fmc = np.zeros(tspectrum.size)
                 if model == 'TEC':
                     tceqdict = {}
                     tceqdict['CtoO'] = float(mdp[1])
                     tceqdict['XtoH'] = float(mdp[0])
-                    out = crbmodel(None, float(cop[1]), float(cop[0]), solidr, orbp,
+                    fmc = crbmodel(None, float(cop[1]), float(cop[0]), solidr, orbp,
                                    out['data'][p]['XSECS'], out['data'][p]['QTGRID'],
                                    float(cop[3]), np.array(spc['data'][p]['WB']),
                                    hzslope=float(cop[2]), cheq=tceqdict, pnet=p,
@@ -346,7 +343,7 @@ def atmos(fin, spc, out, mclen=int(1e4), verbose=False):
                 if model == 'PHOTOCHEM':
                     mixratio = {'TIO':float(mdp[0]), 'CH4':float(mdp[1]),
                                 'C2H2':float(mdp[2]), 'NH3':float(mdp[3])}
-                    out = crbmodel(mixratio, float(cop[1]), float(cop[0]), solidr, orbp,
+                    fmc = crbmodel(mixratio, float(cop[1]), float(cop[0]), solidr, orbp,
                                    out['data'][p]['XSECS'], out['data'][p]['QTGRID'],
                                    float(cop[3]), np.array(spc['data'][p]['WB']),
                                    hzslope=float(cop[2]), cheq=None, pnet=p,
@@ -355,14 +352,14 @@ def atmos(fin, spc, out, mclen=int(1e4), verbose=False):
                 if model == 'HESC':
                     mixratio = {'TIO':float(mdp[0]), 'N2O':float(mdp[1]),
                                 'CO2':float(mdp[2])}
-                    out = crbmodel(mixratio, float(cop[1]), float(cop[0]), solidr, orbp,
+                    fmc = crbmodel(mixratio, float(cop[1]), float(cop[0]), solidr, orbp,
                                    out['data'][p]['XSECS'], out['data'][p]['QTGRID'],
                                    float(cop[3]), np.array(spc['data'][p]['WB']),
                                    hzslope=float(cop[2]), cheq=None, pnet=p,
                                    verbose=False, debug=False)
                     pass
-                out = out[cleanup] - np.nanmean(out[cleanup])
-                out = out + np.nanmean(tspectrum[cleanup])
+                fmc = fmc[cleanup] - np.nanmean(fmc[cleanup])
+                fmc = fmc + np.nanmean(tspectrum[cleanup])
                 return out
             # CERBERUS MCMC
             mcdata = pmnd('mcdata', mu=fmcerberus, tau=1e0/((tspecerr[cleanup])**2),
@@ -376,10 +373,7 @@ def atmos(fin, spc, out, mclen=int(1e4), verbose=False):
             markovc.sample(mclen, burn=burnin, progress_bar=verbose)
             if verbose: print('')
             mctrace = {}
-
-            # Interesting: mcmc is not known, therefore this function is
-            # probably dead code but it is not. So, how could it ever pass?
-            # for key in allnodes: mctrace[key] = mcmc.trace(key)[:]
+            for key in allnodes: mctrace[key] = markovc.trace(key)[:]
             out['data'][p][model]['MCPOST'] = markovc.stats()
             out['data'][p][model]['MCTRACE'] = mctrace
             pass
