@@ -24,17 +24,17 @@ class CalibrateSV(dawgie.StateVector):
     def view(self, visitor:dawgie.Visitor)->None:
         if len(self['STATUS']) == 2:
             data = self['data']
-            timing = np.array([d for d,i in zip(data['TIME'], data['IGNORED']) if not(i)])
+            timing = np.array([d for d,i in zip(data['TIME'], data['IGNORED']) if not i])
             dispersion = np.array([d for d,i in zip(data['DISPERSION'], data['IGNORED'])
-                                   if not(i)])
-            shift = np.array([d for d,i in zip(data['SHIFT'], data['IGNORED']) if not(i)])
+                                   if not i])
+            shift = np.array([d for d,i in zip(data['SHIFT'], data['IGNORED']) if not i])
             spec = np.array([d for d,i in zip(data['SPECTRUM'], data['IGNORED'])
-                             if not(i)])
+                             if not i])
             photoc = np.array([d for d,i in zip(data['PHT2CNT'], data['IGNORED'])
-                               if not(i)])
-            wave = np.array([d for d,i in zip(data['WAVE'], data['IGNORED']) if not(i)])
+                               if not i])
+            wave = np.array([d for d,i in zip(data['WAVE'], data['IGNORED']) if not i])
             errspec = np.array([d for d,i in zip(data['SPECERR'], data['IGNORED'])
-                                if not(i)])
+                                if not i])
             allignore = np.array(data['IGNORED'])
             allindex = np.arange(len(data['LOC']))
             vrange = data['VRANGE']

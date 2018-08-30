@@ -71,7 +71,7 @@ class TargetSV(dawgie.StateVector):
                         j = starlabels.index(l)
                         table.get_cell(i, j).add_primitive(l)
                         elem = starinfo[l][-1]
-                        if len(elem) > 0:
+                        if elem:
                             table.get_cell(i, j).add_primitive(elem)
                             pass
                         else:
@@ -90,7 +90,7 @@ class TargetSV(dawgie.StateVector):
                             j = starlabels.index(l)
                             table.get_cell(i, j).add_primitive(l)
                             elem = starinfo[c][l][-1]
-                            if len(elem) > 0:
+                            if elem:
                                 table.get_cell(i, j).add_primitive(elem)
                                 pass
                             else:
@@ -161,8 +161,6 @@ class DatabaseSV(dawgie.StateVector):
 
     def view(self, visitor:dawgie.Visitor)->None:
         if self['STATUS'][-1]:
-            banlist = ['loc', 'md5', 'sha']
-            listnames = [n for n in self['name'].keys()]
             ordlab = ['observatory', 'instrument', 'detector',
                       'filter', 'mode']
             table = visitor.add_table(clabels=ordlab, rows=1)
