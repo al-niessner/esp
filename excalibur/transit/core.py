@@ -33,7 +33,7 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
     vrange = cal['data']['VRANGE']
     arcsec2pix = datcore.dps(ext)
     scanlen = np.floor(scanlen/arcsec2pix)
-    if len(tme[selftype]) > 0:
+    if tme[selftype].__len__() > 0:
         for p in tme['data'].keys():
             out['data'][p] = {}
             rpors = priors[p]['rp']/priors['R*']*ssc['Rjup/Rsun']
@@ -94,15 +94,15 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
                         pass
                     pass
                 trash = []
-                if len(ootplus) > 1:
+                if ootplus.__len__() > 1:
                     keep = ootplus[ootpv.index(min(ootpv))]
                     trash.extend([i for i in ootplus if i != keep])
                     pass
-                if len(ootminus) > 1:
+                if ootminus.__len__() > 1:
                     keep = ootminus[ootmv.index(max(ootmv))]
                     trash.extend([i for i in ootminus if i != keep])
                     pass
-                if len(trash) > 0:
+                if trash.__len__() > 0:
                     for o in trash:
                         select = orbits[selv] == o
                         if selftype in ['transit', 'eclipse']:
@@ -180,7 +180,7 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
                     print(v, m)
                     pass
                 pass
-            if len(out['data'][p]['visits']) > 0:
+            if out['data'][p]['visits'].__len__() > 0:
                 normed = True
                 out['STATUS'].append(True)
                 pass
@@ -312,7 +312,7 @@ def whitelight(nrm, fin, out, selftype, chainlen=int(8e4), verbose=False, debug=
                 index = visits.index(v)
                 plt.plot(phase[index], allwhite[index], 'o', label=str(v))
                 pass
-            if len(visits) > 14: ncol = 2
+            if visits.__len__() > 14: ncol = 2
             else: ncol = 1
             plt.plot(flatphase, wlmod, '^', label='M')
             plt.xlabel('Orbital Phase')
@@ -398,7 +398,7 @@ def whitelight(nrm, fin, out, selftype, chainlen=int(8e4), verbose=False, debug=
         tauvi = 1e0/(ootstd**2)
         allvslope = np.empty(len(visits), dtype=object)
         allvitcp = np.empty(len(visits), dtype=object)
-        if len(visits) > 20:
+        if visits.__len__() > 20:
             alloslope = np.empty(len(visits), dtype=object)
             allologtau = np.empty(len(visits), dtype=object)
             allologdelay = np.empty(len(visits), dtype=object)
@@ -444,8 +444,9 @@ def whitelight(nrm, fin, out, selftype, chainlen=int(8e4), verbose=False, debug=
                 omt = time[visits.index(v)]
                 if v in ttv: omtk = float(atk[ttv.index(v)])
                 else: omtk = tmjd
-                omz, pmph = datcore.time2z(omt, float(icln), omtk, smaors, period, ecc)
-                lcout = tldlc(abs(omz), float(r), g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0])
+                omz = datcore.time2z(omt, float(icln), omtk, smaors, period, ecc)
+                lcout = tldlc(abs(omz[0]), float(r),
+                              g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0])
                 if commonoim:
                     imout = timlc(omt, orbits[visits.index(v)],
                                   vslope=float(avs[visits.index(v)]),
@@ -548,7 +549,7 @@ def whitelight(nrm, fin, out, selftype, chainlen=int(8e4), verbose=False, debug=
                 plt.plot(phase[iv], allwhite[iv], 'k+')
                 plt.plot(postphase[iv], allwhite[iv]/postim[iv], 'o', label=str(v))
                 pass
-            if len(visits) > 14: ncol = 2
+            if visits.__len__() > 14: ncol = 2
             else: ncol = 1
             plt.plot(postflatphase, postlc, '^', label='M')
             plt.xlabel('Orbital Phase')
@@ -614,29 +615,26 @@ def vecoccs(z, xrs, rprs):
     select2 = (vecxrs >= rprs + veczsel) & selx
     select = (~select1) & (~select2) & selx
     zzero = veczsel == 0e0
-    if (True in select1 & zzero):
+    if True in select1 & zzero:
         out[select1 & zzero] = np.pi*(np.square(vecxrs[select1 & zzero]))
-    if (True in select2 & zzero):
-        out[select2 & zzero] = np.pi*(rprs**2)
-    if (True in select & zzero):
-        out[select & zzero] = np.pi*(rprs**2)
-    if (True in select1 & ~zzero):
+        pass
+    if True in select2 & zzero: out[select2 & zzero] = np.pi*(rprs**2)
+    if True in select & zzero: out[select & zzero] = np.pi*(rprs**2)
+    if True in select1 & ~zzero:
         out[select1 & ~zzero] = np.pi*(np.square(vecxrs[select1 & ~zzero]))
-    if (True in select2):
-        out[select2 & ~zzero] = np.pi*(rprs**2)
-    if (True in select & ~zzero):
+        pass
+    if True in select2: out[select2 & ~zzero] = np.pi*(rprs**2)
+    if True in select & ~zzero:
         redxrs = vecxrs[select & ~zzero]
         redz = veczsel[select & ~zzero]
-        s1 = ((np.square(redz) + np.square(redxrs) - rprs**2)/(2e0*redz*redxrs))
+        s1 = (np.square(redz) + np.square(redxrs) - rprs**2)/(2e0*redz*redxrs)
         s1[s1 > 1e0] = 1e0
-        s2 = ((np.square(redz) + rprs**2 - np.square(redxrs))/(2e0*redz*rprs))
+        s2 = (np.square(redz) + rprs**2 - np.square(redxrs))/(2e0*redz*rprs)
         s2[s2 > 1e0] = 1e0
-        s3 = ((-redz + redxrs + rprs)*(redz + redxrs - rprs)*
-              (redz - redxrs + rprs)*(redz + redxrs + rprs))
+        s3 = (-redz + redxrs + rprs)*(redz + redxrs - rprs)*(redz - redxrs + rprs)*(redz + redxrs + rprs)
         zselect = s3 < 0e0
-        if (True in zselect): s3[zselect] = 0e0
-        out[select & ~zzero] = (np.square(redxrs)*np.arccos(s1) +
-                                (rprs**2)*np.arccos(s2) - (5e-1)*np.sqrt(s3))
+        if True in zselect: s3[zselect] = 0e0
+        out[select & ~zzero] = np.square(redxrs)*np.arccos(s1) + (rprs**2)*np.arccos(s2) - (5e-1)*np.sqrt(s3)
         pass
     return out
 # --------------------------------- ----------------------------------
@@ -1010,8 +1008,8 @@ def spectrum(fin, nrm, wht, out, selftype,
             plt.figure(figsize=(8,6))
             plt.title(p)
             plt.errorbar(specwave, 1e2*vspectrum, fmt='.', yerr=1e2*specerr)
-            plt.xlabel(str('Wavelength [$\mu m$]'))
-            plt.ylabel(str('$(R_p/R_*)^2$ [%]'))
+            plt.xlabel('Wavelength [$\\mu m$]')
+            plt.ylabel('$(R_p/R_*)^2$ [%]')
             plt.show()
             pass
         pass
