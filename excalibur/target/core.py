@@ -31,17 +31,15 @@ def scrapeids(ds:dawgie.Dataset, out, web, genIDs=True):
     for target in targets:
         parsedstr = target.split(':')
         parsedstr = [t.strip() for t in parsedstr]
-        out['starID'][parsedstr[0]] = {'planets':[],
-                                       'PID':[],
-                                       'aliases':[]}
+        out['starID'][parsedstr[0]] = {'planets':[], 'PID':[], 'aliases':[]}
         if parsedstr[1]:
             aliaslist = parsedstr[1].split(',')
             aliaslist = [a.strip() for a in aliaslist if a.strip()]
             out['starID'][parsedstr[0]]['aliases'].extend(aliaslist)
             pass
         if genIDs:
-            dawgie.db.connect(trg.algorithms.create(),
-                              ds._bot(), parsedstr[0]).load()
+            # pylint: disable=protected-access
+            dawgie.db.connect(trg.algorithms.create(), ds._bot(), parsedstr[0]).load()
             pass
         pass
     table = "table=exoplanets"
@@ -73,8 +71,7 @@ def createfltrs(out):
     out['activefilters']['NAMES'] = filters
     if filters:
         for flt in filters:
-            out['activefilters'][flt] = {'ROOTNAME':[],
-                                         'LOC':[], 'TOTAL':[]}
+            out['activefilters'][flt] = {'ROOTNAME':[], 'LOC':[], 'TOTAL':[]}
             pass
         created = True
         out['STATUS'].append(True)
@@ -93,8 +90,7 @@ def autofill(ident, thistarget, out,
     solved = False
     querytarget = thistarget.replace(' ', '+')
     queryform = queryurl+querytarget+action+outfmt+opt
-    failure = ['target not resolved, continue\n\n',
-               'no rows found\n\n']
+    failure = ['target not resolved, continue\n\n', 'no rows found\n\n']
     framelist = urlrequest.urlopen(queryform).read().decode('utf-8')
     if framelist not in failure:
         framelist = framelist.split('\n')

@@ -11,7 +11,8 @@ post_state "$context" "$description" "$state"
 if current_state
 then
     docker run --rm -v $PWD:$PWD -u $UID -w $PWD esp_cit:$(cit_version) pylint \
-               --rcfile=$PWD/.ci/pylint.rc $PWD/excalibur | tee pylint.rpt.txt
+	   --ignore=__main__.py \
+           --rcfile=$PWD/.ci/pylint.rc $PWD/excalibur | tee pylint.rpt.txt
     python3 <<EOF
 mn = '<unknown>'
 count = 0

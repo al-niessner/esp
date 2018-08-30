@@ -117,8 +117,7 @@ class atmos(dawgie.Algorithm):
         return
 
     def _atmos(self, fin, xsl, spc, index):
-        am = crb.atmos(fin, xsl, spc, self.__out[index],
-                       verbose=self.__verbose, debug=debug)
+        am = crbcore.atmos(fin, xsl, spc, self.__out[index], verbose=self.__verbose)
         return am
 
     def _failure(self, errstr):

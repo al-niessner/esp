@@ -67,6 +67,7 @@ class autofill(dawgie.Algorithm):
         update = False
         var_create = self.__create.sv_as_dict()['starIDs']
         valid, errstring = trgcore.checksv(var_create)
+        # pylint: disable=protected-access
         if valid and ds._tn() in var_create['starID']:
             update = self._autofill(var_create, ds._tn(), self.__out)
             pass

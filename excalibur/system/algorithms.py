@@ -77,9 +77,9 @@ class finalize(dawgie.Algorithm):
         overwrite = trgedit.ppar()
         if valid:
             for key in val: self.__out[key] = val.copy()[key]
-            if ds._tn() in overwrite.keys():
-                update = self._priority(overwrite[ds._tn()],
-                                        self.__out)
+            # pylint: disable=protected-access
+            if ds._tn() in overwrite:
+                update = self._priority(overwrite[ds._tn()], self.__out)
                 pass
             elif not self.__out['PP'][-1]: update = True
             else:
