@@ -1043,7 +1043,7 @@ def spectrum(fin, nrm, wht, out, selftype,
                 else: out = tldlc(abs(ctxt.allz), float(r))
                 out = out*np.array(imout)
                 return out[ctxt.valid]
-            
+
             tauwbdata = 1e0/dnoise**2
             wbdata = pmnd('wbdata', mu=lcmodel,
                           tau=tauwbdata[valid], value=data[valid], observed=True)

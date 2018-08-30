@@ -874,7 +874,7 @@ def timing(force, cal, out, verbose=False, debug=False):
                 pcconde = True
                 pass
             pccondt = False
-            if  (np.max(phsto[selv]) - np.min(phsto[selv])) > (1e0 - 2e0*tecrit):
+            if (np.max(phsto[selv]) - np.min(phsto[selv])) > (1e0 - 2e0*tecrit):
                 pccondt = True
                 pass
             if pcconde and pccondt: out['phasecurve'].append(int(v))
