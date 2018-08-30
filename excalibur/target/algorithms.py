@@ -1,6 +1,5 @@
 # -- IMPORTS -- ------------------------------------------------------
 import os
-import pdb
 
 import dawgie
 import dawgie.context
@@ -42,11 +41,8 @@ class create(dawgie.Analyzer):
         return self.__out
 
     def run(self, aspects:dawgie.Aspect):
-        trgcore.scrapeids(aspects.ds(), self.__out[0], web,
-                          genIDs=genIDs,
-                          verbose=verbose, debug=debug)
-        update = trgcore.createfltrs(self.__out[1],
-                                     verbose=verbose, debug=debug)
+        trgcore.scrapeids(aspects.ds(), self.__out[0], web, genIDs=genIDs)
+        update = trgcore.createfltrs(self.__out[1])
         if update: aspects.ds().update()
         return
     pass
@@ -69,21 +65,22 @@ class autofill(dawgie.Algorithm):
 
     def run(self, ds, ps):
         update = False
-        create = self.__create.sv_as_dict()['starIDs']
-        valid, errstring = trgcore.checksv(create)
-        if (valid and (ds._tn() in create['starID'].keys())):
-            update = self._autofill(create, ds._tn(), self.__out)
+        var_create = self.__create.sv_as_dict()['starIDs']
+        valid, errstring = trgcore.checksv(var_create)
+        if valid and ds._tn() in var_create['starID']:
+            update = self._autofill(var_create, ds._tn(), self.__out)
             pass
         else: self._failure(errstring)
         if update: ds.update()
         return
 
-    def _autofill(self, create, thistarget, out):
-        solved = trgcore.autofill(create, thistarget, out,
-                                  verbose=verbose, debug=debug)
+    @staticmethod
+    def _autofill(arg_create, thistarget, out):
+        solved = trgcore.autofill(arg_create, thistarget, out)
         return solved
 
-    def _failure(self, errstr):
+    @staticmethod
+    def _failure(errstr):
         if errstr is None: errstr = 'TARGET NOT EXPECTED'
         errmess = '--< TARGET AUTOFILL: ' + errstr + ' >--'
         if verbose: print(errmess)
@@ -108,25 +105,25 @@ class scrape(dawgie.Algorithm):
 
     def run(self, ds, ps):
         update = False
-        autofill = self.__autofill.sv_as_dict()['parameters']
-        valid, errstring = trgcore.checksv(autofill)
-        if valid: update = self._scrape(autofill, self.__out)
+        var_autofill = self.__autofill.sv_as_dict()['parameters']
+        valid, errstring = trgcore.checksv(var_autofill)
+        if valid: update = self._scrape(var_autofill, self.__out)
         else: self._failure(errstring)
         if update: ds.update()
         return
 
-    def _scrape(self, autofill, out):
+    @staticmethod
+    def _scrape(arg_autofill, out):
         dbs = os.path.join(dawgie.context.data_dbs, 'mast')
-        if (not os.path.exists(dbs)): os.makedirs(dbs)
-        umast = trgcore.mast(autofill, out, dbs, queryform,
-                             mirror1, alt=mirror2,
-                             verbose=verbose, debug=debug)
-        udisk = trgcore.disk(autofill, out, diskloc, dbs,
-                             verbose=verbose, debug=debug)
+        if not os.path.exists(dbs): os.makedirs(dbs)
+        umast = trgcore.mast(arg_autofill, out, dbs, queryform,
+                             mirror1, alt=mirror2)
+        udisk = trgcore.disk(arg_autofill, out, diskloc, dbs)
         update = umast or udisk
         return update
 
-    def _failure(self, errstr):
+    @staticmethod
+    def _failure(errstr):
         errmess = '--< TARGET SCRAPE: ' + errstr + ' >--'
         if verbose: print(errmess)
         return

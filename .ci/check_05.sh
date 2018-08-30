@@ -10,7 +10,7 @@ post_state "$context" "$description" "$state"
 
 if current_state
 then
-    python3 -m dawgie.tools.compliant --ae-dir $PWD/excalibur --ae-pkg excalibur
+    docker run --rm -v $PWD:$PWD -u $UID -w $PWD -e USERNAME=$USERNAME esp_cit:$(cit_version) python3 -m dawgie.tools.compliant --ae-dir $PWD/excalibur --ae-pkg excalibur
     state=`get_state`
 fi
 

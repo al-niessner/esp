@@ -11,7 +11,9 @@ import excalibur.target as trg
 import excalibur.target.edit as trgedit
 
 import astropy.io.fits as pyfits
+import urllib.error
 import urllib.request as urlrequest
+
 # ------------- ------------------------------------------------------
 # -- SV VALIDITY -- --------------------------------------------------
 def checksv(sv):
@@ -22,22 +24,19 @@ def checksv(sv):
     return valid, errstring
 # ----------------- --------------------------------------------------
 # -- SCRAPE IDS -- ---------------------------------------------------
-def scrapeids(ds:dawgie.Dataset, out, web, genIDs=True,
-              verbose=False, debug=False):
+def scrapeids(ds:dawgie.Dataset, out, web, genIDs=True):
     targets = trgedit.targetlist.__doc__
     targets = targets.split('\n')
-    targets = [t.strip() for t in targets
-               if (len(t.replace(' ', '')) > 0)]
+    targets = [t.strip() for t in targets if t.replace(' ', '')]
     for target in targets:
         parsedstr = target.split(':')
         parsedstr = [t.strip() for t in parsedstr]
         out['starID'][parsedstr[0]] = {'planets':[],
                                        'PID':[],
                                        'aliases':[]}
-        if len(parsedstr[1]) > 0:
+        if parsedstr[1]:
             aliaslist = parsedstr[1].split(',')
-            aliaslist = [a.strip() for a in aliaslist
-                         if len(a.strip()) > 0]
+            aliaslist = [a.strip() for a in aliaslist if a.strip()]
             out['starID'][parsedstr[0]]['aliases'].extend(aliaslist)
             pass
         if genIDs:
@@ -65,15 +64,14 @@ def scrapeids(ds:dawgie.Dataset, out, web, genIDs=True,
     return
 # ---------------- ---------------------------------------------------
 # -- CREATE FILTERS -- -----------------------------------------------
-def createfltrs(out, verbose=False, debug=False):
+def createfltrs(out):
     created = False
     filters = trgedit.activefilters.__doc__
     filters = filters.split('\n')
-    filters = [t.strip() for t in filters
-               if (len(t.replace(' ', '')) > 0)]
+    filters = [t.strip() for t in filters if t.replace(' ', '')]
     out['activefilters']['TOTAL'] = len(filters)
     out['activefilters']['NAMES'] = filters
-    if len(filters) > 0:
+    if filters:
         for flt in filters:
             out['activefilters'][flt] = {'ROOTNAME':[],
                                          'LOC':[], 'TOTAL':[]}
@@ -88,8 +86,7 @@ def autofill(ident, thistarget, out,
              queryurl="https://archive.stsci.edu/hst/search.php?target=",
              action="&action=Search&resolver=SIMBAD&radius=3.0",
              outfmt="&outputformat=CSV&max_records=100000",
-             opt="&sci_aec=S",
-             verbose=False, debug=False):
+             opt="&sci_aec=S"):
     out['starID'][thistarget] = ident['starID'][thistarget]
     targetID = [thistarget]
     # AUTOFILL WITH MAST QUERY ---------------------------------------
@@ -200,8 +197,7 @@ def autofill(ident, thistarget, out,
                     pass
                 ref = elem[3]
                 pass
-            for i in range(len(elem)):
-                key = matchkey[i]
+            for i,key in enumerate(matchkey):
                 if key not in banlist:
                     if key in plist:
                         if key not in out['starID'][thistarget][elem[1]].keys():
@@ -227,19 +223,18 @@ def autofill(ident, thistarget, out,
             out['starID'][thistarget][elem[1]]['teq_units'].append('[K]')
             out['starID'][thistarget][elem[1]]['t0_units'].append('[Julian Days]')
             out['starID'][thistarget][elem[1]]['impact_units'].append('[R*]')
-            pkeys = [pk for pk in plist if ('_' not in pk)]
+            pkeys = [pk for pk in plist if '_' not in pk]
             for pk in pkeys:
-                if len(out['starID'][thistarget][elem[1]][pk][-1]) > 0:
+                if out['starID'][thistarget][elem[1]][pk][-1]:
                     addme = ref
                     pass
                 else: addme = ''
                 out['starID'][thistarget][elem[1]][pk+'_ref'].append(addme)
                 pass
-            skeys = [sk for sk in matchkey if ((sk not in banlist) and
-                                               (sk not in plist) and
-                                               ('_' not in sk))]
+            skeys = [sk for sk in matchkey
+                     if sk not in banlist and sk not in plist and '_' not in sk]
             for sk in skeys:
-                if len(out['starID'][thistarget][sk][-1]) > 0:
+                if out['starID'][thistarget][sk][-1]:
                     addme = ref
                     pass
                 else: addme = ''
@@ -271,10 +266,8 @@ def autofill(ident, thistarget, out,
             strnum = ''
             for n in numdate.split('-'): strnum = strnum+n.strip()
             numdate = float(strnum)
-            for i in range(len(elem)):
-                key = matchkey[i]
-                addme = elem[i]
-                if (key not in banlist) and (len(addme) > 0):
+            for addme,key in zip(elem,matchkey):
+                if key not in banlist and addme:
                     if key in plist:
                         test = out['starID'][thistarget][elem[1]][key]
                         refkey = key.split('_')[0]
@@ -294,7 +287,7 @@ def autofill(ident, thistarget, out,
                         test = out['starID'][thistarget][key]
                         refkey = key.split('_')[0]
                         tref = out['starID'][thistarget][refkey+'_ref']
-                        updt = (key+'updt') in out['starID'][thistarget].keys()
+                        updt = (key+'updt') in out['starID'][thistarget]
                         if updt:
                             lupdt = out['starID'][thistarget][key+'updt']
                             if numdate > lupdt: test.append('')
@@ -328,17 +321,15 @@ def autofill(ident, thistarget, out,
     for line in response:
         elem = line.split(',')
         if elem[0] in targetID:
-            for i in range(len(elem)):
-                key = matchkey[i]
-                addme = elem[i]
-                if ('_ref' in key) and (len(addme) > 0):
+            for addme,key in zip(elem,matchkey):
+                if '_ref' in key and addme:
                     addme = addme.split('</a>')[0]
                     addme = addme.split('target=ref>')[-1]
                     pass
                 if 'target=_blank>Calculated Value' in addme:
                     addme = 'NEXSCI'
                     pass
-                if (key not in banlist) and (len(addme) > 0):
+                if key not in banlist and addme:
                     if key in plist:
                         out['starID'][thistarget][elem[1]][key].append(addme)
                         pass
@@ -375,7 +366,7 @@ def mast(selfstart, out, dbs, queryurl, mirror,
          action='&action=Search&resolver=SIMBAD&radius=3.0',
          outfmt='&outputformat=CSV&max_records=100000',
          opt='&sci_aec=S', ext='_ima.fits',
-         verbose=False, debug=False):
+         debug=False):
     found = False
     temploc = dawgie.context.data_stg
     targetID = [t for t in selfstart['starID'].keys()]
@@ -387,7 +378,7 @@ def mast(selfstart, out, dbs, queryurl, mirror,
     namelist = []
     for frame in framelist:
         row = frame.split(',')
-        row = [v.strip() for v in row if (len(v)>0)]
+        row = [v.strip() for v in row if v]
         if len(row) > 2:
             if row[1] in targetID:
                 namelist.append(row[0].lower())
@@ -399,12 +390,12 @@ def mast(selfstart, out, dbs, queryurl, mirror,
     for name in namelist:
         outfile = os.path.join(tempdir, name+ext)
         try: urlrequest.urlretrieve(mirror+name+ext, outfile)
-        except:
+        except (urllib.error.ContentTooShortError, urllib.error.URLError):
             if debug: print(mirror, name, ' NOT FOUND')
             pass
-        if (not(found) and (alt is not None)):
+        if not found and alt is not None:
             try: urlrequest.urlretrieve(alt+name.upper()+ext.upper(), outfile)
-            except:
+            except (urllib.error.ContentTooShortError, urllib.error.URLError):
                 if debug: print(alt, name, 'NOT FOUND')
                 pass
             pass
@@ -416,12 +407,12 @@ def mast(selfstart, out, dbs, queryurl, mirror,
     return ingested
 # ---------- ---------------------------------------------------------
 # -- DISK -- ---------------------------------------------------------
-def disk(selfstart, out, diskloc, dbs, verbose=False, debug=False):
+def disk(selfstart, out, diskloc, dbs):
     merge = False
     targetID = [t for t in selfstart['starID'].keys()]
     targets = trgedit.targetondisk.__doc__
     targets = targets.split('\n')
-    targets = [t.strip() for t in targets if (t.replace(' ', '')).__len__() > 0]
+    targets = [t.strip() for t in targets if t.replace(' ', '')]
     locations = None
     for t in targets:
         parsedstr = t.split(':')
@@ -445,12 +436,12 @@ def dbscp(locations, dbs, out):
         if imalist is None:
             imalist = [os.path.join(loc, imafits)
                        for imafits in os.listdir(loc)
-                       if ('ima.fits' in imafits)]
+                       if 'ima.fits' in imafits]
             pass
         else:
             imalist.extend([os.path.join(loc, imafits)
                             for imafits in os.listdir(loc)
-                            if ('ima.fits' in imafits)])
+                            if 'ima.fits' in imafits])
             pass
         pass
     for fitsfile in imalist:
@@ -489,7 +480,7 @@ def dbscp(locations, dbs, out):
                         pass
                     else: filedict['mode'] = 'STARE'
                     pass
-                if ('FOCUS' in keys) and (filedict['detector'] is None):
+                if 'FOCUS' in keys and filedict['detector'] is None:
                     filedict['detector'] = mainheader['FOCUS']
                     filedict['mode'] = 'IMAGE'
                     pass
@@ -498,7 +489,7 @@ def dbscp(locations, dbs, out):
         out['name'][mainheader['ROOTNAME']] = filedict
         mastout = os.path.join(dbs, md5+'_'+sha)
         onmast = os.path.isfile(mastout)
-        if (not onmast):
+        if not onmast:
             shutil.copyfile(fitsfile, mastout)
             os.chmod(mastout, int('0664', 8))
             pass

@@ -8,7 +8,6 @@ import excalibur.data.states as datstates
 
 import excalibur.target as trg
 import excalibur.target.edit as trgedit
-import excalibur.target.core as trgcore
 import excalibur.target.states as trgstates
 import excalibur.target.algorithms as trgalg
 import excalibur.system as sys

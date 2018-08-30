@@ -39,7 +39,7 @@ class NormSV(dawgie.StateVector):
                         plt.plot(w[select], s[select], 'o')
                         pass
                     plt.ylabel('Normalized Spectra')
-                    plt.xlabel('Wavelength [$\mu$m]')
+                    plt.xlabel('Wavelength [$\\mu$m]')
                     plt.xlim(np.min(vrange), np.max(vrange))
                     buf = io.BytesIO()
                     myfig.savefig(buf, format='png')
@@ -127,7 +127,7 @@ class SpectrumSV(dawgie.StateVector):
                 myfig = plt.figure(figsize=(8,6))
                 plt.title(p)
                 plt.errorbar(specwave, 1e2*spectrum, fmt='.', yerr=1e2*specerr)
-                plt.xlabel(str('Wavelength [$\mu m$]'))
+                plt.xlabel(str('Wavelength [$\\mu m$]'))
                 plt.ylabel(str('$(R_p/R_*)^2$ [%]'))
                 buf = io.BytesIO()
                 myfig.savefig(buf, format='png')
