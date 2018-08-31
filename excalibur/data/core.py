@@ -756,7 +756,7 @@ edges, approximating the log(stellar spectrum) with a linear model
     scale = out.params['scale'].value
     wave = wcme(out.params, logspec, refmu=mutt, reftt=logtt)
     # PLOTS
-    if verbose or debug:
+    if debug:
         plt.figure()
         plt.plot(mutt, logtt, 'o--')
         plt.plot(wave, logspec - (scale+wave*slope), 'o--')
