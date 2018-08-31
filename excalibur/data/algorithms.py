@@ -1,6 +1,4 @@
 # -- IMPORTS -- ------------------------------------------------------
-import pdb
-
 import dawgie
 import dawgie.context
 
@@ -10,7 +8,6 @@ import excalibur.data.states as datstates
 
 import excalibur.target as trg
 import excalibur.target.edit as trgedit
-import excalibur.target.core as trgcore
 import excalibur.target.states as trgstates
 import excalibur.target.algorithms as trgalg
 import excalibur.system as sys
@@ -100,6 +97,7 @@ class calibration(dawgie.Algorithm):
         for datatype in validtype:
             collectin = cll['activefilters'][datatype]
             index = fltrs.index(datatype)
+            # pylint: disable=protected-access
             update = self._calib(collectin, ds._tn(), datatype, self.__out[index])
             if update: svupdate.append(self.__out[index])
             pass
