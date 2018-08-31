@@ -151,9 +151,38 @@ overwrite[starID] =
         'd':{'logg':2.7275412570285562,
              'logg_uperr':0.15, 'logg_lowerr':-0.15,
              'logg_ref':'Prieto-Arranz et al. 2018', 'logg_units':'log10[cm.s-2]'}}
+    overwrite['HAT-P-17'] = {
+        'R*':0.838, 'R*_uperr':0.021, 'R*_lowerr':-0.021,
+        'R*_ref':'Howard et al. 2012',
+        'b':{'inc':89.2,
+             'inc_uperr':0.2, 'inc_lowerr':-0.1,
+             'inc_ref':'Howard et al. 2012',
+             't0':2454801.16945,
+             't0_uperr':0.0002, 't0_lowerr':-0.0002,
+             't0_ref':'Howard et al. 2012',
+             'sma':0.06,
+             'sma_uperr':0.0014,
+             'sma_lowerr':-0.0014,
+             'sma_ref':'Howard et al. 2012 + high ecc',
+             'period':10.338523,
+             'period_ref':'Howard et al. 2012'}}
     overwrite['HAT-P-38'] = {
         'FEH*':0.06, 'FEH*_uperr':0.1, 'FEH*_lowerr':-0.1,
         'FEH*_units':'[Fe/H]', 'FEH*_ref':'Sato et al. 2012'}
+    overwrite['HAT-P-41'] = {
+        'R*':1.683, 'R*_uperr':0.058, 'R*_lowerr':-0.036,
+        'R*_ref':'Hartman et al. 2012',
+        'b':{'inc':87.7,
+             'inc_uperr':1.0, 'inc_lowerr':-1.0,
+             'inc_ref':'Hartman et al. 2012',
+             't0':2454983.86167,
+             't0_uperr':0.00107, 't0_lowerr':-0.00107,
+             't0_ref':'Hartman et al. 2012',
+             'sma':0.0426,
+             'sma_uperr':0.0005, 'sma_lowerr':-0.0005,
+             'sma_ref':'Hartman et al. 2012',
+             'period':2.694047,
+             'period_ref':'Hartman et al. 2012'}}
     overwrite['HD 106315'] = {
         'b':{'logg':2.5081746355417742,
              'logg_uperr':0.26, 'logg_lowerr':-0.26,

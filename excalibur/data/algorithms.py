@@ -157,8 +157,7 @@ class timing(dawgie.Algorithm):
         return
 
     def _timing(self, fin, cal, out):
-        chunked = datcore.timing(fin, cal, out,
-                                 verbose=self.__verbose, debug=debug)
+        chunked = datcore.timing(fin, cal, out, verbose=self.__verbose, debug=debug)
         return chunked
 
     def _failure(self, errstr):

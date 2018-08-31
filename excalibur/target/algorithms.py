@@ -27,8 +27,7 @@ mirror2 = 'http://archives.esac.esa.int/hst/proxy?file_id='
 class create(dawgie.Analyzer):
     def __init__(self):
         self._version_ = dawgie.VERSION(1,1,0)
-        self.__out = [trgstates.TargetSV('starIDs'),
-                      trgstates.FilterSV('filters')]
+        self.__out = [trgstates.TargetSV('starIDs'), trgstates.FilterSV('filters')]
         return
 
     def name(self):

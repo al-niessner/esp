@@ -13,7 +13,6 @@ import excalibur.target.edit as trgedit
 import astropy.io.fits as pyfits
 import urllib.error
 import urllib.request as urlrequest
-
 # ------------- ------------------------------------------------------
 # -- SV VALIDITY -- --------------------------------------------------
 def checksv(sv):
@@ -27,7 +26,7 @@ def checksv(sv):
 def scrapeids(ds:dawgie.Dataset, out, web, genIDs=True):
     targets = trgedit.targetlist.__doc__
     targets = targets.split('\n')
-    targets = [t.strip() for t in targets if t.replace(' ', '')]
+    targets = [t.strip() for t in targets if t.replace(' ', '').__len__() > 0]
     for target in targets:
         parsedstr = target.split(':')
         parsedstr = [t.strip() for t in parsedstr]
