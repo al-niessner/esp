@@ -330,6 +330,7 @@ def atmos(fin, spc, out, mclen=int(1e4), verbose=False):
                            cleanup=cleanup, model=model, p=p, solidr=solidr,
                            tspectrum=tspectrum):
                 fmc = np.zeros(tspectrum.size)
+
                 if model == 'TEC':
                     tceqdict = {}
                     tceqdict['CtoO'] = float(mdp[1])
