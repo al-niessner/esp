@@ -8,6 +8,13 @@ REPO=EXCALIBUR/esp
 
 export GHE4JPL_API_URL PATH 
 
+cit_version ()
+{
+    lv="$(layer_versions)"
+    rm .ci/Dockerfile.1 .ci/Dockerfile.2
+    echo "${lv:17:16}"
+}
+
 current_state ()
 {
     test `cat ${basedir}/.ci/status.txt` == "success"
@@ -28,6 +35,45 @@ download ()
 get_state ()
 {
     cat ${basedir}/.ci/status.txt
+}
+
+layer_versions ()
+{
+    for destination in `destinations`
+    do
+        [[ "$destination" == "dawgie" ]] && dawgieVersion="$(lookup_version $destination)"
+    done
+    python3 <<EOF
+with open ('.ci/Dockerfile.py', 'rt') as f: text = f.read()
+with open ('.ci/Dockerfile.1', 'tw') as f: f.write (text.replace ("ghrVersion", "${dawgieVersion}"))
+EOF
+    pyVersion=$(python3 <<EOF
+try:
+    import pyblake2 as hashlib
+except:
+    import hashlib
+
+with open ('.ci/Dockerfile.1', 'br') as f: data = f.read()
+k = hashlib.blake2b (data, digest_size=8)
+print (k.hexdigest())
+EOF
+           )
+    python3 <<EOF
+with open ('.ci/Dockerfile.cit', 'rt') as f: text = f.read()
+with open ('.ci/Dockerfile.2', 'tw') as f: f.write (text.replace ("ghrVersion", "${pyVersion}"))
+EOF
+    citVersion=$(python3 <<EOF
+try:
+    import pyblake2 as hashlib
+except:
+    import hashlib
+
+with open ('.ci/Dockerfile.2', 'br') as f: data = f.read()
+k = hashlib.blake2b (data, digest_size=8)
+print (k.hexdigest())
+EOF
+           )
+    echo $pyVersion $citVersion
 }
 
 lookup ()
@@ -65,10 +111,10 @@ which_port ()
     python3 <<EOF
 v = "${1:-${ghrVersion}}".split ('.')
 if len (v) == 3:
-    if v[0].isdigit() and v[1].isdigit() and v[2].isdigit(): port = 16003
-    elif v[0].isdigit() and v[1].isdigit() and 0 < v[2].find ('-rc') and v[2].split('-')[0].isdigit(): port = 16002
-    else: port = 16001
-else: port = 16001
+    if v[0].isdigit() and v[1].isdigit() and v[2].isdigit(): port = 16003  #  release port
+    elif v[0].isdigit() and v[1].isdigit() and 0 < v[2].find ('-rc') and v[2].split('-')[0].isdigit(): port = 16002  # staging port
+    else: port = 16001  #  devel port
+else: port = 16001  # devel port
 
 print (port)
 EOF

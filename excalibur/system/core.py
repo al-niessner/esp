@@ -293,7 +293,7 @@ def forcepar(overwrite, out, verbose=False, debug=False):
     for n in out['needed'].copy():
         if ':' not in n:
             try:
-                test = float(out['priors'][n])
+                float(out['priors'][n])
                 out['needed'].pop(out['needed'].index(n))
                 pass
             except (ValueError, KeyError): forced = False
@@ -302,7 +302,7 @@ def forcepar(overwrite, out, verbose=False, debug=False):
             try:
                 pnet = n.split(':')[0]
                 pkey = n.split(':')[1]
-                test = float(out['priors'][pnet][pkey])
+                float(out['priors'][pnet][pkey])
                 out['needed'].pop(out['needed'].index(n))
                 pass
             except (ValueError, KeyError):
@@ -316,7 +316,7 @@ def forcepar(overwrite, out, verbose=False, debug=False):
         pkey = p.split(':')[1]
         ptry.append(pnet)
         try:
-            test = float(out['priors'][pnet][pkey])
+            float(out['priors'][pnet][pkey])
             out['pneeded'].pop(out['pneeded'].index(p))
             pass
         except (ValueError, KeyError):

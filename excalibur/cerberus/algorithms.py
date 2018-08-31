@@ -62,8 +62,8 @@ class xslib(dawgie.Algorithm):
         return
 
     def _xslib(self, spc, fin, index):
-        cs = crbcore.xsecs(spc, fin, self.__out[index],
-                           verbose=self.__verbose, debug=debug)
+        cs = crbcore.myxsecs(spc, fin, self.__out[index],
+                             verbose=self.__verbose, debug=debug)
         return cs
 
     def _failure(self, errstr):
@@ -117,8 +117,7 @@ class atmos(dawgie.Algorithm):
         return
 
     def _atmos(self, fin, xsl, spc, index):
-        am = crb.atmos(fin, xsl, spc, self.__out[index],
-                       verbose=self.__verbose, debug=debug)
+        am = crbcore.atmos(fin, xsl, spc, self.__out[index], verbose=self.__verbose)
         return am
 
     def _failure(self, errstr):

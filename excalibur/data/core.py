@@ -176,6 +176,10 @@ def scancal(clc, tid, flttype, out,
                 floodlist.append(np.nanpercentile(de, indperfld))
                 pass
             fldthr = np.nanmax(floodlist)
+            while abs(fldthr - floodlist[0]) > floodlist[0]/2e0:
+                floodlist[floodlist.index(np.nanmax(floodlist))] = np.nan
+                fldthr = np.nanmax(floodlist)
+                pass
             if 'G102' in flttype: fldthr /= 3e0
             for de, md in zip(psdiff.copy()[::-1], data['MIN'][index][::-1]):
                 lmn, lmx = isolate(de, md, spectrace, scanwpi, targetn, fldthr,
@@ -407,8 +411,7 @@ def scancal(clc, tid, flttype, out,
             cutoff = np.nanmax(spectrum)/scaleco
             spectrum[spectrum < cutoff] = np.nan
             spectrum = abs(spectrum)
-            w, d, s, si = wavesol(spectrum, tt, wavett, disper,
-                                  verbose=False, debug=False)
+            w, d, s, si = wavesol(spectrum, tt, wavett, disper, debug=False)
             if (d > ldisp) and (d < udisp): spectralindex.append(si)
             pass
         pass
@@ -421,7 +424,7 @@ def scancal(clc, tid, flttype, out,
             spectrum[spectrum < cutoff] = np.nan
             spectrum = abs(spectrum)
             wave, disp, shift, si = wavesol(spectrum, tt, wavett, disper,
-                                            siv=siv, verbose=verbose, debug=debug)
+                                            siv=siv, debug=debug)
             if (disp < ldisp) or (disp > udisp):
                 data['TRIAL'][index] = 'Dispersion Out Of Bounds'
                 ignore = True
@@ -439,6 +442,7 @@ def scancal(clc, tid, flttype, out,
             data['DISPERSION'][index] = disp  # ANGSTROMS/PIXEL
             data['SHIFT'][index] = shift*1e4/disp  # PIXELS
             pass
+        else: data['WAVE'][index] = (data['SPECTRUM'][index])*np.nan
         data['IGNORED'][index] = ignore
         pass
     # PLOTS ----------------------------------------------------------
@@ -688,11 +692,11 @@ interpolation grid, filter/grism file is suited.
 def bttf(lightpath, verbose=False, debug=False):
     ttp = 1e0
     muref = [np.nan]
-    if debug: plt.subplot(211)
+    if verbose or debug: plt.subplot(211)
     for name in lightpath:
         muref, t = loadcalf(name, muref)
         ttp *= t
-        if debug: plt.plot(muref, t, 'o--')
+        if verbose or debug: plt.plot(muref, t, 'o--')
         pass
     if verbose or debug:
         plt.xlim([min(muref), max(muref)])
@@ -720,7 +724,7 @@ def loadcalf(name, muref, calloc='/proj/sdp/data/cal'):
     return muref, t
 # ------------------- ------------------------------------------------
 # -- WAVELENGTH SOLUTION -- ------------------------------------------
-def wavesol(spectrum, tt, wavett, disper, siv=None, verbose=False, debug=False):
+def wavesol(spectrum, tt, wavett, disper, siv=None, debug=False):
     '''
 G ROUDIER: Wavelength calibration on log10 spectrum to emphasize the
 edges, approximating the log(stellar spectrum) with a linear model
@@ -752,7 +756,7 @@ edges, approximating the log(stellar spectrum) with a linear model
     scale = out.params['scale'].value
     wave = wcme(out.params, logspec, refmu=mutt, reftt=logtt)
     # PLOTS
-    if verbose or debug:
+    if debug:
         plt.figure()
         plt.plot(mutt, logtt, 'o--')
         plt.plot(wave, logspec - (scale+wave*slope), 'o--')
@@ -865,21 +869,20 @@ def timing(force, cal, out, verbose=False, debug=False):
             posphsto = phsto.copy()
             posphsto[posphsto < 0] = posphsto[posphsto < 0] + 1e0
             pcconde = False
-            if (np.max(posphsto[selv]) - np.min(posphsto[selv])) > (1e0 - 2e0*abs(np.arcsin(trlim/smaors))/(2e0*np.pi)):
+            tecrit = abs(np.arcsin(trlim/smaors))/(2e0*np.pi)
+            if (np.max(posphsto[selv]) - np.min(posphsto[selv])) > (1e0 - 2e0*tecrit):
                 pcconde = True
                 pass
             pccondt = False
-            if (np.max(phsto[selv]) - np.min(phsto[selv])) > (1e0 - 2e0*abs(np.arcsin(trlim/smaors))/(2e0*np.pi)):
+            if (np.max(phsto[selv]) - np.min(phsto[selv])) > (1e0 - 2e0*tecrit):
                 pccondt = True
                 pass
             if pcconde and pccondt: out['phasecurve'].append(int(v))
             select = (abs(zto[selv]) < trlim)
-            if (np.any(select) and (np.min(abs(posphsto[selv][select] - 0.5)) <
-                                    abs(np.arcsin(trlim/smaors))/(2e0*np.pi))):
+            if np.any(select) and (np.min(abs(posphsto[selv][select] - 0.5)) < tecrit):
                 out['eclipse'].append(int(v))
                 pass
-            if (np.any(select) and (np.min(abs(posphsto[selv][select])) <
-                                    abs(np.arcsin(trlim/smaors))/(2e0*np.pi))):
+            if np.any(select) and (np.min(abs(posphsto[selv][select])) < tecrit):
                 out['transit'].append(int(v))
                 pass
             pass
@@ -892,21 +895,20 @@ def timing(force, cal, out, verbose=False, debug=False):
             posphsto = phsto.copy()
             posphsto[posphsto < 0] = posphsto[posphsto < 0] + 1e0
             pcconde = False
-            if (np.max(posphsto[selv]) - np.min(posphsto[selv])) > (1e0 - 2e0*abs(np.arcsin(trlim/smaors))/(2e0*np.pi)):
+            tecrit = abs(np.arcsin(trlim/smaors))/(2e0*np.pi)
+            if (np.max(posphsto[selv]) - np.min(posphsto[selv])) > (1e0 - 2e0*tecrit):
                 pcconde = True
                 pass
             pccondt = False
-            if (np.max(phsto[selv]) - np.min(phsto[selv])) > (1e0 - 2e0*abs(np.arcsin(trlim/smaors))/(2e0*np.pi)):
+            if (np.max(phsto[selv]) - np.min(phsto[selv])) > (1e0 - 2e0*tecrit):
                 pccondt = True
                 pass
             if pcconde and pccondt: out['data'][p]['phasecurve'].append(int(v))
             select = (abs(zto[selv]) < trlim)
-            if (np.any(select) and (np.min(abs(posphsto[selv][select] - 0.5)) <
-                                    abs(np.arcsin(trlim/smaors))/(2e0*np.pi))):
+            if np.any(select) and (np.min(abs(posphsto[selv][select] - 0.5)) < tecrit):
                 out['data'][p]['eclipse'].append(int(v))
                 pass
-            if (np.any(select) and (np.min(abs(posphsto[selv][select])) <
-                                    abs(np.arcsin(trlim/smaors))/(2e0*np.pi))):
+            if np.any(select) and (np.min(abs(posphsto[selv][select])) < tecrit):
                 out['data'][p]['transit'].append(int(v))
                 pass
             pass
@@ -922,8 +924,7 @@ def timing(force, cal, out, verbose=False, debug=False):
 
             plt.figure()
             plt.plot(phsto, 'k.')
-            plt.plot(np.arange(phsto.size)[~ignto],
-                     phsto[~ignto], 'bo')
+            plt.plot(np.arange(phsto.size)[~ignto], phsto[~ignto], 'bo')
             for i in wherev: plt.axvline(i, ls='--', color='r')
             for i in whereo: plt.axvline(i, ls='-.', color='g')
             plt.xlim(0, tmetod.size - 1)

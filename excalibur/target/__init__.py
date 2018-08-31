@@ -1,5 +1,6 @@
 ignore = False
 
+# pylint: disable=redefined-builtin
 def all (prefix, ps_hint=0, runid=-1):
     import excalibur.target.bot as trgbot
     return trgbot.Actor(prefix, ps_hint, runid)
