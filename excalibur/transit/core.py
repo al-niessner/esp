@@ -21,8 +21,11 @@ from ldtk import LDPSetCreator, BoxcarFilter
 from scipy.interpolate import interp1d as itp
 
 import collections
-CONTEXT = collections.namedtuple ('CONTEXT', ['allologtau','allologdelay','allz','commonoim', 'ecc', 'g1', 'g2', 'g3', 'g4', 'ootoindex', 'ootorbits', 'orbits', 'period', 'selectfit', 'smaors', 'time', 'tmjd', 'ttv', 'valid', 'visits'])
-
+CONTEXT = collections.namedtuple('CONTEXT',
+                                 ['allologtau','allologdelay','allz','commonoim', 'ecc',
+                                  'g1', 'g2', 'g3', 'g4', 'ootoindex', 'ootorbits',
+                                  'orbits', 'period', 'selectfit', 'smaors', 'time',
+                                  'tmjd', 'ttv', 'valid', 'visits'])
 # ----- inline hack to ldtk.LDPSet
 class LDPSet(ldtk.LDPSet):
     @staticmethod
@@ -251,11 +254,11 @@ density per wavelength bins
     return wavet, template
 # ---------------------- ---------------------------------------------
 # -- WHITE LIGHT CURVE -- --------------------------------------------
-def whitelight(nrm, fin, out, selftype, chainlen=int(8e4), verbose=False, debug=False):
+def whitelight(nrm, fin, out, selftype, chainlen=int(8e1), verbose=False, debug=False):
     wl = False
     priors = fin['priors'].copy()
     ssc = syscore.ssconstants()
-    planetloop = [p for p in nrm['data'].keys() if len(nrm['data'][p]['visits'] > 0)]
+    planetloop = [p for p in nrm['data'].keys() if nrm['data'][p]['visits'].__len__() > 0]
     for p in planetloop:
         rpors = priors[p]['rp']/priors['R*']*ssc['Rjup/Rsun']
         visits = nrm['data'][p]['visits']
@@ -682,7 +685,7 @@ def vecoccs(z, xrs, rprs):
 # --------------------------------- ----------------------------------
 # -- CREATE LD GRID -- -----------------------------------------------
 def createldgrid(minmu, maxmu, orbp,
-                 ldmodel='nonlinear', phoenixmin=1e-2,
+                 ldmodel='nonlinear', phoenixmin=1e-1,
                  segmentation=int(10),
                  verbose=False, debug=False):
     tstar = orbp['T*']
@@ -745,8 +748,11 @@ def createldgrid(minmu, maxmu, orbp,
     return out
 # -------------------- -----------------------------------------------
 # -- LDX -- ----------------------------------------------------------
-def ldx(psmu, psmean, psstd,
-        mumin=1e-6, debug=False, model='nonlinear'):
+def ldx(psmu, psmean, psstd, mumin=1e-1, debug=False, model='nonlinear'):
+    '''
+GMR: LD law coefficient retrievial on PHOENIX GRID models,
+OPTIONAL mumin set up on HAT-P-41 stellar class
+    '''
     mup = np.array(psmu).copy()
     prfs = np.array(psmean).copy()
     sprfs = np.array(psstd).copy()
@@ -766,15 +772,13 @@ def ldx(psmu, psmean, psstd,
     for iwave in np.arange(nwave):
         if model == 'linear':
             out = lm.minimize(lnldx, params, args=(fitmup,
-                                                   fitprfs[iwave],
-                                                   fitsprfs[iwave]))
+                                                   fitprfs[iwave], fitsprfs[iwave]))
             cl.append([out.params['gamma1'].value])
             el.append([out.params['gamma1'].stderr])
             pass
         if model == 'quadratic':
             out = lm.minimize(qdldx, params, args=(fitmup,
-                                                   fitprfs[iwave],
-                                                   fitsprfs[iwave]))
+                                                   fitprfs[iwave], fitsprfs[iwave]))
             cl.append([out.params['gamma1'].value,
                        out.params['gamma2'].value])
             el.append([out.params['gamma1'].stderr,
@@ -782,8 +786,7 @@ def ldx(psmu, psmean, psstd,
             pass
         if model == 'nonlinear':
             out = lm.minimize(nlldx, params, args=(fitmup,
-                                                   fitprfs[iwave],
-                                                   fitsprfs[iwave]))
+                                                   fitprfs[iwave], fitsprfs[iwave]))
             cl.append([out.params['gamma1'].value,
                        out.params['gamma2'].value,
                        out.params['gamma3'].value,
@@ -795,17 +798,10 @@ def ldx(psmu, psmean, psstd,
             pass
         if debug:
             plt.plot(mup, prfs[iwave], 'k^')
-            plt.errorbar(fitmup, fitprfs[iwave],
-                         yerr=fitsprfs[iwave], ls='None')
-            if model == 'linear':
-                plt.plot(fitmup, lnldx(out.params, fitmup))
-                pass
-            if model == 'quadratic':
-                plt.plot(fitmup, qdldx(out.params, fitmup))
-                pass
-            if model == 'nonlinear':
-                plt.plot(fitmup, nlldx(out.params, fitmup))
-                pass
+            plt.errorbar(fitmup, fitprfs[iwave], yerr=fitsprfs[iwave], ls='None')
+            if model == 'linear': plt.plot(fitmup, lnldx(out.params, fitmup))
+            if model == 'quadratic': plt.plot(fitmup, qdldx(out.params, fitmup))
+            if model == 'nonlinear': plt.plot(fitmup, nlldx(out.params, fitmup))
             pass
         pass
     if debug:
@@ -881,12 +877,11 @@ def timlc(vtime, orbits,
     return vout*oout
 # ---------------------- ---------------------------------------------
 # -- SPECTRUM -- -----------------------------------------------------
-def spectrum(fin, nrm, wht, out, selftype,
-             chainlen=int(2e4), verbose=False, debug=False):
+def spectrum(fin, nrm, wht, out, selftype, chainlen=int(2e2), verbose=False, debug=False):
     exospec = False
     priors = fin['priors'].copy()
     ssc = syscore.ssconstants()
-    planetloop = [p for p in nrm['data'].keys() if len(nrm['data'][p]['visits'] > 0)]
+    planetloop = [p for p in nrm['data'].keys() if nrm['data'][p]['visits'].__len__() > 0]
     for p in planetloop:
         out['data'][p] = {'LD':[]}
         rpors = priors[p]['rp']/priors['R*']*ssc['Rjup/Rsun']

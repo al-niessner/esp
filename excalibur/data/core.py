@@ -176,10 +176,12 @@ def scancal(clc, tid, flttype, out,
                 floodlist.append(np.nanpercentile(de, indperfld))
                 pass
             fldthr = np.nanmax(floodlist)
-            while abs(fldthr - floodlist[0]) > floodlist[0]/2e0:
+            while abs(fldthr - floodlist[0]) > (floodlist[0]/2e0):
                 floodlist[floodlist.index(np.nanmax(floodlist))] = np.nan
                 fldthr = np.nanmax(floodlist)
                 pass
+            # CONTAMINATION FROM ANOTHER SOURCE IN THE UPPER FRAME
+            if tid in ['HAT-P-41']: fldthr = fldthr/1.5
             if 'G102' in flttype: fldthr /= 3e0
             for de, md in zip(psdiff.copy()[::-1], data['MIN'][index][::-1]):
                 lmn, lmx = isolate(de, md, spectrace, scanwpi, targetn, fldthr,
@@ -207,6 +209,8 @@ def scancal(clc, tid, flttype, out,
         if not ignore:
             minl = np.nanmin(minlocs)
             maxl = np.nanmax(maxlocs)
+            # CONTAMINATION FROM ANOTHER SOURCE IN THE UPPER FRAME
+            if (tid in ['HAT-P-41']) and ((maxl - minl) > 15): minl = maxl - 15
             if minl < 0: minl = 10
             if maxl > (psdiff[0].shape[0] - 1): maxl = -10
             for eachdiff in psdiff:
@@ -383,6 +387,11 @@ def scancal(clc, tid, flttype, out,
             nanme = (abs(spectrum - template)/template) > 1e0
             if True in nanme: spectrum[nanme] = np.nan
             spectrum -= np.nanmin(spectrum)
+            testspec = spectrum[np.isfinite(spectrum)]
+            if np.all(testspec[-18:] > emptythr):
+                data['IGNORED'][index] = True
+                data['TRIAL'][index] = 'Truncated Spectrum'
+                pass
             data['SPECTRUM'][index] = np.array(spectrum)
             data['SPECERR'][index] = np.array(specerr)
             data['NSPEC'][index] = np.array(nspectrum)
@@ -447,20 +456,14 @@ def scancal(clc, tid, flttype, out,
         pass
     # PLOTS ----------------------------------------------------------
     if verbose and not np.all(ignore):
-        alltime = np.array([d for d,i in zip(data['TIME'], data['IGNORED'])
-                            if not i])
+        alltime = np.array([d for d,i in zip(data['TIME'], data['IGNORED']) if not i])
         dispersion = np.array([d for d,i in zip(data['DISPERSION'], data['IGNORED'])
                                if not i])
-        shift = np.array([d for d,i in zip(data['SHIFT'], data['IGNORED'])
-                          if not i])
-        spec = np.array([d for d,i in zip(data['SPECTRUM'], data['IGNORED'])
-                         if not i])
-        photoc = np.array([d for d,i in zip(data['PHT2CNT'], data['IGNORED'])
-                           if not i])
-        wave = np.array([d for d,i in zip(data['WAVE'], data['IGNORED'])
-                         if not i])
-        errspec = np.array([d for d,i in zip(data['SPECERR'], data['IGNORED'])
-                            if not i])
+        shift = np.array([d for d,i in zip(data['SHIFT'], data['IGNORED']) if not i])
+        spec = np.array([d for d,i in zip(data['SPECTRUM'], data['IGNORED']) if not i])
+        photoc = np.array([d for d,i in zip(data['PHT2CNT'], data['IGNORED']) if not i])
+        wave = np.array([d for d,i in zip(data['WAVE'], data['IGNORED']) if not i])
+        errspec = np.array([d for d,i in zip(data['SPECERR'], data['IGNORED']) if not i])
         torder = np.argsort(alltime)
         vrange = data['VRANGE']
         allerr = []
@@ -789,7 +792,6 @@ def wcme(params, data, refmu=None, reftt=None, forward=True):
 def timing(force, cal, out, verbose=False, debug=False):
     chunked = False
     priors = force['priors'].copy()
-    planets = priors['planets']
     time = np.array(cal['data']['TIME'].copy())
     ignore = np.array(cal['data']['IGNORED'].copy())
     scanangle = np.array(cal['data']['SCANANGLE'].copy())
@@ -800,7 +802,7 @@ def timing(force, cal, out, verbose=False, debug=False):
     exlto = exposlen.copy()[ordt]
     tmeto = time.copy()[ordt]
     ssc = syscore.ssconstants()
-    for p in planets:
+    for p in priors['planets']:
         out['data'][p] = {}
         smaors = priors[p]['sma']/priors['R*']/ssc['Rsun/AU']
         tmjd = priors[p]['t0']

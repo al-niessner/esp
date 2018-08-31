@@ -282,7 +282,7 @@ def gettpf(tips, knownspecies, verbose=False):
     return grid
 # ------------------------------ -------------------------------------
 # -- ATMOS -- --------------------------------------------------------
-def atmos(fin, spc, out, mclen=int(1e4), verbose=False):
+def atmos(fin, spc, out, mclen=int(4e2), verbose=False):
     am = False
     orbp = fin['priors'].copy()
     ssc = syscore.ssconstants(mks=True)
