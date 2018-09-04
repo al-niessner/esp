@@ -362,7 +362,6 @@ def mast(selfstart, out, dbs, queryurl, mirror,
          outfmt='&outputformat=CSV&max_records=100000',
          opt='&sci_aec=S', debug=False):
     found = False
-    listext=['_ima.fits', '_crj.fits']
     temploc = dawgie.context.data_stg
     targetID = [t for t in selfstart['starID'].keys()]
     querytarget = targetID[0].replace(' ', '+')
