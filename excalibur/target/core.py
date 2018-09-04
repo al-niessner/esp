@@ -362,7 +362,6 @@ def mast(selfstart, out, dbs, queryurl, mirror,
          outfmt='&outputformat=CSV&max_records=100000',
          opt='&sci_aec=S', debug=False):
     found = False
-    listext=['_ima.fits', '_crj.fits']
     temploc = dawgie.context.data_stg
     targetID = [t for t in selfstart['starID'].keys()]
     querytarget = targetID[0].replace(' ', '+')
@@ -371,25 +370,33 @@ def mast(selfstart, out, dbs, queryurl, mirror,
     framelist = urlrequest.urlopen(queryform)
     framelist = framelist.read().decode('utf-8').split('\n')
     namelist = []
+    instlist = []
     for frame in framelist:
         row = frame.split(',')
         row = [v.strip() for v in row if v]
         if len(row) > 2:
             if row[1] in targetID:
                 namelist.append(row[0].lower())
+                instlist.append(row[8])
                 found = True
                 pass
             pass
         pass
     tempdir = tempfile.mkdtemp(dir=temploc, prefix=targetID[0])
-    for ext in listext:
-        for name in namelist:
-            dlmirror = False
-            outfile = os.path.join(tempdir, name+ext)
-            try:
-                urlrequest.urlretrieve(mirror+name+ext, outfile)
-                dlmirror = True
-                pass
+    for name, inst in zip(namelist, instlist):
+        dlmirror = False
+        ext = '_flt.fits'
+        if inst in ['WFC3', 'NICMOS']: ext = '_ima.fits'
+        outfile = os.path.join(tempdir, name+ext)
+        try:
+            urlrequest.urlretrieve(mirror+name+ext, outfile)
+            dlmirror = True
+            pass
+        except (urllib.error.ContentTooShortError, urllib.error.URLError):
+            if debug: print(mirror, name, ' NOT FOUND')
+            pass
+        if not dlmirror and alt is not None:
+            try: urlrequest.urlretrieve(alt+name.upper()+ext.upper(), outfile)
             except (urllib.error.ContentTooShortError, urllib.error.URLError):
                 if debug: print(mirror, name, ' NOT FOUND')
                 pass
@@ -422,8 +429,7 @@ def disk(selfstart, out, diskloc, dbs):
             folders = parsedstr[1]
             folders = folders.split(',')
             folders = [f.strip() for f in folders]
-            locations = [os.path.join(diskloc, fold)
-                         for fold in folders]
+            locations = [os.path.join(diskloc, fold) for fold in folders]
             pass
         pass
     if locations is not None: merge = dbscp(locations, dbs, out)
@@ -435,14 +441,12 @@ def dbscp(locations, dbs, out):
     imalist = None
     for loc in locations:
         if imalist is None:
-            imalist = [os.path.join(loc, imafits)
-                       for imafits in os.listdir(loc)
-                       if 'ima.fits' in imafits]
+            imalist = [os.path.join(loc, imafits) for imafits in os.listdir(loc)
+                       if '.fits' in imafits]
             pass
         else:
-            imalist.extend([os.path.join(loc, imafits)
-                            for imafits in os.listdir(loc)
-                            if 'ima.fits' in imafits])
+            imalist.extend([os.path.join(loc, imafits) for imafits in os.listdir(loc)
+                            if '.fits' in imafits])
             pass
         pass
     for fitsfile in imalist:
