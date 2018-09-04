@@ -362,6 +362,7 @@ def mast(selfstart, out, dbs, queryurl, mirror,
          outfmt='&outputformat=CSV&max_records=100000',
          opt='&sci_aec=S', debug=False):
     found = False
+    listext=['_ima.fits', '_crj.fits']
     temploc = dawgie.context.data_stg
     targetID = [t for t in selfstart['starID'].keys()]
     querytarget = targetID[0].replace(' ', '+')
@@ -398,7 +399,13 @@ def mast(selfstart, out, dbs, queryurl, mirror,
         if not dlmirror and alt is not None:
             try: urlrequest.urlretrieve(alt+name.upper()+ext.upper(), outfile)
             except (urllib.error.ContentTooShortError, urllib.error.URLError):
-                if debug: print(alt, name, 'NOT FOUND')
+                if debug: print(mirror, name, ' NOT FOUND')
+                pass
+            if not dlmirror and alt is not None:
+                try: urlrequest.urlretrieve(alt+name.upper()+ext.upper(), outfile)
+                except (urllib.error.ContentTooShortError, urllib.error.URLError):
+                    if debug: print(alt, name, 'NOT FOUND')
+                    pass
                 pass
             pass
         pass
