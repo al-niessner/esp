@@ -1,4 +1,6 @@
 # -- IMPORTS -- ------------------------------------------------------
+import logging; log = logging.getLogger(__name__)
+
 import numpy as np
 # ------------- ------------------------------------------------------
 # -- SOLAR SYSTEM CONSTANTS -- ---------------------------------------
@@ -42,19 +44,16 @@ def checksv(sv):
     return valid, errstring
 # ----------------- --------------------------------------------------
 # -- BUILD SYSTEM PRIORS -- ------------------------------------------
-def buildsp(autofill, out, verbose=False, debug=False):
+def buildsp(autofill, out):
     target = [t for t in autofill['starID'].keys()]
     target = target[0]
-    for p in autofill['starID'][target]['planets']:
-        out['priors'][p] = {}
-        pass
+    for p in autofill['starID'][target]['planets']: out['priors'][p] = {}
     out['priors']['planets'] = autofill['starID'][target]['planets'].copy()
     out['starkeys'].extend(autofill['starkeys'])
     out['planetkeys'].extend(autofill['planetkeys'])
     out['exts'].extend(autofill['exts'])
     out['starmdt'].extend(['R*', 'T*', 'FEH*', 'LOGG*'])
-    out['planetmdt'].extend(['inc', 'period', 'ecc', 'rp',
-                             't0', 'sma', 'mass'])
+    out['planetmdt'].extend(['inc', 'period', 'ecc', 'rp', 't0', 'sma', 'mass'])
     out['extsmdt'].extend(['_lowerr', '_uperr'])
     for lbl in out['starmdt']:
         value = autofill['starID'][target][lbl].copy()
@@ -141,9 +140,7 @@ def buildsp(autofill, out, verbose=False, debug=False):
                 for ext in out['extsmdt']:
                     value = autofill['starID'][target][p][lbl+ext].copy()
                     value = value[-1]
-                    if value.__len__() > 0:
-                        out['priors'][p][lbl+ext] = float(value)
-                        pass
+                    if value.__len__() > 0: out['priors'][p][lbl+ext] = float(value)
                     else:
                         err = out['priors'][p][lbl]/1e1
                         out['priors'][p][lbl+ext] = err
@@ -185,9 +182,7 @@ def buildsp(autofill, out, verbose=False, debug=False):
             value = autofill['starID'][target][p]['impact'].copy()
             value = value[-1]
             if value.__len__() > 0:
-                sininc = (float(value)*(out['priors']['R*'])*
-                          ssc['Rsun/AU']/
-                          (out['priors'][p]['sma']))
+                sininc = float(value)*(out['priors']['R*'])*ssc['Rsun/AU']/(out['priors'][p]['sma'])
                 inc = 9e1 - np.arcsin(sininc)*18e1/np.pi
                 out['priors'][p]['inc'] = inc
                 out['autofill'].append(p+':inc')
@@ -262,21 +257,17 @@ def buildsp(autofill, out, verbose=False, debug=False):
     for p in out['needed']:
         if ':' not in p: starneed = True
         pass
-    if starneed or (len(out['priors']['planets']) < 1):
-        out['PP'].append(True)
-        pass
-    if verbose or debug:
-        print('>-- FORCE PARAMETER:', out['PP'][-1])
-        print('>-- MISSING MANDATORY PARAMETERS:', out['needed'])
-        print('>-- MISSING PLANET PARAMETERS:', out['pneeded'])
-        print('>-- PLANETS IGNORED:', out['ignore'])
-        print('>-- AUTOFILL:', out['autofill'])
-        pass
+    if starneed or (len(out['priors']['planets']) < 1): out['PP'].append(True)
+    log.log(31, '>-- FORCE PARAMETER: %s', str(out['PP'][-1]))
+    log.log(31, '>-- MISSING MANDATORY PARAMETERS: %s', str(out['needed']))
+    log.log(31, '>-- MISSING PLANET PARAMETERS: %s', str(out['pneeded']))
+    log.log(31, '>-- PLANETS IGNORED: %s', str(out['ignore']))
+    log.log(31, '>-- AUTOFILL: %s', str(out['autofill']))
     out['STATUS'].append(True)
     return True
 # ------------------------- ------------------------------------------
 # -- FORCE PRIOR PARAMETERS -- ---------------------------------------
-def forcepar(overwrite, out, verbose=False, debug=False):
+def forcepar(overwrite, out):
     forced = True
     for key in overwrite.keys():
         mainkey = key.split(':')[0]
@@ -327,9 +318,7 @@ def forcepar(overwrite, out, verbose=False, debug=False):
         addback = True
         for pkey in out['pneeded']:
             if pkey in [p+':mass', p+':rho']:
-                if 'logg' not in out['priors'][p].keys():
-                    addback = False
-                    pass
+                if 'logg' not in out['priors'][p].keys(): addback = False
                 else: out['pneeded'].pop(out['pneeded'].index(pkey))
                 pass
             else:
@@ -344,14 +333,12 @@ def forcepar(overwrite, out, verbose=False, debug=False):
         pass
     if starneed or (len(out['priors']['planets']) < 1):
         forced = False
-        if verbose or debug:
-            print('>-- MISSING MANDATORY PARAMETERS')
-            print('>-- ADD THEM TO TARGET/EDIT.PY PPAR()')
-            pass
+        log.log(31, '>-- MISSING MANDATORY PARAMETERS')
+        log.log(31, '>-- ADD THEM TO TARGET/EDIT.PY PPAR()')
         pass
     else:
         forced = True
-        if verbose or debug: print('>-- PRIORITY PARAMETERS SUCCESSFUL')
+        log.log(31, '>-- PRIORITY PARAMETERS SUCCESSFUL')
         pass
     return forced
 # ---------------------------- ---------------------------------------

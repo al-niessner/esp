@@ -1,9 +1,14 @@
+# -- IMPORTS -- ------------------------------------------------------
 import os
+# GMR: LEVEL >30 GETS RID OF GNUPG WARNINGS
+import logging; logging.basicConfig(level=31)
+
 import dawgie
 import dawgie.db
 import dawgie.security
-import excalibur.system.bot
 
+import excalibur.system.bot
+# ------------- ------------------------------------------------------
 rid = int(os.environ.get('RUNID', None))
 tn = os.environ.get('TARGET_NAME', None)
 dawgie.context._ports(int(os.environ.get('FE_PORT', None)))
