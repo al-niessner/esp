@@ -360,9 +360,9 @@ def mast(selfstart, out, dbs, queryurl, mirror,
          alt=None,
          action='&action=Search&resolver=SIMBAD&radius=3.0',
          outfmt='&outputformat=CSV&max_records=100000',
-         opt='&sci_aec=S', ext='_ima.fits',
-         debug=False):
+         opt='&sci_aec=S', debug=False):
     found = False
+    listext=['_ima.fits', '_crj.fits']
     temploc = dawgie.context.data_stg
     targetID = [t for t in selfstart['starID'].keys()]
     querytarget = targetID[0].replace(' ', '+')
@@ -382,16 +382,22 @@ def mast(selfstart, out, dbs, queryurl, mirror,
             pass
         pass
     tempdir = tempfile.mkdtemp(dir=temploc, prefix=targetID[0])
-    for name in namelist:
-        outfile = os.path.join(tempdir, name+ext)
-        try: urlrequest.urlretrieve(mirror+name+ext, outfile)
-        except (urllib.error.ContentTooShortError, urllib.error.URLError):
-            if debug: print(mirror, name, ' NOT FOUND')
-            pass
-        if not found and alt is not None:
-            try: urlrequest.urlretrieve(alt+name.upper()+ext.upper(), outfile)
+    for ext in listext:
+        for name in namelist:
+            dlmirror = False
+            outfile = os.path.join(tempdir, name+ext)
+            try:
+                urlrequest.urlretrieve(mirror+name+ext, outfile)
+                dlmirror = True
+                pass
             except (urllib.error.ContentTooShortError, urllib.error.URLError):
-                if debug: print(alt, name, 'NOT FOUND')
+                if debug: print(mirror, name, ' NOT FOUND')
+                pass
+            if not dlmirror and alt is not None:
+                try: urlrequest.urlretrieve(alt+name.upper()+ext.upper(), outfile)
+                except (urllib.error.ContentTooShortError, urllib.error.URLError):
+                    if debug: print(alt, name, 'NOT FOUND')
+                    pass
                 pass
             pass
         pass

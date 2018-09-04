@@ -161,12 +161,10 @@ class DatabaseSV(dawgie.StateVector):
 
     def view(self, visitor:dawgie.Visitor)->None:
         if self['STATUS'][-1]:
-            ordlab = ['observatory', 'instrument', 'detector',
-                      'filter', 'mode']
+            ordlab = ['observatory', 'instrument', 'detector', 'filter', 'mode']
             table = visitor.add_table(clabels=ordlab, rows=1)
             for label in ordlab:
-                vlist = [self['name'][n][label]
-                         for n in self['name'].keys()]
+                vlist = [self['name'][n][label] for n in self['name'].keys()]
                 i = ordlab.index(label)
                 if vlist is not None:
                     for v in set(vlist):
