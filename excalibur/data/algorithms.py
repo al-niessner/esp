@@ -1,4 +1,6 @@
 # -- IMPORTS -- ------------------------------------------------------
+import logging; log = logging.getLogger(__name__)
+
 import dawgie
 import dawgie.context
 
@@ -25,7 +27,6 @@ fltrs = [t.strip() for t in fltrs if t.replace(' ', '').__len__() > 0]
 class collect(dawgie.Algorithm):
     def __init__(self):
         self._version_ = dawgie.VERSION(1,1,0)
-        self.__verbose = verbose
         self.__create = trgalg.create()
         self.__scrape = trgalg.scrape()
         self.__out = trgstates.FilterSV('frames')
@@ -48,7 +49,7 @@ class collect(dawgie.Algorithm):
         valid, errstring = datcore.checksv(scrape)
         if valid:
             for key in create.keys(): self.__out[key] = create[key]
-            for name in create['activefilters']['NAMES']:
+            for name in fltrs:
                 ok = self._collect(name, scrape, self.__out)
                 update = update or ok
                 pass
@@ -56,15 +57,15 @@ class collect(dawgie.Algorithm):
             pass
         else: self._failure(errstring)
         return
-
-    def _collect(self, name, scrape, out):
-        collected = datcore.collect(name, scrape, out,
-                                    verbose=self.__verbose, debug=debug)
+    
+    @staticmethod
+    def _collect(name, scrape, out):
+        collected = datcore.collect(name, scrape, out)
         return collected
 
-    def _failure(self, errstr):
-        errmess = '--< DATA COLLECT: ' + errstr + ' >--'
-        if self.__verbose: print(errmess)
+    @staticmethod
+    def _failure(errstr):
+        log.log(31, '--< DATA COLLECT: '+errstr+' >--')
         return
     pass
 
@@ -88,13 +89,9 @@ class calibration(dawgie.Algorithm):
     def run(self, ds, ps):
         update = False
         cll = self.__collect.sv_as_dict()['frames']
-        validtype = []
-        for test in cll['activefilters'].keys():
-            if 'SCAN' in test: validtype.append(test)
-            pass
         errstring = 'NO DATA'
         svupdate = []
-        for datatype in validtype:
+        for datatype in cll['activefilters']:
             collectin = cll['activefilters'][datatype]
             index = fltrs.index(datatype)
             # pylint: disable=protected-access
@@ -107,13 +104,17 @@ class calibration(dawgie.Algorithm):
         return
 
     def _calib(self, cll, tid, flttype, out):
-        caled = datcore.scancal(cll, tid, flttype, out,
-                                verbose=self.__verbose, debug=debug)
+        if 'SCAN' in flttype:
+            caled = datcore.scancal(cll, tid, flttype, out,
+                                    verbose=self.__verbose, debug=debug)
+            pass
+        if 'STARE' in flttype:
+            pass
         return caled
 
-    def _failure(self, errstr):
-        errmess = '--< DATA CALIBRATION: ' + errstr + ' >--'
-        if self.__verbose: print(errmess)
+    @staticmethod
+    def _failure(errstr):
+        log.log(31, '--< DATA CALIBRATION: ' + errstr + ' >--')
         return
     pass
 
@@ -160,9 +161,9 @@ class timing(dawgie.Algorithm):
         chunked = datcore.timing(fin, cal, out, verbose=self.__verbose, debug=debug)
         return chunked
 
-    def _failure(self, errstr):
-        errmess = '--< DATA TIMING: ' + errstr + ' >--'
-        if self.__verbose: print(errmess)
+    @staticmethod
+    def _failure(errstr):
+        log.log(31, '--< DATA TIMING: '+errstr+' >--')
         return
     pass
 # ---------------- ---------------------------------------------------

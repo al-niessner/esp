@@ -390,12 +390,12 @@ def mast(selfstart, out, dbs, queryurl, mirror,
             dlmirror = True
             pass
         except (urllib.error.ContentTooShortError, urllib.error.URLError):
-            log.log(32, '>-- %s %s %s', mirror, name, 'NOT FOUND')
+            log.debug('>-- %s %s %s', mirror, name, 'NOT FOUND')
             pass
         if not dlmirror and alt is not None:
             try: urlrequest.urlretrieve(alt+name.upper()+ext.upper(), outfile)
             except (urllib.error.ContentTooShortError, urllib.error.URLError):
-                log.log(32, '>-- %s %s %s', mirror, name, 'NOT FOUND')
+                log.debug('>-- %s %s %s', mirror, name, 'NOT FOUND')
                 pass
             pass
         pass
@@ -459,7 +459,8 @@ def dbscp(locations, dbs, out):
                 keys = [k for k in set(keys)]
                 if 'TELESCOP' in keys: filedict['observatory'] = mainheader['TELESCOP']
                 if 'INSTRUME' in keys: filedict['instrument'] = mainheader['INSTRUME']
-                if 'DETECTOR' in keys: filedict['detector'] = mainheader['DETECTOR']
+                if 'DETECTOR' in keys:
+                    filedict['detector'] = mainheader['DETECTOR'].replace('-', '.')
                 if 'FILTER' in keys: filedict['filter'] = mainheader['FILTER']
                 if ('SCAN_RAT' in keys) and (mainheader['SCAN_RAT'] > 0):
                     filedict['mode'] = 'SCAN'

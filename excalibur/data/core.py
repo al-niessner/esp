@@ -1,5 +1,6 @@
 # -- IMPORTS -- ------------------------------------------------------
 import os
+import logging; log = logging.getLogger(__name__)
 
 import dawgie
 
@@ -20,7 +21,7 @@ def checksv(sv):
     return valid, errstring
 # ----------------- --------------------------------------------------
 # -- COLLECT DATA -- -------------------------------------------------
-def collect(name, scrape, out, verbose=False, debug=False):
+def collect(name, scrape, out):
     collected = False
     obs, ins, det, fil, mod = name.split('-')
     for rootname in scrape['name'].keys():
@@ -39,7 +40,6 @@ def collect(name, scrape, out, verbose=False, debug=False):
         pass
     if collected: out['STATUS'].append(True)
     else: out['activefilters'].pop(name, None)
-    if verbose or debug: pass
     return collected
 # ------------------ -------------------------------------------------
 # -- CALIBRATE SCAN DATA -- ------------------------------------------
