@@ -254,7 +254,7 @@ density per wavelength bins
     return wavet, template
 # ---------------------- ---------------------------------------------
 # -- WHITE LIGHT CURVE -- --------------------------------------------
-def whitelight(nrm, fin, out, selftype, chainlen=int(8e1), verbose=False, debug=False):
+def whitelight(nrm, fin, out, selftype, chainlen=int(4e4), verbose=False, debug=False):
     wl = False
     priors = fin['priors'].copy()
     ssc = syscore.ssconstants()
@@ -987,8 +987,8 @@ def spectrum(fin, nrm, wht, out, selftype, chainlen=int(2e2), verbose=False, deb
             nodes.extend(allvslope)
             nodes.extend(allvitcp)
             nodes.extend(alloslope)
-            ctxt = CONTEXT(allologtau=allologtau,
-                           allologdelay=allologdelay,
+            ctxt = CONTEXT(alt=allologtau,
+                           ald=allologdelay,
                            allz=allz,
                            commonoim=commonoim,
                            ecc=None,
@@ -1007,22 +1007,21 @@ def spectrum(fin, nrm, wht, out, selftype, chainlen=int(2e2), verbose=False, deb
 
             # LIGHT CURVE MODEL --------------------------------------
             @pm.deterministic
-            def lcmodel(r=rprs, avs=allvslope, avi=allvitcp, aos=alloslope,
-                        ctxt=ctxt):
+            def lcmodel(r=rprs, avs=allvslope, avi=allvitcp, aos=alloslope, ctxt=ctxt):
                 allimout = []
                 for iv in range(len(ctxt.visits)):
                     if ctxt.commonoim:
                         imout = timlc(ctxt.time[iv], ctxt.orbits[iv],
                                       vslope=float(avs[iv]),
                                       vitcp=float(avi[iv]), oslope=float(aos[iv]),
-                                      ologtau=float(ctxt.allologtau[iv]),
-                                      ologdelay=float(ctxt.allologdelay[iv]))
+                                      ologtau=float(ctxt.alt[iv]),
+                                      ologdelay=float(ctxt.ald[iv]))
                         pass
                     else:
                         ooti = ctxt.ootoindex[iv]
                         oslopetable = [float(aos[i]) for i in ooti]
-                        ologtautable = [float(allologtau[i]) for i in ooti]
-                        ologdelaytable = [float(allologdelay[i]) for i in ooti]
+                        ologtautable = [float(ctxt.alt[i]) for i in ooti]
+                        ologdelaytable = [float(ctxt.ald[i]) for i in ooti]
                         imout = timlc(ctxt.time[iv], ctxt.orbits[iv],
                                       vslope=float(avs[iv]), vitcp=float(avi[iv]),
                                       oslope=oslopetable, ologtau=ologtautable,

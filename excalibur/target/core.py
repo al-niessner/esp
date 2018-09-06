@@ -3,6 +3,7 @@ import os
 import shutil
 import tempfile
 import subprocess
+import logging; log = logging.getLogger(__name__)
 
 import dawgie
 import dawgie.db
@@ -220,18 +221,14 @@ def autofill(ident, thistarget, out,
             out['starID'][thistarget][elem[1]]['impact_units'].append('[R*]')
             pkeys = [pk for pk in plist if '_' not in pk]
             for pk in pkeys:
-                if out['starID'][thistarget][elem[1]][pk][-1]:
-                    addme = ref
-                    pass
+                if out['starID'][thistarget][elem[1]][pk][-1]: addme = ref
                 else: addme = ''
                 out['starID'][thistarget][elem[1]][pk+'_ref'].append(addme)
                 pass
             skeys = [sk for sk in matchkey
                      if sk not in banlist and sk not in plist and '_' not in sk]
             for sk in skeys:
-                if out['starID'][thistarget][sk][-1]:
-                    addme = ref
-                    pass
+                if out['starID'][thistarget][sk][-1]: addme = ref
                 else: addme = ''
                 out['starID'][thistarget][sk+'_ref'].append(addme)
                 pass
@@ -360,7 +357,7 @@ def mast(selfstart, out, dbs, queryurl, mirror,
          alt=None,
          action='&action=Search&resolver=SIMBAD&radius=3.0',
          outfmt='&outputformat=CSV&max_records=100000',
-         opt='&sci_aec=S', debug=False):
+         opt='&sci_aec=S'):
     found = False
     temploc = dawgie.context.data_stg
     targetID = [t for t in selfstart['starID'].keys()]
@@ -393,18 +390,12 @@ def mast(selfstart, out, dbs, queryurl, mirror,
             dlmirror = True
             pass
         except (urllib.error.ContentTooShortError, urllib.error.URLError):
-            if debug: print(mirror, name, ' NOT FOUND')
+            log.debug('>-- %s %s %s', mirror, name, 'NOT FOUND')
             pass
         if not dlmirror and alt is not None:
             try: urlrequest.urlretrieve(alt+name.upper()+ext.upper(), outfile)
             except (urllib.error.ContentTooShortError, urllib.error.URLError):
-                if debug: print(mirror, name, ' NOT FOUND')
-                pass
-            if not dlmirror and alt is not None:
-                try: urlrequest.urlretrieve(alt+name.upper()+ext.upper(), outfile)
-                except (urllib.error.ContentTooShortError, urllib.error.URLError):
-                    if debug: print(alt, name, 'NOT FOUND')
-                    pass
+                log.debug('>-- %s %s %s', mirror, name, 'NOT FOUND')
                 pass
             pass
         pass
@@ -450,9 +441,8 @@ def dbscp(locations, dbs, out):
             pass
         pass
     for fitsfile in imalist:
-        filedict = {'md5':None, 'sha':None, 'loc':None,
-                    'observatory':None, 'instrument':None,
-                    'detector':None, 'filter':None, 'mode':None}
+        filedict = {'md5':None, 'sha':None, 'loc':None, 'observatory':None,
+                    'instrument':None, 'detector':None, 'filter':None, 'mode':None}
         m = subprocess.check_output(['md5sum', '-b', fitsfile])
         s = subprocess.check_output(['sha1sum', '-b', fitsfile])
         m = m.decode('utf-8').split(' ')
@@ -467,27 +457,21 @@ def dbscp(locations, dbs, out):
             if 'SCI' in mainheader['FILETYPE']:
                 keys = [k for k in mainheader.keys() if k != '']
                 keys = [k for k in set(keys)]
-                if 'TELESCOP' in keys:
-                    filedict['observatory'] = mainheader['TELESCOP']
-                    pass
-                if 'INSTRUME' in keys:
-                    filedict['instrument'] = mainheader['INSTRUME']
-                    pass
+                if 'TELESCOP' in keys: filedict['observatory'] = mainheader['TELESCOP']
+                if 'INSTRUME' in keys: filedict['instrument'] = mainheader['INSTRUME']
                 if 'DETECTOR' in keys:
-                    filedict['detector'] = mainheader['DETECTOR']
+                    filedict['detector'] = mainheader['DETECTOR'].replace('-', '.')
+                if 'FILTER' in keys: filedict['filter'] = mainheader['FILTER']
+                if ('SCAN_RAT' in keys) and (mainheader['SCAN_RAT'] > 0):
+                    filedict['mode'] = 'SCAN'
                     pass
-                if 'FILTER' in keys:
-                    filedict['filter'] = mainheader['FILTER']
-                    pass
-                if 'SCAN_RAT' in keys:
-                    if mainheader['SCAN_RAT'] > 0:
-                        filedict['mode'] = 'SCAN'
-                        pass
-                    else: filedict['mode'] = 'STARE'
-                    pass
+                else: filedict['mode'] = 'STARE'
                 if 'FOCUS' in keys and filedict['detector'] is None:
                     filedict['detector'] = mainheader['FOCUS']
                     filedict['mode'] = 'IMAGE'
+                    pass
+                if filedict['instrument'] in ['STIS']:
+                    filedict['filter'] = mainheader['OPT_ELEM']
                     pass
                 pass
             pass

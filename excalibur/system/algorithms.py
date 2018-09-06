@@ -1,4 +1,6 @@
 # -- IMPORTS -- ------------------------------------------------------
+import logging; log = logging.getLogger(__name__)
+
 import dawgie
 
 import excalibur.system as sys
@@ -9,16 +11,10 @@ import excalibur.target as trg
 import excalibur.target.edit as trgedit
 import excalibur.target.algorithms as trgalg
 # ------------- ------------------------------------------------------
-# -- ALGO RUN OPTIONS -- ---------------------------------------------
-# VERBOSE AND DEBUG
-verbose = False
-debug = False
-# ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class validate(dawgie.Algorithm):
     def __init__(self):
         self._version_ = dawgie.VERSION(1,1,0)
-        self.__verbose = verbose
         self.__autofill = trgalg.autofill()
         self.__out = sysstates.PriorsSV('parameters')
         return
@@ -41,22 +37,20 @@ class validate(dawgie.Algorithm):
         if update: ds.update()
         return
 
-    def _validate(self, autofill, out):
-        afilled = syscore.buildsp(autofill, out,
-                                  verbose=self.__verbose,
-                                  debug=debug)
+    @staticmethod
+    def _validate(autofill, out):
+        afilled = syscore.buildsp(autofill, out)
         return afilled
 
-    def _failure(self, errstr):
-        errmess = '--< SYSTEM VALIDATE: ' + errstr + ' >--'
-        if self.__verbose: print(errmess)
+    @staticmethod
+    def _failure(errstr):
+        log.log(31, '--< SYSTEM VALIDATE: ' + errstr + ' >--')
         return
     pass
 
 class finalize(dawgie.Algorithm):
     def __init__(self):
         self._version_ = dawgie.VERSION(1,1,0)
-        self.__verbose = verbose
         self.__val = validate()
         self.__out = sysstates.PriorsSV('parameters')
         return
@@ -83,25 +77,22 @@ class finalize(dawgie.Algorithm):
                 pass
             elif not self.__out['PP'][-1]: update = True
             else:
-                if verbose:
-                    print('>-- MISSING DICT INFO')
-                    print('>-- ADD KEY TO TARGET/EDIT.PY PPAR()')
-                    pass
+                log.log(31, '>-- MISSING DICT INFO')
+                log.log(31, '>-- ADD KEY TO TARGET/EDIT.PY PPAR()')
                 pass
             pass
         else: self._failure(errstring)
         if update: ds.update()
         return
 
-    def _priority(self, overwrite, out):
-        ffill = syscore.forcepar(overwrite, out,
-                                 verbose=self.__verbose,
-                                 debug=debug)
+    @staticmethod
+    def _priority(overwrite, out):
+        ffill = syscore.forcepar(overwrite, out)
         return ffill
 
-    def _failure(self, errstr):
-        errmess = '--< SYSTEM FINALIZE: ' + errstr + ' >--'
-        if self.__verbose: print(errmess)
+    @staticmethod
+    def _failure(errstr):
+        log.log(31, '--< SYSTEM FINALIZE: ' + errstr + ' >--')
         return
     pass
 # ---------------- ---------------------------------------------------

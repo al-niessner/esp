@@ -1,5 +1,6 @@
 # -- IMPORTS -- ------------------------------------------------------
 import os
+import logging; log = logging.getLogger(__name__)
 
 import dawgie
 import dawgie.context
@@ -9,9 +10,6 @@ import excalibur.target.core as trgcore
 import excalibur.target.states as trgstates
 # ------------- ------------------------------------------------------
 # -- ALGO RUN OPTIONS -- ---------------------------------------------
-# VERBOSE AND DEBUG
-verbose = False
-debug = False
 # GENERATE DATABASE IDs
 genIDs = True
 # NEXSCI QUERY
@@ -68,22 +66,20 @@ class autofill(dawgie.Algorithm):
         valid, errstring = trgcore.checksv(var_create)
         # pylint: disable=protected-access
         if valid and ds._tn() in var_create['starID']:
-            update = self._autofill(var_create, ds._tn(), self.__out)
+            update = self._autofill(var_create, ds._tn())
             pass
         else: self._failure(errstring)
         if update: ds.update()
         return
 
-    @staticmethod
-    def _autofill(arg_create, thistarget, out):
-        solved = trgcore.autofill(arg_create, thistarget, out)
+    def _autofill(self, crt, thistarget):
+        solved = trgcore.autofill(crt, thistarget, self.__out)
         return solved
 
     @staticmethod
     def _failure(errstr):
         if errstr is None: errstr = 'TARGET NOT EXPECTED'
-        errmess = '--< TARGET AUTOFILL: ' + errstr + ' >--'
-        if verbose: print(errmess)
+        log.log(31, '--< TARGET AUTOFILL: '+errstr+' >--')
         return
     pass
 
@@ -116,16 +112,14 @@ class scrape(dawgie.Algorithm):
     def _scrape(arg_autofill, out):
         dbs = os.path.join(dawgie.context.data_dbs, 'mast')
         if not os.path.exists(dbs): os.makedirs(dbs)
-        umast = trgcore.mast(arg_autofill, out, dbs, queryform,
-                             mirror1, alt=mirror2)
+        umast = trgcore.mast(arg_autofill, out, dbs, queryform, mirror1, alt=mirror2)
         udisk = trgcore.disk(arg_autofill, out, diskloc, dbs)
         update = umast or udisk
         return update
 
     @staticmethod
     def _failure(errstr):
-        errmess = '--< TARGET SCRAPE: ' + errstr + ' >--'
-        if verbose: print(errmess)
+        log.log(31, '--< TARGET SCRAPE: '+errstr+' >--')
         return
     pass
 # ---------------- ---------------------------------------------------
