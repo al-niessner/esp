@@ -11,7 +11,7 @@ import excalibur.target.states as trgstates
 # ------------- ------------------------------------------------------
 # -- ALGO RUN OPTIONS -- ---------------------------------------------
 # GENERATE DATABASE IDs
-genIDs = False
+genIDs = True
 # NEXSCI QUERY
 web = 'https://exoplanetarchive.ipac.caltech.edu/cgi-bin/nstedAPI/nph-nstedAPI?'
 # DATA ON DISK

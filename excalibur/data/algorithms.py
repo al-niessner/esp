@@ -49,7 +49,7 @@ class collect(dawgie.Algorithm):
         valid, errstring = datcore.checksv(scrape)
         if valid:
             for key in create.keys(): self.__out[key] = create[key]
-            for name in fltrs:
+            for name in create['activefilters']['NAMES']:
                 ok = self._collect(name, scrape, self.__out)
                 update = update or ok
                 pass
@@ -57,7 +57,7 @@ class collect(dawgie.Algorithm):
             pass
         else: self._failure(errstring)
         return
-    
+
     @staticmethod
     def _collect(name, scrape, out):
         collected = datcore.collect(name, scrape, out)
@@ -89,9 +89,13 @@ class calibration(dawgie.Algorithm):
     def run(self, ds, ps):
         update = False
         cll = self.__collect.sv_as_dict()['frames']
+        validtype = []
+        for test in cll['activefilters'].keys():
+            if ('SCAN' in test) or ('STARE' in test): validtype.append(test)
+            pass
         errstring = 'NO DATA'
         svupdate = []
-        for datatype in cll['activefilters']:
+        for datatype in validtype:
             collectin = cll['activefilters'][datatype]
             index = fltrs.index(datatype)
             # pylint: disable=protected-access
@@ -108,8 +112,7 @@ class calibration(dawgie.Algorithm):
             caled = datcore.scancal(cll, tid, flttype, out,
                                     verbose=self.__verbose, debug=debug)
             pass
-        if 'STARE' in flttype:
-            pass
+        if 'STARE' in flttype: caled = datcore.starecal(cll, tid, flttype, out)
         return caled
 
     @staticmethod

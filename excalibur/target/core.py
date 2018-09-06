@@ -470,7 +470,7 @@ def dbscp(locations, dbs, out):
                     filedict['detector'] = mainheader['FOCUS']
                     filedict['mode'] = 'IMAGE'
                     pass
-                if filedict['instrument'] == 'STIS':
+                if filedict['instrument'] in ['STIS']:
                     filedict['filter'] = mainheader['OPT_ELEM']
                     pass
                 pass

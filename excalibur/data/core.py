@@ -527,23 +527,34 @@ def scancal(clc, tid, flttype, out,
 def dps(flttype):
     '''
 http://www.stsci.edu/hst/wfc3/ins_performance/detectors
+http://www.stsci.edu/hst/stis/design/detectors
+http://www.stsci.edu/hst/stis/design/gratings
     '''
     detector = flttype.split('-')[2]
+    fltr = flttype.split('-')[3]
     arcsec2pix = None
-    if detector == 'IR': arcsec2pix = 0.13
-    if detector == 'UVIS': arcsec2pix = 0.04
+    if detector in ['IR']: arcsec2pix = 0.13
+    if detector in ['UVIS']: arcsec2pix = 0.04
+    if detector in ['CCD']: arcsec2pix = 0.05071
+    if detector in ['FUV.MAMA']:
+        if fltr in ['G140M']: arcsec2pix = np.sqrt(0.029*0.036)
+        pass
     return arcsec2pix
 # --------------------------------------------------------------------
 # -- DETECTOR PLATE SCALE -- -----------------------------------------
 def validrange(flttype):
     '''
-G102 http://www.stsci.edu/hst/wfc3/documents/ISRs/WFC3-2009-18.pdf
-G141 http://www.stsci.edu/hst/wfc3/documents/ISRs/WFC3-2009-17.pdf
+http://www.stsci.edu/hst/wfc3/documents/ISRs/WFC3-2009-18.pdf
+http://www.stsci.edu/hst/wfc3/documents/ISRs/WFC3-2009-17.pdf
+http://www.stsci.edu/hst/stis/design/gratings/documents/handbooks/currentIHB/c13_specref07.html
+http://www.stsci.edu/hst/stis/design/gratings/documents/handbooks/currentIHB/c13_specref16.html
     '''
     fltr = flttype.split('-')[3]
     vrange = None
-    if fltr == 'G141': vrange=[1.10, 1.65]
-    if fltr == 'G102': vrange=[0.8, 1.14]
+    if fltr in ['G141']: vrange = [1.10, 1.65]  # MICRONS
+    if fltr in ['G102']: vrange = [0.80, 1.14]
+    if fltr in ['G430L']: vrange = [0.30, 0.55]
+    if fltr in ['G140M']: vrange = [0.12, 0.17]
     return vrange
 # --------------------------------------------------------------------
 # -- FILTERS AND GRISMS -- -------------------------------------------
@@ -567,6 +578,12 @@ G141 http://www.stsci.edu/hst/wfc3/documents/ISRs/WFC3-2009-17.pdf
         disp = 24.5  # Angstroms/Pixel
         llim = 23.5
         ulim = 25
+        pass
+    if fltr == 'G430L':
+        wvrng = [29e2, 57e2]  # Angstroms
+        disp = 2.73  # Angstroms/Pixel
+        llim = 2.63
+        ulim = 2.83
         pass
     return wvrng, disp, llim, ulim
 # ------------------------ -------------------------------------------
@@ -1027,3 +1044,101 @@ def solveme(M, e, eps):
         pass
     return E
 # ---------------------------------------- ---------------------------
+# -- CALIBRATE STARE DATA -- -----------------------------------------
+def starecal(clc, tid, flttype, out):
+    calibrated = False
+    # DATA TYPE ------------------------------------------------------
+    arcsec2pix = dps(flttype)
+    vrange = validrange(flttype)
+    wvrng, disper, ldisp, udisp = fng(flttype)
+    spectrace = np.round((np.max(wvrng) - np.min(wvrng))/disper)
+    # LOAD DATA ------------------------------------------------------
+    dbs = os.path.join(dawgie.context.data_dbs, 'mast')
+    data = {'LOC':[], 'EPS':[], 'DISPLIM':[ldisp, udisp],
+            'SCANRATE':[], 'SCANLENGTH':[], 'SCANANGLE':[],
+            'EXP':[], 'EXPERR':[], 'EXPFLAG':[], 'VRANGE':vrange,
+            'TIME':[], 'EXPLEN':[], 'MIN':[], 'MAX':[], 'TRIAL':[]}
+    for loc in sorted(clc['LOC']):
+        fullloc = os.path.join(dbs, loc)
+        with pyfits.open(fullloc) as hdulist:
+            header0 = hdulist[0].header
+            data['EPS'].append(False)
+            if 'SCAN_RAT' in header0: data['SCANRATE'].append(header0['SCAN_RAT'])
+            else: data['SCANRATE'].append(np.nan)
+            if 'SCAN_LEN' in header0: data['SCANLENGTH'].append(header0['SCAN_LEN'])
+            else: data['SCANLENGTH'].append(np.nan)
+            if 'SCAN_ANG' in header0: data['SCANANGLE'].append(header0['SCAN_ANG'])
+            elif 'PA_V3' in header0: data['SCANANGLE'].append(header0['PA_V3'])
+            else: data['SCANANGLE'].append(666)
+            frame = []
+            errframe = []
+            dqframe = []
+            ftime = []
+            fmin = []
+            fmax = []
+            for fits in hdulist:
+                if (fits.size != 0) and ('EXTNAME' in fits.header):
+                    if fits.header['EXTNAME'] in ['SCI']:
+                        fitsdata = np.empty(fits.data.shape)
+                        fitsdata[:] = fits.data[:]
+                        frame.append(fitsdata)
+                        routtime = np.mean([float(fits.header['EXPEND']),
+                                            float(fits.header['EXPSTART'])])
+                        ftime.append(routtime)
+                        fmin.append(float(fits.header['GOODMIN']))
+                        fmax.append(float(fits.header['GOODMAX']))
+                        del fits.data
+                        pass
+                    pass
+                    if (fits.header['EXTNAME'] in ['ERR', 'DQ']):
+                        fitsdata = np.empty(fits.data.shape)
+                        fitsdata[:] = fits.data[:]
+                        if fits.header['EXTNAME'] == 'ERR': errframe.append(fitsdata)
+                        if fits.header['EXTNAME'] == 'DQ': dqframe.append(fitsdata)
+                        del fits.data
+                        pass
+                    pass
+                pass
+            data['LOC'].append(loc)
+            data['EXP'].append(frame)
+            data['EXPERR'].append(errframe)
+            data['EXPFLAG'].append(dqframe)
+            data['TIME'].append(ftime)
+            data['EXPLEN'].append(header0['TEXPTIME'])
+            data['MIN'].append(fmin)
+            data['MAX'].append(fmax)
+            pass
+        pass
+    # MASK DATA ------------------------------------------------------
+    data['MEXP'] = data['EXP'].copy()
+    data['MASK'] = data['EXPFLAG'].copy()
+    data['IGNORED'] = [False]*len(data['LOC'])
+    data['FLOODLVL'] = [np.nan]*len(data['LOC'])
+    data['TRIAL'] = ['']*len(data['LOC'])
+    for index in enumerate(data['LOC']):
+        maskedexp = []
+        masks = []
+        ignore = False
+        for dd, ff in zip(data['EXP'][index[0]], data['EXPFLAG'][index[0]]):
+            select = ff > 0
+            if np.sum(select) > 0:
+                dd[select] = np.nan
+                if np.all(~np.isfinite(dd)):
+                    data['TRIAL'][index[0]] = 'Empty Subexposure'
+                    ignore = True
+                    pass
+                else: maskedexp.append(dd)
+                pass
+            else: maskedexp.append(dd)
+            mm = np.isfinite(dd)
+            masks.append(mm)
+            pass
+        if ignore: maskedexp = data['EXP'][index[0]].copy()
+        data['MEXP'][index[0]] = maskedexp
+        data['MASK'][index[0]] = masks
+        data['IGNORED'][index[0]] = ignore
+        pass
+    calibrated = len(tid)*len(out)*arcsec2pix*spectrace
+    calibrated = calibrated and False
+    return calibrated
+# -------------------------- -----------------------------------------
