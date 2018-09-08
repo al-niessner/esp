@@ -248,7 +248,10 @@ def myxsecs(spc, out,
         out['data'][p]['XSECS'] = library
         out['data'][p]['QTGRID'] = qtgrid
         pass
-    if out['data'].keys(): out['STATUS'].append(True)
+    if out['data'].keys():
+        cs = True
+        out['STATUS'].append(True)
+        pass
     return cs
 # ------------------------ -------------------------------------------
 # -- TOTAL PARTITION FUNCTION -- -------------------------------------
@@ -282,7 +285,7 @@ def gettpf(tips, knownspecies, verbose=False):
     return grid
 # ------------------------------ -------------------------------------
 # -- ATMOS -- --------------------------------------------------------
-def atmos(fin, spc, out, mclen=int(4e2), verbose=False):
+def atmos(fin, xsl, spc, out, mclen=int(4e2), verbose=False):
     am = False
     orbp = fin['priors'].copy()
     ssc = syscore.ssconstants(mks=True)
@@ -308,6 +311,8 @@ def atmos(fin, spc, out, mclen=int(4e2), verbose=False):
             if model == 'TEC':
                 modelpar[0] = pmud('XtoH', -6e0, 3e0)
                 modelpar[1] = pmud('CtoO', -6e0, 6e0)
+                modelpar[2] = pmud('dummy1', -6e0, 6e0)
+                modelpar[3] = pmud('dummy2', -6e0, 6e0)
                 nodes.extend(modelpar[0:2])
                 pass
             if model == 'PHOTOCHEM':
@@ -321,6 +326,7 @@ def atmos(fin, spc, out, mclen=int(4e2), verbose=False):
                 modelpar[0] = pmud('TIO', -4e0, 4e0)
                 modelpar[1] = pmud('N2O', -4e0, 4e0)
                 modelpar[2] = pmud('CO2', -4e0, 4e0)
+                modelpar[3] = pmud('dummy1', -6e0, 6e0)
                 nodes.extend(modelpar[0:3])
                 pass
 
@@ -328,14 +334,14 @@ def atmos(fin, spc, out, mclen=int(4e2), verbose=False):
             @pm.deterministic
             def fmcerberus(cop=compar, mdp=modelpar,
                            cleanup=cleanup, model=model, p=p, solidr=solidr,
-                           tspectrum=tspectrum):
+                           tspectrum=tspectrum, xsl=xsl):
                 fmc = np.zeros(tspectrum.size)
                 if model == 'TEC':
                     tceqdict = {}
                     tceqdict['CtoO'] = float(mdp[1])
                     tceqdict['XtoH'] = float(mdp[0])
                     fmc = crbmodel(None, float(cop[1]), float(cop[0]), solidr, orbp,
-                                   out['data'][p]['XSECS'], out['data'][p]['QTGRID'],
+                                   xsl['data'][p]['XSECS'], xsl['data'][p]['QTGRID'],
                                    float(cop[3]), np.array(spc['data'][p]['WB']),
                                    hzslope=float(cop[2]), cheq=tceqdict, pnet=p,
                                    verbose=False, debug=False)
@@ -344,7 +350,7 @@ def atmos(fin, spc, out, mclen=int(4e2), verbose=False):
                     mixratio = {'TIO':float(mdp[0]), 'CH4':float(mdp[1]),
                                 'C2H2':float(mdp[2]), 'NH3':float(mdp[3])}
                     fmc = crbmodel(mixratio, float(cop[1]), float(cop[0]), solidr, orbp,
-                                   out['data'][p]['XSECS'], out['data'][p]['QTGRID'],
+                                   xsl['data'][p]['XSECS'], xsl['data'][p]['QTGRID'],
                                    float(cop[3]), np.array(spc['data'][p]['WB']),
                                    hzslope=float(cop[2]), cheq=None, pnet=p,
                                    verbose=False, debug=False)
@@ -353,14 +359,14 @@ def atmos(fin, spc, out, mclen=int(4e2), verbose=False):
                     mixratio = {'TIO':float(mdp[0]), 'N2O':float(mdp[1]),
                                 'CO2':float(mdp[2])}
                     fmc = crbmodel(mixratio, float(cop[1]), float(cop[0]), solidr, orbp,
-                                   out['data'][p]['XSECS'], out['data'][p]['QTGRID'],
+                                   xsl['data'][p]['XSECS'], xsl['data'][p]['QTGRID'],
                                    float(cop[3]), np.array(spc['data'][p]['WB']),
                                    hzslope=float(cop[2]), cheq=None, pnet=p,
                                    verbose=False, debug=False)
                     pass
                 fmc = fmc[cleanup] - np.nanmean(fmc[cleanup])
                 fmc = fmc + np.nanmean(tspectrum[cleanup])
-                return out
+                return fmc
             # CERBERUS MCMC
             mcdata = pmnd('mcdata', mu=fmcerberus, tau=1e0/((tspecerr[cleanup])**2),
                           value=tspectrum[cleanup], observed=True)
@@ -450,7 +456,7 @@ def crbmodel(mixratio, rayleigh, cloudtp, rp0, orbp, xsecs, qtgrid,
     model = (rp0**2 + atmdepth)/(orbp['R*']*ssc['Rsun'])**2
     noatm = rp0**2/(orbp['R*']*ssc['Rsun'])**2
     noatm = np.nanmin(model)
-    rp0hs = np.sqrt(noatm*(orbp['Rs']*ssc['Rsun'])**2)
+    rp0hs = np.sqrt(noatm*(orbp['R*']*ssc['Rsun'])**2)
     if verbose:
         fig, ax = plt.subplots(figsize=(10,6))
         axes = [ax, ax.twinx(), ax.twinx()]

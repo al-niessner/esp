@@ -392,7 +392,7 @@ def mast(selfstart, out, dbs, queryurl, mirror,
         except (urllib.error.ContentTooShortError, urllib.error.URLError):
             log.debug('>-- %s %s %s', mirror, name, 'NOT FOUND')
             pass
-        if not dlmirror and alt is not None:
+        if (not dlmirror) and (alt is not None):
             try: urlrequest.urlretrieve(alt+name.upper()+ext.upper(), outfile)
             except (urllib.error.ContentTooShortError, urllib.error.URLError):
                 log.debug('>-- %s %s %s', mirror, name, 'NOT FOUND')

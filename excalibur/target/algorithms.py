@@ -19,7 +19,7 @@ diskloc = '/proj/sdp/data/sci'
 # MAST MIRRORS
 queryform = 'https://archive.stsci.edu/hst/search.php?target='
 mirror1 = 'http://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/data/pub/HSTCA/'
-mirror2 = 'http://archives.esac.esa.int/hst/proxy?file_id='
+mirror2 = 'http://archives.esac.esa.int/ehst-sl-server/servlet/data-action?ARTIFACT_ID='
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class create(dawgie.Analyzer):
