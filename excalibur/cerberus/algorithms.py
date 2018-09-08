@@ -26,7 +26,6 @@ class xslib(dawgie.Algorithm):
         self._version_ = dawgie.VERSION(1,1,0)
         self.__verbose = verbose
         self.__spc = trnalg.spectrum()
-        self.__fin = sysalg.finalize()
         self.__out = [crbstates.xslibSV(ext) for ext in fltrs]
         return
 
@@ -34,25 +33,19 @@ class xslib(dawgie.Algorithm):
         return 'xslib'
 
     def previous(self):
-        return [dawgie.ALG_REF(trn.factory, self.__spc),
-                dawgie.ALG_REF(sys.factory, self.__fin)]
+        return [dawgie.ALG_REF(trn.factory, self.__spc)]
 
     def state_vectors(self):
         return self.__out
 
     def run(self, ds, ps):
         svupdate = []
-        vfin, sfin = crbcore.checksv(self.__fin.sv_as_dict()['parameters'])
         for ext in fltrs:
             update = False
             vspc, sspc = crbcore.checksv(self.__spc.sv_as_dict()[ext])
-            if vspc and vfin:
-                update = self._xslib(self.__spc.sv_as_dict()[ext],
-                                     self.__fin.sv_as_dict()['parameters'],
-                                     fltrs.index(ext))
-                pass
+            if vspc: update = self._xslib(self.__spc.sv_as_dict()[ext], fltrs.index(ext))
             else:
-                errstr = [m for m in [sspc, sfin] if m is not None]
+                errstr = [m for m in [sspc] if m is not None]
                 self._failure(errstr[0])
                 pass
             if update: svupdate.append(self.__out[fltrs.index(ext)])
@@ -61,9 +54,8 @@ class xslib(dawgie.Algorithm):
         if self.__out.__len__() > 0: ds.update()
         return
 
-    def _xslib(self, spc, fin, index):
-        cs = crbcore.myxsecs(spc, fin, self.__out[index],
-                             verbose=self.__verbose, debug=debug)
+    def _xslib(self, spc, index):
+        cs = crbcore.myxsecs(spc, self.__out[index], verbose=self.__verbose, debug=debug)
         return cs
 
     def _failure(self, errstr):

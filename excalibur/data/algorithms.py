@@ -16,9 +16,6 @@ import excalibur.system as sys
 import excalibur.system.algorithms as sysalg
 # ------------- ------------------------------------------------------
 # -- ALGO RUN OPTIONS -- ---------------------------------------------
-# VERBOSE AND DEBUG
-verbose = False
-debug = False
 # FILTERS
 fltrs = (trgedit.activefilters.__doc__).split('\n')
 fltrs = [t.strip() for t in fltrs if t.replace(' ', '').__len__() > 0]
@@ -72,7 +69,6 @@ class collect(dawgie.Algorithm):
 class calibration(dawgie.Algorithm):
     def __init__(self):
         self._version_ = dawgie.VERSION(1,1,0)
-        self.__verbose = verbose
         self.__collect = collect()
         self.__out = [datstates.CalibrateSV(ext) for ext in fltrs]
         return
@@ -107,11 +103,9 @@ class calibration(dawgie.Algorithm):
         else: self._failure(errstring)
         return
 
-    def _calib(self, cll, tid, flttype, out):
-        if 'SCAN' in flttype:
-            caled = datcore.scancal(cll, tid, flttype, out,
-                                    verbose=self.__verbose, debug=debug)
-            pass
+    @staticmethod
+    def _calib(cll, tid, flttype, out):
+        if 'SCAN' in flttype: caled = datcore.scancal(cll, tid, flttype, out)
         if 'STARE' in flttype: caled = datcore.starecal(cll, tid, flttype, out)
         return caled
 
@@ -124,7 +118,6 @@ class calibration(dawgie.Algorithm):
 class timing(dawgie.Algorithm):
     def __init__(self):
         self._version_ = dawgie.VERSION(1,1,0)
-        self.__verbose = verbose
         self.__fin = sysalg.finalize()
         self.__calib = calibration()
         self.__out = [datstates.TimingSV(ext) for ext in fltrs]
@@ -160,8 +153,9 @@ class timing(dawgie.Algorithm):
         if self.__out.__len__() > 0: ds.update()
         return
 
-    def _timing(self, fin, cal, out):
-        chunked = datcore.timing(fin, cal, out, verbose=self.__verbose, debug=debug)
+    @staticmethod
+    def _timing(fin, cal, out):
+        chunked = datcore.timing(fin, cal, out)
         return chunked
 
     @staticmethod
