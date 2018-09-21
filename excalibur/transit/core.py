@@ -254,7 +254,7 @@ density per wavelength bins
     return wavet, template
 # ---------------------- ---------------------------------------------
 # -- WHITE LIGHT CURVE -- --------------------------------------------
-def whitelight(nrm, fin, out, selftype, chainlen=int(4e4), verbose=False, debug=False):
+def whitelight(nrm, fin, out, selftype, chainlen=int(4e2), verbose=False, debug=False):
     wl = False
     priors = fin['priors'].copy()
     ssc = syscore.ssconstants()
@@ -877,7 +877,7 @@ def timlc(vtime, orbits,
     return vout*oout
 # ---------------------- ---------------------------------------------
 # -- SPECTRUM -- -----------------------------------------------------
-def spectrum(fin, nrm, wht, out, selftype, chainlen=int(2e4), verbose=False, debug=False):
+def spectrum(fin, nrm, wht, out, selftype, chainlen=int(2e2), verbose=False, debug=False):
     exospec = False
     priors = fin['priors'].copy()
     ssc = syscore.ssconstants()

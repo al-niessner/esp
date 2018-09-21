@@ -379,29 +379,41 @@ def mast(selfstart, out, dbs, queryurl, mirror,
                 pass
             pass
         pass
-    tempdir = tempfile.mkdtemp(dir=temploc, prefix=targetID[0])
-    for name, inst in zip(namelist, instlist):
-        dlmirror = False
-        ext = '_flt.fits'
-        if inst in ['WFC3', 'NICMOS']: ext = '_ima.fits'
-        outfile = os.path.join(tempdir, name+ext)
-        try:
-            urlrequest.urlretrieve(mirror+name+ext, outfile)
-            dlmirror = True
-            pass
-        except (urllib.error.ContentTooShortError, urllib.error.URLError):
-            log.debug('>-- %s %s %s', mirror, name, 'NOT FOUND')
-            pass
-        if (not dlmirror) and (alt is not None):
-            try: urlrequest.urlretrieve(alt+name.upper()+ext.upper(), outfile)
-            except (urllib.error.ContentTooShortError, urllib.error.URLError):
-                log.debug('>-- %s %s %s', mirror, name, 'NOT FOUND')
+    if found:
+        tempdir = tempfile.mkdtemp(dir=temploc, prefix=targetID[0])
+        ignname = []
+        igninst = []
+        for name, inst in zip(namelist, instlist):
+            ext = '_flt.fits'
+            if inst in ['WFC3', 'NICMOS']: ext = '_ima.fits'
+            outfile = os.path.join(tempdir, name+ext)
+            try: urlrequest.urlretrieve(mirror+name+ext, outfile)
+            except(urllib.error.ContentTooShortError, urllib.error.URLError):
+                log.log(31, '>-- Mirror1 %s %s %s', name, ext, 'NOT FOUND')
+                try: urlrequest.urlretrieve(alt+name.upper()+ext.upper(), outfile)
+                except (urllib.error.ContentTooShortError, urllib.error.HTTPError):
+                    log.log(31, '>-- Mirror2 %s %s %s', name, ext, 'NOT FOUND')
+                    ignname.append(name)
+                    igninst.append(inst)
+                    pass
                 pass
             pass
+        for name, inst in zip(ignname, igninst):
+            ext = '_crj.fits'
+            outfile = os.path.join(tempdir, name+ext)
+            try: urlrequest.urlretrieve(mirror+name+ext, outfile)
+            except (urllib.error.ContentTooShortError, urllib.error.URLError):
+                log.log(31, '>-- Mirror1: %s %s %s', name, ext, 'NOT FOUND')
+                try: urlrequest.urlretrieve(alt+name.upper()+ext.upper(), outfile)
+                except(urllib.error.ContentTooShortError, urllib.error.HTTPError):
+                    log.log(31, '>-- Mirror2: %s %s %s', name, ext, 'NOT FOUND')
+                    pass
+                pass
+            pass
+        locations = [tempdir]
+        new = dbscp(locations, dbs, out)
+        shutil.rmtree(tempdir, True)
         pass
-    locations = [tempdir]
-    new = dbscp(locations, dbs, out)
-    shutil.rmtree(tempdir, True)
     ingested = found and new
     return ingested
 # ---------- ---------------------------------------------------------

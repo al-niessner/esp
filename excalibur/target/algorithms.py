@@ -111,11 +111,9 @@ class scrape(dawgie.Algorithm):
     @staticmethod
     def _scrape(arg_autofill, out):
         dbs = os.path.join(dawgie.context.data_dbs, 'mast')
-        if not os.path.exists(dbs): os.makedirs(dbs)
-        umast = trgcore.mast(arg_autofill, out, dbs, queryform, mirror1, alt=mirror2)
+        if not os.path.exists(dbs): os.makedirs(dbs)  # umast = trgcore.mast(arg_autofill, out, dbs, queryform, mirror1, alt=mirror2)
         udisk = trgcore.disk(arg_autofill, out, diskloc, dbs)
-        update = umast or udisk
-        return update
+        return udisk
 
     @staticmethod
     def _failure(errstr):
