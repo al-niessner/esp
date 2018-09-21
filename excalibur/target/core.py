@@ -398,16 +398,6 @@ def mast(selfstart, out, dbs, queryurl, mirror,
                     pass
                 pass
             pass
-        if (not dlmirror) and (alt is not None):
-            try: urlrequest.urlretrieve(alt+name.upper()+ext.upper(), outfile)
-            except (urllib.error.ContentTooShortError, urllib.error.URLError):
-                log.log(31, '>-- Mirror1: %s %s %s', name, ext, 'NOT FOUND')
-                try: urlrequest.urlretrieve(alt+name.upper()+ext.upper(), outfile)
-                except(urllib.error.ContentTooShortError, urllib.error.HTTPError):
-                    log.log(31, '>-- Mirror2: %s %s %s', name, ext, 'NOT FOUND')
-                    pass
-                pass
-            pass
         locations = [tempdir]
         new = dbscp(locations, dbs, out)
         shutil.rmtree(tempdir, True)

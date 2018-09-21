@@ -4,7 +4,6 @@
 # SECOND COL [OPTIONAL] HAS TO BE 'Default Alias' RETURNED FROM
 # https://exoplanetarchive.ipac.caltech.edu/index.html
 # OR ALIAS KNOWN BY https://archive.stsci.edu/hst/
-# G ROUDIER, M SWAIN, A ROWEN  May 29 2018
 def targetlist():
     '''
 55 Cnc :
