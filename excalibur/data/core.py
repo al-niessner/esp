@@ -1265,6 +1265,7 @@ def starecal(clc, tid, flttype, out,
                     ignore = True
                     pass
                 pass
+            else: pstamperr = thispstamp*np.nan
             pass
         else:
             garbage = data['EXP'][index][::-1].copy()
