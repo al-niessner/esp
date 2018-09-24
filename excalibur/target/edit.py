@@ -4,6 +4,7 @@
 # SECOND COL [OPTIONAL] HAS TO BE 'Default Alias' RETURNED FROM
 # https://exoplanetarchive.ipac.caltech.edu/index.html
 # OR ALIAS KNOWN BY https://archive.stsci.edu/hst/
+# MINOR CHANGE
 def targetlist():
     '''
 55 Cnc :
