@@ -142,6 +142,7 @@ def scancal(clc, tid, flttype, out,
         data['IGNORED'][index] = ignore
         pass
     # DATA CUBE ------------------------------------------------------
+    ovszspc = False
     for index, nm in enumerate(data['LOC']):
         ignore = data['IGNORED'][index]
         # ISOLATE SCAN Y ---------------------------------------------
@@ -219,6 +220,7 @@ def scancal(clc, tid, flttype, out,
             thispstamp = np.nansum(psdiff, axis=0)
             thispstamp[thispstamp <= psmin] = np.nan
             thispstamp[thispstamp == 0] = np.nan
+            if abs(spectrace - thispstamp.shape[1]) < 36: ovszspc = True
             # PLOTS --------------------------------------------------
             if debug:
                 show = thispstamp.copy()
@@ -252,14 +254,14 @@ def scancal(clc, tid, flttype, out,
             if np.isfinite(minx*maxx):
                 minx -= 1.5*12
                 maxx += 1.5*12
-                if minx < 0: minx = 2
-                if maxx > (thispstamp.shape[1] - 1): maxx = thispstamp.shape[1] - 2
-                if (maxx - minx) < spectrace:
+                if minx < 0: minx = 5
+                thispstamp[:,:int(minx)] = np.nan
+                if maxx > (thispstamp.shape[1] - 1): maxx = thispstamp.shape[1] - 5
+                thispstamp[:,int(maxx):] = np.nan
+                if ((maxx - minx) < spectrace) and not ovszspc:
                     data['TRIAL'][index] = 'Could Not Find Full Spectrum'
                     ignore = True
                     pass
-                thispstamp[:,:int(minx)] = np.nan
-                thispstamp[:,int(maxx):] = np.nan
                 pstamperr = np.array(data['EXPERR'][index].copy())
                 select = ~np.isfinite(pstamperr)
                 if np.nansum(select) > 0: pstamperr[select] = 0
@@ -316,7 +318,8 @@ def scancal(clc, tid, flttype, out,
             # OVERSIZED MASK -----------------------------------------
             for line in frame:
                 if np.nanmax(line) < floodlevel: line *= np.nan
-                if np.sum(np.isfinite(line)) < spectrace: line *= np.nan
+                if abs(spectrace - line.size) < 36: ovszspc = True
+                elif np.sum(np.isfinite(line)) < spectrace: line *= np.nan
                 pass
             frame = [line for line in frame if not np.all(~np.isfinite(line))]
             # SCAN RATE CORRECTION -----------------------------------
@@ -382,7 +385,7 @@ def scancal(clc, tid, flttype, out,
             if True in nanme: spectrum[nanme] = np.nan
             spectrum -= np.nanmin(spectrum)
             testspec = spectrum[np.isfinite(spectrum)]
-            if np.all(testspec[-18:] > emptythr):
+            if (np.all(testspec[-18:] > emptythr)) and not ovszspc:
                 data['IGNORED'][index] = True
                 data['TRIAL'][index] = 'Truncated Spectrum'
                 pass
@@ -401,6 +404,11 @@ def scancal(clc, tid, flttype, out,
         pass
     # WAVELENGTH CALIBRATION -----------------------------------------
     wavett, tt = ag2ttf(flttype)
+    if ovszspc:
+        select = (wavett*1e-4 < 1.68) & (wavett*1e-4 > 1.09)
+        wavett = wavett[select]
+        tt = tt[select]
+        pass
     scaleco = np.nanmax(tt) / np.nanmin(tt[tt > 0])
     data['PHT2CNT'] = [np.nan]*len(data['LOC'])
     data['WAVE'] = [np.nan]*len(data['LOC'])
@@ -414,7 +422,7 @@ def scancal(clc, tid, flttype, out,
             cutoff = np.nanmax(spectrum)/scaleco
             spectrum[spectrum < cutoff] = np.nan
             spectrum = abs(spectrum)
-            w, d, s, si = wavesol(spectrum, tt, wavett, disper)
+            w, d, s, si = wavesol(spectrum, tt, wavett, disper, ovszspc=ovszspc)
             if (d > ldisp) and (d < udisp): spectralindex.append(si)
             pass
         pass
@@ -426,12 +434,13 @@ def scancal(clc, tid, flttype, out,
             cutoff = np.nanmax(spectrum)/scaleco
             spectrum[spectrum < cutoff] = np.nan
             spectrum = abs(spectrum)
-            wave, disp, shift, si = wavesol(spectrum, tt, wavett, disper, siv=siv)
+            wave, disp, shift, si = wavesol(spectrum, tt, wavett, disper,
+                                            siv=siv, ovszspc=ovszspc)
             if (disp < ldisp) or (disp > udisp):
                 data['TRIAL'][index] = 'Dispersion Out Of Bounds'
                 ignore = True
                 pass
-            if abs(disp - disper) < 1e-7:
+            if (abs(disp - disper) < 1e-7) and not ovszspc:
                 data['TRIAL'][index] = 'Dispersion Fit Failure'
                 ignore = True
                 pass
@@ -740,7 +749,7 @@ def loadcalf(name, muref, calloc='/proj/sdp/data/cal'):
     return muref, t
 # ------------------- ------------------------------------------------
 # -- WAVELENGTH SOLUTION -- ------------------------------------------
-def wavesol(spectrum, tt, wavett, disper, siv=None, fd=False, debug=False):
+def wavesol(spectrum, tt, wavett, disper, siv=None, fd=False, debug=False, ovszspc=False):
     '''
 G ROUDIER: Wavelength calibration on log10 spectrum to emphasize the
 edges, approximating the log(stellar spectrum) with a linear model
@@ -763,7 +772,7 @@ edges, approximating the log(stellar spectrum) with a linear model
     if siv is None: params.add('slope', value=1e-2)
     else: params.add('slope', value=siv, vary=False)
     params.add('scale', value=scale)
-    if fd: params.add('disper', value=disper, vary=False)
+    if fd or ovszspc: params.add('disper', value=disper, vary=False)
     else: params.add('disper', value=disper)
     if fd: params.add('shift', value=shift, vary=False)
     else: params.add('shift', value=shift)
