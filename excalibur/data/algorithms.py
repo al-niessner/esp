@@ -105,6 +105,7 @@ class calibration(dawgie.Algorithm):
 
     @staticmethod
     def _calib(cll, tid, flttype, out):
+        caled = False
         if 'SCAN' in flttype: caled = datcore.scancal(cll, tid, flttype, out)
         if 'STARE' in flttype: caled = datcore.starecal(cll, tid, flttype, out)
         return caled
