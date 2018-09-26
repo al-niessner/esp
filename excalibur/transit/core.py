@@ -241,10 +241,17 @@ density per wavelength bins
         selspec.pop(seldist.index(min(seldist)))
         while len(cluster) < disp.size:
             seldist = list(abs(np.array(selwave) - np.mean(cluster)))
-            cluster.append(selwave[seldist.index(min(seldist))])
-            cloud.append(selspec[seldist.index(min(seldist))])
-            selwave.pop(seldist.index(min(seldist)))
-            selspec.pop(seldist.index(min(seldist)))
+            if seldist.__len__() > 0:
+                cluster.append(selwave[seldist.index(min(seldist))])
+                cloud.append(selspec[seldist.index(min(seldist))])
+                selwave.pop(seldist.index(min(seldist)))
+                selspec.pop(seldist.index(min(seldist)))
+                pass
+            else:
+                disp = list(disp)
+                disp.pop(-1)
+                disp = np.array(disp)
+                pass
             pass
         wavet.append(np.mean(cluster))
         template.append(np.mean(cloud))
