@@ -193,7 +193,7 @@ def autofill(ident, thistarget, out,
                     pass
                 ref = elem[3]
                 pass
-            for i,key in enumerate(matchkey):
+            for i, key in enumerate(matchkey):
                 if key not in banlist:
                     if key in plist:
                         if key not in out['starID'][thistarget][elem[1]].keys():
@@ -243,10 +243,8 @@ def autofill(ident, thistarget, out,
     # AUTOFILL WITH NEXSCI EXTENDED TABLE ----------------------------
     response = ident['nexscix']
     header = response[0].split(',')
-    matchkey = ['star', 'planet', 'ref', 'date',
-                'inc', 'inc_uperr', 'inc_lowerr',
-                't0', 't0_uperr', 't0_lowerr',
-                'LOGG*', 'LOGG*_uperr', 'LOGG*_lowerr',
+    matchkey = ['star', 'planet', 'ref', 'date', 'inc', 'inc_uperr', 'inc_lowerr',
+                't0', 't0_uperr', 't0_lowerr', 'LOGG*', 'LOGG*_uperr', 'LOGG*_lowerr',
                 'FEH*', 'FEH*_uperr', 'FEH*_lowerr','FEH*_units']
     for line in response:
         elem = line.split(',')

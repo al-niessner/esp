@@ -62,7 +62,7 @@ def scancal(clc, tid, flttype, out,
             header0 = hdulist[0].header
             test = header0['UNITCORR']
             eps = False
-            if (test in ['COMPLETE', 'PERFORM']): eps = True
+            if test in ['COMPLETE', 'PERFORM']: eps = True
             data['EPS'].append(eps)
             if 'SCAN_RAT' in header0: data['SCANRATE'].append(header0['SCAN_RAT'])
             else: data['SCANRATE'].append(np.nan)
@@ -97,8 +97,7 @@ def scancal(clc, tid, flttype, out,
                         pass
                     if eps and (fits.header['EXTNAME'] == 'TIME'):
                         frame[-1] = frame[-1]*np.array(float(fits.header['PIXVALUE']))
-                        errframe[-1] = (errframe[-1]*
-                                        np.array(float(fits.header['PIXVALUE'])))
+                        errframe[-1] = errframe[-1]*np.array(float(fits.header['PIXVALUE']))
                         pass
                     pass
                 pass
@@ -301,9 +300,12 @@ def scancal(clc, tid, flttype, out,
             plt.close()
             pass
         pass
+    maxwasize = []
+    for mexp in data['MEXP']: maxwasize.append(mexp.shape[1])
+    maxwasize = np.nanmax(maxwasize)
     # SPECTRUM EXTRACTION --------------------------------------------
-    data['SPECTRUM'] = [np.nan]*len(data['LOC'])
-    data['SPECERR'] = [np.nan]*len(data['LOC'])
+    data['SPECTRUM'] = [np.array([np.nan]*maxwasize)]*len(data['LOC'])
+    data['SPECERR'] = [np.array([np.nan]*maxwasize)]*len(data['LOC'])
     data['NSPEC'] = [np.nan]*len(data['LOC'])
     for index, loc in enumerate(data['LOC']):
         floodlevel = data['FLOODLVL'][index]
@@ -411,7 +413,7 @@ def scancal(clc, tid, flttype, out,
         pass
     scaleco = np.nanmax(tt) / np.nanmin(tt[tt > 0])
     data['PHT2CNT'] = [np.nan]*len(data['LOC'])
-    data['WAVE'] = [np.nan]*len(data['LOC'])
+    data['WAVE'] = [np.array([np.nan]*maxwasize)]*len(data['LOC'])
     data['DISPERSION'] = [np.nan]*len(data['LOC'])
     data['SHIFT'] = [np.nan]*len(data['LOC'])
     spectralindex = []

@@ -24,7 +24,7 @@ from scipy.interpolate import interp1d as itp
 
 import collections
 CONTEXT = collections.namedtuple('CONTEXT',
-                                 ['allologtau','allologdelay','allz','commonoim', 'ecc',
+                                 ['alt', 'ald', 'allz', 'commonoim', 'ecc',
                                   'g1', 'g2', 'g3', 'g4', 'ootoindex', 'ootorbits',
                                   'orbits', 'period', 'selectfit', 'smaors', 'time',
                                   'tmjd', 'ttv', 'valid', 'visits'])
@@ -466,8 +466,8 @@ def whitelight(nrm, fin, out, selftype, chainlen=int(4e2), verbose=False):
         nodes.extend(allologtau)
         nodes.extend(allologdelay)
         selectfit = np.isfinite(flatwhite)
-        ctxt = CONTEXT(allologtau=allologtau,
-                       allologdelay=allologdelay,
+        ctxt = CONTEXT(alt=allologtau,
+                       ald=allologdelay,
                        allz=None,
                        commonoim=commonoim,
                        ecc=ecc,
