@@ -2,6 +2,8 @@
 import dawgie
 import dawgie.context
 
+import logging; log = logging.getLogger(__name__)
+
 import excalibur.transit as trn
 import excalibur.transit.core as trncore
 import excalibur.transit.states as trnstates
@@ -68,13 +70,12 @@ class normalization(dawgie.Algorithm):
 
     def _norm(self, cal, tme, fin, index):
         normed = trncore.norm(cal, tme, fin, fltrs[index],
-                              self.__out[index], self._type,
-                              verbose=self.__verbose, debug=debug)
+                              self.__out[index], self._type, debug=debug)
         return normed
 
-    def _failure(self, errstr):
-        errmess = '--< TRANSIT NORMALIZATION: ' + errstr + ' >--'
-        if self.__verbose: print(errmess)
+    @staticmethod
+    def _failure(errstr):
+        log.log(31, '--< TRANSIT NORMALIZATION: '+errstr+' >--')
         return
     pass
 
@@ -121,13 +122,12 @@ class whitelight(dawgie.Algorithm):
         return
 
     def _whitelight(self, nrm, fin, out):
-        wl = trncore.whitelight(nrm, fin, out, self._type,
-                                verbose=self.__verbose, debug=debug)
+        wl = trncore.whitelight(nrm, fin, out, self._type)
         return wl
 
-    def _failure(self, errstr):
-        errmess = '--< TRANSIT WHITE LIGHT: ' + errstr + ' >--'
-        if self.__verbose: print(errmess)
+    @staticmethod
+    def _failure(errstr):
+        log.log(31, '--< TRANSIT WHITE LIGHT: ' + errstr + ' >--')
         return
     pass
 
@@ -177,13 +177,12 @@ class spectrum(dawgie.Algorithm):
         return
 
     def _spectrum(self, fin, nrm, wht, out):
-        s = trncore.spectrum(fin, nrm, wht, out, self._type,
-                             verbose=self.__verbose, debug=debug)
+        s = trncore.spectrum(fin, nrm, wht, out, self._type, debug=debug)
         return s
 
-    def _failure(self, errstr):
-        errmess = '--< TRANSIT SPECTRUM: ' + errstr + ' >--'
-        if self.__verbose: print(errmess)
+    @staticmethod
+    def _failure(errstr):
+        log.log(31, '--< TRANSIT SPECTRUM: ' + errstr + ' >--')
         return
     pass
 # ---------------- ---------------------------------------------------

@@ -2,6 +2,8 @@
 import dawgie
 import dawgie.context
 
+import logging; log = logging.getLogger(__name__)
+
 import excalibur.phasecurve.states as phcstates
 
 import excalibur.data as dat

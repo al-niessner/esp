@@ -839,8 +839,9 @@ def timing(force, cal, out, verbose=False):
         tmetod.extend(list(np.diff(tmeto)))
         tmetod = np.array(tmetod)
         thrs = np.percentile(tmetod, 75)
-        if True not in tmetod > 3*thrs: thrs = 0
-        thro = np.percentile(tmetod[tmetod > 3*thrs], 75)
+        cftfail = tmetod > 3*thrs
+        if True in cftfail: thro = np.percentile(tmetod[cftfail], 75)
+        else: thro = 0
         # VISIT NUMBERING --------------------------------------------
         whereo = np.where(tmetod > 3*thrs)[0]
         wherev = np.where(tmetod > 3*thro)[0]

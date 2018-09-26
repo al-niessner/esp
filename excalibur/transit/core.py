@@ -2,6 +2,8 @@
 import excalibur.data.core as datcore
 import excalibur.system.core as syscore
 
+import logging; log = logging.getLogger(__name__)
+
 try:
     import pymc as pm
     from pymc.distributions import Normal as pmnd, Uniform as pmud, TruncatedNormal as pmtnd
@@ -47,7 +49,7 @@ def checksv(sv):
     return valid, errstring
 # ----------------- --------------------------------------------------
 # -- NORMALIZATION -- ------------------------------------------------
-def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
+def norm(cal, tme, fin, ext, out, selftype, debug=False):
     normed = False
     priors = fin['priors'].copy()
     ssc = syscore.ssconstants()
@@ -201,10 +203,8 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
                     out['data'][p]['vignore'].append(v)
                     pass
                 pass
-            if verbose:
-                for v, m in zip(out['data'][p]['vignore'], out['data'][p]['trial']):
-                    print(v, m)
-                    pass
+            for v, m in zip(out['data'][p]['vignore'], out['data'][p]['trial']):
+                log.log(31, '>-- %s %s', str(v), str(m))
                 pass
             if out['data'][p]['visits'].__len__() > 0:
                 normed = True
@@ -215,7 +215,7 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
     return normed
 # ------------------- ------------------------------------------------
 # -- TEMPLATE BUILDER -- ---------------------------------------------
-def tplbuild(spectra, wave, vrange, disp, verbose=False, debug=False):
+def tplbuild(spectra, wave, vrange, disp):
     '''
 Builds a spectrum template according to the peak in population
 density per wavelength bins
@@ -250,11 +250,10 @@ density per wavelength bins
         template.append(np.mean(cloud))
         guess.append(np.mean(cluster) + vdisp)
         pass
-    if verbose or debug: pass
     return wavet, template
 # ---------------------- ---------------------------------------------
 # -- WHITE LIGHT CURVE -- --------------------------------------------
-def whitelight(nrm, fin, out, selftype, chainlen=int(4e2), verbose=False, debug=False):
+def whitelight(nrm, fin, out, selftype, chainlen=int(4e2), verbose=False):
     wl = False
     priors = fin['priors'].copy()
     ssc = syscore.ssconstants()
@@ -322,7 +321,7 @@ def whitelight(nrm, fin, out, selftype, chainlen=int(4e2), verbose=False, debug=
         # LIMB DARKENING ---------------------------------------------
         if selftype == 'transit':
             whiteld = createldgrid([allwwmin], [allwwmax], priors,
-                                   segmentation=int(10), verbose=verbose, debug=debug)
+                                   segmentation=int(10), verbose=verbose)
             g1, g2, g3, g4 = whiteld['LD']
             wlmod = tldlc(abs(flatz), rpors, g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0])
             pass
@@ -520,12 +519,12 @@ def whitelight(nrm, fin, out, selftype, chainlen=int(4e2), verbose=False, debug=
                          value=flatwhite[selectfit], observed=True)
         nodes.append(whitedata)
         allnodes = [n.__name__ for n in nodes if not n.observed]
-        if verbose: print('MCMC nodes:', allnodes)
+        log.log(31, '>-- MCMC nodes: %s', str(allnodes))
         model = pm.Model(nodes)
         mcmc = pm.MCMC(model)
         burnin = int(chainlen/2)
         mcmc.sample(chainlen, burn=burnin, progress_bar=verbose)
-        if verbose: print('')
+        log.log(31, ' ')
         mcpost = mcmc.stats()
         mctrace = {}
         for key in allnodes: mctrace[key] = mcmc.trace(key)[:]
@@ -686,8 +685,7 @@ def vecoccs(z, xrs, rprs):
 # -- CREATE LD GRID -- -----------------------------------------------
 def createldgrid(minmu, maxmu, orbp,
                  ldmodel='nonlinear', phoenixmin=1e-1,
-                 segmentation=int(10),
-                 verbose=False, debug=False):
+                 segmentation=int(10), verbose=False):
     tstar = orbp['T*']
     terr = np.sqrt(abs(orbp['T*_uperr']*orbp['T*_lowerr']))
     if terr < (3e0*tstar/1e2): terr = 3e0*tstar/1e2
@@ -695,18 +693,15 @@ def createldgrid(minmu, maxmu, orbp,
     feherr = np.sqrt(abs(orbp['FEH*_uperr']*orbp['FEH*_lowerr']))
     loggstar = orbp['LOGG*']
     loggerr = np.sqrt(abs(orbp['LOGG*_uperr']*orbp['LOGG*_lowerr']))
-    if verbose:
-        print('Temperature', tstar, terr)
-        print('Metallicity', fehstar, feherr)
-        print('Surface Gravity', loggstar, loggerr)
-        pass
+    log.log(31, '>-- Temperature %s %s', str(tstar), str(terr))
+    log.log(31, '>-- Metallicity %s %s', str(fehstar), str(feherr))
+    log.log(31, '>-- Surface Gravity %s %s', str(loggstar), str(loggerr))
     niter = int(len(minmu)/segmentation) + 1
     allcl = None
     allel = None
     out = {}
     avmu = [np.mean([mm, xm]) for mm, xm in zip(minmu, maxmu)]
     for i in np.arange(niter):
-        if debug: print(str(i)+'/'+str(niter-1))
         loweri = i*segmentation
         upperi = (i+1)*segmentation
         if i == (niter-1): upperi = len(avmu)
@@ -936,8 +931,7 @@ def spectrum(fin, nrm, wht, out, selftype, chainlen=int(2e4), verbose=False, deb
             dnoise = np.array([np.median(n[s]) for n, s in zip(allpnoise, select)])
             valid = np.isfinite(data)
             if selftype == 'transit':
-                bld = createldgrid([wl], [wh], priors,
-                                   segmentation=int(10), verbose=debug, debug=debug)
+                bld = createldgrid([wl], [wh], priors, segmentation=int(10))
                 g1, g2, g3, g4 = bld['LD']
                 out['data'][p]['LD'].append([g1[0], g2[0], g3[0], g4[0]])
                 model = tldlc(abs(allz), whiterprs,
@@ -1046,7 +1040,7 @@ def spectrum(fin, nrm, wht, out, selftype, chainlen=int(2e4), verbose=False, deb
             mcmc = pm.MCMC(model)
             burnin = int(chainlen/2)
             mcmc.sample(chainlen, burn=burnin, progress_bar=verbose)
-            if verbose: print('')
+            log.log(31, ' ')
             mcpost = mcmc.stats()
             out['data'][p]['ES'].append(mcpost['rprs']['quantiles'][50])
             out['data'][p]['ESerr'].append(mcpost['rprs']['standard deviation'])

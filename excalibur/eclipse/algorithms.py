@@ -2,6 +2,8 @@
 import dawgie
 import dawgie.context
 
+import logging; log = logging.getLogger(__name__)
+
 import excalibur.data.algorithms as datalg
 import excalibur.system.algorithms as sysalg
 import excalibur.transit.algorithms as trnalg

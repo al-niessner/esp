@@ -2,6 +2,7 @@
 import excalibur.system.core as syscore
 
 import os
+import logging; log = logging.getLogger(__name__)
 
 try:
     import pymc as pm
@@ -34,7 +35,7 @@ def myxsecs(spc, out,
             knownspecies=['NO', 'OH', 'C2H2', 'N2', 'N2O', 'O3', 'O2'].copy(),
             cialist=['H2-H', 'H2-H2', 'H2-He', 'He-H'].copy(),
             xmspecies=['TIO', 'CH4', 'H2O', 'H2CO', 'HCN', 'CO', 'CO2', 'NH3'].copy(),
-            verbose=False, debug=False):
+            debug=False):
     cs = False
     for p in spc['data'].keys():
         out['data'][p] = {}
@@ -44,7 +45,7 @@ def myxsecs(spc, out,
         nugrid = (1e4/np.copy(wgrid))[::-1]
         dwnu = np.concatenate((np.array([np.diff(nugrid)[0]]), np.diff(nugrid)))
         for myexomol in xmspecies:
-            if verbose: print(myexomol)
+            log.log(31, '>-- %s', str(myexomol))
             library[myexomol] = {'I':[], 'nu':[], 'T':[],
                                  'Itemp':[], 'nutemp':[], 'Ttemp':[],
                                  'SPL':[], 'SPLNU':[]}
@@ -122,7 +123,7 @@ def myxsecs(spc, out,
                 pass
             pass
         for mycia in cialist:
-            if verbose: print(mycia)
+            log.log(31, '>-- %s', str(mycia))
             myfile = '_'.join((os.path.join(ciadir, mycia), '2011.cia'))
             library[mycia] = {'I':[], 'nu':[], 'T':[],
                               'Itemp':[], 'nutemp':[], 'Ttemp':[],
@@ -186,7 +187,7 @@ def myxsecs(spc, out,
                 pass
             pass
         for ks in knownspecies:
-            if debug: print(ks)
+            log.log(31, '>-- %s', str(ks))
             library[ks] = {'MU':[], 'I':[], 'nu':[], 'S':[],
                            'g_air':[], 'g_self':[],
                            'Epp':[], 'eta':[], 'delta':[]}
@@ -228,9 +229,6 @@ def myxsecs(spc, out,
                                 pass
                             pass
                         pass
-                    pass
-                else:
-                    if debug: print(':'.join(('Skipping', fdata)))
                     pass
                 pass
             if debug:
@@ -372,12 +370,12 @@ def atmos(fin, xsl, spc, out, mclen=int(4e2), verbose=False):
                           value=tspectrum[cleanup], observed=True)
             nodes.append(mcdata)
             allnodes = [n.__name__ for n in nodes if not n.observed]
-            if verbose: print('MCMC nodes:', allnodes)
+            log.log(31, '>-- MCMC nodes: %s', str(allnodes))
             mcmcmodel = pm.Model(nodes)
             markovc = pm.MCMC(mcmcmodel)
             burnin = int(mclen/2)
             markovc.sample(mclen, burn=burnin, progress_bar=verbose)
-            if verbose: print('')
+            log.log(31, ' ')
             mctrace = {}
             for key in allnodes: mctrace[key] = markovc.trace(key)[:]
             out['data'][p][model]['MCPOST'] = markovc.stats()
