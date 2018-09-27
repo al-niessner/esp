@@ -260,7 +260,7 @@ density per wavelength bins
     return wavet, template
 # ---------------------- ---------------------------------------------
 # -- WHITE LIGHT CURVE -- --------------------------------------------
-def whitelight(nrm, fin, out, selftype, chainlen=int(4e2), verbose=False):
+def whitelight(nrm, fin, out, selftype, chainlen=int(4e4), verbose=False):
     wl = False
     priors = fin['priors'].copy()
     ssc = syscore.ssconstants()

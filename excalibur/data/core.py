@@ -1140,29 +1140,6 @@ def starecal(clc, tid, flttype, out,
     data['IGNORED'] = [False]*len(data['LOC'])
     data['FLOODLVL'] = [np.nan]*len(data['LOC'])
     data['TRIAL'] = ['']*len(data['LOC'])
-    for index in enumerate(data['LOC']):
-        maskedexp = []
-        masks = []
-        ignore = False
-        for dd, ff in zip(data['EXP'][index[0]], data['EXPFLAG'][index[0]]):
-            select = ff > 0
-            if np.sum(select) > 0:
-                dd[select] = np.nan
-                if np.all(~np.isfinite(dd)):
-                    data['TRIAL'][index[0]] = 'Empty Subexposure'
-                    ignore = True
-                    pass
-                else: maskedexp.append(dd)
-                pass
-            else: maskedexp.append(dd)
-            mm = np.isfinite(dd)
-            masks.append(mm)
-            pass
-        if ignore: maskedexp = data['EXP'][index[0]].copy()
-        data['MEXP'][index[0]] = maskedexp
-        data['MASK'][index[0]] = masks
-        data['IGNORED'][index[0]] = ignore
-        pass
     # DATA CUBE ------------------------------------------------------
     for index, nm in enumerate(data['LOC']):
         ignore = data['IGNORED'][index]
@@ -1172,7 +1149,9 @@ def starecal(clc, tid, flttype, out,
             select = ~np.isfinite(eachdiff)
             if True in select: eachdiff[select] = 0
             pass
-        psdiff = np.nanmedian(psdiff, axis=0)*data['EXPLEN'][index]
+        # CHANGE THAT LATER TO EXPAND COMPACTIFIED FILES
+        psdiff = psdiff[0]*data['EXPLEN'][index]
+        # -----------------------------------------------
         select = ~np.isfinite(psdiff)
         if True in select: psdiff[select] = np.nan
         psdiff = np.array([psdiff])
