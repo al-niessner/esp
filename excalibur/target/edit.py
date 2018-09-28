@@ -178,7 +178,6 @@ HST-WFC3-IR-G141-SCAN
 HST-WFC3-IR-G141-STARE
 HST-WFC3-IR-G102-SCAN
 HST-WFC3-IR-G102-STARE
-HST-STIS-CCD-G430L-STARE
     '''
     return
 # -------------------- -----------------------------------------------

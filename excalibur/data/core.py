@@ -592,7 +592,7 @@ G141 http://www.stsci.edu/hst/wfc3/documents/ISRs/WFC3-2009-17.pdf
 # ------------------------ -------------------------------------------
 # -- ISOLATE -- ------------------------------------------------------
 def isolate(thisdiff, psmin, spectrace, scanwdw, targetn, floodlevel,
-            axis=1, debug=False):
+            axis=1, debug=False, stare=False):
     '''
 G ROUDIER: Based on Minkowski functionnals decomposition algorithm
     '''
@@ -639,6 +639,10 @@ G ROUDIER: Based on Minkowski functionnals decomposition algorithm
         if (mx - mn) < thrw:
             mn = np.nan
             mx = np.nan
+            pass
+        if stare:
+            mn = minlocs[targetn] - 1
+            mx = maxlocs[targetn] + 1
             pass
         pass
     else:
@@ -1149,36 +1153,38 @@ def starecal(clc, tid, flttype, out,
             select = ~np.isfinite(eachdiff)
             if True in select: eachdiff[select] = 0
             pass
-        # CHANGE THAT LATER TO EXPAND COMPACTIFIED FILES
-        psdiff = psdiff[0]*data['EXPLEN'][index]
-        # -----------------------------------------------
+        if 'WFC3' in flttype:
+            psdiff = np.sum(np.diff(psdiff[::-1], axis=0), axis=0)*data['EXPLEN'][index]
+            pass
+        else: psdiff = psdiff[0]*data['EXPLEN'][index]
         select = ~np.isfinite(psdiff)
         if True in select: psdiff[select] = np.nan
         psdiff = np.array([psdiff])
         psmin = np.array([np.nanmin(data['MIN'][index])])
-        scanwpi = 2
+        scanwpi = 1
         if not ignore:
             targetn = 0
             minlocs = []
             maxlocs = []
-            fldthr = emptythr
+            floodlist = []
+            for de, md in zip(psdiff[::-1], data['MIN'][index][::-1]):
+                valid = np.isfinite(de)
+                if np.nansum(~valid) > 0: de[~valid] = 0
+                select = de[valid] < md
+                if np.nansum(select) > 0: de[valid][select] = 0
+                perfldlist = np.nanpercentile(de, np.arange(1001)/1e1)
+                perfldlist = np.diff(perfldlist)
+                perfldlist[:100] = 0
+                perfldlist[-1] = 0
+                indperfld = list(perfldlist).index(np.max(perfldlist))*1e-1
+                floodlist.append(np.nanpercentile(de, indperfld))
+                pass
+            fldthr = np.nanmax(floodlist)
             for de, md in zip(psdiff[::-1], psmin[::-1]):
                 lmn, lmx = isolate(de, md, spectrace, scanwpi, targetn, fldthr,
-                                   debug=False)
-                if 'STIS' in flttype:
-                    lmn = 10
-                    lmx = psdiff[0].shape[0] - 10
-                    pass
+                                   debug=False, stare=True)
                 minlocs.append(lmn)
                 maxlocs.append(lmx)
-                pass
-            # HEAVILY FLAGGED SCAN -----------------------------------
-            if np.all(~np.isfinite(minlocs)) or np.all(~np.isfinite(maxlocs)):
-                for de, md in zip(psdiff.copy()[::-1], data['MIN'][index][::-1]):
-                    lmn, lmx = isolate(de, md, spectrace, scanwpi/2, targetn, fldthr)
-                    minlocs.append(lmn)
-                    maxlocs.append(lmx)
-                    pass
                 pass
             data['FLOODLVL'][index] = fldthr
             pass
@@ -1232,16 +1238,12 @@ def starecal(clc, tid, flttype, out,
                 mltord = thispstamp.copy()
                 targetn = 0
                 minx, maxx = isolate(mltord, psmin, spectrace, scanwpi, targetn, fldthr,
-                                     axis=0)
+                                     axis=0, stare=True)
                 if np.isfinite(minx*maxx):
                     minx -= 1.5*12
                     maxx += 1.5*12
-                    if minx < 0: minx = 2
-                    if maxx > (thispstamp.shape[1] - 1): maxx = thispstamp.shape[1] - 2
-                    if (maxx - minx) < spectrace:
-                        data['TRIAL'][index] = 'Could Not Find Full Spectrum'
-                        ignore = True
-                        pass
+                    if minx < 0: minx = 5
+                    if maxx > (thispstamp.shape[1] - 1): maxx = thispstamp.shape[1] - 5
                     thispstamp[:,:int(minx)] = np.nan
                     thispstamp[:,int(maxx):] = np.nan
                     pstamperr = np.array(data['EXPERR'][index].copy())
