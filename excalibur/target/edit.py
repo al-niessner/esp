@@ -175,9 +175,7 @@ XO-2 : XO2
 def activefilters():
     '''
 HST-WFC3-IR-G141-SCAN
-HST-WFC3-IR-G141-STARE
 HST-WFC3-IR-G102-SCAN
-HST-WFC3-IR-G102-STARE
     '''
     return
 # -------------------- -----------------------------------------------
