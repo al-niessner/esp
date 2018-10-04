@@ -1037,7 +1037,7 @@ def spectrum(fin, nrm, wht, out, selftype, chainlen=int(4e4), verbose=False, deb
                                 g3=ctxt.g3[0], g4=ctxt.g4[0])
                     pass
                 else: out = tldlc(abs(ctxt.allz), float(r))
-                out = out*np.array(imout)
+                out = out*np.array(allimout)
                 return out[ctxt.valid]
 
             tauwbdata = 1e0/dnoise**2

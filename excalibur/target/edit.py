@@ -42,6 +42,7 @@ Kepler-9 :
 Kepler-11 :
 Kepler-13 :
 Kepler-16 :
+Kepler-1625 :
 Kepler-51 :
 Kepler-79 :
 Kepler-138 :
@@ -133,6 +134,7 @@ Kepler-11 : KEPLER11
 Kepler-13 : KEPLER13
 Kepler-138 : KEPLER138
 Kepler-16 : KEPLER16
+Kepler-1625 : KEPLER1625
 Kepler-51 : KEPLER51
 Kepler-9 : KEPLER9
 TRAPPIST-1 : TRAPPIST1
