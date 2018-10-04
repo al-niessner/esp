@@ -522,6 +522,7 @@ def whitelight(nrm, fin, out, selftype, chainlen=int(4e4), verbose=False):
                 pass
             return np.array(out)[ctxt.selectfit]
         tauwhite = 1e0/((np.median(flaterrwhite))**2)
+        if tauwhite == 0: tauwhite = 1e0/(ootstd**2)
         whitedata = pmnd('whitedata', mu=orbital, tau=tauwhite,
                          value=flatwhite[selectfit], observed=True)
         nodes.append(whitedata)
@@ -879,7 +880,7 @@ def timlc(vtime, orbits,
     return vout*oout
 # ---------------------- ---------------------------------------------
 # -- SPECTRUM -- -----------------------------------------------------
-def spectrum(fin, nrm, wht, out, selftype, chainlen=int(2e4), verbose=False, debug=False):
+def spectrum(fin, nrm, wht, out, selftype, chainlen=int(4e4), verbose=False, debug=False):
     exospec = False
     priors = fin['priors'].copy()
     ssc = syscore.ssconstants()

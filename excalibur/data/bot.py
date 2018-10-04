@@ -8,8 +8,8 @@ class Actor(dawgie.Task):
     def list(self)->[dawgie.Task]:
         return [
             datalg.collect(),
-            datalg.calibration(),
-            datalg.timing()
+            datalg.timing(),
+            datalg.calibration()
         ]
     pass
 # --------- ----------------------------------------------------------

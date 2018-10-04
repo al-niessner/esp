@@ -69,7 +69,8 @@ class collect(dawgie.Algorithm):
 class calibration(dawgie.Algorithm):
     def __init__(self):
         self._version_ = dawgie.VERSION(1,1,0)
-        self.__collect = collect()
+        self.__col = collect()
+        self.__tim = timing()
         self.__out = [datstates.CalibrateSV(ext) for ext in fltrs]
         return
 
@@ -77,37 +78,49 @@ class calibration(dawgie.Algorithm):
         return 'calibration'
 
     def previous(self):
-        return [dawgie.ALG_REF(dat.factory, self.__collect)]
+        return [dawgie.ALG_REF(dat.factory, self.__col),
+                dawgie.ALG_REF(dat.factory, self.__tim)]
 
     def state_vectors(self):
         return self.__out
 
     def run(self, ds, ps):
         update = False
-        cll = self.__collect.sv_as_dict()['frames']
+        cll = self.__col.sv_as_dict()['frames']
+        vcll, ecll = datcore.checksv(cll)
         validtype = []
         for test in cll['activefilters'].keys():
-            if ('SCAN' in test) or ('STARE' in test): validtype.append(test)
+            if ('WFC3' in test) and (('SCAN' in test) or ('STARE' in test)):
+                validtype.append(test)
+                pass
             pass
-        errstring = 'NO DATA'
         svupdate = []
         for datatype in validtype:
-            collectin = cll['activefilters'][datatype]
-            index = fltrs.index(datatype)
-            # pylint: disable=protected-access
-            update = self._calib(collectin, ds._tn(), datatype, self.__out[index])
-            if update: svupdate.append(self.__out[index])
+            tim = self.__tim.sv_as_dict()[datatype]
+            vtim, etim = datcore.checksv(tim)
+            if vcll and vtim:
+                # pylint: disable=protected-access
+                update = self._calib(cll['activefilters'][datatype], tim, ds._tn(),
+                                     datatype, self.__out[fltrs.index(datatype)])
+                if update: svupdate.append(self.__out[fltrs.index(datatype)])
+                pass
+            else:
+                message = [m for m in [ecll, etim] if m is not None]
+                self._failure(message[0])
+                pass
             pass
         self.__out = svupdate
         if self.__out.__len__() > 0: ds.update()
-        else: self._failure(errstring)
+        else: self._failure('NO DATA')
         return
 
     @staticmethod
-    def _calib(cll, tid, flttype, out):
+    def _calib(cll, tim, tid, flttype, out):
         caled = False
-        if 'SCAN' in flttype: caled = datcore.scancal(cll, tid, flttype, out)
-        if 'STARE' in flttype: caled = datcore.starecal(cll, tid, flttype, out)
+        if 'SCAN' in flttype: caled = datcore.scancal(cll, tim, tid, flttype, out)
+        if ('WFC3' in flttype) and ('STARE' in flttype):
+            caled = datcore.starecal(cll, tim, tid, flttype, out)
+            pass
         return caled
 
     @staticmethod
@@ -120,7 +133,7 @@ class timing(dawgie.Algorithm):
     def __init__(self):
         self._version_ = dawgie.VERSION(1,1,0)
         self.__fin = sysalg.finalize()
-        self.__calib = calibration()
+        self.__col = collect()
         self.__out = [datstates.TimingSV(ext) for ext in fltrs]
         return
 
@@ -129,34 +142,43 @@ class timing(dawgie.Algorithm):
 
     def previous(self):
         return [dawgie.ALG_REF(sys.factory, self.__fin),
-                dawgie.ALG_REF(dat.factory, self.__calib)]
+                dawgie.ALG_REF(dat.factory, self.__col)]
 
     def state_vectors(self):
         return self.__out
 
     def run(self, ds, ps):
+        update = False
         fin = self.__fin.sv_as_dict()['parameters']
-        valid, errstring = datcore.checksv(fin)
-        svupdate = []
-        for ext in fltrs:
-            cal = self.__calib.sv_as_dict()[ext]
-            vext, verr = datcore.checksv(cal)
-            index = fltrs.index(ext)
-            update = False
-            if valid and vext: update = self._timing(fin, cal, self.__out[index])
-            else:
-                message = [m for m in [errstring, verr] if m is not None]
-                self._failure(message[0])
+        vfin, efin = datcore.checksv(fin)
+        col = self.__col.sv_as_dict()['frames']
+        vcol, ecol = datcore.checksv(col)
+        validtype = []
+        for test in col['activefilters'].keys():
+            if ('WFC3' in test) and (('SCAN' in test) or ('STARE' in test)):
+                validtype.append(test)
                 pass
-            if update: svupdate.append(self.__out[index])
+            pass
+        svupdate = []
+        if vfin and vcol:
+            for ext in validtype:
+                update = self._timing(fin, col['activefilters'][ext],
+                                      self.__out[fltrs.index(ext)])
+                if update: svupdate.append(self.__out[fltrs.index(ext)])
+                pass
+            pass
+        else:
+            message = [m for m in [efin, ecol] if m is not None]
+            self._failure(message[0])
             pass
         self.__out = svupdate
         if self.__out.__len__() > 0: ds.update()
+        else: self._failure('NO DATA')
         return
 
     @staticmethod
-    def _timing(fin, cal, out):
-        chunked = datcore.timing(fin, cal, out)
+    def _timing(fin, colin, out):
+        chunked = datcore.timing(fin, colin, out)
         return chunked
 
     @staticmethod

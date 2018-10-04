@@ -43,8 +43,10 @@ def collect(name, scrape, out):
     return collected
 # ------------------ -------------------------------------------------
 # -- CALIBRATE SCAN DATA -- ------------------------------------------
-def scancal(clc, tid, flttype, out,
+def scancal(clc, tim, tid, flttype, out,
             emptythr=1e3, frame2png=False, verbose=False, debug=False):
+    # VISIT ----------------------------------------------------------
+    for pkey in tim['data'].keys(): visits = np.array(tim['data'][pkey]['visits'])
     # DATA TYPE ------------------------------------------------------
     arcsec2pix = dps(flttype)
     vrange = validrange(flttype)
@@ -183,6 +185,36 @@ def scancal(clc, tid, flttype, out,
             # CONTAMINATION FROM ANOTHER SOURCE IN THE UPPER FRAME
             if tid in ['HAT-P-41']: fldthr = fldthr/1.5
             if 'G102' in flttype: fldthr /= 3e0
+            data['FLOODLVL'][index] = fldthr
+            pass
+        pass
+    allfloodlvl = np.array(data['FLOODLVL'])
+    for v in set(visits):
+        select = visits == v
+        allfloodlvl[select] = np.nanmedian(allfloodlvl[select])
+        pass
+    data['FLOODLVL'] = list(allfloodlvl)
+    for index, nm in enumerate(data['LOC']):
+        ignore = data['IGNORED'][index]
+        # ISOLATE SCAN Y ---------------------------------------------
+        psdiff = np.diff(data['MEXP'][index][::-1].copy(), axis=0)
+        psmin = np.nansum(data['MIN'][index])
+        floatsw = data['SCANLENGTH'][index]/arcsec2pix
+        scanwdw = np.round(floatsw)
+        if (scanwdw > psdiff[0].shape[0]) or (len(psdiff) < 2):
+            scanwpi = np.round(floatsw/(len(psdiff)))
+            pass
+        else: scanwpi = np.round(floatsw/(len(psdiff) - 1))
+        if scanwpi < 1:
+            data['TRIAL'][index] = 'Subexposure Scan Length < 1 Pixel'
+            ignore = True
+            pass
+        if not ignore:
+            targetn = 0
+            if tid in ['XO-2']: targetn = -1
+            minlocs = []
+            maxlocs = []
+            fldthr = data['FLOODLVL'][index]
             for de, md in zip(psdiff.copy()[::-1], data['MIN'][index][::-1]):
                 lmn, lmx = isolate(de, md, spectrace, scanwpi, targetn, fldthr)
                 minlocs.append(lmn)
@@ -196,7 +228,6 @@ def scancal(clc, tid, flttype, out,
                     maxlocs.append(lmx)
                     pass
                 pass
-            data['FLOODLVL'][index] = fldthr
             pass
         else:
             minlocs = [np.nan]
@@ -819,13 +850,35 @@ def wcme(params, data, refmu=None, reftt=None, forward=True):
     return out
 # ----------------------------- --------------------------------------
 # -- TIMING -- -------------------------------------------------------
-def timing(force, cal, out, verbose=False):
+def timing(force, clc, out, verbose=False):
     chunked = False
     priors = force['priors'].copy()
-    time = np.array(cal['data']['TIME'].copy())
-    ignore = np.array(cal['data']['IGNORED'].copy())
-    scanangle = np.array(cal['data']['SCANANGLE'].copy())
-    exposlen = np.array(cal['data']['EXPLEN'].copy())
+    # LOAD DATA ------------------------------------------------------
+    dbs = os.path.join(dawgie.context.data_dbs, 'mast')
+    data = {'LOC':[], 'SCANANGLE':[], 'TIME':[], 'EXPLEN':[]}
+    for loc in sorted(clc['LOC']):
+        fullloc = os.path.join(dbs, loc)
+        with pyfits.open(fullloc) as hdulist:
+            header0 = hdulist[0].header
+            if 'SCAN_ANG' in header0: data['SCANANGLE'].append(header0['SCAN_ANG'])
+            elif 'PA_V3' in header0: data['SCANANGLE'].append(header0['PA_V3'])
+            else: data['SCANANGLE'].append(666)
+            ftime = []
+            for fits in hdulist:
+                if (fits.size != 0) and ('DELTATIM' in fits.header.keys()):
+                    ftime.append(float(fits.header['ROUTTIME']))
+                    pass
+                pass
+            data['LOC'].append(loc)
+            data['TIME'].append(np.nanmean(ftime))
+            data['EXPLEN'].append(header0['EXPTIME'])
+            pass
+        pass
+    data['IGNORED'] = [False]*len(data['LOC'])
+    time = np.array(data['TIME'].copy())
+    ignore = np.array(data['IGNORED'].copy())
+    scanangle = np.array(data['SCANANGLE'].copy())
+    exposlen = np.array(data['EXPLEN'].copy())
     ordt = np.argsort(time)
     ignto = ignore.copy()[ordt]
     scato = scanangle.copy()[ordt]
@@ -1060,9 +1113,14 @@ def solveme(M, e, eps):
     return E
 # ---------------------------------------- ---------------------------
 # -- CALIBRATE STARE DATA -- -----------------------------------------
-def starecal(clc, tid, flttype, out,
+def starecal(clc, tim, tid, flttype, out,
              emptythr=1e3, frame2png=False, verbose=False, debug=False):
+    '''
+WFC3 STARE Calibration
+    '''
     calibrated = False
+    # VISIT ----------------------------------------------------------
+    for pkey in tim['data'].keys(): visits = np.array(tim['data'][pkey]['visits'])
     # DATA TYPE ------------------------------------------------------
     vrange = validrange(flttype)
     wvrng, disper, ldisp, udisp = fng(flttype)
@@ -1078,10 +1136,8 @@ def starecal(clc, tid, flttype, out,
         with pyfits.open(fullloc) as hdulist:
             header0 = hdulist[0].header
             eps = False
-            if 'WFC3' in flttype:
-                test = header0['UNITCORR']
-                if (test in ['COMPLETE', 'PERFORM']): eps = True
-                pass
+            test = header0['UNITCORR']
+            if (test in ['COMPLETE', 'PERFORM']): eps = True
             data['EPS'].append(eps)
             if 'SCAN_RAT' in header0: data['SCANRATE'].append(header0['SCAN_RAT'])
             else: data['SCANRATE'].append(np.nan)
@@ -1096,35 +1152,37 @@ def starecal(clc, tid, flttype, out,
             ftime = []
             fmin = []
             fmax = []
-            for fits in hdulist:
-                if (fits.size != 0) and ('EXTNAME' in fits.header):
-                    if fits.header['EXTNAME'] in ['SCI']:
-                        fitsdata = np.empty(fits.data.shape)
-                        fitsdata[:] = fits.data[:]
-                        if (not eps) and ('EXPTIME' in fits.header):
-                            frame.append(fitsdata/float(fits.header['EXPTIME']))
-                            pass
-                        else: frame.append(fitsdata)
-                        if 'STIS' in flttype:
-                            routtime = np.mean([float(fits.header['EXPEND']),
-                                                float(fits.header['EXPSTART'])])
-                            ftime.append(routtime)
-                            pass
-                        if 'WFC3' in flttype:
-                            ftime.append(float(fits.header['ROUTTIME']))
-                            pass
+            datahdu = [h for h in hdulist if h.size != 0]
+            for fits in datahdu:
+                if fits.header['EXTNAME'] in ['SCI']:
+                    fitsdata = np.empty(fits.data.shape)
+                    fitsdata[:] = fits.data[:]
+                    if eps and ('DELTATIM' in fits.header):
+                        frame.append(fitsdata*float(fits.header['DELTATIM']))
+                        fmin.append(float(fits.header['GOODMIN'])*
+                                    float(fits.header['DELTATIM']))
+                        fmax.append(float(fits.header['GOODMAX'])*
+                                    float(fits.header['DELTATIM']))
+                        pass
+                    elif eps and not'DELTATIM' in fits.header:
+                        frame.append(fitsdata*np.nan)
+                        fmin.append(np.nan)
+                        fmax.append(np.nan)
+                        pass
+                    else:
+                        frame.append(fitsdata)
                         fmin.append(float(fits.header['GOODMIN']))
                         fmax.append(float(fits.header['GOODMAX']))
-                        del fits.data
                         pass
+                    ftime.append(float(fits.header['ROUTTIME']))
+                    del fits.data
                     pass
-                    if (fits.header['EXTNAME'] in ['ERR', 'DQ']):
-                        fitsdata = np.empty(fits.data.shape)
-                        fitsdata[:] = fits.data[:]
-                        if fits.header['EXTNAME'] == 'ERR': errframe.append(fitsdata)
-                        if fits.header['EXTNAME'] == 'DQ': dqframe.append(fitsdata)
-                        del fits.data
-                        pass
+                if (fits.header['EXTNAME'] in ['ERR', 'DQ']):
+                    fitsdata = np.empty(fits.data.shape)
+                    fitsdata[:] = fits.data[:]
+                    if fits.header['EXTNAME'] == 'ERR': errframe.append(fitsdata)
+                    if fits.header['EXTNAME'] == 'DQ': dqframe.append(fitsdata)
+                    del fits.data
                     pass
                 pass
             data['LOC'].append(loc)
@@ -1132,8 +1190,7 @@ def starecal(clc, tid, flttype, out,
             data['EXPERR'].append(errframe)
             data['EXPFLAG'].append(dqframe)
             data['TIME'].append(ftime)
-            if 'WFC3' in flttype: data['EXPLEN'].append(header0['EXPTIME'])
-            if 'STIS' in flttype: data['EXPLEN'].append(header0['TEXPTIME'])
+            data['EXPLEN'].append(header0['EXPTIME'])
             data['MIN'].append(fmin)
             data['MAX'].append(fmax)
             pass
@@ -1142,55 +1199,61 @@ def starecal(clc, tid, flttype, out,
     data['MEXP'] = data['EXP'].copy()
     data['MASK'] = data['EXPFLAG'].copy()
     data['IGNORED'] = [False]*len(data['LOC'])
+    data['TRUNCSPEC'] = [False]*len(data['LOC'])
     data['FLOODLVL'] = [np.nan]*len(data['LOC'])
     data['TRIAL'] = ['']*len(data['LOC'])
+    # FLOOD LEVEL STABILIZATION --------------------------------------
+    for index in enumerate(data['LOC']):
+        ignore = data['IGNORED'][index[0]]
+        # ISOLATE SCAN Y ---------------------------------------------
+        sampramp = np.array(data['MEXP'][index[0]]).copy()
+        for sutr in sampramp:
+            select = ~np.isfinite(sutr)
+            if True in select: sutr[select] = 0
+            pass
+        psdiff = sampramp[0] - sampramp[-1]
+        psmin = np.nanmin(data['MIN'][index[0]])
+        floodlist = []
+        for de in [psdiff]:
+            select = de < psmin
+            if True in select: de[select] = np.nan
+            perfldlist = np.nanpercentile(de, np.arange(1001)/1e1)
+            perfldlist = np.diff(perfldlist)
+            perfldlist[:100] = 0
+            perfldlist[-1] = 0
+            indperfld = list(perfldlist).index(np.max(perfldlist))*1e-1
+            floodlist.append(np.nanpercentile(de, indperfld))
+            pass
+        fldthr = np.nanmax(floodlist)
+        data['FLOODLVL'][index[0]] = fldthr
+        pass
+    allfloodlvl = np.array(data['FLOODLVL'])
+    for v in set(visits):
+        select = visits == v
+        allfloodlvl[select] = np.nanmedian(allfloodlvl[select])
+        pass
+    data['FLOODLVL'] = list(allfloodlvl)
     # DATA CUBE ------------------------------------------------------
     for index, nm in enumerate(data['LOC']):
         ignore = data['IGNORED'][index]
         # ISOLATE SCAN Y ---------------------------------------------
-        psdiff = np.array(data['MEXP'][index]).copy()
-        for eachdiff in psdiff:
-            select = ~np.isfinite(eachdiff)
-            if True in select: eachdiff[select] = 0
+        sampramp = np.array(data['MEXP'][index]).copy()
+        for sutr in sampramp:
+            select = ~np.isfinite(sutr)
+            if True in select: sutr[select] = 0
             pass
-        if 'WFC3' in flttype:
-            psdiff = np.sum(np.diff(psdiff[::-1], axis=0), axis=0)*data['EXPLEN'][index]
-            pass
-        else: psdiff = psdiff[0]*data['EXPLEN'][index]
-        select = ~np.isfinite(psdiff)
-        if True in select: psdiff[select] = np.nan
-        psdiff = np.array([psdiff])
-        psmin = np.array([np.nanmin(data['MIN'][index])])
+        psdiff = sampramp[0] - sampramp[-1]
+        psmin = np.nanmin(data['MIN'][index])
+        targetn = 0
         scanwpi = 1
-        if not ignore:
-            targetn = 0
-            minlocs = []
-            maxlocs = []
-            floodlist = []
-            for de, md in zip(psdiff[::-1], data['MIN'][index][::-1]):
-                valid = np.isfinite(de)
-                if np.nansum(~valid) > 0: de[~valid] = 0
-                select = de[valid] < md
-                if np.nansum(select) > 0: de[valid][select] = 0
-                perfldlist = np.nanpercentile(de, np.arange(1001)/1e1)
-                perfldlist = np.diff(perfldlist)
-                perfldlist[:100] = 0
-                perfldlist[-1] = 0
-                indperfld = list(perfldlist).index(np.max(perfldlist))*1e-1
-                floodlist.append(np.nanpercentile(de, indperfld))
-                pass
-            fldthr = np.nanmax(floodlist)
-            for de, md in zip(psdiff[::-1], psmin[::-1]):
-                lmn, lmx = isolate(de, md, spectrace, scanwpi, targetn, fldthr,
-                                   debug=False, stare=True)
-                minlocs.append(lmn)
-                maxlocs.append(lmx)
-                pass
-            data['FLOODLVL'][index] = fldthr
-            pass
-        else:
-            minlocs = [np.nan]
-            maxlocs = [np.nan]
+        minlocs = []
+        maxlocs = []
+        fldthr = data['FLOODLVL'][index]
+        for de in [psdiff]:
+            lmn, lmx = isolate(de, psmin, spectrace, scanwpi, targetn, fldthr,
+                               debug=False, stare=True)
+            minlocs.append(lmn)
+            maxlocs.append(lmx)
             pass
         ignore = ignore or not((np.any(np.isfinite(minlocs))) and
                                (np.any(np.isfinite(maxlocs))))
@@ -1199,16 +1262,12 @@ def starecal(clc, tid, flttype, out,
             maxl = np.nanmax(maxlocs)
             minl -= 12
             maxl += 12
-            if minl < 10: minl = 10
-            if maxl > (psdiff[0].shape[0] - 10): maxl = psdiff[0].shape[0] - 10
-            for eachdiff in psdiff:
-                eachdiff[:int(minl),:] = 0
-                eachdiff[int(maxl):,:] = 0
-                pass
-            # DIFF ACCUM ---------------------------------------------
-            thispstamp = np.nansum(psdiff, axis=0)
+            if minl < 0: minl = 0
+            else: psdiff[:int(minl), :] = np.nan
+            if maxl > (psdiff[0].shape[0] - 1): maxl = psdiff[0].shape[0] - 1
+            else: psdiff[int(maxl):, :] = np.nan
+            thispstamp = psdiff.copy()
             thispstamp[thispstamp <= psmin] = np.nan
-            thispstamp[thispstamp == 0] = np.nan
             # PLOTS --------------------------------------------------
             if debug:
                 show = thispstamp.copy()
@@ -1234,34 +1293,31 @@ def starecal(clc, tid, flttype, out,
                 plt.show()
                 pass
             # ISOLATE SCAN X -----------------------------------------
-            if 'WFC3' in flttype:
-                mltord = thispstamp.copy()
-                targetn = 0
-                minx, maxx = isolate(mltord, psmin, spectrace, scanwpi, targetn, fldthr,
-                                     axis=0, stare=True)
-                if np.isfinite(minx*maxx):
-                    minx -= 1.5*12
-                    maxx += 1.5*12
-                    if minx < 0: minx = 5
-                    if maxx > (thispstamp.shape[1] - 1): maxx = thispstamp.shape[1] - 5
-                    thispstamp[:,:int(minx)] = np.nan
-                    thispstamp[:,int(maxx):] = np.nan
-                    pstamperr = np.array(data['EXPERR'][index].copy())
-                    select = ~np.isfinite(pstamperr)
-                    if np.nansum(select) > 0: pstamperr[select] = 0
-                    pstamperr = np.sqrt(np.nansum(pstamperr**2, axis=0))
-                    select = ~np.isfinite(thispstamp)
-                    if np.nansum(select) > 0: pstamperr[select] = np.nan
+            targetn = 0
+            minx, maxx = isolate(thispstamp.copy(), psmin, spectrace, scanwpi, targetn,
+                                 fldthr, axis=0, stare=True)
+            if np.isfinite(minx*maxx):
+                minx -= 1.5*12
+                maxx += 1.5*12
+                if minx < 0:
+                    minx = 5
+                    data['TRUNCSPEC'][index] = True
                     pass
-                else:
-                    garbage = data['EXP'][index][::-1].copy()
-                    thispstamp = np.sum(np.diff(garbage, axis=0), axis=0)
-                    pstamperr = thispstamp*np.nan
-                    data['TRIAL'][index] = 'Could Not Find X Edges'
-                    ignore = True
+                if maxx > (thispstamp.shape[1] - 1):
+                    maxx = thispstamp.shape[1] - 5
+                    data['TRUNCSPEC'][index] = True
                     pass
+                thispstamp[:, :int(minx)] = np.nan
+                thispstamp[:, int(maxx):] = np.nan
+                pstamperr = np.sqrt(abs(thispstamp))
                 pass
-            else: pstamperr = thispstamp*np.nan
+            else:
+                garbage = data['EXP'][index][::-1].copy()
+                thispstamp = np.sum(np.diff(garbage, axis=0), axis=0)
+                pstamperr = thispstamp*np.nan
+                data['TRIAL'][index] = 'Could Not Find X Edges'
+                ignore = True
+                pass
             pass
         else:
             garbage = data['EXP'][index][::-1].copy()
@@ -1271,7 +1327,7 @@ def starecal(clc, tid, flttype, out,
             ignore = True
             pass
         data['MEXP'][index] = thispstamp
-        data['TIME'][index] = np.nanmean(data['TIME'][index].copy())
+        data['TIME'][index] = np.nanmax(data['TIME'][index].copy())
         data['IGNORED'][index] = ignore
         data['EXPERR'][index] = pstamperr
         log.log(31, '>-- %s %s %s', str(index), '/', str(len(data['LOC'])-1))
@@ -1300,29 +1356,24 @@ def starecal(clc, tid, flttype, out,
         ignore = data['IGNORED'][index]
         if not ignore:
             frame = data['MEXP'][index].copy()
-            frame = [line for line in frame if not np.all(~np.isfinite(line))]
             spectrum = []
             specerr = []
             nspectrum = []
             for col in np.array(frame).T:
-                ignorecol = False
-                if not np.all(~np.isfinite(col)):
-                    valid = np.isfinite(col)
-                    if np.nansum(valid) > 0:
-                        spectrum.append(np.nansum(col[valid]))
-                        specerr.append(np.sqrt(np.nansum(col[valid])))
-                        nspectrum.append(np.nansum(valid))
-                        pass
-                    else: ignorecol = True
-                else: ignorecol = True
-                if ignorecol:
+                valid = np.isfinite(col)
+                if True in valid:
+                    spectrum.append(np.nansum(col[valid]))
+                    specerr.append(np.sqrt(abs(np.nansum(col[valid]))))
+                    nspectrum.append(np.nansum(valid))
+                    pass
+                else:
                     spectrum.append(np.nan)
                     specerr.append(np.nan)
                     nspectrum.append(0)
                     pass
                 pass
             spectrum = np.array(spectrum)
-            if np.sum(np.isfinite(spectrum)) < 1:
+            if np.all(~np.isfinite(spectrum)):
                 data['IGNORED'][index] = True
                 data['TRIAL'][index] = 'NaN Spectrum'
                 pass
@@ -1341,30 +1392,42 @@ def starecal(clc, tid, flttype, out,
     spectralindex = []
     for index, loc in enumerate(data['LOC']):
         ignore = data['IGNORED'][index]
+        ovszspc = False
+        if data['TRUNCSPEC'][index]:
+            ovszspc = True
+            if 'G141' in flttype: wthr = 1.67*1e4
+            select = wavett < wthr
+            wavett = wavett[select]
+            tt = tt[select]
+            pass
         if not ignore:
             spectrum = data['SPECTRUM'][index].copy()
             cutoff = np.nanmax(spectrum)/scaleco
             spectrum[spectrum < cutoff] = np.nan
             spectrum = abs(spectrum)
-            fd = False
-            if 'G430L' in flttype: fd = True
-            w, d, s, si = wavesol(spectrum, tt, wavett, disper, fd=fd)
+            w, d, s, si = wavesol(spectrum, tt, wavett, disper,
+                                  ovszspc=ovszspc, debug=False)
             if (d > ldisp) and (d < udisp): spectralindex.append(si)
             pass
         pass
     siv = np.nanmedian(spectralindex)
     for index, loc in enumerate(data['LOC']):
         ignore = data['IGNORED'][index]
+        ovszspc = False
+        if data['TRUNCSPEC'][index]:
+            ovszspc = True
+            if 'G141' in flttype: wthr = 1.67*1e4
+            select = wavett < wthr
+            wavett = wavett[select]
+            tt = tt[select]
+            pass
         if not ignore:
             spectrum = data['SPECTRUM'][index].copy()
             cutoff = np.nanmax(spectrum)/scaleco
             spectrum[spectrum < cutoff] = np.nan
             spectrum = abs(spectrum)
-            fd = False
-            if 'G430L' in flttype: fd = True
-            wave, disp, shift, si = wavesol(spectrum, tt, wavett, disper, siv=siv, fd=fd)
-            pass
-        if not ignore:
+            wave, disp, shift, si = wavesol(spectrum, tt, wavett, disper,
+                                            siv=siv, ovszspc=ovszspc)
             liref = itp.interp1d(wavett*1e-4, tt, bounds_error=False, fill_value=np.nan)
             phot2counts = liref(wave)
             data['PHT2CNT'][index] = phot2counts
