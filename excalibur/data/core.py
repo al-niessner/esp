@@ -1213,18 +1213,8 @@ WFC3 STARE Calibration
             pass
         psdiff = sampramp[0] - sampramp[-1]
         psmin = np.nanmin(data['MIN'][index[0]])
-        floodlist = []
-        for de in [psdiff]:
-            select = de < psmin
-            if True in select: de[select] = np.nan
-            perfldlist = np.nanpercentile(de, np.arange(1001)/1e1)
-            perfldlist = np.diff(perfldlist)
-            perfldlist[:100] = 0
-            perfldlist[-1] = 0
-            indperfld = list(perfldlist).index(np.max(perfldlist))*1e-1
-            floodlist.append(np.nanpercentile(de, indperfld))
-            pass
-        fldthr = np.nanmax(floodlist)
+        fldthr = np.nanpercentile(psdiff,
+                                  1e2*(1e0 - spectrace/(psdiff.shape[0]*psdiff.shape[1])))
         data['FLOODLVL'][index[0]] = fldthr
         pass
     allfloodlvl = np.array(data['FLOODLVL'])
@@ -1295,7 +1285,7 @@ WFC3 STARE Calibration
             # ISOLATE SCAN X -----------------------------------------
             targetn = 0
             minx, maxx = isolate(thispstamp.copy(), psmin, spectrace, scanwpi, targetn,
-                                 fldthr, axis=0, stare=True)
+                                 fldthr, axis=0, stare=True, debug=False)
             if np.isfinite(minx*maxx):
                 minx -= 1.5*12
                 maxx += 1.5*12

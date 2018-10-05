@@ -4,23 +4,25 @@ import excalibur.system.core as syscore
 
 import logging; log = logging.getLogger(__name__)
 
-try:
-    import pymc as pm
-    from pymc.distributions import Normal as pmnd, Uniform as pmud, TruncatedNormal as pmtnd
-except ImportError:
-    import pymc3 as pm
-    from pymc3.distributions import Normal as pmnd, Uniform as pmud, TruncatedNormal as pmtnd
-    pass
-
 import numpy as np
 import lmfit as lm
 import matplotlib.pyplot as plt
 
 import ldtk
-from ldtk.ldmodel import LinearModel, QuadraticModel, NonlinearModel
 from ldtk import LDPSetCreator, BoxcarFilter
+from ldtk.ldmodel import LinearModel, QuadraticModel, NonlinearModel
 
-from scipy.interpolate import interp1d as itp
+try:
+    import pymc as pm
+    from pymc.distributions import Normal as pmnd
+    from pymc.distributions import Uniform as pmud
+    from pymc.distributions import TruncatedNormal as pmtnd
+except ImportError:
+    import pymc3 as pm
+    from pymc3.distributions import Normal as pmnd
+    from pymc3.distributions import Uniform as pmud
+    from pymc3.distributions import TruncatedNormal as pmtnd
+    pass
 
 import collections
 CONTEXT = collections.namedtuple('CONTEXT',
@@ -28,8 +30,12 @@ CONTEXT = collections.namedtuple('CONTEXT',
                                   'g1', 'g2', 'g3', 'g4', 'ootoindex', 'ootorbits',
                                   'orbits', 'period', 'selectfit', 'smaors', 'time',
                                   'tmjd', 'ttv', 'valid', 'visits'])
-# ----- inline hack to ldtk.LDPSet
+
+# AN: INLINE HACK TO ldtk.LDPSet -- ------------------------------------------------------
 class LDPSet(ldtk.LDPSet):
+    '''
+Despotic bypass of CIs
+    '''
     @staticmethod
     def is_mime(): return True
     @property
@@ -37,8 +43,6 @@ class LDPSet(ldtk.LDPSet):
     pass
 setattr (ldtk, 'LDPSet', LDPSet)
 setattr (ldtk.ldtk, 'LDPSet', LDPSet)
-# -----
-
 # ------------- ------------------------------------------------------
 # -- SV VALIDITY -- --------------------------------------------------
 def checksv(sv):
@@ -90,7 +94,7 @@ def norm(cal, tme, fin, ext, out, selftype, debug=False):
             out['data'][p]['vignore'] = []
             for v in tme['data'][p][selftype]:
                 selv = (dvisits == v)
-                # ORBIT REJECTION ------------------------------------
+                # ORBIT REJECTION --------------------------------------------------------
                 if selftype in ['transit', 'phasecurve']:
                     select = (phase[selv] > 0.25) | (phase[selv] < -0.25)
                     vzoot = zoot[selv]
@@ -143,26 +147,43 @@ def norm(cal, tme, fin, ext, out, selftype, debug=False):
                         nrmignore[selv] = vnrmignore
                         pass
                     pass
-                # OUT OF TRANSIT SELECTION ---------------------------
+                # OUT OF TRANSIT SELECTION -----------------------------------------------
                 selv = selv & (~ignore.astype(bool))
                 selvoot = selv & (abs(z) > (1e0 + rpors)) & (~nrmignore)
                 voots = [s for s in np.array(spectra)[selvoot]]
                 vootw = [w for w in np.array(wave)[selvoot]]
                 viss = [s for s in np.array(spectra)[selv]]
                 visw = [w for w in np.array(wave)[selv]]
-                if np.sum(selvoot) > 6:
+                # STELLAR SPECTRUM CORRECTION --------------------------------------------
+                if np.sum(selvoot) > 5:
                     wt, te = tplbuild(voots, vootw, vrange, disp[selvoot]*1e-4)
-                    selfin = np.isfinite(te)
-                    wt = np.array(wt)
-                    te = np.array(te)
-                    if np.sum(~selfin) > 0:
-                        wt = wt[selfin]
-                        te = te[selfin]
+                    srwt, srte = tplbuild(voots, vootw, vrange, disp[selvoot]*1e-4,
+                                          superres=True)
+                    outsrti = []
+                    for idx in enumerate(wt):
+                        srti = np.poly1d(np.polyfit(np.array(srwt[idx[0]]),
+                                                    np.array(srte[idx[0]]), 2))
+                        outsrti.append(srti)
                         pass
-                    ti = itp(wt, te, kind='linear', bounds_error=False, fill_value=np.nan)
-                    nspectra = [s/ti(w) for s,w in zip(viss, visw)]
-                    photnoise = [np.sqrt(s)/ti(w)/np.sqrt(l)
-                                 for s,w,l in zip(viss, visw, scanlen[selv])]
+                    # DIVIDE TEMPLATE ----------------------------------------------------
+                    nspectra = []
+                    photnoise = []
+                    for s, w, l in zip(viss, visw, scanlen[selv]):
+                        ti = []
+                        for eachw in w:
+                            test = list(abs(np.array(wt) - eachw))
+                            nidx = test.index(np.nanmin(test))
+                            tol = np.nanmedian(np.diff(wt))/2e0
+                            if eachw < (wt[nidx] - tol): ti.append(np.nan)
+                            elif eachw > (wt[nidx] + tol): ti.append(np.nan)
+                            else:
+                                wsrti = outsrti[nidx]
+                                ti.append(wsrti(eachw))
+                                pass
+                            pass
+                        nspectra.append(s/np.array(ti))
+                        photnoise.append(np.sqrt(s)/np.array(ti)/np.sqrt(l))
+                        pass
                     check = np.array([np.nanstd(s) < 27e0*np.nanmedian(p)
                                       for s, p in zip(nspectra, photnoise)])
                     if np.sum(check) > 9:
@@ -199,7 +220,7 @@ def norm(cal, tme, fin, ext, out, selftype, debug=False):
                         pass
                     pass
                 else:
-                    out['data'][p]['trial'].append('N/Visit < 7')
+                    out['data'][p]['trial'].append('N/Visit < 6')
                     out['data'][p]['vignore'].append(v)
                     pass
                 pass
@@ -215,7 +236,7 @@ def norm(cal, tme, fin, ext, out, selftype, debug=False):
     return normed
 # ------------------- ------------------------------------------------
 # -- TEMPLATE BUILDER -- ---------------------------------------------
-def tplbuild(spectra, wave, vrange, disp):
+def tplbuild(spectra, wave, vrange, disp, superres=False):
     '''
 Builds a spectrum template according to the peak in population
 density per wavelength bins
@@ -253,8 +274,14 @@ density per wavelength bins
                 disp = np.array(disp)
                 pass
             pass
-        wavet.append(np.mean(cluster))
-        template.append(np.mean(cloud))
+        if superres:
+            wavet.append(cluster)
+            template.append(cloud)
+            pass
+        else:
+            wavet.append(np.mean(cluster))
+            template.append(np.mean(cloud))
+            pass
         guess.append(np.mean(cluster) + vdisp)
         pass
     return wavet, template
