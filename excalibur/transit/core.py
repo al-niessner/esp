@@ -69,7 +69,7 @@ def norm(cal, tme, fin, ext, out, selftype, debug=False):
         for p in tme['data'].keys():
             out['data'][p] = {}
             rpors = priors[p]['rp']/priors['R*']*ssc['Rjup/Rsun']
-            ignore = np.array(tme['data'][p]['ignore'])
+            ignore = np.array(tme['data'][p]['ignore']) | np.array(cal['data']['IGNORED'])
             nrmignore = ignore.copy()
             orbits = tme['data'][p]['orbits']
             dvisits = tme['data'][p]['dvisits']
@@ -171,15 +171,18 @@ def norm(cal, tme, fin, ext, out, selftype, debug=False):
                     for s, w, l in zip(viss, visw, scanlen[selv]):
                         ti = []
                         for eachw in w:
-                            test = list(abs(np.array(wt) - eachw))
-                            nidx = test.index(np.nanmin(test))
-                            tol = np.nanmedian(np.diff(wt))/2e0
-                            if eachw < (wt[nidx] - tol): ti.append(np.nan)
-                            elif eachw > (wt[nidx] + tol): ti.append(np.nan)
-                            else:
-                                wsrti = outsrti[nidx]
-                                ti.append(wsrti(eachw))
+                            if np.isfinite(eachw):
+                                test = list(abs(np.array(wt) - eachw))
+                                nidx = test.index(np.nanmin(test))
+                                tol = np.nanmedian(np.diff(wt))/2e0
+                                if eachw < (wt[nidx] - tol): ti.append(np.nan)
+                                elif eachw > (wt[nidx] + tol): ti.append(np.nan)
+                                else:
+                                    wsrti = outsrti[nidx]
+                                    ti.append(wsrti(eachw))
+                                    pass
                                 pass
+                            else: ti.append(np.nan)
                             pass
                         nspectra.append(s/np.array(ti))
                         photnoise.append(np.sqrt(s)/np.array(ti)/np.sqrt(l))
@@ -288,6 +291,9 @@ density per wavelength bins
 # ---------------------- ---------------------------------------------
 # -- WHITE LIGHT CURVE -- --------------------------------------------
 def whitelight(nrm, fin, out, selftype, chainlen=int(4e4), verbose=False):
+    '''
+Orbital Parameters Recovery
+    '''
     wl = False
     priors = fin['priors'].copy()
     ssc = syscore.ssconstants()

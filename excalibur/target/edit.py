@@ -306,6 +306,14 @@ overwrite[starID] =
              't0':2457914.235774331,
              't0_uperr':0.004, 't0_lowerr':-0.004,
              't0_ref':'Oroz'}}
+    overwrite['Kepler-1625'] = {
+        'b':{'logg':4.00,
+             'logg_uperr':0.4, 'logg_lowerr':-0.4,
+             'logg_ref':'Teachey et al. 2018', 'logg_units':'log10[cm.s-2]',
+             'sma':0.898,
+             'sma_uperr':0.1,
+             'sma_lowerr':-0.1,
+             'sma_ref':'Morton et al. 2016'}}
     overwrite['WASP-39'] = {
         'FEH*':-0.10, 'FEH*_uperr':0.1, 'FEH*_lowerr':-0.1,
         'FEH*_units':'[Fe/H]', 'FEH*_ref':'Faedi et al. 2011'}

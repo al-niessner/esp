@@ -91,7 +91,7 @@ class calibration(dawgie.Algorithm):
         validtype = []
         for test in cll['activefilters'].keys():
             if ('WFC3' in test) and (('SCAN' in test) or ('STARE' in test)):
-                validtype.append(test)
+                if test in fltrs: validtype.append(test)
                 pass
             pass
         svupdate = []
@@ -156,7 +156,7 @@ class timing(dawgie.Algorithm):
         validtype = []
         for test in col['activefilters'].keys():
             if ('WFC3' in test) and (('SCAN' in test) or ('STARE' in test)):
-                validtype.append(test)
+                if test in fltrs: validtype.append(test)
                 pass
             pass
         svupdate = []

@@ -30,5 +30,10 @@ class normalization(trnalg.normalization):
         self.__fin = sysalg.finalize()
         self.__out = [trnstates.NormSV(ext) for ext in fltrs]
         return
+
+    @staticmethod
+    def _failure(errstr):
+        log.log(31, '--< ECLIPSE NORMALIZATION: '+errstr+' >--')
+        return
     pass
 # ---------------- ---------------------------------------------------
