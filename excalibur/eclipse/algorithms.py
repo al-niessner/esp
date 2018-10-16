@@ -11,9 +11,6 @@ import excalibur.transit.states as trnstates
 import excalibur.target.edit as trgedit
 # ------------- ------------------------------------------------------
 # -- ALGO RUN OPTIONS -- ---------------------------------------------
-# VERBOSE AND DEBUG
-verbose = False
-debug = False
 # FILTERS
 fltrs = (trgedit.activefilters.__doc__).split('\n')
 fltrs = [t.strip() for t in fltrs if t.replace(' ', '').__len__() > 0]
@@ -24,7 +21,6 @@ class normalization(trnalg.normalization):
         trnalg.normalization.__init__(self)
         self._version_ = dawgie.VERSION(1,1,0)
         self._type = 'eclipse'
-        self.__verbose = verbose
         self.__cal = datalg.calibration()
         self.__tme = datalg.timing()
         self.__fin = sysalg.finalize()

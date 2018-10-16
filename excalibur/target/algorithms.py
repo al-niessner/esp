@@ -79,7 +79,7 @@ class autofill(dawgie.Algorithm):
     @staticmethod
     def _failure(errstr):
         if errstr is None: errstr = 'TARGET NOT EXPECTED'
-        log.log(31, '--< TARGET AUTOFILL: '+errstr+' >--')
+        log.warning('--< TARGET AUTOFILL: '+errstr+' >--')
         return
     pass
 
@@ -117,7 +117,7 @@ class scrape(dawgie.Algorithm):
 
     @staticmethod
     def _failure(errstr):
-        log.log(31, '--< TARGET SCRAPE: '+errstr+' >--')
+        log.warning('--< TARGET SCRAPE: '+errstr+' >--')
         return
     pass
 # ---------------- ---------------------------------------------------

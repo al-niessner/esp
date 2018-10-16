@@ -161,7 +161,7 @@ def scancal(clc, tim, tid, flttype, out,
             pass
         if not ignore:
             targetn = 0
-            if tid in ['XO-2']: targetn = -1
+            if tid in ['XO-2', 'HAT-P-1']: targetn = -1
             minlocs = []
             maxlocs = []
             floodlist = []
@@ -211,7 +211,7 @@ def scancal(clc, tim, tid, flttype, out,
             pass
         if not ignore:
             targetn = 0
-            if tid in ['XO-2']: targetn = -1
+            if tid in ['XO-2', 'HAT-P-1']: targetn = -1
             minlocs = []
             maxlocs = []
             fldthr = data['FLOODLVL'][index]
@@ -280,7 +280,7 @@ def scancal(clc, tim, tid, flttype, out,
             targetn = 0
             if tid in ['XO-2']: targetn = -1
             minx, maxx = isolate(mltord, psmin, spectrace, scanwpi, targetn, fldthr,
-                                 axis=0)
+                                 axis=0, debug=False)
             if np.isfinite(minx*maxx):
                 minx -= 1.5*12
                 maxx += 1.5*12
@@ -318,7 +318,7 @@ def scancal(clc, tim, tid, flttype, out,
         data['TIME'][index] = np.nanmean(data['TIME'][index].copy())
         data['IGNORED'][index] = ignore
         data['EXPERR'][index] = pstamperr
-        log.log(31, '>-- %s %s %s', str(index), '/', str(len(data['LOC'])-1))
+        log.warning('>-- %s %s %s', str(index), '/', str(len(data['LOC'])-1))
         # PLOTS ------------------------------------------------------
         if frame2png:
             if not os.path.exists('TEST'): os.mkdir('TEST')
@@ -543,11 +543,11 @@ def scancal(clc, tim, tid, flttype, out,
     allignore = data['IGNORED']
     allculprits = data['TRIAL']
     allindex = np.arange(len(data['LOC']))
-    log.log(31, '>-- IGNORED: %s %s %s',
-            str(np.nansum(allignore)), '/', str(len(allignore)))
+    log.warning('>-- IGNORED: %s %s %s',
+                str(np.nansum(allignore)), '/', str(len(allignore)))
     for index in allindex:
         if allculprits[index].__len__() > 0:
-            log.log(31, '>-- FRAME %s %s %s', str(index), ':', str(allculprits[index]))
+            log.warning('>-- FRAME %s %s %s', str(index), ':', str(allculprits[index]))
             pass
         pass
     data.pop('EXP', None)
@@ -1004,9 +1004,9 @@ def timing(force, clc, out, verbose=False):
             orb[ordt] = orbto.astype(int)
             dvis[ordt] = dvisto.astype(int)
             ignore[ordt] = ignto
-            log.log(31, '>-- TRANSIT: %s', str(out['transit']))
-            log.log(31, '>-- ECLIPSE: %s', str(out['eclipse']))
-            log.log(31, '>-- PHASE CURVE: %s', str(out['phasecurve']))
+            log.warning('>-- TRANSIT: %s', str(out['transit']))
+            log.warning('>-- ECLIPSE: %s', str(out['eclipse']))
+            log.warning('>-- PHASE CURVE: %s', str(out['phasecurve']))
             # PLOTS ------------------------------------------------------
             if verbose:
                 plt.figure()
@@ -1320,7 +1320,7 @@ WFC3 STARE Calibration
         data['TIME'][index] = np.nanmax(data['TIME'][index].copy())
         data['IGNORED'][index] = ignore
         data['EXPERR'][index] = pstamperr
-        log.log(31, '>-- %s %s %s', str(index), '/', str(len(data['LOC'])-1))
+        log.warning('>-- %s %s %s', str(index), '/', str(len(data['LOC'])-1))
         # PLOTS ------------------------------------------------------
         if frame2png:
             if not os.path.exists('TEST'): os.mkdir('TEST')
@@ -1482,11 +1482,11 @@ WFC3 STARE Calibration
     allignore = data['IGNORED']
     allculprits = data['TRIAL']
     allindex = np.arange(len(data['LOC']))
-    log.log(31, '>-- IGNORED: %s %s %s', str(np.nansum(allignore)), '/',
-            str(len(allignore)))
+    log.warning('>-- IGNORED: %s %s %s', str(np.nansum(allignore)), '/',
+                str(len(allignore)))
     for index in allindex:
         if allculprits[index].__len__() > 0:
-            log.log(31, '>-- FRAME %s %s %s', str(index), ':', str(allculprits[index]))
+            log.warning('>-- FRAME %s %s %s', str(index), ':', str(allculprits[index]))
             pass
         pass
     data.pop('EXP', None)

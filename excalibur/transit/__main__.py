@@ -1,9 +1,12 @@
+# -- IMPORTS -- ------------------------------------------------------
 import os
+
 import dawgie
 import dawgie.db
 import dawgie.security
-import excalibur.transit.bot
 
+import excalibur.transit.bot
+# ------------- ------------------------------------------------------
 rid = int(os.environ.get('RUNID', None))
 tn = os.environ.get('TARGET_NAME', None)
 dawgie.context._ports(int(os.environ.get('FE_PORT', None)))

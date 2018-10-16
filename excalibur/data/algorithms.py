@@ -62,7 +62,7 @@ class collect(dawgie.Algorithm):
 
     @staticmethod
     def _failure(errstr):
-        log.log(31, '--< DATA COLLECT: '+errstr+' >--')
+        log.warning('--< DATA COLLECT: '+errstr+' >--')
         return
     pass
 
@@ -125,7 +125,7 @@ class calibration(dawgie.Algorithm):
 
     @staticmethod
     def _failure(errstr):
-        log.log(31, '--< DATA CALIBRATION: ' + errstr + ' >--')
+        log.warning('--< DATA CALIBRATION: ' + errstr + ' >--')
         return
     pass
 
@@ -183,7 +183,7 @@ class timing(dawgie.Algorithm):
 
     @staticmethod
     def _failure(errstr):
-        log.log(31, '--< DATA TIMING: '+errstr+' >--')
+        log.warning('--< DATA TIMING: '+errstr+' >--')
         return
     pass
 # ---------------- ---------------------------------------------------

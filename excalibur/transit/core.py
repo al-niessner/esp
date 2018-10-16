@@ -29,7 +29,7 @@ CONTEXT = collections.namedtuple('CONTEXT',
                                  ['alt', 'ald', 'allz', 'commonoim', 'ecc',
                                   'g1', 'g2', 'g3', 'g4', 'ootoindex', 'ootorbits',
                                   'orbits', 'period', 'selectfit', 'smaors', 'time',
-                                  'tmjd', 'ttv', 'valid', 'visits'])
+                                  'tmjd', 'ttv', 'valid', 'visits', 'aos'])
 
 # AN: INLINE HACK TO ldtk.LDPSet -- ------------------------------------------------------
 class LDPSet(ldtk.LDPSet):
@@ -38,11 +38,12 @@ Despotic bypass of CIs
     '''
     @staticmethod
     def is_mime(): return True
+
     @property
     def profile_mu(self): return self._mu
     pass
-setattr (ldtk, 'LDPSet', LDPSet)
-setattr (ldtk.ldtk, 'LDPSet', LDPSet)
+setattr(ldtk, 'LDPSet', LDPSet)
+setattr(ldtk.ldtk, 'LDPSet', LDPSet)
 # ------------- ------------------------------------------------------
 # -- SV VALIDITY -- --------------------------------------------------
 def checksv(sv):
@@ -92,6 +93,7 @@ def norm(cal, tme, fin, ext, out, selftype, debug=False):
             out['data'][p]['photnoise'] = []
             out['data'][p]['trial'] = []
             out['data'][p]['vignore'] = []
+            out['data'][p]['stdns'] = []
             for v in tme['data'][p][selftype]:
                 selv = (dvisits == v)
                 # ORBIT REJECTION --------------------------------------------------------
@@ -205,6 +207,8 @@ def norm(cal, tme, fin, ext, out, selftype, debug=False):
                         out['data'][p]['z'].append(z[selv][check])
                         out['data'][p]['phase'].append(phase[selv][check])
                         out['data'][p]['photnoise'].append(nphotn)
+                        out['data'][p]['stdns'].append(np.nanstd(np.nanmedian(nspectra,
+                                                                              axis=1)))
                         if debug:
                             plt.figure()
                             for w,s in zip(visw[check], vnspec):
@@ -227,8 +231,36 @@ def norm(cal, tme, fin, ext, out, selftype, debug=False):
                     out['data'][p]['vignore'].append(v)
                     pass
                 pass
+            # VARIANCE EXCESS FROM LOST GUIDANCE -----------------------------------------
+            kickout = []
+            if out['data'][p]['stdns'].__len__() > 2:
+                stdns = np.array(out['data'][p]['stdns'])
+                vthr = np.percentile(stdns, 66, interpolation='nearest')
+                ref = np.nanmean(stdns[stdns <= vthr])
+                stdref = np.nanstd(stdns[stdns <= vthr])
+                kickout = np.array(out['data'][p]['visits'])[stdns > ref + 3e0*stdref]
+                pass
+            if kickout.__len__() > 0:
+                for v in kickout:
+                    i2pop = out['data'][p]['visits'].index(v)
+                    out['data'][p]['visits'].pop(i2pop)
+                    out['data'][p]['dvisnum'].pop(i2pop)
+                    out['data'][p]['wavet'].pop(i2pop)
+                    out['data'][p]['spect'].pop(i2pop)
+                    out['data'][p]['nspec'].pop(i2pop)
+                    out['data'][p]['wave'].pop(i2pop)
+                    out['data'][p]['time'].pop(i2pop)
+                    out['data'][p]['orbits'].pop(i2pop)
+                    out['data'][p]['dispersion'].pop(i2pop)
+                    out['data'][p]['z'].pop(i2pop)
+                    out['data'][p]['phase'].pop(i2pop)
+                    out['data'][p]['photnoise'].pop(i2pop)
+                    out['data'][p]['trial'].append('Lost Guidance Variance Excess')
+                    out['data'][p]['vignore'].append(v)
+                    pass
+                pass
             for v, m in zip(out['data'][p]['vignore'], out['data'][p]['trial']):
-                log.log(31, '>-- %s %s', str(v), str(m))
+                log.warning('>-- %s %s', str(v), str(m))
                 pass
             if out['data'][p]['visits'].__len__() > 0:
                 normed = True
@@ -560,12 +592,12 @@ Orbital Parameters Recovery
                          value=flatwhite[selectfit], observed=True)
         nodes.append(whitedata)
         allnodes = [n.__name__ for n in nodes if not n.observed]
-        log.log(31, '>-- MCMC nodes: %s', str(allnodes))
+        log.warning('>-- MCMC nodes: %s', str(allnodes))
         model = pm.Model(nodes)
         mcmc = pm.MCMC(model)
         burnin = int(chainlen/2)
         mcmc.sample(chainlen, burn=burnin, progress_bar=verbose)
-        log.log(31, ' ')
+        log.warning(' ')
         mcpost = mcmc.stats()
         mctrace = {}
         for key in allnodes: mctrace[key] = mcmc.trace(key)[:]
@@ -734,9 +766,9 @@ def createldgrid(minmu, maxmu, orbp,
     feherr = np.sqrt(abs(orbp['FEH*_uperr']*orbp['FEH*_lowerr']))
     loggstar = orbp['LOGG*']
     loggerr = np.sqrt(abs(orbp['LOGG*_uperr']*orbp['LOGG*_lowerr']))
-    log.log(31, '>-- Temperature %s %s', str(tstar), str(terr))
-    log.log(31, '>-- Metallicity %s %s', str(fehstar), str(feherr))
-    log.log(31, '>-- Surface Gravity %s %s', str(loggstar), str(loggerr))
+    log.warning('>-- Temperature %s %s', str(tstar), str(terr))
+    log.warning('>-- Metallicity %s %s', str(fehstar), str(feherr))
+    log.warning('>-- Surface Gravity %s %s', str(loggstar), str(loggerr))
     niter = int(len(minmu)/segmentation) + 1
     allcl = None
     allel = None
@@ -775,8 +807,7 @@ def createldgrid(minmu, maxmu, orbp,
             plt.plot(avmu, thiscl, '*', label='$\\gamma$ %i' % i)
             pass
         plt.xlabel('Wavelength [$\\mu$m]')
-        plt.legend(bbox_to_anchor=(1, 0.5),
-                   loc=5, ncol=1, mode='expand', numpoints=1,
+        plt.legend(bbox_to_anchor=(1, 0.5), loc=5, ncol=1, mode='expand', numpoints=1,
                    borderaxespad=0., frameon=False)
         plt.tight_layout(rect=[0,0,0.9,1])
         plt.show()
@@ -913,7 +944,7 @@ def timlc(vtime, orbits,
     return vout*oout
 # ---------------------- ---------------------------------------------
 # -- SPECTRUM -- -----------------------------------------------------
-def spectrum(fin, nrm, wht, out, selftype, chainlen=int(4e4), verbose=False, debug=False):
+def spectrum(fin, nrm, wht, out, selftype, chainlen=int(2e4), verbose=False):
     exospec = False
     priors = fin['priors'].copy()
     ssc = syscore.ssconstants()
@@ -955,7 +986,17 @@ def spectrum(fin, nrm, wht, out, selftype, chainlen=int(4e4), verbose=False, deb
         wavec = np.arange(nbin)*disp + np.mean([np.max(wavel), np.min(wavel)])
         lwavec = wavec - disp/2e0
         hwavec = wavec + disp/2e0
-        # LOOP OVER WAVELENGTH BINS ----------------------------------
+        # EXCLUDE ALL NAN CHANNELS -------------------------------------------------------
+        allnanc = []
+        for wl, wh in zip(lwavec, hwavec):
+            select = [(w > wl) & (w < wh) for w in allwave]
+            data = np.array([np.median(d[s]) for d, s in zip(allspec, select)])
+            if np.all(~np.isfinite(data)): allnanc.append(True)
+            else: allnanc.append(False)
+            pass
+        lwavec = [lwv for lwv, lln in zip(lwavec, allnanc) if not lln]
+        hwavec = [hwv for hwv, lln in zip(hwavec, allnanc) if not lln]
+        # LOOP OVER WAVELENGTH BINS ------------------------------------------------------
         out['data'][p]['WB'] = []
         out['data'][p]['WBlow'] = []
         out['data'][p]['WBup'] = []
@@ -968,8 +1009,8 @@ def spectrum(fin, nrm, wht, out, selftype, chainlen=int(4e4), verbose=False, deb
             out['data'][p]['WBup'].append(wh)
             out['data'][p]['WB'].append(np.mean([wl, wh]))
             select = [(w > wl) & (w < wh) for w in allwave]
-            data = np.array([np.median(d[s]) for d, s in zip(allspec, select)])
-            dnoise = np.array([np.median(n[s]) for n, s in zip(allpnoise, select)])
+            data = np.array([np.nanmedian(d[s]) for d, s in zip(allspec, select)])
+            dnoise = np.array([np.nanmedian(n[s]) for n, s in zip(allpnoise, select)])
             valid = np.isfinite(data)
             if selftype == 'transit':
                 bld = createldgrid([wl], [wh], priors, segmentation=int(10))
@@ -979,7 +1020,7 @@ def spectrum(fin, nrm, wht, out, selftype, chainlen=int(4e4), verbose=False, deb
                               g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0])
                 pass
             else: model = tldlc(abs(allz), whiterprs)
-            if debug:
+            if verbose:
                 plt.figure()
                 plt.title(str(int(1e3*np.mean([wl, wh])))+' nm')
                 plt.plot(allz[valid], data[valid]/allim[valid], 'o')
@@ -987,7 +1028,7 @@ def spectrum(fin, nrm, wht, out, selftype, chainlen=int(4e4), verbose=False, deb
                 plt.xlabel('Separation [R*]')
                 plt.show()
                 pass
-            # PRIORS -------------------------------------------------
+            # PRIORS ---------------------------------------------------------------------
             oot = (abs(allz) > (1e0 + whiterprs)) & valid
             ootstd = np.std(data[oot])
             rprs = pmud('rprs', 0, 2e0*whiterprs)
@@ -996,32 +1037,29 @@ def spectrum(fin, nrm, wht, out, selftype, chainlen=int(4e4), verbose=False, deb
             tauvi = 1e0/(ootstd**2)
             allvslope = np.empty(len(visits), dtype=object)
             allvitcp = np.empty(len(visits), dtype=object)
-            if commonoim: alloslope = np.empty(len(visits), dtype=object)
-            else: alloslope = np.empty(totalindex, dtype=object)
             allologtau = []
             allologdelay = []
+            alloslope = []
             for i, v in enumerate(visits):
                 allvslope[i] = pmtnd('vslope%i' % v, 0e0, tauvs,
                                      -3e-2/trdura, 3e-2/trdura)
                 allvitcp[i] = pmtnd('vitcp%i' % v, 1e0, tauvi,
                                     1e0 - 3e0*ootstd, 1e0 + 3e0*ootstd)
                 if commonoim:
-                    alloslope[i] = pmnd('oslope%i' % v, 0e0, tauvs)
+                    alloslope.append(wht['data'][p]['mcpost']['oslope%i' % v]['quantiles'][50])
                     allologtau.append(wht['data'][p]['mcpost']['ologtau%i' % v]['quantiles'][50])
                     allologdelay.append(wht['data'][p]['mcpost']['ologdelay%i' % v]['quantiles'][50])
                     pass
                 pass
             if not commonoim:
                 for i in range(totalindex):
-                    alloslope[i] = pmtnd('oslope%i' % i, 0e0, tauvs,
-                                         -3e-2/trdura, 3e-2/trdura)
+                    alloslope.append(wht['data'][p]['mcpost']['oslope%i' % i]['quantiles'][50])
                     allologtau.append(wht['data'][p]['mcpost']['ologtau%i' % i]['quantiles'][50])
                     allologdelay.append(wht['data'][p]['mcpost']['ologdelay%i' % i]['quantiles'][50])
                     pass
                 pass
             nodes.extend(allvslope)
             nodes.extend(allvitcp)
-            nodes.extend(alloslope)
             ctxt = CONTEXT(alt=allologtau,
                            ald=allologdelay,
                            allz=allz,
@@ -1038,23 +1076,23 @@ def spectrum(fin, nrm, wht, out, selftype, chainlen=int(4e4), verbose=False, deb
                            tmjd=None,
                            ttv=None,
                            valid=valid,
-                           visits=visits)
+                           visits=visits, aos=alloslope)
 
             # LIGHT CURVE MODEL --------------------------------------
             @pm.deterministic
-            def lcmodel(r=rprs, avs=allvslope, avi=allvitcp, aos=alloslope, ctxt=ctxt):
+            def lcmodel(r=rprs, avs=allvslope, avi=allvitcp, ctxt=ctxt):
                 allimout = []
                 for iv in range(len(ctxt.visits)):
                     if ctxt.commonoim:
                         imout = timlc(ctxt.time[iv], ctxt.orbits[iv],
                                       vslope=float(avs[iv]),
-                                      vitcp=float(avi[iv]), oslope=float(aos[iv]),
+                                      vitcp=float(avi[iv]), oslope=float(ctxt.aos[iv]),
                                       ologtau=float(ctxt.alt[iv]),
                                       ologdelay=float(ctxt.ald[iv]))
                         pass
                     else:
                         ooti = ctxt.ootoindex[iv]
-                        oslopetable = [float(aos[i]) for i in ooti]
+                        oslopetable = [float(ctxt.aos[i]) for i in ooti]
                         ologtautable = [float(ctxt.alt[i]) for i in ooti]
                         ologdelaytable = [float(ctxt.ald[i]) for i in ooti]
                         imout = timlc(ctxt.time[iv], ctxt.orbits[iv],
@@ -1081,7 +1119,7 @@ def spectrum(fin, nrm, wht, out, selftype, chainlen=int(4e4), verbose=False, deb
             mcmc = pm.MCMC(model)
             burnin = int(chainlen/2)
             mcmc.sample(chainlen, burn=burnin, progress_bar=verbose)
-            log.log(31, ' ')
+            log.warning(' ')
             mcpost = mcmc.stats()
             out['data'][p]['ES'].append(mcpost['rprs']['quantiles'][50])
             out['data'][p]['ESerr'].append(mcpost['rprs']['standard deviation'])

@@ -15,9 +15,6 @@ import excalibur.system.algorithms as sysalg
 import excalibur.target.edit as trgedit
 # ------------- ------------------------------------------------------
 # -- ALGO RUN OPTIONS -- ---------------------------------------------
-# VERBOSE AND DEBUG
-verbose = False
-debug = False
 # FILTERS
 fltrs = (trgedit.activefilters.__doc__).split('\n')
 fltrs = [t.strip() for t in fltrs if t.replace(' ', '').__len__() > 0]
@@ -27,7 +24,6 @@ class normalization(dawgie.Algorithm):
     def __init__(self):
         self._version_ = dawgie.VERSION(1,1,0)
         self._type = 'transit'
-        self.__verbose = verbose
         self.__cal = datalg.calibration()
         self.__tme = datalg.timing()
         self.__fin = sysalg.finalize()
@@ -69,13 +65,12 @@ class normalization(dawgie.Algorithm):
         return
 
     def _norm(self, cal, tme, fin, index):
-        normed = trncore.norm(cal, tme, fin, fltrs[index],
-                              self.__out[index], self._type, debug=debug)
+        normed = trncore.norm(cal, tme, fin, fltrs[index], self.__out[index], self._type)
         return normed
 
     @staticmethod
     def _failure(errstr):
-        log.log(31, '--< TRANSIT NORMALIZATION: '+errstr+' >--')
+        log.warning('--< TRANSIT NORMALIZATION: '+errstr+' >--')
         return
     pass
 
@@ -83,7 +78,6 @@ class whitelight(dawgie.Algorithm):
     def __init__(self):
         self._version_ = dawgie.VERSION(1,1,0)
         self._type = 'transit'
-        self.__verbose = verbose
         self.__nrm = normalization()
         self.__fin = sysalg.finalize()
         self.__out = [trnstates.WhiteLightSV(ext) for ext in fltrs]
@@ -127,7 +121,7 @@ class whitelight(dawgie.Algorithm):
 
     @staticmethod
     def _failure(errstr):
-        log.log(31, '--< TRANSIT WHITE LIGHT: ' + errstr + ' >--')
+        log.warning('--< TRANSIT WHITE LIGHT: ' + errstr + ' >--')
         return
     pass
 
@@ -135,7 +129,6 @@ class spectrum(dawgie.Algorithm):
     def __init__(self):
         self._version_ = dawgie.VERSION(1,1,0)
         self._type = 'transit'
-        self.__verbose = verbose
         self.__fin = sysalg.finalize()
         self.__nrm = normalization()
         self.__wht = whitelight()
@@ -177,12 +170,12 @@ class spectrum(dawgie.Algorithm):
         return
 
     def _spectrum(self, fin, nrm, wht, out):
-        s = trncore.spectrum(fin, nrm, wht, out, self._type, debug=debug)
+        s = trncore.spectrum(fin, nrm, wht, out, self._type)
         return s
 
     @staticmethod
     def _failure(errstr):
-        log.log(31, '--< TRANSIT SPECTRUM: ' + errstr + ' >--')
+        log.warning('--< TRANSIT SPECTRUM: ' + errstr + ' >--')
         return
     pass
 # ---------------- ---------------------------------------------------

@@ -45,7 +45,7 @@ def myxsecs(spc, out,
         nugrid = (1e4/np.copy(wgrid))[::-1]
         dwnu = np.concatenate((np.array([np.diff(nugrid)[0]]), np.diff(nugrid)))
         for myexomol in xmspecies:
-            log.log(31, '>-- %s', str(myexomol))
+            log.warning('>-- %s', str(myexomol))
             library[myexomol] = {'I':[], 'nu':[], 'T':[],
                                  'Itemp':[], 'nutemp':[], 'Ttemp':[],
                                  'SPL':[], 'SPLNU':[]}
@@ -123,7 +123,7 @@ def myxsecs(spc, out,
                 pass
             pass
         for mycia in cialist:
-            log.log(31, '>-- %s', str(mycia))
+            log.warning('>-- %s', str(mycia))
             myfile = '_'.join((os.path.join(ciadir, mycia), '2011.cia'))
             library[mycia] = {'I':[], 'nu':[], 'T':[],
                               'Itemp':[], 'nutemp':[], 'Ttemp':[],
@@ -187,7 +187,7 @@ def myxsecs(spc, out,
                 pass
             pass
         for ks in knownspecies:
-            log.log(31, '>-- %s', str(ks))
+            log.warning('>-- %s', str(ks))
             library[ks] = {'MU':[], 'I':[], 'nu':[], 'S':[],
                            'g_air':[], 'g_self':[],
                            'Epp':[], 'eta':[], 'delta':[]}
@@ -370,12 +370,12 @@ def atmos(fin, xsl, spc, out, mclen=int(4e2), verbose=False):
                           value=tspectrum[cleanup], observed=True)
             nodes.append(mcdata)
             allnodes = [n.__name__ for n in nodes if not n.observed]
-            log.log(31, '>-- MCMC nodes: %s', str(allnodes))
+            log.warning('>-- MCMC nodes: %s', str(allnodes))
             mcmcmodel = pm.Model(nodes)
             markovc = pm.MCMC(mcmcmodel)
             burnin = int(mclen/2)
             markovc.sample(mclen, burn=burnin, progress_bar=verbose)
-            log.log(31, ' ')
+            log.warning(' ')
             mctrace = {}
             for key in allnodes: mctrace[key] = markovc.trace(key)[:]
             out['data'][p][model]['MCPOST'] = markovc.stats()

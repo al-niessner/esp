@@ -387,10 +387,10 @@ def mast(selfstart, out, dbs, queryurl, mirror,
             outfile = os.path.join(tempdir, name+ext)
             try: urlrequest.urlretrieve(mirror+name+ext, outfile)
             except(urllib.error.ContentTooShortError, urllib.error.URLError):
-                log.log(31, '>-- Mirror1 %s %s %s', name, ext, 'NOT FOUND')
+                log.warning('>-- Mirror1 %s %s %s', name, ext, 'NOT FOUND')
                 try: urlrequest.urlretrieve(alt+name.upper()+ext.upper(), outfile)
                 except (urllib.error.ContentTooShortError, urllib.error.HTTPError):
-                    log.log(31, '>-- Mirror2 %s %s %s', name, ext, 'NOT FOUND')
+                    log.warning('>-- Mirror2 %s %s %s', name, ext, 'NOT FOUND')
                     ignname.append(name)
                     igninst.append(inst)
                     pass

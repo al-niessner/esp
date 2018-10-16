@@ -1,7 +1,5 @@
 # -- IMPORTS -- ------------------------------------------------------
 import os
-# GMR: LEVEL >30 GETS RID OF GNUPG WARNINGS
-import logging; logging.basicConfig(level=31)
 
 import dawgie
 import dawgie.db
