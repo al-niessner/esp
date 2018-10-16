@@ -547,7 +547,8 @@ Orbital Parameters Recovery
                        tmjd=tmjd,
                        ttv=ttv,
                        valid=None,
-                       visits=visits)
+                       visits=visits,
+                       aos=None)
 
         # ORBITAL MODEL ----------------------------------------------
         @pm.deterministic
@@ -1076,7 +1077,8 @@ def spectrum(fin, nrm, wht, out, selftype, chainlen=int(2e4), verbose=False):
                            tmjd=None,
                            ttv=None,
                            valid=valid,
-                           visits=visits, aos=alloslope)
+                           visits=visits,
+                           aos=alloslope)
 
             # LIGHT CURVE MODEL --------------------------------------
             @pm.deterministic
