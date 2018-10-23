@@ -65,7 +65,8 @@ class normalization(dawgie.Algorithm):
         return
 
     def _norm(self, cal, tme, fin, index):
-        normed = trncore.norm(cal, tme, fin, fltrs[index], self.__out[index], self._type)
+        normed = trncore.norm(cal, tme, fin, fltrs[index], self.__out[index], self._type,
+                              verbose=False)
         return normed
 
     @staticmethod
@@ -116,7 +117,7 @@ class whitelight(dawgie.Algorithm):
         return
 
     def _whitelight(self, nrm, fin, out):
-        wl = trncore.whitelight(nrm, fin, out, self._type)
+        wl = trncore.whitelight(nrm, fin, out, self._type, verbose=False)
         return wl
 
     @staticmethod

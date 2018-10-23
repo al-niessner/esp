@@ -7,7 +7,9 @@ import excalibur.eclipse.algorithms as eclalg
 class Actor(dawgie.Task):
     def list(self)->[dawgie.Task]:
         return [
-            eclalg.normalization()
+            eclalg.normalization(),
+            eclalg.whitelight(),
+            eclalg.spectrum()
         ]
     pass
 # --------- ----------------------------------------------------------

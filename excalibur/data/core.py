@@ -45,14 +45,14 @@ def collect(name, scrape, out):
 # -- CALIBRATE SCAN DATA -- ------------------------------------------
 def scancal(clc, tim, tid, flttype, out,
             emptythr=1e3, frame2png=False, verbose=False, debug=False):
-    # VISIT ----------------------------------------------------------
+    # VISIT ------------------------------------------------------------------------------
     for pkey in tim['data'].keys(): visits = np.array(tim['data'][pkey]['visits'])
-    # DATA TYPE ------------------------------------------------------
+    # DATA TYPE --------------------------------------------------------------------------
     arcsec2pix = dps(flttype)
     vrange = validrange(flttype)
     wvrng, disper, ldisp, udisp = fng(flttype)
     spectrace = np.round((np.max(wvrng) - np.min(wvrng))/disper)
-    # LOAD DATA ------------------------------------------------------
+    # LOAD DATA --------------------------------------------------------------------------
     dbs = os.path.join(dawgie.context.data_dbs, 'mast')
     data = {'LOC':[], 'EPS':[], 'DISPLIM':[ldisp, udisp],
             'SCANRATE':[], 'SCANLENGTH':[], 'SCANANGLE':[],
@@ -113,7 +113,7 @@ def scancal(clc, tim, tid, flttype, out,
             data['MAX'].append(fmax)
             pass
         pass
-    # MASK DATA ------------------------------------------------------
+    # MASK DATA --------------------------------------------------------------------------
     data['MEXP'] = data['EXP'].copy()
     data['MASK'] = data['EXPFLAG'].copy()
     data['IGNORED'] = [False]*len(data['LOC'])
@@ -142,11 +142,11 @@ def scancal(clc, tim, tid, flttype, out,
         data['MASK'][index] = masks
         data['IGNORED'][index] = ignore
         pass
-    # DATA CUBE ------------------------------------------------------
+    # DATA CUBE --------------------------------------------------------------------------
     ovszspc = False
     for index, nm in enumerate(data['LOC']):
         ignore = data['IGNORED'][index]
-        # ISOLATE SCAN Y ---------------------------------------------
+        # ISOLATE SCAN Y -----------------------------------------------------------------
         psdiff = np.diff(data['MEXP'][index][::-1].copy(), axis=0)
         psmin = np.nansum(data['MIN'][index])
         floatsw = data['SCANLENGTH'][index]/arcsec2pix
@@ -182,25 +182,37 @@ def scancal(clc, tim, tid, flttype, out,
                 floodlist[floodlist.index(np.nanmax(floodlist))] = np.nan
                 fldthr = np.nanmax(floodlist)
                 pass
-            # CONTAMINATION FROM ANOTHER SOURCE IN THE UPPER FRAME
+            # CONTAMINATION FROM ANOTHER SOURCE IN THE UPPER FRAME -----------------------
             if tid in ['HAT-P-41']: fldthr = fldthr/1.5
             if 'G102' in flttype: fldthr /= 3e0
             data['FLOODLVL'][index] = fldthr
             pass
         pass
     allfloodlvl = np.array(data['FLOODLVL'])
+    allscanlen = np.array(data['SCANLENGTH'])
+    allignore = np.array(data['IGNORED'])
+    alltrials = np.array(['Exposure Scan Length Rejection']*len(data['TRIAL']))
     for v in set(visits):
-        select = visits == v
-        allfloodlvl[select] = np.nanmedian(allfloodlvl[select])
+        allfloodlvl[visits == v] = np.nanmedian(allfloodlvl[visits == v])
+        visitign = allignore[visits == v]
+        visittrials = alltrials[visits == v]
+        select = allscanlen[visits == v] != np.nanmedian(allscanlen[visits == v])
+        visitign[select] = True
+        visittrials[~select] = ''
+        allignore[visits == v] = visitign
+        alltrials[visits == v] = visittrials
         pass
     data['FLOODLVL'] = list(allfloodlvl)
+    data['IGNORED'] = list(allignore)
+    data['TRIAL'] = list(alltrials)
     for index, nm in enumerate(data['LOC']):
         ignore = data['IGNORED'][index]
-        # ISOLATE SCAN Y ---------------------------------------------
+        # ISOLATE SCAN Y -----------------------------------------------------------------
         psdiff = np.diff(data['MEXP'][index][::-1].copy(), axis=0)
-        psmin = np.nansum(data['MIN'][index])
+        psminsel = np.array(data['MIN'][index]) < 0
+        if True in psminsel: psmin = np.nansum(np.array(data['MIN'][index])[psminsel])
+        else: psmin = np.nanmin(data['MIN'][index])
         floatsw = data['SCANLENGTH'][index]/arcsec2pix
-        scanwdw = np.round(floatsw)
         if (scanwdw > psdiff[0].shape[0]) or (len(psdiff) < 2):
             scanwpi = np.round(floatsw/(len(psdiff)))
             pass
@@ -220,8 +232,10 @@ def scancal(clc, tim, tid, flttype, out,
                 minlocs.append(lmn)
                 maxlocs.append(lmx)
                 pass
-            # HEAVILY FLAGGED SCAN -----------------------------------
-            if np.all(~np.isfinite(minlocs)) or np.all(~np.isfinite(maxlocs)):
+            # HEAVILY FLAGGED SCAN -------------------------------------------------------
+            nanlocs = np.all(~np.isfinite(minlocs)) or np.all(~np.isfinite(maxlocs))
+            almstare = scanwpi < 5
+            if nanlocs or almstare:
                 for de, md in zip(psdiff.copy()[::-1], data['MIN'][index][::-1]):
                     lmn, lmx = isolate(de, md, spectrace, scanwpi/2, targetn, fldthr)
                     minlocs.append(lmn)
@@ -238,7 +252,7 @@ def scancal(clc, tim, tid, flttype, out,
         if not ignore:
             minl = np.nanmin(minlocs)
             maxl = np.nanmax(maxlocs)
-            # CONTAMINATION FROM ANOTHER SOURCE IN THE UPPER FRAME
+            # CONTAMINATION FROM ANOTHER SOURCE IN THE UPPER FRAME -----------------------
             if (tid in ['HAT-P-41']) and ((maxl - minl) > 15): minl = maxl - 15
             if minl < 10: minl = 10
             if maxl > (psdiff[0].shape[0] - 10): maxl = psdiff[0].shape[0] - 10
@@ -246,12 +260,12 @@ def scancal(clc, tim, tid, flttype, out,
                 eachdiff[:int(minl),:] = 0
                 eachdiff[int(maxl):,:] = 0
                 pass
-            # DIFF ACCUM ---------------------------------------------
+            # DIFF ACCUM -----------------------------------------------------------------
             thispstamp = np.nansum(psdiff, axis=0)
             thispstamp[thispstamp <= psmin] = np.nan
             thispstamp[thispstamp == 0] = np.nan
             if abs(spectrace - thispstamp.shape[1]) < 36: ovszspc = True
-            # PLOTS --------------------------------------------------
+            # PLOTS ----------------------------------------------------------------------
             if debug:
                 show = thispstamp.copy()
                 valid = np.isfinite(show)
@@ -275,7 +289,7 @@ def scancal(clc, tim, tid, flttype, out,
                 plt.clim(colorlim, abs(colorlim))
                 plt.show()
                 pass
-            # ISOLATE SCAN X -----------------------------------------
+            # ISOLATE SCAN X -------------------------------------------------------------
             mltord = thispstamp.copy()
             targetn = 0
             if tid in ['XO-2']: targetn = -1
@@ -311,7 +325,9 @@ def scancal(clc, tim, tid, flttype, out,
             garbage = data['EXP'][index][::-1].copy()
             thispstamp = np.sum(np.diff(garbage, axis=0), axis=0)
             pstamperr = thispstamp*np.nan
-            data['TRIAL'][index] = 'Could Not Find Y Edges'
+            if len(data['TRIAL'][index]) < 1:
+                data['TRIAL'][index] = 'Could Not Find Y Edges'
+                pass
             ignore = True
             pass
         data['MEXP'][index] = thispstamp
@@ -319,12 +335,12 @@ def scancal(clc, tim, tid, flttype, out,
         data['IGNORED'][index] = ignore
         data['EXPERR'][index] = pstamperr
         log.warning('>-- %s %s %s', str(index), '/', str(len(data['LOC'])-1))
-        # PLOTS ------------------------------------------------------
+        # PLOTS --------------------------------------------------------------------------
         if frame2png:
             if not os.path.exists('TEST'): os.mkdir('TEST')
             if not os.path.exists('TEST/'+tid): os.mkdir('TEST/'+tid)
             plt.figure()
-            plt.title('Ignored = '+str(ignore))
+            plt.title('Index: '+str(index)+' Ignored='+str(ignore))
             plt.imshow(thispstamp)
             plt.colorbar()
             plt.savefig('TEST/'+tid+'/'+nm+'.png')
@@ -334,7 +350,7 @@ def scancal(clc, tim, tid, flttype, out,
     maxwasize = []
     for mexp in data['MEXP']: maxwasize.append(mexp.shape[1])
     maxwasize = np.nanmax(maxwasize)
-    # SPECTRUM EXTRACTION --------------------------------------------
+    # SPECTRUM EXTRACTION ----------------------------------------------------------------
     data['SPECTRUM'] = [np.array([np.nan]*maxwasize)]*len(data['LOC'])
     data['SPECERR'] = [np.array([np.nan]*maxwasize)]*len(data['LOC'])
     data['NSPEC'] = [np.nan]*len(data['LOC'])
@@ -348,14 +364,14 @@ def scancal(clc, tim, tid, flttype, out,
         if not ignore:
             frame = data['MEXP'][index].copy()
             frame = [line for line in frame if not np.all(~np.isfinite(line))]
-            # OVERSIZED MASK -----------------------------------------
+            # OVERSIZED MASK -------------------------------------------------------------
             for line in frame:
                 if np.nanmax(line) < floodlevel: line *= np.nan
                 if abs(spectrace - line.size) < 36: ovszspc = True
                 elif np.sum(np.isfinite(line)) < spectrace: line *= np.nan
                 pass
             frame = [line for line in frame if not np.all(~np.isfinite(line))]
-            # SCAN RATE CORRECTION -----------------------------------
+            # SCAN RATE CORRECTION -------------------------------------------------------
             template = []
             for col in np.array(frame).T:
                 if not np.all(~np.isfinite(col)): template.append(np.nanmedian(col))
@@ -427,7 +443,7 @@ def scancal(clc, tim, tid, flttype, out,
             data['NSPEC'][index] = np.array(nspectrum)
             pass
         pass
-    # PLOT -----------------------------------------------------------
+    # PLOT -------------------------------------------------------------------------------
     if debug:
         plt.figure()
         for spec in data['SPECTRUM']: plt.plot(spec)
@@ -435,7 +451,7 @@ def scancal(clc, tim, tid, flttype, out,
         plt.xlabel('Pixel Number')
         plt.show()
         pass
-    # WAVELENGTH CALIBRATION -----------------------------------------
+    # WAVELENGTH CALIBRATION -------------------------------------------------------------
     wavett, tt = ag2ttf(flttype)
     if ovszspc:
         select = (wavett*1e-4 < 1.68) & (wavett*1e-4 > 1.09)
@@ -489,7 +505,7 @@ def scancal(clc, tim, tid, flttype, out,
         else: data['WAVE'][index] = (data['SPECTRUM'][index])*np.nan
         data['IGNORED'][index] = ignore
         pass
-    # PLOTS ----------------------------------------------------------
+    # PLOTS ------------------------------------------------------------------------------
     if verbose and (not np.all(data['IGNORED'])):
         alltime = np.array([d for d,i in zip(data['TIME'], data['IGNORED']) if not i])
         dispersion = np.array([d for d,i in zip(data['DISPERSION'], data['IGNORED'])

@@ -17,6 +17,7 @@ try:
     from pymc.distributions import Normal as pmnd
     from pymc.distributions import Uniform as pmud
     from pymc.distributions import TruncatedNormal as pmtnd
+    pass
 except ImportError:
     import pymc3 as pm
     from pymc3.distributions import Normal as pmnd
@@ -54,7 +55,7 @@ def checksv(sv):
     return valid, errstring
 # ----------------- --------------------------------------------------
 # -- NORMALIZATION -- ------------------------------------------------
-def norm(cal, tme, fin, ext, out, selftype, debug=False):
+def norm(cal, tme, fin, ext, out, selftype, verbose=False):
     normed = False
     priors = fin['priors'].copy()
     ssc = syscore.ssconstants()
@@ -195,6 +196,11 @@ def norm(cal, tme, fin, ext, out, selftype, debug=False):
                         vnspec = np.array(nspectra)[check]
                         nphotn = np.array(photnoise)[check]
                         visw = np.array(visw)
+                        eclphase = phase[selv][check]
+                        if selftype in ['eclipse']:
+                            eclphase[eclphase < 0] = eclphase[eclphase < 0] + 1e0
+                            eclphase = eclphase - 5e-1
+                            pass
                         out['data'][p]['visits'].append(v)
                         out['data'][p]['dvisnum'].append(set(visits[selv]))
                         out['data'][p]['wavet'].append(wt)
@@ -205,11 +211,11 @@ def norm(cal, tme, fin, ext, out, selftype, debug=False):
                         out['data'][p]['orbits'].append(orbits[selv][check])
                         out['data'][p]['dispersion'].append(disp[selv][check])
                         out['data'][p]['z'].append(z[selv][check])
-                        out['data'][p]['phase'].append(phase[selv][check])
+                        out['data'][p]['phase'].append(eclphase)
                         out['data'][p]['photnoise'].append(nphotn)
                         out['data'][p]['stdns'].append(np.nanstd(np.nanmedian(nspectra,
                                                                               axis=1)))
-                        if debug:
+                        if verbose:
                             plt.figure()
                             for w,s in zip(visw[check], vnspec):
                                 select = (w > np.min(vrange)) & (w < np.max(vrange))
@@ -391,17 +397,14 @@ Orbital Parameters Recovery
         out['data'][p]['phase'] = phase
         out['data'][p]['flatphase'] = flatphase
         # LIMB DARKENING ---------------------------------------------
-        if selftype == 'transit':
+        if selftype in ['transit']:
             whiteld = createldgrid([allwwmin], [allwwmax], priors,
                                    segmentation=int(10), verbose=verbose)
             g1, g2, g3, g4 = whiteld['LD']
-            wlmod = tldlc(abs(flatz), rpors, g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0])
             pass
-        else:
-            wlmod = tldlc(abs(flatz), rpors)
-            whiteld = {}
-            pass
-        out['data'][p]['whiteld'] = whiteld
+        else: g1, g2, g3, g4 = [[0], [0], [0], [0]]
+        wlmod = tldlc(abs(flatz), rpors, g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0])
+        out['data'][p]['whiteld'] = [g1[0], g2[0], g3[0], g4[0]]
         # PLOT -------------------------------------------------------
         if verbose:
             plt.figure(figsize=(10, 6))
@@ -946,6 +949,7 @@ def timlc(vtime, orbits,
 # ---------------------- ---------------------------------------------
 # -- SPECTRUM -- -----------------------------------------------------
 def spectrum(fin, nrm, wht, out, selftype, chainlen=int(2e4), verbose=False):
+    if selftype in ['eclipse']: chainlen = int(1e2)
     exospec = False
     priors = fin['priors'].copy()
     ssc = syscore.ssconstants()
@@ -1013,14 +1017,13 @@ def spectrum(fin, nrm, wht, out, selftype, chainlen=int(2e4), verbose=False):
             data = np.array([np.nanmedian(d[s]) for d, s in zip(allspec, select)])
             dnoise = np.array([np.nanmedian(n[s]) for n, s in zip(allpnoise, select)])
             valid = np.isfinite(data)
-            if selftype == 'transit':
+            if selftype in ['transit']:
                 bld = createldgrid([wl], [wh], priors, segmentation=int(10))
                 g1, g2, g3, g4 = bld['LD']
-                out['data'][p]['LD'].append([g1[0], g2[0], g3[0], g4[0]])
-                model = tldlc(abs(allz), whiterprs,
-                              g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0])
                 pass
-            else: model = tldlc(abs(allz), whiterprs)
+            else: g1, g2, g3, g4 = [[0], [0], [0], [0]]
+            out['data'][p]['LD'].append([g1[0], g2[0], g3[0], g4[0]])
+            model = tldlc(abs(allz), whiterprs, g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0])
             if verbose:
                 plt.figure()
                 plt.title(str(int(1e3*np.mean([wl, wh])))+' nm')
