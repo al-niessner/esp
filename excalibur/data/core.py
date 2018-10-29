@@ -14,6 +14,9 @@ import astropy.io.fits as pyfits
 # ------------- ------------------------------------------------------
 # -- SV VALIDITY -- --------------------------------------------------
 def checksv(sv):
+    '''
+G ROUDIER: Tests for empty SV shell, better if it could be inherited from SV class
+    '''
     valid = False
     errstring = None
     if sv['STATUS'][-1]: valid = True
@@ -22,6 +25,9 @@ def checksv(sv):
 # ----------------- --------------------------------------------------
 # -- COLLECT DATA -- -------------------------------------------------
 def collect(name, scrape, out):
+    '''
+G ROUDIER: Filters data from target.scrape.databases according to active filters
+    '''
     collected = False
     obs, ins, det, fil, mod = name.split('-')
     for rootname in scrape['name'].keys():
@@ -38,13 +44,239 @@ def collect(name, scrape, out):
             collected = True
             pass
         pass
-    if collected: out['STATUS'].append(True)
-    else: out['activefilters'].pop(name, None)
+    if collected:
+        log.warning('>-- %s', str(int(np.sum(out['activefilters'][name]['TOTAL']))))
+        out['STATUS'].append(True)
+        pass
+    else:
+        log.warning('>-- NO DATA')
+        out['activefilters'].pop(name, None)
+        pass
     return collected
 # ------------------ -------------------------------------------------
+# -- TIMING -- -------------------------------------------------------
+def timing(force, ext, clc, out, verbose=False):
+    '''
+G ROUDIER: Uses system orbital parameters to guide the dataset towards transit, eclipse or phasecurve tasks
+    '''
+    chunked = False
+    priors = force['priors'].copy()
+    # LOAD DATA ------------------------------------------------------
+    if 'WFC3' in ext:
+        dbs = os.path.join(dawgie.context.data_dbs, 'mast')
+        data = {'LOC':[], 'SCANANGLE':[], 'TIME':[], 'EXPLEN':[]}
+        for loc in sorted(clc['LOC']):
+            fullloc = os.path.join(dbs, loc)
+            with pyfits.open(fullloc) as hdulist:
+                header0 = hdulist[0].header
+                if 'SCAN_ANG' in header0: data['SCANANGLE'].append(header0['SCAN_ANG'])
+                elif 'PA_V3' in header0: data['SCANANGLE'].append(header0['PA_V3'])
+                else: data['SCANANGLE'].append(666)
+                ftime = []
+                for fits in hdulist:
+                    if (fits.size != 0) and ('DELTATIM' in fits.header.keys()):
+                        ftime.append(float(fits.header['ROUTTIME']))
+                        pass
+                    pass
+                data['LOC'].append(loc)
+                data['TIME'].append(np.nanmean(ftime))
+                data['EXPLEN'].append(header0['EXPTIME'])
+                pass
+            pass
+        pass
+    data['IGNORED'] = [False]*len(data['LOC'])
+    time = np.array(data['TIME'].copy())
+    ignore = np.array(data['IGNORED'].copy())
+    scanangle = np.array(data['SCANANGLE'].copy())
+    exposlen = np.array(data['EXPLEN'].copy())
+    ordt = np.argsort(time)
+    ignto = ignore.copy()[ordt]
+    scato = scanangle.copy()[ordt]
+    exlto = exposlen.copy()[ordt]
+    tmeto = time.copy()[ordt]
+    ssc = syscore.ssconstants()
+    if tmeto.size > 1:
+        for p in priors['planets']:
+            out['data'][p] = {}
+            smaors = priors[p]['sma']/priors['R*']/ssc['Rsun/AU']
+            tmjd = priors[p]['t0']
+            if tmjd > 2400000.5: tmjd -= 2400000.5
+            z, phase = time2z(time, priors[p]['inc'], tmjd, smaors, priors[p]['period'],
+                              priors[p]['ecc'])
+            zto = z.copy()[ordt]
+            phsto = phase.copy()[ordt]
+            tmetod = [np.diff(tmeto)[0]]
+            tmetod.extend(list(np.diff(tmeto)))
+            tmetod = np.array(tmetod)
+            thrs = np.percentile(tmetod, 75)
+            cftfail = tmetod > 3*thrs
+            if True in cftfail: thro = np.percentile(tmetod[cftfail], 75)
+            else: thro = 0
+            # VISIT NUMBERING --------------------------------------------
+            whereo = np.where(tmetod > 3*thrs)[0]
+            wherev = np.where(tmetod > 3*thro)[0]
+            visto = np.ones(tmetod.size)
+            dvis = np.ones(tmetod.size)
+            vis = np.ones(tmetod.size)
+            for index in wherev: visto[index:] += 1
+            # DOUBLE SCAN VISIT RE NUMBERING -----------------------------
+            dvisto = visto.copy()
+            for v in set(visto):
+                selv = (visto == v)
+                vordsa = scato[selv].copy()
+                if len(set(vordsa)) > 1:
+                    dvisto[visto > v] = dvisto[visto > v] + 1
+                    dbthr = np.mean(list(set(vordsa)))
+                    vdbvisto = dvisto[selv].copy()
+                    vdbvisto[vordsa > dbthr] = vdbvisto[vordsa > dbthr] + 1
+                    dvisto[selv] = vdbvisto
+                    pass
+                pass
+            # ORBIT NUMBERING --------------------------------------------
+            orbto = np.ones(tmetod.size)
+            orb = np.ones(tmetod.size)
+            for v in set(visto):
+                selv = (visto == v)
+                if len(~ignto[selv]) < 4: ignto[selv] = True
+                else:
+                    select = np.where(tmetod[selv] > 3*thrs)[0]
+                    incorb = orbto[selv]
+                    for indice in select: incorb[indice:] = incorb[indice:] + 1
+                    orbto[selv] = incorb
+                    for o in set(orbto[selv]):
+                        selo = (orbto[selv] == o)
+                        if len(~ignto[selv][selo]) < 4:
+                            visignto = ignto[selv]
+                            visignto[selo] = True
+                            ignto[selv] = visignto
+                            pass
+                        ref = np.median(exlto[selv][selo])
+                        if len(set(exlto[selv][selo])) > 1:
+                            rej = (exlto[selv][selo] != ref)
+                            ovignto = ignto[selv][selo]
+                            ovignto[rej] = True
+                            ignto[selv][selo] = ovignto
+                            pass
+                        pass
+                    pass
+                pass
+            # TRANSIT VISIT PHASECURVE -----------------------------------
+            for v in set(visto):
+                selv = (visto == v)
+                trlim = 1e0
+                posphsto = phsto.copy()
+                posphsto[posphsto < 0] = posphsto[posphsto < 0] + 1e0
+                pcconde = False
+                tecrit = abs(np.arcsin(trlim/smaors))/(2e0*np.pi)
+                if (np.max(posphsto[selv]) - np.min(posphsto[selv])) > (1e0 - 2e0*tecrit):
+                    pcconde = True
+                    pass
+                pccondt = False
+                if (np.max(phsto[selv]) - np.min(phsto[selv])) > (1e0 - 2e0*tecrit):
+                    pccondt = True
+                    pass
+                if pcconde and pccondt: out['phasecurve'].append(int(v))
+                select = (abs(zto[selv]) < trlim)
+                if np.any(select)and(np.min(abs(posphsto[selv][select] - 0.5)) < tecrit):
+                    out['eclipse'].append(int(v))
+                    pass
+                if np.any(select)and(np.min(abs(posphsto[selv][select])) < tecrit):
+                    out['transit'].append(int(v))
+                    pass
+                pass
+            out['data'][p]['transit'] = []
+            out['data'][p]['eclipse'] = []
+            out['data'][p]['phasecurve'] = []
+            for v in set(dvisto):
+                selv = (dvisto == v)
+                trlim = 1e0
+                posphsto = phsto.copy()
+                posphsto[posphsto < 0] = posphsto[posphsto < 0] + 1e0
+                pcconde = False
+                tecrit = abs(np.arcsin(trlim/smaors))/(2e0*np.pi)
+                if (np.max(posphsto[selv]) - np.min(posphsto[selv])) > (1e0 - 2e0*tecrit):
+                    pcconde = True
+                    pass
+                pccondt = False
+                if (np.max(phsto[selv]) - np.min(phsto[selv])) > (1e0 - 2e0*tecrit):
+                    pccondt = True
+                    pass
+                if pcconde and pccondt: out['data'][p]['phasecurve'].append(int(v))
+                select = (abs(zto[selv]) < trlim)
+                if np.any(select)and(np.min(abs(posphsto[selv][select] - 0.5)) < tecrit):
+                    out['data'][p]['eclipse'].append(int(v))
+                    pass
+                if np.any(select) and (np.min(abs(posphsto[selv][select])) < tecrit):
+                    out['data'][p]['transit'].append(int(v))
+                    pass
+                pass
+            vis[ordt] = visto.astype(int)
+            orb[ordt] = orbto.astype(int)
+            dvis[ordt] = dvisto.astype(int)
+            ignore[ordt] = ignto
+            log.warning('>-- TRANSIT: %s', str(out['transit']))
+            log.warning('>-- ECLIPSE: %s', str(out['eclipse']))
+            log.warning('>-- PHASE CURVE: %s', str(out['phasecurve']))
+            # PLOTS ------------------------------------------------------
+            if verbose:
+                plt.figure()
+                plt.plot(phsto, 'k.')
+                plt.plot(np.arange(phsto.size)[~ignto], phsto[~ignto], 'bo')
+                for i in wherev: plt.axvline(i, ls='--', color='r')
+                for i in whereo: plt.axvline(i, ls='-.', color='g')
+                plt.xlim(0, tmetod.size - 1)
+                plt.ylim(-0.5, 0.5)
+                plt.xlabel('Time index')
+                plt.ylabel('Orbital Phase [2pi rad]')
+
+                plt.figure()
+                plt.plot(tmetod, 'o')
+                plt.plot(tmetod*0+3*thro, 'r--')
+                plt.plot(tmetod*0+3*thrs, 'g-.')
+                for i in wherev: plt.axvline(i, ls='--', color='r')
+                for i in whereo: plt.axvline(i, ls='-.', color='g')
+                plt.xlim(0, tmetod.size - 1)
+                plt.xlabel('Time index')
+                plt.ylabel('Frame Separation [Days]')
+                plt.semilogy()
+
+                if np.max(dvis) > np.max(vis):
+                    plt.figure()
+                    plt.plot(dvisto, 'o')
+                    plt.xlim(0, tmetod.size - 1)
+                    plt.ylim(1, np.max(dvisto))
+                    plt.xlabel('Time index')
+                    plt.ylabel('Double Scan Visit Number')
+                    plt.show()
+                    pass
+                else: plt.show()
+                pass
+            out['data'][p]['tmetod'] = tmetod
+            out['data'][p]['whereo'] = whereo
+            out['data'][p]['wherev'] = wherev
+            out['data'][p]['thrs'] = thrs
+            out['data'][p]['thro'] = thro
+            out['data'][p]['visits'] = vis
+            out['data'][p]['orbits'] = orb
+            out['data'][p]['dvisits'] = dvis
+            out['data'][p]['z'] = z
+            out['data'][p]['phase'] = phase
+            out['data'][p]['ordt'] = ordt
+            out['data'][p]['ignore'] = ignore
+            out['STATUS'].append(True)
+            pass
+        pass
+    if ((out['transit'].__len__() > 0) or
+        (out['eclipse'].__len__() > 0) or
+        (out['phasecurve'].__len__() > 0)): chunked = True
+    return chunked
+# ------------ -------------------------------------------------------
 # -- CALIBRATE SCAN DATA -- ------------------------------------------
 def scancal(clc, tim, tid, flttype, out,
             emptythr=1e3, frame2png=False, verbose=False, debug=False):
+    '''
+G ROUDIER: Extracts and Wavelength calibrates WFC3 SCAN mode spectra
+    '''
     # VISIT ------------------------------------------------------------------------------
     for pkey in tim['data'].keys(): visits = np.array(tim['data'][pkey]['visits'])
     # DATA TYPE --------------------------------------------------------------------------
@@ -98,8 +330,9 @@ def scancal(clc, tim, tid, flttype, out,
                         del fits.data
                         pass
                     if eps and (fits.header['EXTNAME'] == 'TIME'):
-                        frame[-1] = frame[-1]*np.array(float(fits.header['PIXVALUE']))
-                        errframe[-1] = errframe[-1]*np.array(float(fits.header['PIXVALUE']))
+                        xpsrl = np.array(float(fits.header['PIXVALUE']))
+                        frame[-1] = frame[-1]*xpsrl
+                        errframe[-1] = errframe[-1]*xpsrl
                         pass
                     pass
                 pass
@@ -146,7 +379,7 @@ def scancal(clc, tim, tid, flttype, out,
     ovszspc = False
     for index, nm in enumerate(data['LOC']):
         ignore = data['IGNORED'][index]
-        # ISOLATE SCAN Y -----------------------------------------------------------------
+        # MINKOWSKI FLOOD LEVEL ----------------------------------------------------------
         psdiff = np.diff(data['MEXP'][index][::-1].copy(), axis=0)
         psmin = np.nansum(data['MIN'][index])
         floatsw = data['SCANLENGTH'][index]/arcsec2pix
@@ -237,7 +470,9 @@ def scancal(clc, tim, tid, flttype, out,
             almstare = scanwpi < 5
             if nanlocs or almstare:
                 for de, md in zip(psdiff.copy()[::-1], data['MIN'][index][::-1]):
-                    lmn, lmx = isolate(de, md, spectrace, scanwpi/2, targetn, fldthr)
+                    if (scanwpi/3) < 2: redscanwpi = scanwpi/2
+                    else: redscanwpi = scanwpi/3
+                    lmn, lmx = isolate(de, md, spectrace, redscanwpi, targetn, fldthr)
                     minlocs.append(lmn)
                     maxlocs.append(lmx)
                     pass
@@ -334,7 +569,7 @@ def scancal(clc, tim, tid, flttype, out,
         data['TIME'][index] = np.nanmean(data['TIME'][index].copy())
         data['IGNORED'][index] = ignore
         data['EXPERR'][index] = pstamperr
-        log.warning('>-- %s %s %s', str(index), '/', str(len(data['LOC'])-1))
+        if debug: log.warning('>-- %s / %s', str(index), str(len(data['LOC'])-1))
         # PLOTS --------------------------------------------------------------------------
         if frame2png:
             if not os.path.exists('TEST'): os.mkdir('TEST')
@@ -374,7 +609,7 @@ def scancal(clc, tim, tid, flttype, out,
             # SCAN RATE CORRECTION -------------------------------------------------------
             template = []
             for col in np.array(frame).T:
-                if not np.all(~np.isfinite(col)): template.append(np.nanmedian(col))
+                if not np.all(~np.isfinite(col)): template.append(np.nanmean(col))
                 else: template.append(np.nan)
                 pass
             template = np.array(template)
@@ -392,12 +627,21 @@ def scancal(clc, tim, tid, flttype, out,
                 else: line *= np.nan
                 pass
             frame = [line for line in frame if not np.all(~np.isfinite(line))]
+            if debug:
+                display = [np.array(line)/template for line in frame]
+                plt.figure()
+                plt.imshow(np.array(display))
+                plt.colorbar()
+                plt.clim(0.95, 1.05)
+                plt.title(str(index))
+                plt.show()
+                pass
             spectrum = []
             specerr = []
             nspectrum = []
             vtemplate = []
             for row in np.array(frame):
-                if not np.all(~np.isfinite(row)): vtemplate.append(np.nanmedian(row))
+                if not np.all(~np.isfinite(row)): vtemplate.append(np.nanmean(row))
                 else: vtemplate.append(np.nan)
                 pass
             vtemplate = np.array(vtemplate)
@@ -416,7 +660,7 @@ def scancal(clc, tim, tid, flttype, out,
                         pass
                     else: valid = [False]
                     if np.nansum(valid) > 0:
-                        spectrum.append(np.nanmean(col[select][valid]))
+                        spectrum.append(np.nanmedian(col[select][valid]))
                         specerr.append(np.nanstd(col[select][valid]))
                         nspectrum.append(np.nansum(valid))
                         pass
@@ -558,13 +802,9 @@ def scancal(clc, tim, tid, flttype, out,
         pass
     allignore = data['IGNORED']
     allculprits = data['TRIAL']
-    allindex = np.arange(len(data['LOC']))
-    log.warning('>-- IGNORED: %s %s %s',
-                str(np.nansum(allignore)), '/', str(len(allignore)))
-    for index in allindex:
-        if allculprits[index].__len__() > 0:
-            log.warning('>-- FRAME %s %s %s', str(index), ':', str(allculprits[index]))
-            pass
+    log.warning('>-- IGNORED: %s / %s', str(np.nansum(allignore)), str(len(allignore)))
+    for index, ignore in enumerate(allignore):
+        if ignore: log.warning('>-- %s: %s', str(index), str(allculprits[index]))
         pass
     data.pop('EXP', None)
     data.pop('EXPFLAG', None)
@@ -865,218 +1105,6 @@ def wcme(params, data, refmu=None, reftt=None, forward=True):
     else: out = (d - model)/weights
     return out
 # ----------------------------- --------------------------------------
-# -- TIMING -- -------------------------------------------------------
-def timing(force, clc, out, verbose=False):
-    chunked = False
-    priors = force['priors'].copy()
-    # LOAD DATA ------------------------------------------------------
-    dbs = os.path.join(dawgie.context.data_dbs, 'mast')
-    data = {'LOC':[], 'SCANANGLE':[], 'TIME':[], 'EXPLEN':[]}
-    for loc in sorted(clc['LOC']):
-        fullloc = os.path.join(dbs, loc)
-        with pyfits.open(fullloc) as hdulist:
-            header0 = hdulist[0].header
-            if 'SCAN_ANG' in header0: data['SCANANGLE'].append(header0['SCAN_ANG'])
-            elif 'PA_V3' in header0: data['SCANANGLE'].append(header0['PA_V3'])
-            else: data['SCANANGLE'].append(666)
-            ftime = []
-            for fits in hdulist:
-                if (fits.size != 0) and ('DELTATIM' in fits.header.keys()):
-                    ftime.append(float(fits.header['ROUTTIME']))
-                    pass
-                pass
-            data['LOC'].append(loc)
-            data['TIME'].append(np.nanmean(ftime))
-            data['EXPLEN'].append(header0['EXPTIME'])
-            pass
-        pass
-    data['IGNORED'] = [False]*len(data['LOC'])
-    time = np.array(data['TIME'].copy())
-    ignore = np.array(data['IGNORED'].copy())
-    scanangle = np.array(data['SCANANGLE'].copy())
-    exposlen = np.array(data['EXPLEN'].copy())
-    ordt = np.argsort(time)
-    ignto = ignore.copy()[ordt]
-    scato = scanangle.copy()[ordt]
-    exlto = exposlen.copy()[ordt]
-    tmeto = time.copy()[ordt]
-    ssc = syscore.ssconstants()
-    if tmeto.size > 1:
-        for p in priors['planets']:
-            out['data'][p] = {}
-            smaors = priors[p]['sma']/priors['R*']/ssc['Rsun/AU']
-            tmjd = priors[p]['t0']
-            if tmjd > 2400000.5: tmjd -= 2400000.5
-            z, phase = time2z(time, priors[p]['inc'], tmjd, smaors, priors[p]['period'],
-                              priors[p]['ecc'])
-            zto = z.copy()[ordt]
-            phsto = phase.copy()[ordt]
-            tmetod = [np.diff(tmeto)[0]]
-            tmetod.extend(list(np.diff(tmeto)))
-            tmetod = np.array(tmetod)
-            thrs = np.percentile(tmetod, 75)
-            cftfail = tmetod > 3*thrs
-            if True in cftfail: thro = np.percentile(tmetod[cftfail], 75)
-            else: thro = 0
-            # VISIT NUMBERING --------------------------------------------
-            whereo = np.where(tmetod > 3*thrs)[0]
-            wherev = np.where(tmetod > 3*thro)[0]
-            visto = np.ones(tmetod.size)
-            dvis = np.ones(tmetod.size)
-            vis = np.ones(tmetod.size)
-            for index in wherev: visto[index:] += 1
-            # DOUBLE SCAN VISIT RE NUMBERING -----------------------------
-            dvisto = visto.copy()
-            for v in set(visto):
-                selv = (visto == v)
-                vordsa = scato[selv].copy()
-                if len(set(vordsa)) > 1:
-                    dvisto[visto > v] = dvisto[visto > v] + 1
-                    dbthr = np.mean(list(set(vordsa)))
-                    vdbvisto = dvisto[selv].copy()
-                    vdbvisto[vordsa > dbthr] = vdbvisto[vordsa > dbthr] + 1
-                    dvisto[selv] = vdbvisto
-                    pass
-                pass
-            # ORBIT NUMBERING --------------------------------------------
-            orbto = np.ones(tmetod.size)
-            orb = np.ones(tmetod.size)
-            for v in set(visto):
-                selv = (visto == v)
-                if len(~ignto[selv]) < 4: ignto[selv] = True
-                else:
-                    select = np.where(tmetod[selv] > 3*thrs)[0]
-                    incorb = orbto[selv]
-                    for indice in select: incorb[indice:] = incorb[indice:] + 1
-                    orbto[selv] = incorb
-                    for o in set(orbto[selv]):
-                        selo = (orbto[selv] == o)
-                        if len(~ignto[selv][selo]) < 4:
-                            visignto = ignto[selv]
-                            visignto[selo] = True
-                            ignto[selv] = visignto
-                            pass
-                        ref = np.median(exlto[selv][selo])
-                        if len(set(exlto[selv][selo])) > 1:
-                            rej = (exlto[selv][selo] != ref)
-                            ovignto = ignto[selv][selo]
-                            ovignto[rej] = True
-                            ignto[selv][selo] = ovignto
-                            pass
-                        pass
-                    pass
-                pass
-            # TRANSIT VISIT PHASECURVE -----------------------------------
-            for v in set(visto):
-                selv = (visto == v)
-                trlim = 1e0
-                posphsto = phsto.copy()
-                posphsto[posphsto < 0] = posphsto[posphsto < 0] + 1e0
-                pcconde = False
-                tecrit = abs(np.arcsin(trlim/smaors))/(2e0*np.pi)
-                if (np.max(posphsto[selv]) - np.min(posphsto[selv])) > (1e0 - 2e0*tecrit):
-                    pcconde = True
-                    pass
-                pccondt = False
-                if (np.max(phsto[selv]) - np.min(phsto[selv])) > (1e0 - 2e0*tecrit):
-                    pccondt = True
-                    pass
-                if pcconde and pccondt: out['phasecurve'].append(int(v))
-                select = (abs(zto[selv]) < trlim)
-                if np.any(select)and(np.min(abs(posphsto[selv][select] - 0.5)) < tecrit):
-                    out['eclipse'].append(int(v))
-                    pass
-                if np.any(select)and(np.min(abs(posphsto[selv][select])) < tecrit):
-                    out['transit'].append(int(v))
-                    pass
-                pass
-            out['data'][p]['transit'] = []
-            out['data'][p]['eclipse'] = []
-            out['data'][p]['phasecurve'] = []
-            for v in set(dvisto):
-                selv = (dvisto == v)
-                trlim = 1e0
-                posphsto = phsto.copy()
-                posphsto[posphsto < 0] = posphsto[posphsto < 0] + 1e0
-                pcconde = False
-                tecrit = abs(np.arcsin(trlim/smaors))/(2e0*np.pi)
-                if (np.max(posphsto[selv]) - np.min(posphsto[selv])) > (1e0 - 2e0*tecrit):
-                    pcconde = True
-                    pass
-                pccondt = False
-                if (np.max(phsto[selv]) - np.min(phsto[selv])) > (1e0 - 2e0*tecrit):
-                    pccondt = True
-                    pass
-                if pcconde and pccondt: out['data'][p]['phasecurve'].append(int(v))
-                select = (abs(zto[selv]) < trlim)
-                if np.any(select)and(np.min(abs(posphsto[selv][select] - 0.5)) < tecrit):
-                    out['data'][p]['eclipse'].append(int(v))
-                    pass
-                if np.any(select) and (np.min(abs(posphsto[selv][select])) < tecrit):
-                    out['data'][p]['transit'].append(int(v))
-                    pass
-                pass
-            vis[ordt] = visto.astype(int)
-            orb[ordt] = orbto.astype(int)
-            dvis[ordt] = dvisto.astype(int)
-            ignore[ordt] = ignto
-            log.warning('>-- TRANSIT: %s', str(out['transit']))
-            log.warning('>-- ECLIPSE: %s', str(out['eclipse']))
-            log.warning('>-- PHASE CURVE: %s', str(out['phasecurve']))
-            # PLOTS ------------------------------------------------------
-            if verbose:
-                plt.figure()
-                plt.plot(phsto, 'k.')
-                plt.plot(np.arange(phsto.size)[~ignto], phsto[~ignto], 'bo')
-                for i in wherev: plt.axvline(i, ls='--', color='r')
-                for i in whereo: plt.axvline(i, ls='-.', color='g')
-                plt.xlim(0, tmetod.size - 1)
-                plt.ylim(-0.5, 0.5)
-                plt.xlabel('Time index')
-                plt.ylabel('Orbital Phase [2pi rad]')
-
-                plt.figure()
-                plt.plot(tmetod, 'o')
-                plt.plot(tmetod*0+3*thro, 'r--')
-                plt.plot(tmetod*0+3*thrs, 'g-.')
-                for i in wherev: plt.axvline(i, ls='--', color='r')
-                for i in whereo: plt.axvline(i, ls='-.', color='g')
-                plt.xlim(0, tmetod.size - 1)
-                plt.xlabel('Time index')
-                plt.ylabel('Frame Separation [Days]')
-                plt.semilogy()
-
-                if np.max(dvis) > np.max(vis):
-                    plt.figure()
-                    plt.plot(dvisto, 'o')
-                    plt.xlim(0, tmetod.size - 1)
-                    plt.ylim(1, np.max(dvisto))
-                    plt.xlabel('Time index')
-                    plt.ylabel('Double Scan Visit Number')
-                    plt.show()
-                    pass
-                else: plt.show()
-                pass
-            out['data'][p]['tmetod'] = tmetod
-            out['data'][p]['whereo'] = whereo
-            out['data'][p]['wherev'] = wherev
-            out['data'][p]['thrs'] = thrs
-            out['data'][p]['thro'] = thro
-            out['data'][p]['visits'] = vis
-            out['data'][p]['orbits'] = orb
-            out['data'][p]['dvisits'] = dvis
-            out['data'][p]['z'] = z
-            out['data'][p]['phase'] = phase
-            out['data'][p]['ordt'] = ordt
-            out['data'][p]['ignore'] = ignore
-            out['STATUS'].append(True)
-            pass
-        pass
-    if ((out['transit'].__len__() > 0) or
-        (out['eclipse'].__len__() > 0) or
-        (out['phasecurve'].__len__() > 0)): chunked = True
-    return chunked
-# ------------ -------------------------------------------------------
 # -- TIME TO Z -- ----------------------------------------------------
 def time2z(time, ipct, tknot, sma, orbperiod, ecc, tperi=None, epsilon=1e-10):
     if tperi is not None:

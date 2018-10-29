@@ -23,11 +23,6 @@ class normalization(trnalg.normalization):
         self._version_ = dawgie.VERSION(1,1,0)
         self._type = 'eclipse'
         return
-
-    @staticmethod
-    def _failure(errstr):
-        log.log(31, '--< ECLIPSE NORMALIZATION: '+errstr+' >--')
-        return
     pass
 
 class whitelight(trnalg.whitelight):
@@ -40,11 +35,6 @@ class whitelight(trnalg.whitelight):
     def previous(self):
         return [dawgie.ALG_REF(ecl.factory, self.__nrm),
                 dawgie.ALG_REF(sys.factory, self.__fin)]
-
-    @staticmethod
-    def _failure(errstr):
-        log.warning('--< ECLIPSE WHITE LIGHT: ' + errstr + ' >--')
-        return
     pass
 
 class spectrum(trnalg.spectrum):
@@ -58,10 +48,5 @@ class spectrum(trnalg.spectrum):
         return [dawgie.ALG_REF(sys.factory, self.__fin),
                 dawgie.ALG_REF(ecl.factory, self.__nrm),
                 dawgie.ALG_REF(ecl.factory, self.__wht)]
-
-    @staticmethod
-    def _failure(errstr):
-        log.warning('--< ECLIPSE SPECTRUM: ' + errstr + ' >--')
-        return
     pass
 # ---------------- ---------------------------------------------------

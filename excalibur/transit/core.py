@@ -30,9 +30,9 @@ CONTEXT = collections.namedtuple('CONTEXT',
                                  ['alt', 'ald', 'allz', 'commonoim', 'ecc',
                                   'g1', 'g2', 'g3', 'g4', 'ootoindex', 'ootorbits',
                                   'orbits', 'period', 'selectfit', 'smaors', 'time',
-                                  'tmjd', 'ttv', 'valid', 'visits', 'aos'])
+                                  'tmjd', 'ttv', 'valid', 'visits', 'aos', 'avi'])
 
-# AN: INLINE HACK TO ldtk.LDPSet -- ------------------------------------------------------
+# A NIESSNER: INLINE HACK TO ldtk.LDPSet -- ----------------------------------------------
 class LDPSet(ldtk.LDPSet):
     '''
 Despotic bypass of CIs
@@ -129,9 +129,16 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False):
                         pass
                     pass
                 trash = []
+                avorbnum = []
+                for onum in ootplus: avorbnum.append(np.sum(orbits[selv] == onum))
+                for onum in ootminus: avorbnum.append(np.sum(orbits[selv] == onum))
                 if ootplus.__len__() > 1:
                     keep = ootplus[ootpv.index(min(ootpv))]
                     trash.extend([i for i in ootplus if i != keep])
+                    # SMALL OOT ORBIT DETECTION ------------------------------------------
+                    if np.sum(orbits[selv] == keep) < 5e-1*np.nanmedian(avorbnum):
+                        trash = []
+                        pass
                     pass
                 if ootminus.__len__() > 1:
                     keep = ootminus[ootmv.index(max(ootmv))]
@@ -199,7 +206,6 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False):
                         eclphase = phase[selv][check]
                         if selftype in ['eclipse']:
                             eclphase[eclphase < 0] = eclphase[eclphase < 0] + 1e0
-                            eclphase = eclphase - 5e-1
                             pass
                         out['data'][p]['visits'].append(v)
                         out['data'][p]['dvisnum'].append(set(visits[selv]))
@@ -279,8 +285,7 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False):
 # -- TEMPLATE BUILDER -- ---------------------------------------------
 def tplbuild(spectra, wave, vrange, disp, superres=False):
     '''
-Builds a spectrum template according to the peak in population
-density per wavelength bins
+Builds a spectrum template according to the peak in population density per wavelength bins
     '''
     allspec = []
     for s in spectra.copy(): allspec.extend(s)
@@ -551,7 +556,7 @@ Orbital Parameters Recovery
                        ttv=ttv,
                        valid=None,
                        visits=visits,
-                       aos=None)
+                       aos=None, avi=None)
 
         # ORBITAL MODEL ----------------------------------------------
         @pm.deterministic
@@ -620,6 +625,7 @@ Orbital Parameters Recovery
                                                smaors, period, ecc)
                 pass
             else: postz, postph = datcore.time2z(postt, inc, posttk, smaors, period, ecc)
+            if selftype in ['eclipse']: postph[postph < 0] = postph[postph < 0] + 1e0
             postsep.extend(postz)
             postphase.append(postph)
             postflatphase.extend(postph)
@@ -763,6 +769,9 @@ def vecoccs(z, xrs, rprs):
 def createldgrid(minmu, maxmu, orbp,
                  ldmodel='nonlinear', phoenixmin=1e-1,
                  segmentation=int(10), verbose=False):
+    '''
+G Roudier: Wrapper around LDTK downloading tools
+    '''
     tstar = orbp['T*']
     terr = np.sqrt(abs(orbp['T*_uperr']*orbp['T*_lowerr']))
     if terr < (3e0*tstar/1e2): terr = 3e0*tstar/1e2
@@ -1033,22 +1042,24 @@ def spectrum(fin, nrm, wht, out, selftype, chainlen=int(2e4), verbose=False):
                 plt.show()
                 pass
             # PRIORS ---------------------------------------------------------------------
-            oot = (abs(allz) > (1e0 + whiterprs)) & valid
-            ootstd = np.std(data[oot])
-            rprs = pmud('rprs', 0, 2e0*whiterprs)
+            # oot = (abs(allz) > (1e0 + whiterprs)) & valid
+            # ootstd = np.std(data[oot])
+            # rprs = pmud('rprs', 0, 2e0*whiterprs)
+            rprs = pmnd('rprs', whiterprs, 1e6)
             nodes = [rprs]
             tauvs = 1e0/((1e-2/trdura)**2)
-            tauvi = 1e0/(ootstd**2)
+            # tauvi = 1e0/(ootstd**2)
             allvslope = np.empty(len(visits), dtype=object)
-            allvitcp = np.empty(len(visits), dtype=object)
+            # allvitcp = np.empty(len(visits), dtype=object)
+            allvitcp = []
             allologtau = []
             allologdelay = []
             alloslope = []
             for i, v in enumerate(visits):
                 allvslope[i] = pmtnd('vslope%i' % v, 0e0, tauvs,
                                      -3e-2/trdura, 3e-2/trdura)
-                allvitcp[i] = pmtnd('vitcp%i' % v, 1e0, tauvi,
-                                    1e0 - 3e0*ootstd, 1e0 + 3e0*ootstd)
+                # allvitcp[i] = pmtnd('vitcp%i' % v, 1e0, tauvi, 1e0 - 3e0*ootstd, 1e0 + 3e0*ootstd)
+                allvitcp.append(wht['data'][p]['mcpost']['vitcp%i' % v]['quantiles'][50])
                 if commonoim:
                     alloslope.append(wht['data'][p]['mcpost']['oslope%i' % v]['quantiles'][50])
                     allologtau.append(wht['data'][p]['mcpost']['ologtau%i' % v]['quantiles'][50])
@@ -1063,7 +1074,7 @@ def spectrum(fin, nrm, wht, out, selftype, chainlen=int(2e4), verbose=False):
                     pass
                 pass
             nodes.extend(allvslope)
-            nodes.extend(allvitcp)
+            # nodes.extend(allvitcp)
             ctxt = CONTEXT(alt=allologtau,
                            ald=allologdelay,
                            allz=allz,
@@ -1081,17 +1092,18 @@ def spectrum(fin, nrm, wht, out, selftype, chainlen=int(2e4), verbose=False):
                            ttv=None,
                            valid=valid,
                            visits=visits,
-                           aos=alloslope)
+                           aos=alloslope, avi=allvitcp)
 
             # LIGHT CURVE MODEL --------------------------------------
             @pm.deterministic
-            def lcmodel(r=rprs, avs=allvslope, avi=allvitcp, ctxt=ctxt):
+            def lcmodel(r=rprs, avs=allvslope, ctxt=ctxt):
                 allimout = []
                 for iv in range(len(ctxt.visits)):
                     if ctxt.commonoim:
                         imout = timlc(ctxt.time[iv], ctxt.orbits[iv],
                                       vslope=float(avs[iv]),
-                                      vitcp=float(avi[iv]), oslope=float(ctxt.aos[iv]),
+                                      vitcp=float(ctxt.avi[iv]),
+                                      oslope=float(ctxt.aos[iv]),
                                       ologtau=float(ctxt.alt[iv]),
                                       ologdelay=float(ctxt.ald[iv]))
                         pass
@@ -1101,7 +1113,8 @@ def spectrum(fin, nrm, wht, out, selftype, chainlen=int(2e4), verbose=False):
                         ologtautable = [float(ctxt.alt[i]) for i in ooti]
                         ologdelaytable = [float(ctxt.ald[i]) for i in ooti]
                         imout = timlc(ctxt.time[iv], ctxt.orbits[iv],
-                                      vslope=float(avs[iv]), vitcp=float(avi[iv]),
+                                      vslope=float(avs[iv]),
+                                      vitcp=float(ctxt.avi[iv]),
                                       oslope=oslopetable, ologtau=ologtautable,
                                       ologdelay=ologdelaytable, ooto=ctxt.ootorbits[iv])
                         pass
@@ -1118,13 +1131,14 @@ def spectrum(fin, nrm, wht, out, selftype, chainlen=int(2e4), verbose=False):
 
             tauwbdata = 1e0/dnoise**2
             wbdata = pmnd('wbdata', mu=lcmodel,
-                          tau=tauwbdata[valid], value=data[valid], observed=True)
+                          tau=np.nanmedian(tauwbdata[valid]), value=data[valid],
+                          observed=True)
             nodes.append(wbdata)
             model = pm.Model(nodes)
             mcmc = pm.MCMC(model)
             burnin = int(chainlen/2)
             mcmc.sample(chainlen, burn=burnin, progress_bar=verbose)
-            log.warning(' ')
+            if verbose: log.warning(' ')
             mcpost = mcmc.stats()
             out['data'][p]['ES'].append(mcpost['rprs']['quantiles'][50])
             out['data'][p]['ESerr'].append(mcpost['rprs']['standard deviation'])

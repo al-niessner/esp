@@ -209,6 +209,21 @@ overwrite[starID] =
 }
     '''
     overwrite = {}
+    overwrite['GJ 436'] = {
+        'b':{'inc':86.774,
+             'inc_uperr':0.03, 'inc_lowerr':-0.03,
+             'inc_ref':'Knutson et al. 2014',
+             't0':2456295.431924,
+             't0_uperr':0.000045, 't0_lowerr':-0.000045,
+             't0_ref':'Knutson et al. 2014',
+             'ecc':0, 'ecc_ref':'Knutson et al. 2014',
+             'sma':0.030826087286013763,
+             'sma_uperr':0.0002,
+             'sma_lowerr':-0.0002,
+             'sma_ref':'Knutson et al. 2014',
+             'period':2.64389782,
+             'period_uperr':0.00000008, 'period_lowerr':-0.00000008,
+             'period_ref':'Knutson et al. 2014'}}
     overwrite['GJ 9827'] = {
         'R*':0.637, 'R*_uperr':0.063, 'R*_lowerr':-0.063,
         'R*_ref':'Prieto-Arranz et al. 2018',
@@ -311,6 +326,19 @@ overwrite[starID] =
         'c':{'logg':2.97505059402918,
              'logg_uperr':0.3, 'logg_lowerr':-0.3,
              'logg_ref':'Crossfield et al. 2017', 'logg_units':'log10[cm.s-2]'}}
+    overwrite['HD 97658'] = {
+        'b':{'inc':89.85,
+             'inc_uperr':0.15, 'inc_lowerr':-0.48,
+             'inc_ref':'Knutson et al. 2014',
+             't0':2456523.12537,
+             't0_uperr':0.00049, 't0_lowerr':-0.00049,
+             't0_ref':'Knutson et al. 2014',
+             'sma':0.09030091308645881,
+             'sma_uperr':0.004164, 'sma_lowerr':-0.004164,
+             'sma_ref':'Knutson et al. 2014',
+             'ecc':0, 'ecc_ref':'Knutson et al. 2014',
+             'period':9.489264,
+             'period_ref':'Knutson et al. 2014'}}
     overwrite['K2-24'] = {
         'b':{'logg':2.9233923050832749,
              'logg_uperr':0.28, 'logg_lowerr':-0.28,

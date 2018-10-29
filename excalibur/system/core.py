@@ -258,11 +258,11 @@ def buildsp(autofill, out):
         if ':' not in p: starneed = True
         pass
     if starneed or (len(out['priors']['planets']) < 1): out['PP'].append(True)
-    log.log(31, '>-- FORCE PARAMETER: %s', str(out['PP'][-1]))
-    log.log(31, '>-- MISSING MANDATORY PARAMETERS: %s', str(out['needed']))
-    log.log(31, '>-- MISSING PLANET PARAMETERS: %s', str(out['pneeded']))
-    log.log(31, '>-- PLANETS IGNORED: %s', str(out['ignore']))
-    log.log(31, '>-- AUTOFILL: %s', str(out['autofill']))
+    log.warning('>-- FORCE PARAMETER: %s', str(out['PP'][-1]))
+    log.warning('>-- MISSING MANDATORY PARAMETERS: %s', str(out['needed']))
+    log.warning('>-- MISSING PLANET PARAMETERS: %s', str(out['pneeded']))
+    log.warning('>-- PLANETS IGNORED: %s', str(out['ignore']))
+    log.warning('>-- AUTOFILL: %s', str(out['autofill']))
     out['STATUS'].append(True)
     return True
 # ------------------------- ------------------------------------------
@@ -333,12 +333,12 @@ def forcepar(overwrite, out):
         pass
     if starneed or (len(out['priors']['planets']) < 1):
         forced = False
-        log.log(31, '>-- MISSING MANDATORY PARAMETERS')
-        log.log(31, '>-- ADD THEM TO TARGET/EDIT.PY PPAR()')
+        log.warning('>-- MISSING MANDATORY PARAMETERS')
+        log.warning('>-- ADD THEM TO TARGET/EDIT.PY PPAR()')
         pass
     else:
         forced = True
-        log.log(31, '>-- PRIORITY PARAMETERS SUCCESSFUL')
+        log.warning('>-- PRIORITY PARAMETERS SUCCESSFUL')
         pass
     return forced
 # ---------------------------- ---------------------------------------

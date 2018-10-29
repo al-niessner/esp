@@ -49,6 +49,7 @@ class normalization(dawgie.Algorithm):
             vcal, scal = trncore.checksv(self.__cal.sv_as_dict()[ext])
             vtme, stme = trncore.checksv(self.__tme.sv_as_dict()[ext])
             if vcal and vtme and vfin:
+                log.warning('--< %s NORMALIZATION: %s >--', self._type.upper(), ext)
                 update = self._norm(self.__cal.sv_as_dict()[ext],
                                     self.__tme.sv_as_dict()[ext],
                                     self.__fin.sv_as_dict()['parameters'],
@@ -69,9 +70,8 @@ class normalization(dawgie.Algorithm):
                               verbose=False)
         return normed
 
-    @staticmethod
-    def _failure(errstr):
-        log.warning('--< TRANSIT NORMALIZATION: '+errstr+' >--')
+    def _failure(self, errstr):
+        log.warning('--< %s NORMALIZATION: %s >--', self._type.upper(), errstr)
         return
     pass
 
@@ -104,6 +104,7 @@ class whitelight(dawgie.Algorithm):
             nrm = self.__nrm.sv_as_dict()[ext]
             vnrm, snrm = trncore.checksv(nrm)
             if vnrm and vfin:
+                log.warning('--< %s WHITE LIGHT: %s >--', self._type.upper(), ext)
                 update = self._whitelight(nrm, fin, self.__out[index])
                 pass
             else:
@@ -120,9 +121,8 @@ class whitelight(dawgie.Algorithm):
         wl = trncore.whitelight(nrm, fin, out, self._type, verbose=False)
         return wl
 
-    @staticmethod
-    def _failure(errstr):
-        log.warning('--< TRANSIT WHITE LIGHT: ' + errstr + ' >--')
+    def _failure(self, errstr):
+        log.warning('--< %s WHITE LIGHT: %s >--', self._type.upper(), errstr)
         return
     pass
 
@@ -155,6 +155,7 @@ class spectrum(dawgie.Algorithm):
             vnrm, snrm = trncore.checksv(self.__nrm.sv_as_dict()[ext])
             vwht, swht = trncore.checksv(self.__wht.sv_as_dict()[ext])
             if vfin and vnrm and vwht:
+                log.warning('--< %s SPECTRUM: %s >--', self._type.upper(), ext)
                 update = self._spectrum(self.__fin.sv_as_dict()['parameters'],
                                         self.__nrm.sv_as_dict()[ext],
                                         self.__wht.sv_as_dict()[ext],
@@ -171,12 +172,11 @@ class spectrum(dawgie.Algorithm):
         return
 
     def _spectrum(self, fin, nrm, wht, out):
-        s = trncore.spectrum(fin, nrm, wht, out, self._type)
+        s = trncore.spectrum(fin, nrm, wht, out, self._type, verbose=False)
         return s
 
-    @staticmethod
-    def _failure(errstr):
-        log.warning('--< TRANSIT SPECTRUM: ' + errstr + ' >--')
+    def _failure(self, errstr):
+        log.warning('--< %s SPECTRUM: %s >--', self._type.upper(), errstr)
         return
     pass
 # ---------------- ---------------------------------------------------

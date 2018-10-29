@@ -44,7 +44,7 @@ class validate(dawgie.Algorithm):
 
     @staticmethod
     def _failure(errstr):
-        log.log(31, '--< SYSTEM VALIDATE: ' + errstr + ' >--')
+        log.warning('--< SYSTEM VALIDATE: %s >--', errstr)
         return
     pass
 
@@ -77,8 +77,8 @@ class finalize(dawgie.Algorithm):
                 pass
             elif not self.__out['PP'][-1]: update = True
             else:
-                log.log(31, '>-- MISSING DICT INFO')
-                log.log(31, '>-- ADD KEY TO TARGET/EDIT.PY PPAR()')
+                log.warning('>-- MISSING DICT INFO')
+                log.warning('>-- ADD KEY TO TARGET/EDIT.PY PPAR()')
                 pass
             pass
         else: self._failure(errstring)
@@ -92,7 +92,7 @@ class finalize(dawgie.Algorithm):
 
     @staticmethod
     def _failure(errstr):
-        log.log(31, '--< SYSTEM FINALIZE: ' + errstr + ' >--')
+        log.warning('--< SYSTEM FINALIZE: %s >--', errstr)
         return
     pass
 # ---------------- ---------------------------------------------------
