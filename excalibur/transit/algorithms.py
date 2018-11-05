@@ -76,10 +76,13 @@ class normalization(dawgie.Algorithm):
     pass
 
 class whitelight(dawgie.Algorithm):
-    def __init__(self):
+    '''
+G ROUDIER: See inheritance and CI5 thread with A NIESSNER for __init__() method and class attributes https://github-fn.jpl.nasa.gov/EXCALIBUR/esp/pull/86
+    '''
+    def __init__(self, nrm=normalization()):
         self._version_ = dawgie.VERSION(1,1,0)
         self._type = 'transit'
-        self.__nrm = normalization()
+        self._nrm = nrm
         self.__fin = sysalg.finalize()
         self.__out = [trnstates.WhiteLightSV(ext) for ext in fltrs]
         return
@@ -88,7 +91,7 @@ class whitelight(dawgie.Algorithm):
         return 'whitelight'
 
     def previous(self):
-        return [dawgie.ALG_REF(trn.factory, self.__nrm),
+        return [dawgie.ALG_REF(trn.factory, self._nrm),
                 dawgie.ALG_REF(sys.factory, self.__fin)]
 
     def state_vectors(self):
@@ -101,7 +104,7 @@ class whitelight(dawgie.Algorithm):
         for ext in fltrs:
             update = False
             index = fltrs.index(ext)
-            nrm = self.__nrm.sv_as_dict()[ext]
+            nrm = self._nrm.sv_as_dict()[ext]
             vnrm, snrm = trncore.checksv(nrm)
             if vnrm and vfin:
                 log.warning('--< %s WHITE LIGHT: %s >--', self._type.upper(), ext)
@@ -127,12 +130,15 @@ class whitelight(dawgie.Algorithm):
     pass
 
 class spectrum(dawgie.Algorithm):
-    def __init__(self):
+    '''
+G ROUDIER: See inheritance and CI5 thread with A NIESSNER for __init__() method and class attributes https://github-fn.jpl.nasa.gov/EXCALIBUR/esp/pull/86
+    '''
+    def __init__(self, nrm=normalization(), wht=whitelight()):
         self._version_ = dawgie.VERSION(1,1,0)
         self._type = 'transit'
         self.__fin = sysalg.finalize()
-        self.__nrm = normalization()
-        self.__wht = whitelight()
+        self._nrm = nrm
+        self._wht = wht
         self.__out = [trnstates.SpectrumSV(ext) for ext in fltrs]
         return
 
@@ -141,8 +147,8 @@ class spectrum(dawgie.Algorithm):
 
     def previous(self):
         return [dawgie.ALG_REF(sys.factory, self.__fin),
-                dawgie.ALG_REF(trn.factory, self.__nrm),
-                dawgie.ALG_REF(trn.factory, self.__wht)]
+                dawgie.ALG_REF(trn.factory, self._nrm),
+                dawgie.ALG_REF(trn.factory, self._wht)]
 
     def state_vectors(self):
         return self.__out
@@ -152,13 +158,13 @@ class spectrum(dawgie.Algorithm):
         vfin, sfin = trncore.checksv(self.__fin.sv_as_dict()['parameters'])
         for index, ext in enumerate(fltrs):
             update = False
-            vnrm, snrm = trncore.checksv(self.__nrm.sv_as_dict()[ext])
-            vwht, swht = trncore.checksv(self.__wht.sv_as_dict()[ext])
+            vnrm, snrm = trncore.checksv(self._nrm.sv_as_dict()[ext])
+            vwht, swht = trncore.checksv(self._wht.sv_as_dict()[ext])
             if vfin and vnrm and vwht:
                 log.warning('--< %s SPECTRUM: %s >--', self._type.upper(), ext)
                 update = self._spectrum(self.__fin.sv_as_dict()['parameters'],
-                                        self.__nrm.sv_as_dict()[ext],
-                                        self.__wht.sv_as_dict()[ext],
+                                        self._nrm.sv_as_dict()[ext],
+                                        self._wht.sv_as_dict()[ext],
                                         self.__out[index])
                 pass
             else:

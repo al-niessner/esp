@@ -27,26 +27,26 @@ class normalization(trnalg.normalization):
 
 class whitelight(trnalg.whitelight):
     def __init__(self):
-        trnalg.whitelight.__init__(self)
+        trnalg.whitelight.__init__(self, nrm=normalization())
         self._version_ = dawgie.VERSION(1,1,0)
         self._type = 'eclipse'
         return
 
     def previous(self):
-        return [dawgie.ALG_REF(ecl.factory, self.__nrm),
+        return [dawgie.ALG_REF(ecl.factory, self._nrm),
                 dawgie.ALG_REF(sys.factory, self.__fin)]
     pass
 
 class spectrum(trnalg.spectrum):
     def __init__(self):
-        trnalg.spectrum.__init__(self)
+        trnalg.spectrum.__init__(self, nrm=normalization(), wht=whitelight())
         self._version_ = dawgie.VERSION(1,1,0)
         self._type = 'eclipse'
         return
 
     def previous(self):
         return [dawgie.ALG_REF(sys.factory, self.__fin),
-                dawgie.ALG_REF(ecl.factory, self.__nrm),
-                dawgie.ALG_REF(ecl.factory, self.__wht)]
+                dawgie.ALG_REF(ecl.factory, self._nrm),
+                dawgie.ALG_REF(ecl.factory, self._wht)]
     pass
 # ---------------- ---------------------------------------------------

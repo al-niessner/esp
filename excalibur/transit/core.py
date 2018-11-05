@@ -595,7 +595,7 @@ Orbital Parameters Recovery
                 out.extend(lcout*imout)
                 pass
             return np.array(out)[ctxt.selectfit]
-        tauwhite = 1e0/((np.median(flaterrwhite))**2)
+        tauwhite = 1e0/((np.nanmedian(flaterrwhite))**2)
         if tauwhite == 0: tauwhite = 1e0/(ootstd**2)
         whitedata = pmnd('whitedata', mu=orbital, tau=tauwhite,
                          value=flatwhite[selectfit], observed=True)
@@ -621,8 +621,8 @@ Orbital Parameters Recovery
             else: posttk = tmjd
             if 'inc' in allnodes:
                 postinc = mcpost['inc']['quantiles'][50]
-                postz, postph = datcore.time2z(postt, postinc, posttk,
-                                               smaors, period, ecc)
+                postz, postph = datcore.time2z(postt, postinc, posttk, smaors, period,
+                                               ecc)
                 pass
             else: postz, postph = datcore.time2z(postt, inc, posttk, smaors, period, ecc)
             if selftype in ['eclipse']: postph[postph < 0] = postph[postph < 0] + 1e0

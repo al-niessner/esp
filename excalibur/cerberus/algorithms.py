@@ -2,6 +2,8 @@
 import dawgie
 import dawgie.context
 
+import logging; log = logging.getLogger(__name__)
+
 import excalibur.cerberus as crb
 import excalibur.cerberus.core as crbcore
 import excalibur.cerberus.states as crbstates
@@ -13,9 +15,6 @@ import excalibur.transit.algorithms as trnalg
 import excalibur.target.edit as trgedit
 # ------------- ------------------------------------------------------
 # -- ALGOS RUN OPTIONS -- --------------------------------------------
-# VERBOSE AND DEBUG
-verbose = False
-debug = False
 # FILTERS
 fltrs = (trgedit.activefilters.__doc__).split('\n')
 fltrs = [t.strip() for t in fltrs if t.replace(' ', '').__len__() > 0]
@@ -24,7 +23,6 @@ fltrs = [t.strip() for t in fltrs if t.replace(' ', '').__len__() > 0]
 class xslib(dawgie.Algorithm):
     def __init__(self):
         self._version_ = dawgie.VERSION(1,1,0)
-        self.__verbose = verbose
         self.__spc = trnalg.spectrum()
         self.__out = [crbstates.xslibSV(ext) for ext in fltrs]
         return
@@ -43,7 +41,10 @@ class xslib(dawgie.Algorithm):
         for ext in fltrs:
             update = False
             vspc, sspc = crbcore.checksv(self.__spc.sv_as_dict()[ext])
-            if vspc: update = self._xslib(self.__spc.sv_as_dict()[ext], fltrs.index(ext))
+            if vspc:
+                log.warning('--< CERBERUS XSLIB: %s >--', ext)
+                update = self._xslib(self.__spc.sv_as_dict()[ext], fltrs.index(ext))
+                pass
             else:
                 errstr = [m for m in [sspc] if m is not None]
                 self._failure(errstr[0])
@@ -55,19 +56,18 @@ class xslib(dawgie.Algorithm):
         return
 
     def _xslib(self, spc, index):
-        cs = crbcore.myxsecs(spc, self.__out[index], debug=debug)
+        cs = crbcore.myxsecs(spc, self.__out[index], verbose=False)
         return cs
 
-    def _failure(self, errstr):
-        errmess = '--< CERBERUS XSLIB: ' + errstr + ' >--'
-        if self.__verbose: print(errmess)
+    @staticmethod
+    def _failure(errstr):
+        log.warning('--< CERBERUS XSLIB: %s >--', errstr)
         return
     pass
 
 class atmos(dawgie.Algorithm):
     def __init__(self):
         self._version_ = dawgie.VERSION(1,1,0)
-        self.__verbose = verbose
         self.__spc = trnalg.spectrum()
         self.__fin = sysalg.finalize()
         self.__xsl = xslib()
@@ -93,6 +93,7 @@ class atmos(dawgie.Algorithm):
             vxsl, sxsl = crbcore.checksv(self.__xsl.sv_as_dict()[ext])
             vspc, sspc = crbcore.checksv(self.__spc.sv_as_dict()[ext])
             if vfin and vxsl and vspc:
+                log.warning('--< CERBERUS ATMOS: %s >--', ext)
                 update = self._atmos(self.__fin.sv_as_dict()['parameters'],
                                      self.__xsl.sv_as_dict()[ext],
                                      self.__spc.sv_as_dict()[ext],
@@ -109,12 +110,12 @@ class atmos(dawgie.Algorithm):
         return
 
     def _atmos(self, fin, xsl, spc, index):
-        am = crbcore.atmos(fin, xsl, spc, self.__out[index], verbose=self.__verbose)
+        am = crbcore.atmos(fin, xsl, spc, self.__out[index], verbose=False)
         return am
 
-    def _failure(self, errstr):
-        errmess = '--< CERBERUS ATMOS: ' + errstr + ' >--'
-        if self.__verbose: print(errmess)
+    @staticmethod
+    def _failure(errstr):
+        log.warning('--< CERBERUS ATMOS: %s >--', errstr)
         return
     pass
 # ---------------- ---------------------------------------------------

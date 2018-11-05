@@ -178,8 +178,9 @@ class calibration(dawgie.Algorithm):
     def _calib(cll, tim, tid, flttype, out):
         log.warning('--< DATA CALIBRATION: %s >--', flttype)
         caled = False
-        if 'SCAN' in flttype: caled = datcore.scancal(cll, tim, tid, flttype, out,
-                                                      verbose=False)
+        if 'SCAN' in flttype:
+            caled = datcore.scancal(cll, tim, tid, flttype, out, verbose=False)
+            pass
         if ('WFC3' in flttype) and ('STARE' in flttype):
             caled = datcore.starecal(cll, tim, tid, flttype, out)
             pass

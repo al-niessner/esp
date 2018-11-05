@@ -7,6 +7,7 @@ import logging; log = logging.getLogger(__name__)
 try:
     import pymc as pm
     from pymc.distributions import Normal as pmnd, Uniform as pmud
+    pass
 except ImportError:
     import pymc3 as pm
     from pymc3.distributions import Normal as pmnd, Uniform as pmud
@@ -35,7 +36,7 @@ def myxsecs(spc, out,
             knownspecies=['NO', 'OH', 'C2H2', 'N2', 'N2O', 'O3', 'O2'].copy(),
             cialist=['H2-H', 'H2-H2', 'H2-He', 'He-H'].copy(),
             xmspecies=['TIO', 'CH4', 'H2O', 'H2CO', 'HCN', 'CO', 'CO2', 'NH3'].copy(),
-            debug=False):
+            verbose=False):
     cs = False
     for p in spc['data'].keys():
         out['data'][p] = {}
@@ -90,14 +91,14 @@ def myxsecs(spc, out,
                 myspl = itp(x, y, bounds_error=False, fill_value=0)
                 library[myexomol]['SPL'].append(myspl)
                 library[myexomol]['SPLNU'].append(iline)
-                if debug:
+                if verbose:
                     plt.plot(x, y, 'o')
                     xp = np.arange(101)/100.*(3000. - np.min(x))+np.min(x)
                     plt.plot(xp, myspl(xp))
                     plt.show()
                     pass
                 pass
-            if debug:
+            if verbose:
                 fts = 20
                 plt.figure(figsize=(16,12))
                 haha = [huhu for huhu in set(library[myexomol]['T'])]
@@ -166,7 +167,7 @@ def myxsecs(spc, out,
                     myspl = itp(x, y, bounds_error=False, fill_value=0)
                     library[mycia]['SPL'].append(myspl)
                     library[mycia]['SPLNU'].append(iline)
-                    if debug:
+                    if verbose:
                         plt.plot(x, y, 'o')
                         xp = np.arange(101)/100.*(np.max(x) - np.min(x))+np.min(x)
                         plt.plot(xp, myspl(xp))
@@ -174,7 +175,7 @@ def myxsecs(spc, out,
                         pass
                     pass
                 pass
-            if debug:
+            if verbose:
                 for temp in set(library[mycia]['T']):
                     select = np.array(library[mycia]['T']) == temp
                     plt.semilogy(1e4/(np.array(library[mycia]['nu'])[select]),
@@ -231,7 +232,7 @@ def myxsecs(spc, out,
                         pass
                     pass
                 pass
-            if debug:
+            if verbose:
                 for i in set(library[ks]['I']):
                     select = np.array(library[ks]['I']) == i
                     plt.semilogy(np.array(library[ks]['MU'])[select],
@@ -283,7 +284,7 @@ def gettpf(tips, knownspecies, verbose=False):
     return grid
 # ------------------------------ -------------------------------------
 # -- ATMOS -- --------------------------------------------------------
-def atmos(fin, xsl, spc, out, mclen=int(4e2), verbose=False):
+def atmos(fin, xsl, spc, out, mclen=int(1e4), verbose=False):
     am = False
     orbp = fin['priors'].copy()
     ssc = syscore.ssconstants(mks=True)
@@ -366,7 +367,8 @@ def atmos(fin, xsl, spc, out, mclen=int(4e2), verbose=False):
                 fmc = fmc + np.nanmean(tspectrum[cleanup])
                 return fmc
             # CERBERUS MCMC
-            mcdata = pmnd('mcdata', mu=fmcerberus, tau=1e0/((tspecerr[cleanup])**2),
+            mcdata = pmnd('mcdata', mu=fmcerberus,
+                          tau=1e0/(np.nanmedian(tspecerr[cleanup])**2),
                           value=tspectrum[cleanup], observed=True)
             nodes.append(mcdata)
             allnodes = [n.__name__ for n in nodes if not n.observed]
@@ -398,8 +400,9 @@ def crbmodel(mixratio, rayleigh, cloudtp, rp0, orbp, xsecs, qtgrid,
              hzlib=None, hzp=None, hzslope=-4., hztop=None,
              cheq=None, h2rs=True, logx=False, pnet='b',
              verbose=False, debug=False):
-    # Probing up to 'Hsmax' scale heights from solid radius 'solrad'
-    # evenly log divided amongst 'nlevels' steps
+    '''
+Cerberus forward model probing up to 'Hsmax' scale heights from solid radius 'solrad' evenly log divided amongst 'nlevels' steps
+    '''
     ssc = syscore.ssconstants(mks=True)
     pgrid = np.arange(np.log(solrad)-Hsmax, np.log(solrad)+Hsmax/nlevels,
                       Hsmax/(nlevels-1))
@@ -643,14 +646,15 @@ def absorb(xsecs, qtgrid, T, p, mmr, lbroadening, lshifting, wgrid,
     eta = np.array(xsecs['eta'])[select]
     gair = np.array(xsecs['g_air'])[select]
     Qref = float(qtgrid['SPL'][iso](Tref))
-    Q = float(qtgrid['SPL'][iso](T))
+    try: Q = float(qtgrid['SPL'][iso](T))
+    except ValueError: Q = np.nan
     c2 = 1e2*cst.h*cst.c/cst.Boltzmann
-    tips = (Qref*np.exp(-c2*E/T)*
-            (1.-np.exp(-c2*nu/T)))/(Q*np.exp(-c2*E/Tref)*(1.-np.exp(-c2*nu/Tref)))
+    tips = (Qref*np.exp(-c2*E/T)*(1.-np.exp(-c2*nu/T)))/(Q*np.exp(-c2*E/Tref)*
+                                                         (1.-np.exp(-c2*nu/Tref)))
+    if np.all(~np.isfinite(tips)): tips = 0
     sigma = S*tips
     ps = mmr*p
-    gamma = np.array(np.mat(p-ps).T*np.mat(gair*(Tref/T)**eta) +
-                     np.mat(ps).T*np.mat(gself))
+    gamma = np.array(np.mat(p-ps).T*np.mat(gair*(Tref/T)**eta)+np.mat(ps).T*np.mat(gself))
     if lbroadening:
         if lshifting: matnu = np.array(np.mat(np.ones(p.size)).T*np.mat(nu) +
                                        np.mat(p).T*np.mat(delta))

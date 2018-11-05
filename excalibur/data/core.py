@@ -1364,7 +1364,7 @@ WFC3 STARE Calibration
         data['TIME'][index] = np.nanmax(data['TIME'][index].copy())
         data['IGNORED'][index] = ignore
         data['EXPERR'][index] = pstamperr
-        log.warning('>-- %s %s %s', str(index), '/', str(len(data['LOC'])-1))
+        log.warning('>-- %s / %s', str(index), str(len(data['LOC'])-1))
         # PLOTS ------------------------------------------------------
         if frame2png:
             if not os.path.exists('TEST'): os.mkdir('TEST')
@@ -1439,8 +1439,8 @@ WFC3 STARE Calibration
             cutoff = np.nanmax(spectrum)/scaleco
             spectrum[spectrum < cutoff] = np.nan
             spectrum = abs(spectrum)
-            w, d, s, si = wavesol(spectrum, tt, wavett, disper,
-                                  ovszspc=ovszspc, debug=False)
+            w, d, s, si = wavesol(spectrum, tt, wavett, disper, ovszspc=ovszspc,
+                                  debug=False)
             if (d > ldisp) and (d < udisp): spectralindex.append(si)
             pass
         pass
@@ -1526,11 +1526,10 @@ WFC3 STARE Calibration
     allignore = data['IGNORED']
     allculprits = data['TRIAL']
     allindex = np.arange(len(data['LOC']))
-    log.warning('>-- IGNORED: %s %s %s', str(np.nansum(allignore)), '/',
-                str(len(allignore)))
+    log.warning('>-- IGNORED: %s / %s', str(np.nansum(allignore)), str(len(allignore)))
     for index in allindex:
         if allculprits[index].__len__() > 0:
-            log.warning('>-- FRAME %s %s %s', str(index), ':', str(allculprits[index]))
+            log.warning('>-- %s: %s', str(index), str(allculprits[index]))
             pass
         pass
     data.pop('EXP', None)
