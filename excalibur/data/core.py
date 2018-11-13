@@ -376,7 +376,6 @@ G ROUDIER: Extracts and Wavelength calibrates WFC3 SCAN mode spectra
         data['IGNORED'][index] = ignore
         pass
     # DATA CUBE --------------------------------------------------------------------------
-    ovszspc = False
     for index, nm in enumerate(data['LOC']):
         ignore = data['IGNORED'][index]
         # MINKOWSKI FLOOD LEVEL ----------------------------------------------------------
@@ -411,12 +410,8 @@ G ROUDIER: Extracts and Wavelength calibrates WFC3 SCAN mode spectra
                 floodlist.append(np.nanpercentile(de, indperfld))
                 pass
             fldthr = np.nanmax(floodlist)
-            while abs(fldthr - floodlist[0]) > (floodlist[0]/2e0):
-                floodlist[floodlist.index(np.nanmax(floodlist))] = np.nan
-                fldthr = np.nanmax(floodlist)
-                pass
             # CONTAMINATION FROM ANOTHER SOURCE IN THE UPPER FRAME -----------------------
-            if tid in ['HAT-P-41']: fldthr = fldthr/1.5
+            if tid in ['HAT-P-41']: fldthr /= 1.5
             if 'G102' in flttype: fldthr /= 3e0
             data['FLOODLVL'][index] = fldthr
             pass
@@ -438,6 +433,7 @@ G ROUDIER: Extracts and Wavelength calibrates WFC3 SCAN mode spectra
     data['FLOODLVL'] = list(allfloodlvl)
     data['IGNORED'] = list(allignore)
     data['TRIAL'] = list(alltrials)
+    ovszspc = False
     for index, nm in enumerate(data['LOC']):
         ignore = data['IGNORED'][index]
         # ISOLATE SCAN Y -----------------------------------------------------------------
@@ -609,7 +605,7 @@ G ROUDIER: Extracts and Wavelength calibrates WFC3 SCAN mode spectra
             # SCAN RATE CORRECTION -------------------------------------------------------
             template = []
             for col in np.array(frame).T:
-                if not np.all(~np.isfinite(col)): template.append(np.nanmean(col))
+                if not np.all(~np.isfinite(col)): template.append(np.nanmedian(col))
                 else: template.append(np.nan)
                 pass
             template = np.array(template)
@@ -641,7 +637,7 @@ G ROUDIER: Extracts and Wavelength calibrates WFC3 SCAN mode spectra
             nspectrum = []
             vtemplate = []
             for row in np.array(frame):
-                if not np.all(~np.isfinite(row)): vtemplate.append(np.nanmean(row))
+                if not np.all(~np.isfinite(row)): vtemplate.append(np.nanmedian(row))
                 else: vtemplate.append(np.nan)
                 pass
             vtemplate = np.array(vtemplate)

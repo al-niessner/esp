@@ -68,7 +68,7 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False):
     arcsec2pix = datcore.dps(ext)
     scanlen = np.floor(scanlen/arcsec2pix)
     if tme[selftype].__len__() > 0:
-        for p in tme['data'].keys():
+        for p in [p for p in tme['data'].keys() if p in priors.keys()]:
             out['data'][p] = {}
             rpors = priors[p]['rp']/priors['R*']*ssc['Rjup/Rsun']
             ignore = np.array(tme['data'][p]['ignore']) | np.array(cal['data']['IGNORED'])

@@ -284,7 +284,7 @@ def gettpf(tips, knownspecies, verbose=False):
     return grid
 # ------------------------------ -------------------------------------
 # -- ATMOS -- --------------------------------------------------------
-def atmos(fin, xsl, spc, out, mclen=int(1e4), verbose=False):
+def atmos(fin, xsl, spc, out, mclen=int(1e2), verbose=False):
     am = False
     orbp = fin['priors'].copy()
     ssc = syscore.ssconstants(mks=True)
@@ -292,8 +292,10 @@ def atmos(fin, xsl, spc, out, mclen=int(1e4), verbose=False):
     for p in spc['data'].keys():
         out['data'][p] = {}
         eqtemp = orbp['T*']*np.sqrt(orbp['R*']*ssc['Rsun/AU']/(2.*orbp[p]['sma']))
-        tspectrum = np.array(spc['data'][p]['ES'])
-        tspecerr = np.array(spc['data'][p]['ESerr'])
+        tspc = np.array(spc['data'][p]['ES'])
+        terr = np.array(spc['data'][p]['ESerr'])
+        tspecerr = abs(tspc**2 - (tspc + terr)**2)
+        tspectrum = tspc**2
         cleanup = np.isfinite(tspectrum) & (tspecerr < 1e0)
         solidr = orbp[p]['rp']*ssc['Rjup']  # MKS
         for model in modfam:

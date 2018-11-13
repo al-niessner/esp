@@ -375,6 +375,13 @@ overwrite[starID] =
              'sma_uperr':9.765981248020531e-05,
              'sma_lowerr':-9.765981248020531e-05,
              'sma_ref':'Dressing et al. 2015'}}
+    overwrite['K2-96'] = {
+        'b':{'logg':3.22900042686,
+             'logg_lowerr':0.3, 'logg_uperr':-0.3,
+             'logg_ref':'System Prior Auto Fill', 'logg_units':'log10[cm.s-2]'},
+        'c':{'logg':3.02377443746,
+             'logg_lowerr':0.3, 'logg_uperr':-0.3,
+             'logg_ref':'System Prior Auto Fill', 'logg_units':'log10[cm.s-2]'}}
     overwrite['KELT-1'] = {
         'FEH*':0.009, 'FEH*_uperr':0.073, 'FEH*_lowerr':-0.073,
         'FEH*_units':'[Fe/H]', 'FEH*_ref':'Siverd et al. 2012',
@@ -391,14 +398,20 @@ overwrite[starID] =
              'period':1.217513,
              'period_ref':'Siverd et al. 2012'}}
     overwrite['Kepler-16'] = {
-        'R*':0.6679689998646066, 'R*_uperr':0.0013, 'R*_lowerr':-0.0013,
-        'R*_ref':'Oroz + dilution factor',
-        'b':{'inc':89.776139764168605,
+        'R*':0.665924608009903, 'R*_uperr':0.0013, 'R*_lowerr':-0.0013,
+        'R*_ref':'Oroz + GMR',
+        'b':{'inc':89.7511397641686,
              'inc_uperr':0.0323, 'inc_lowerr':-0.04,
-             'inc_ref':'Oroz',
-             't0':2457914.235774331,
+             'inc_ref':'Oroz + GMR',
+             't0':2457914.235774330795,
              't0_uperr':0.004, 't0_lowerr':-0.004,
-             't0_ref':'Oroz'}}
+             't0_ref':'Oroz',
+             'sma':0.7048,
+             'sma_uperr':0.0011,
+             'sma_lowerr':-0.0011,
+             'sma_ref':'Doyle et al. 2011',
+             'period':228.776,
+             'period_ref':'Doyle et al. 2011'}}
     overwrite['Kepler-1625'] = {
         'b':{'logg':4.00,
              'logg_uperr':0.4, 'logg_lowerr':-0.4,
