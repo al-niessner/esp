@@ -473,8 +473,8 @@ Cerberus forward model probing up to 'Hsmax' scale heights from solid radius 'so
         axes[0].set_ylabel('Transit Depth [%]')
         axes[0].get_yaxis().get_major_formatter().set_useOffset(False)
         yaxmin, yaxmax = axes[0].get_ylim()
-        ax2min = (np.sqrt(1e-2*yaxmin)*orbp['R*'] - rp0hs)/Hs
-        ax2max = (np.sqrt(1e-2*yaxmax)*orbp['R*'] - rp0hs)/Hs
+        ax2min = (np.sqrt(1e-2*yaxmin)*orbp['R*']*ssc['Rsun'] - rp0hs)/Hs
+        ax2max = (np.sqrt(1e-2*yaxmax)*orbp['R*']*ssc['Rsun'] - rp0hs)/Hs
         axes[-1].set_ylabel('Transit Depth Modulation [Hs]')
         axes[-1].set_ylim(ax2min, ax2max)
         axes[-1].get_yaxis().get_major_formatter().set_useOffset(False)
@@ -619,8 +619,8 @@ def gettau(xsecs, qtgrid, temp, mixratio,
     if (hzlib is None) or (hzp is None) or (hztop is None):
         slambda0 = 750.*1e-3  # microns
         sray0 = 2.52*1e-28*1e-4  # m^2/mol
-        sray = sray0*(wgrid[::-1]/slambda0)**(hzslope)
-        tauz = (vectauelem*0e0 + rayleigh)*sray
+        sray = (10**rayleigh)*sray0*(wgrid[::-1]/slambda0)**(hzslope)
+        tauz = vectauelem*sray
         if firstelem:
             tau = np.array(tauz)
             firstelem = False
