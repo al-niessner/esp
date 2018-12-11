@@ -275,6 +275,22 @@ overwrite[starID] =
              'logg':2.7275412570285562,
              'logg_uperr':0.15, 'logg_lowerr':-0.15,
              'logg_ref':'Prieto-Arranz et al. 2018', 'logg_units':'log10[cm.s-2]'}}
+    overwrite['HAT-P-11'] = {
+        'b':{'inc':89.549,
+             'inc_uperr':0.114, 'inc_lowerr':-0.114,
+             'inc_ref':'Fraine et al. 2014',
+             'rp':0.3895538538577743,
+             'rp_uperr':0.0016542969842779612, 'rp_lowerr':-0.0016542969842779612,
+             'rp_ref':'Fraine et al. 2014',
+             'sma':0.05415469125390434,
+             'sma_uperr':0.00018973906424725608, 'sma_lowerr':-0.00018973906424725608,
+             'sma_ref':'Fraine et al. 2014',
+             'ecc':0.232,
+             'ecc_uperr':0.054, 'ecc_lowerr':-0.054,
+             'ecc_ref':'Fraine et al. 2014',
+             'period':4.8878018,
+             'period_uperr':0.0000071, 'period_lowerr':-0.0000071,
+             'period_ref':'Fraine et al. 2014'}}
     overwrite['HAT-P-17'] = {
         'R*':0.838, 'R*_uperr':0.021, 'R*_lowerr':-0.021,
         'R*_ref':'Howard et al. 2012',

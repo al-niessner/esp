@@ -37,7 +37,7 @@ CONTEXT = collections.namedtuple('CONTEXT',
 # A NIESSNER: INLINE HACK TO ldtk.LDPSet -- ----------------------------------------------
 class LDPSet(ldtk.LDPSet):
     '''
-Despotic bypass of CIs
+A. NIESSNER: Despotic bypass of CIs
     '''
     @staticmethod
     def is_mime(): return True
@@ -50,6 +50,9 @@ setattr(ldtk.ldtk, 'LDPSet', LDPSet)
 # ------------- ------------------------------------------------------
 # -- SV VALIDITY -- --------------------------------------------------
 def checksv(sv):
+    '''
+G. ROUDIER: Tests for empty SV shell
+    '''
     valid = False
     errstring = None
     if sv['STATUS'][-1]: valid = True
@@ -57,7 +60,10 @@ def checksv(sv):
     return valid, errstring
 # ----------------- --------------------------------------------------
 # -- NORMALIZATION -- ------------------------------------------------
-def norm(cal, tme, fin, ext, out, selftype, verbose=False):
+def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
+    '''
+G. ROUDIER: Out of transit data normalization
+    '''
     normed = False
     priors = fin['priors'].copy()
     ssc = syscore.ssconstants()
@@ -136,15 +142,17 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False):
                 for onum in ootminus: avorbnum.append(np.sum(orbits[selv] == onum))
                 if ootplus.__len__() > 1:
                     keep = ootplus[ootpv.index(min(ootpv))]
-                    trash.extend([i for i in ootplus if i != keep])
                     # SMALL OOT ORBIT DETECTION ------------------------------------------
-                    if np.sum(orbits[selv] == keep) < 5e-1*np.nanmedian(avorbnum):
-                        trash = []
+                    if not np.sum(orbits[selv] == keep) < 5e-1*np.nanmedian(avorbnum):
+                        trash.extend([i for i in ootplus if i != keep])
                         pass
                     pass
                 if ootminus.__len__() > 1:
                     keep = ootminus[ootmv.index(max(ootmv))]
-                    trash.extend([i for i in ootminus if i != keep])
+                    # SMALL OOT ORBIT DETECTION ------------------------------------------
+                    if not np.sum(orbits[selv] == keep) < 5e-1*np.nanmedian(avorbnum):
+                        trash.extend([i for i in ootminus if i != keep])
+                        pass
                     pass
                 if trash.__len__() > 0:
                     for o in trash:
@@ -174,8 +182,14 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False):
                     outsrti = []
                     for idx in enumerate(wt):
                         srti = np.poly1d(np.polyfit(np.array(srwt[idx[0]]),
-                                                    np.array(srte[idx[0]]), 2))
+                                                    np.array(srte[idx[0]]), 0))
                         outsrti.append(srti)
+                        if debug:
+                            plt.figure()
+                            plt.plot(srwt[idx[0]], srte[idx[0]], '+')
+                            plt.plot(srwt[idx[0]], srti(srwt[idx[0]]), 'o')
+                            plt.show()
+                            pass
                         pass
                     # DIVIDE TEMPLATE ----------------------------------------------------
                     nspectra = []
@@ -249,7 +263,7 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False):
             kickout = []
             if out['data'][p]['stdns'].__len__() > 2:
                 stdns = np.array(out['data'][p]['stdns'])
-                vthr = np.percentile(stdns, 66, interpolation='nearest')
+                vthr = np.nanpercentile(stdns, 66, interpolation='nearest')
                 ref = np.nanmean(stdns[stdns <= vthr])
                 stdref = np.nanstd(stdns[stdns <= vthr])
                 kickout = np.array(out['data'][p]['visits'])[stdns > ref + 3e0*stdref]
@@ -287,7 +301,8 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False):
 # -- TEMPLATE BUILDER -- ---------------------------------------------
 def tplbuild(spectra, wave, vrange, disp, superres=False):
     '''
-Builds a spectrum template according to the peak in population density per wavelength bins
+G. ROUDIER: Builds a spectrum template according to the peak in population density
+per wavelength bins
     '''
     allspec = []
     for s in spectra.copy(): allspec.extend(s)
@@ -337,7 +352,7 @@ Builds a spectrum template according to the peak in population density per wavel
 # -- WHITE LIGHT CURVE -- --------------------------------------------
 def whitelight(nrm, fin, out, selftype, chainlen=int(4e4), verbose=False):
     '''
-Orbital Parameters Recovery
+G. ROUDIER: Orbital Parameters Recovery
     '''
     wl = False
     priors = fin['priors'].copy()
@@ -571,8 +586,10 @@ Orbital Parameters Recovery
                 omt = ctxt.time[i]
                 if v in ctxt.ttv: omtk = float(atk[ctxt.ttv.index(v)])
                 else: omtk = ctxt.tmjd
-                omz, _pmph = datcore.time2z(omt, float(icln), omtk, ctxt.smaors, ctxt.period, ctxt.ecc)
-                lcout = tldlc(abs(omz), float(r), g1=ctxt.g1[0], g2=ctxt.g2[0], g3=ctxt.g3[0], g4=ctxt.g4[0])
+                omz, _pmph = datcore.time2z(omt, float(icln), omtk,
+                                            ctxt.smaors, ctxt.period, ctxt.ecc)
+                lcout = tldlc(abs(omz), float(r),
+                              g1=ctxt.g1[0], g2=ctxt.g2[0], g3=ctxt.g3[0], g4=ctxt.g4[0])
                 if ctxt.commonoim:
                     imout = timlc(omt, ctxt.orbits[i],
                                   vslope=float(avs[i]),
@@ -692,6 +709,9 @@ Orbital Parameters Recovery
 # ----------------------- --------------------------------------------
 # -- TRANSIT LIMB DARKENED LIGHT CURVE -- ----------------------------
 def tldlc(z, rprs, g1=0, g2=0, g3=0, g4=0, nint=int(8**2)):
+    '''
+G. ROUDIER: Light curve model
+    '''
     ldlc = np.zeros(z.size)
     xin = z.copy() - rprs
     xin[xin < 0e0] = 0e0
@@ -721,6 +741,9 @@ def tldlc(z, rprs, g1=0, g2=0, g3=0, g4=0, nint=int(8**2)):
 # --------------------------------------- ----------------------------
 # -- STELLAR EXTINCTION LAW -- ---------------------------------------
 def vecistar(xrs, g1, g2, g3, g4):
+    '''
+G. ROUDIER: Stellar surface extinction model
+    '''
     ldnorm = (-g1/10e0 - g2/6e0 - 3e0*g3/14e0 - g4/4e0 + 5e-1)*2e0*np.pi
     select = xrs < 1e0
     mu = np.zeros(xrs.shape)
@@ -734,6 +757,9 @@ def vecistar(xrs, g1, g2, g3, g4):
 # ---------------------------- ---------------------------------------
 # -- STELLAR SURFACE OCCULTATION -- ----------------------------------
 def vecoccs(z, xrs, rprs):
+    '''
+G. ROUDIER: Stellar surface occulation model
+    '''
     out = np.zeros(xrs.shape)
     vecxrs = xrs.copy()
     selx = vecxrs > 0e0
@@ -772,11 +798,11 @@ def createldgrid(minmu, maxmu, orbp,
                  ldmodel='nonlinear', phoenixmin=1e-1,
                  segmentation=int(10), verbose=False):
     '''
-G Roudier: Wrapper around LDTK downloading tools
+G. ROUDIER: Wrapper around LDTK downloading tools
+LDTK: Parviainen et al. https://github.com/hpparvi/ldtk
     '''
     tstar = orbp['T*']
     terr = np.sqrt(abs(orbp['T*_uperr']*orbp['T*_lowerr']))
-    if terr < (3e0*tstar/1e2): terr = 3e0*tstar/1e2
     fehstar = orbp['FEH*']
     feherr = np.sqrt(abs(orbp['FEH*_uperr']*orbp['FEH*_lowerr']))
     loggstar = orbp['LOGG*']
@@ -801,6 +827,21 @@ G Roudier: Wrapper around LDTK downloading tools
         sc = LDPSetCreator(teff=(tstar, terr), logg=(loggstar, loggerr),
                            z=(fehstar, feherr), filters=filters)
         ps = sc.create_profiles(nsamples=int(1e4))
+        itpfail = False
+        for testprof in ps.profile_averages:
+            if np.all(~np.isfinite(testprof)): itpfail = True
+            pass
+        nfail = 1e0
+        while itpfail:
+            nfail *= 2
+            sc = LDPSetCreator(teff=(tstar, nfail*terr), logg=(loggstar, loggerr),
+                               z=(fehstar, feherr), filters=filters)
+            ps = sc.create_profiles(nsamples=int(1e4))
+            itpfail = False
+            for testprof in ps.profile_averages:
+                if np.all(~np.isfinite(testprof)): itpfail = True
+                pass
+            pass
         cl, el = ldx(ps.profile_mu, ps.profile_averages, ps.profile_uncertainties,
                      mumin=phoenixmin, debug=verbose, model=ldmodel)
         if allcl is None: allcl = cl
@@ -832,7 +873,7 @@ G Roudier: Wrapper around LDTK downloading tools
 # -- LDX -- ----------------------------------------------------------
 def ldx(psmu, psmean, psstd, mumin=1e-1, debug=False, model='nonlinear'):
     '''
-GMR: LD law coefficient retrievial on PHOENIX GRID models,
+G. ROUDIER: Limb darkening coefficient retrievial on PHOENIX GRID models,
 OPTIONAL mumin set up on HAT-P-41 stellar class
     '''
     mup = np.array(psmu).copy()
@@ -896,6 +937,9 @@ OPTIONAL mumin set up on HAT-P-41 stellar class
 # --------- ----------------------------------------------------------
 # -- LNLDX -- --------------------------------------------------------
 def lnldx(params, x, data=None, weights=None):
+    '''
+G. ROUDIER: Linear law
+    '''
     gamma1 = params['gamma1'].value
     model = LinearModel.evaluate(x, [gamma1])
     if data is None: return model
@@ -904,6 +948,9 @@ def lnldx(params, x, data=None, weights=None):
 # ----------- --------------------------------------------------------
 # -- QDLDX -- --------------------------------------------------------
 def qdldx(params, x, data=None, weights=None):
+    '''
+G. ROUDIER: Quadratic law
+    '''
     gamma1 = params['gamma1'].value
     gamma2 = params['gamma2'].value
     model = QuadraticModel.evaluate(x, [gamma1, gamma2])
@@ -913,6 +960,9 @@ def qdldx(params, x, data=None, weights=None):
 # ----------- --------------------------------------------------------
 # -- NLLDX -- --------------------------------------------------------
 def nlldx(params, x, data=None, weights=None):
+    '''
+G. ROUDIER: Non Linear law
+    '''
     gamma1 = params['gamma1'].value
     gamma2 = params['gamma2'].value
     gamma3 = params['gamma3'].value
@@ -925,6 +975,9 @@ def nlldx(params, x, data=None, weights=None):
 # -- INSTRUMENT MODEL -- ---------------------------------------------
 def timlc(vtime, orbits,
           vslope=0, vitcp=1e0, oslope=0, ologtau=0, ologdelay=0, ooto=None):
+    '''
+G. ROUDIER: WFC3 intrument model
+    '''
     xout = np.array(vtime) - np.mean(vtime)
     vout = vslope*xout + vitcp
     oout = np.ones(vout.size)
@@ -960,6 +1013,9 @@ def timlc(vtime, orbits,
 # ---------------------- ---------------------------------------------
 # -- SPECTRUM -- -----------------------------------------------------
 def spectrum(fin, nrm, wht, out, selftype, chainlen=int(2e4), verbose=False):
+    '''
+G. ROUDIER: Exoplanet spectrum recovery
+    '''
     if selftype in ['eclipse']: chainlen = int(1e2)
     exospec = False
     priors = fin['priors'].copy()

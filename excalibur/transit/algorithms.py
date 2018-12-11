@@ -77,7 +77,7 @@ class normalization(dawgie.Algorithm):
 
 class whitelight(dawgie.Algorithm):
     '''
-G ROUDIER: See inheritance and CI5 thread with A NIESSNER for __init__() method and class attributes https://github-fn.jpl.nasa.gov/EXCALIBUR/esp/pull/86
+G. ROUDIER: See inheritance and CI5 thread with A NIESSNER for __init__() method and class attributes https://github-fn.jpl.nasa.gov/EXCALIBUR/esp/pull/86
     '''
     def __init__(self, nrm=normalization()):
         self._version_ = dawgie.VERSION(1,1,0)
@@ -131,7 +131,7 @@ G ROUDIER: See inheritance and CI5 thread with A NIESSNER for __init__() method 
 
 class spectrum(dawgie.Algorithm):
     '''
-G ROUDIER: See inheritance and CI5 thread with A NIESSNER for __init__() method and class attributes https://github-fn.jpl.nasa.gov/EXCALIBUR/esp/pull/86
+G. ROUDIER: See inheritance and CI5 thread with A NIESSNER for __init__() method and class attributes https://github-fn.jpl.nasa.gov/EXCALIBUR/esp/pull/86
     '''
     def __init__(self, nrm=normalization(), wht=whitelight()):
         self._version_ = dawgie.VERSION(1,1,0)

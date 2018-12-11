@@ -186,8 +186,8 @@ class TimingSV(dawgie.StateVector):
 
                 myfig = plt.figure()
                 plt.plot(tmetod, 'o')
-                plt.plot(tmetod*0+3*thro, 'r--')
-                plt.plot(tmetod*0+3*thrs, 'g-.')
+                plt.plot(tmetod*0+thro, 'r--')
+                plt.plot(tmetod*0+thrs, 'g-.')
                 for i in wherev: plt.axvline(i, ls='--', color='r')
                 for i in whereo: plt.axvline(i, ls='-.', color='g')
                 plt.xlim(0, tmetod.size - 1)

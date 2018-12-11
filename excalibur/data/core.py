@@ -15,7 +15,7 @@ import astropy.io.fits as pyfits
 # -- SV VALIDITY -- --------------------------------------------------
 def checksv(sv):
     '''
-G ROUDIER: Tests for empty SV shell, better if it could be inherited from SV class
+G. ROUDIER: Tests for empty SV shell
     '''
     valid = False
     errstring = None
@@ -26,7 +26,7 @@ G ROUDIER: Tests for empty SV shell, better if it could be inherited from SV cla
 # -- COLLECT DATA -- -------------------------------------------------
 def collect(name, scrape, out):
     '''
-G ROUDIER: Filters data from target.scrape.databases according to active filters
+G. ROUDIER: Filters data from target.scrape.databases according to active filters
     '''
     collected = False
     obs, ins, det, fil, mod = name.split('-')
@@ -57,7 +57,7 @@ G ROUDIER: Filters data from target.scrape.databases according to active filters
 # -- TIMING -- -------------------------------------------------------
 def timing(force, ext, clc, out, verbose=False):
     '''
-G ROUDIER: Uses system orbital parameters to guide the dataset towards transit, eclipse or phasecurve tasks
+G. ROUDIER: Uses system orbital parameters to guide the dataset towards transit, eclipse or phasecurve tasks
     '''
     chunked = False
     priors = force['priors'].copy()
@@ -101,8 +101,8 @@ G ROUDIER: Uses system orbital parameters to guide the dataset towards transit, 
             smaors = priors[p]['sma']/priors['R*']/ssc['Rsun/AU']
             tmjd = priors[p]['t0']
             if tmjd > 2400000.5: tmjd -= 2400000.5
-            z, phase = time2z(time, priors[p]['inc'], tmjd, smaors, priors[p]['period'],
-                              priors[p]['ecc'])
+            z, phase = time2z(time, priors[p]['inc'], tmjd, smaors,
+                              priors[p]['period'], priors[p]['ecc'])
             zto = z.copy()[ordt]
             phsto = phase.copy()[ordt]
             tmetod = [np.diff(tmeto)[0]]
@@ -112,9 +112,12 @@ G ROUDIER: Uses system orbital parameters to guide the dataset towards transit, 
             cftfail = tmetod > 3*thrs
             if True in cftfail: thro = np.percentile(tmetod[cftfail], 75)
             else: thro = 0
+            # THRESHOLDS
+            rbtthr = 25e-1*thrs  # HAT-P-11
+            vstthr = 3e0*thro
             # VISIT NUMBERING --------------------------------------------
-            whereo = np.where(tmetod > 3*thrs)[0]
-            wherev = np.where(tmetod > 3*thro)[0]
+            whereo = np.where(tmetod > rbtthr)[0]
+            wherev = np.where(tmetod > vstthr)[0]
             visto = np.ones(tmetod.size)
             dvis = np.ones(tmetod.size)
             vis = np.ones(tmetod.size)
@@ -139,7 +142,7 @@ G ROUDIER: Uses system orbital parameters to guide the dataset towards transit, 
                 selv = (visto == v)
                 if len(~ignto[selv]) < 4: ignto[selv] = True
                 else:
-                    select = np.where(tmetod[selv] > 3*thrs)[0]
+                    select = np.where(tmetod[selv] > rbtthr)[0]
                     incorb = orbto[selv]
                     for indice in select: incorb[indice:] = incorb[indice:] + 1
                     orbto[selv] = incorb
@@ -231,8 +234,8 @@ G ROUDIER: Uses system orbital parameters to guide the dataset towards transit, 
 
                 plt.figure()
                 plt.plot(tmetod, 'o')
-                plt.plot(tmetod*0+3*thro, 'r--')
-                plt.plot(tmetod*0+3*thrs, 'g-.')
+                plt.plot(tmetod*0+vstthr, 'r--')
+                plt.plot(tmetod*0+rbtthr, 'g-.')
                 for i in wherev: plt.axvline(i, ls='--', color='r')
                 for i in whereo: plt.axvline(i, ls='-.', color='g')
                 plt.xlim(0, tmetod.size - 1)
@@ -254,8 +257,8 @@ G ROUDIER: Uses system orbital parameters to guide the dataset towards transit, 
             out['data'][p]['tmetod'] = tmetod
             out['data'][p]['whereo'] = whereo
             out['data'][p]['wherev'] = wherev
-            out['data'][p]['thrs'] = thrs
-            out['data'][p]['thro'] = thro
+            out['data'][p]['thrs'] = rbtthr
+            out['data'][p]['thro'] = vstthr
             out['data'][p]['visits'] = vis
             out['data'][p]['orbits'] = orb
             out['data'][p]['dvisits'] = dvis
@@ -275,7 +278,7 @@ G ROUDIER: Uses system orbital parameters to guide the dataset towards transit, 
 def scancal(clc, tim, tid, flttype, out,
             emptythr=1e3, frame2png=False, verbose=False, debug=False):
     '''
-G ROUDIER: Extracts and Wavelength calibrates WFC3 SCAN mode spectra
+G. ROUDIER: Extracts and Wavelength calibrates WFC3 SCAN mode spectra
     '''
     # VISIT ------------------------------------------------------------------------------
     for pkey in tim['data'].keys(): visits = np.array(tim['data'][pkey]['visits'])
@@ -451,6 +454,18 @@ G ROUDIER: Extracts and Wavelength calibrates WFC3 SCAN mode spectra
             ignore = True
             pass
         if not ignore:
+            # BACKGROUND SUBTRACTION -----------------------------------------------------
+            for eachdiff in psdiff:
+                background = []
+                for eachcol in eachdiff.T:
+                    eachcol[eachcol < psmin] = np.nan
+                    thr = 1e2*scanwpi/eachdiff.shape[0]
+                    bcke = np.nanmedian(eachcol[eachcol < np.nanpercentile(eachcol, thr)])
+                    background.append(bcke)
+                    pass
+                background = np.array([np.array(background)]*eachdiff.shape[0])
+                eachdiff -= background
+                pass
             targetn = 0
             if tid in ['XO-2', 'HAT-P-1']: targetn = -1
             minlocs = []
@@ -527,8 +542,8 @@ G ROUDIER: Extracts and Wavelength calibrates WFC3 SCAN mode spectra
             minx, maxx = isolate(mltord, psmin, spectrace, scanwpi, targetn, fldthr,
                                  axis=0, debug=False)
             if np.isfinite(minx*maxx):
-                minx -= 1.5*12
-                maxx += 1.5*12
+                minx -= (1.5*12)
+                maxx += (1.5*12)
                 if minx < 0: minx = 5
                 thispstamp[:,:int(minx)] = np.nan
                 if maxx > (thispstamp.shape[1] - 1): maxx = thispstamp.shape[1] - 5
@@ -669,10 +684,12 @@ G ROUDIER: Extracts and Wavelength calibrates WFC3 SCAN mode spectra
                     pass
                 pass
             spectrum = np.array(spectrum)
+            spectrum -= np.nanmin(spectrum)
+            # EXCLUDE RESIDUAL GLITCHES
             template[~np.isfinite(template)] = np.nanmin(template)
             nanme = (abs(spectrum - template)/template) > 1e0
             if True in nanme: spectrum[nanme] = np.nan
-            spectrum -= np.nanmin(spectrum)
+            # TRUNCATED SPECTRUM
             testspec = spectrum[np.isfinite(spectrum)]
             if (np.all(testspec[-18:] > emptythr)) and not ovszspc:
                 data['IGNORED'][index] = True
@@ -685,11 +702,16 @@ G ROUDIER: Extracts and Wavelength calibrates WFC3 SCAN mode spectra
         pass
     # PLOT -------------------------------------------------------------------------------
     if debug:
-        plt.figure()
-        for spec in data['SPECTRUM']: plt.plot(spec)
-        plt.ylabel('Stellar Spectra [Counts]')
-        plt.xlabel('Pixel Number')
-        plt.show()
+        for v in set(visits):
+            plt.figure()
+            for spec, vi in zip(data['SPECTRUM'], visits):
+                if vi == v: plt.plot(spec)
+                pass
+            plt.ylabel('Stellar Spectra [Counts]')
+            plt.xlabel('Pixel Number')
+            plt.title('Visit ' + str(int(v)))
+            plt.show()
+            pass
         pass
     # WAVELENGTH CALIBRATION -------------------------------------------------------------
     wavett, tt = ag2ttf(flttype)
@@ -703,6 +725,7 @@ G ROUDIER: Extracts and Wavelength calibrates WFC3 SCAN mode spectra
     data['WAVE'] = [np.array([np.nan]*maxwasize)]*len(data['LOC'])
     data['DISPERSION'] = [np.nan]*len(data['LOC'])
     data['SHIFT'] = [np.nan]*len(data['LOC'])
+    data['BACKGROUND'] = [np.nan]*len(data['LOC'])
     spectralindex = []
     for index, loc in enumerate(data['LOC']):
         ignore = data['IGNORED'][index]
@@ -710,8 +733,8 @@ G ROUDIER: Extracts and Wavelength calibrates WFC3 SCAN mode spectra
             spectrum = data['SPECTRUM'][index].copy()
             cutoff = np.nanmax(spectrum)/scaleco
             spectrum[spectrum < cutoff] = np.nan
-            spectrum = abs(spectrum)
-            w, d, s, si = wavesol(spectrum, tt, wavett, disper, ovszspc=ovszspc)
+            w, d, s, si, bck = wavesol(abs(spectrum), tt, wavett, disper,
+                                       ovszspc=ovszspc, bck=None, debug=debug)
             if (d > ldisp) and (d < udisp): spectralindex.append(si)
             pass
         pass
@@ -722,9 +745,9 @@ G ROUDIER: Extracts and Wavelength calibrates WFC3 SCAN mode spectra
             spectrum = data['SPECTRUM'][index].copy()
             cutoff = np.nanmax(spectrum)/scaleco
             spectrum[spectrum < cutoff] = np.nan
-            spectrum = abs(spectrum)
-            wave, disp, shift, si = wavesol(spectrum, tt, wavett, disper,
-                                            siv=siv, ovszspc=ovszspc)
+            wave, disp, shift, si, bck = wavesol(abs(spectrum), tt, wavett, disper,
+                                                 siv=siv, ovszspc=ovszspc,
+                                                 bck=None, debug=debug)
             if (disp < ldisp) or (disp > udisp):
                 data['TRIAL'][index] = 'Dispersion Out Of Bounds'
                 ignore = True
@@ -741,6 +764,8 @@ G ROUDIER: Extracts and Wavelength calibrates WFC3 SCAN mode spectra
             data['WAVE'][index] = wave  # MICRONS
             data['DISPERSION'][index] = disp  # ANGSTROMS/PIXEL
             data['SHIFT'][index] = shift*1e4/disp  # PIXELS
+            data['BACKGROUND'][index] = bck
+            data['SPECTRUM'][index] = data['SPECTRUM'][index] - bck
             pass
         else: data['WAVE'][index] = (data['SPECTRUM'][index])*np.nan
         data['IGNORED'][index] = ignore
@@ -755,6 +780,7 @@ G ROUDIER: Extracts and Wavelength calibrates WFC3 SCAN mode spectra
         photoc = np.array([d for d,i in zip(data['PHT2CNT'], data['IGNORED']) if not i])
         wave = np.array([d for d,i in zip(data['WAVE'], data['IGNORED']) if not i])
         errspec = np.array([d for d,i in zip(data['SPECERR'], data['IGNORED']) if not i])
+        allb = np.array([d for d,i in zip(data['BACKGROUND'], data['IGNORED']) if not i])
         torder = np.argsort(alltime)
         vrange = data['VRANGE']
         allerr = []
@@ -794,6 +820,11 @@ G ROUDIER: Extracts and Wavelength calibrates WFC3 SCAN mode spectra
         plt.plot(shift[torder] - np.nanmin(shift), 'o')
         plt.xlabel('Time Ordered Frame Number')
         plt.ylabel('Shift [Pixels]')
+
+        plt.figure()
+        plt.plot(allb[torder], 'o')
+        plt.xlabel('Time Ordered Frame Number')
+        plt.ylabel('Background [DN]')
         plt.show()
         pass
     allignore = data['IGNORED']
@@ -812,6 +843,8 @@ G ROUDIER: Extracts and Wavelength calibrates WFC3 SCAN mode spectra
 # -- DETECTOR PLATE SCALE -- -----------------------------------------
 def dps(flttype):
     '''
+G. ROUDIER: Detector plate scale
+
 http://www.stsci.edu/hst/wfc3/ins_performance/detectors
 http://www.stsci.edu/hst/stis/design/detectors
 http://www.stsci.edu/hst/stis/design/gratings
@@ -827,9 +860,11 @@ http://www.stsci.edu/hst/stis/design/gratings
         pass
     return arcsec2pix
 # --------------------------------------------------------------------
-# -- DETECTOR PLATE SCALE -- -----------------------------------------
+# -- SCIENCE WAVELENGTH BAND -- --------------------------------------
 def validrange(flttype):
     '''
+G. ROUDIER: Science wavelength band
+
 http://www.stsci.edu/hst/wfc3/documents/ISRs/WFC3-2009-18.pdf
 http://www.stsci.edu/hst/wfc3/documents/ISRs/WFC3-2009-17.pdf
 http://www.stsci.edu/hst/stis/design/gratings/documents/handbooks/currentIHB/c13_specref07.html
@@ -842,10 +877,12 @@ http://www.stsci.edu/hst/stis/design/gratings/documents/handbooks/currentIHB/c13
     if fltr in ['G430L']: vrange = [0.30, 0.55]
     if fltr in ['G140M']: vrange = [0.12, 0.17]
     return vrange
-# --------------------------------------------------------------------
+# ----------------------------- --------------------------------------
 # -- FILTERS AND GRISMS -- -------------------------------------------
 def fng(flttype):
     '''
+G. ROUDIER: Filters and grisms
+
 http://www.stsci.edu/hst/wfc3/documents/handbooks/currentDHB/wfc3_dhb.pdf
 G102 http://www.stsci.edu/hst/wfc3/documents/ISRs/WFC3-2009-18.pdf
 G141 http://www.stsci.edu/hst/wfc3/documents/ISRs/WFC3-2009-17.pdf
@@ -877,7 +914,7 @@ G141 http://www.stsci.edu/hst/wfc3/documents/ISRs/WFC3-2009-17.pdf
 def isolate(thisdiff, psmin, spectrace, scanwdw, targetn, floodlevel,
             axis=1, debug=False, stare=False):
     '''
-G ROUDIER: Based on Minkowski functionnals decomposition algorithm
+G. ROUDIER: Based on Minkowski functionnals decomposition algorithm
     '''
     valid = np.isfinite(thisdiff)
     if np.nansum(~valid) > 0: thisdiff[~valid] = 0
@@ -952,6 +989,9 @@ G ROUDIER: Based on Minkowski functionnals decomposition algorithm
 # ------------- ------------------------------------------------------
 # -- APERTURE AND FILTER TO TOTAL TRANSMISSION FILTER -- -------------
 def ag2ttf(flttype):
+    '''
+G ROUDIER: Aperture and filter to total transmission filter
+    '''
     detector = flttype.split('-')[2]
     grism = flttype.split('-')[3]
     lightpath = ag2lp(detector, grism)
@@ -976,15 +1016,15 @@ def ag2ttf(flttype):
 # -- APERTURE AND GRISM TO .FITS FILES -- ----------------------------
 def ag2lp(detector, grism):
     '''
-http://www.stsci.edu/hst/wfc3/documents/ISRs/WFC3-2011-05.pdf
-ftp://ftp.stsci.edu/cdbs/comp/ota/
-ftp://ftp.stsci.edu/cdbs/comp/wfc3/
-
-G ROUDIER: The first element of the returned list defines the default
+G. ROUDIER: The first element of the returned list defines the default
 interpolation grid, filter/grism file is suited.
 
 ['Grism source', 'Refractive correction plate', 'Cold mask', 'Mirror 1', 'Mirror 2',
 'Fold mirror', 'Channel select mechanism', 'Pick off mirror', 'OTA']
+
+http://www.stsci.edu/hst/wfc3/documents/ISRs/WFC3-2011-05.pdf
+ftp://ftp.stsci.edu/cdbs/comp/ota/
+ftp://ftp.stsci.edu/cdbs/comp/wfc3/
     '''
     lightpath = []
     if grism == 'G141': lightpath.append('WFC3/wfc3_ir_g141_src_004_syn.fits')
@@ -1004,6 +1044,9 @@ interpolation grid, filter/grism file is suited.
 # --------------------------------------- ----------------------------
 # -- BUILD TOTAL TRANSMISSION FILTER -- ------------------------------
 def bttf(lightpath, debug=False):
+    '''
+G. ROUDIER: Builds total transmission filter
+    '''
     ttp = 1e0
     muref = [np.nan]
     if debug: plt.subplot(211)
@@ -1028,6 +1071,9 @@ def bttf(lightpath, debug=False):
 # ------------------------------------- ------------------------------
 # -- WFC3 CAL FITS -- ------------------------------------------------
 def loadcalf(name, muref, calloc='/proj/sdp/data/cal'):
+    '''
+G. ROUDIER: Loads optical element .fits calibration file
+    '''
     fitsfile = os.path.join(calloc, name)
     data = pyfits.getdata(fitsfile)
     muin = np.array(data.WAVELENGTH)
@@ -1038,9 +1084,10 @@ def loadcalf(name, muref, calloc='/proj/sdp/data/cal'):
     return muref, t
 # ------------------- ------------------------------------------------
 # -- WAVELENGTH SOLUTION -- ------------------------------------------
-def wavesol(spectrum, tt, wavett, disper, siv=None, fd=False, debug=False, ovszspc=False):
+def wavesol(spectrum, tt, wavett, disper, siv=None, fd=False, bck=None,
+            debug=False, ovszspc=False):
     '''
-G ROUDIER: Wavelength calibration on log10 spectrum to emphasize the
+G. ROUDIER: Wavelength calibration on log10 spectrum to emphasize the
 edges, approximating the log(stellar spectrum) with a linear model
     '''
     mutt = wavett.copy()
@@ -1058,39 +1105,47 @@ edges, approximating the log(stellar spectrum) with a linear model
     shift = reftt - minwave
     scale = np.nanmedian(logspec) - np.nanmedian(logtt)
     params = lm.Parameters()
+    params.add('scale', value=scale)
+    if bck is None: params.add('background', value=0e0, vary=False)
+    else: params.add('background', value=bck)
     if siv is None: params.add('slope', value=1e-2)
     else: params.add('slope', value=siv, vary=False)
-    params.add('scale', value=scale)
     if fd or ovszspc: params.add('disper', value=disper, vary=False)
     else: params.add('disper', value=disper)
     if fd: params.add('shift', value=shift, vary=False)
     else: params.add('shift', value=shift)
-    out = lm.minimize(wcme, params, args=(logspec, mutt, logtt,False))
+    out = lm.minimize(wcme, params, args=(logspec, mutt, logtt, False))
     disper = out.params['disper'].value
     shift = out.params['shift'].value
     slope = out.params['slope'].value
     scale = out.params['scale'].value
+    background = out.params['background'].value
     wave = wcme(out.params, logspec, refmu=mutt, reftt=logtt)
     # PLOTS
     if debug:
         plt.figure()
-        plt.plot(mutt, logtt, 'o--')
-        plt.plot(wave, logspec - (scale+wave*slope), 'o--')
+        plt.plot(mutt, logtt, 'o--', label='Reference')
+        plt.plot(wave, logspec - (scale+wave*slope), 'o--', label='Spectrum')
+        plt.legend(loc=8)
         plt.show()
         pass
-    return wave, disper, shift+minwave, slope
+    return wave, disper, shift+minwave, slope, background
 # ------------------------- ------------------------------------------
 # -- WAVELENGTH FIT FUNCTION -- --------------------------------------
 def wcme(params, data, refmu=None, reftt=None, forward=True):
+    '''
+G. ROUDIER: Wavelength calibration function for LMfit
+    '''
     slope = params['slope'].value
     scale = params['scale'].value
     disper = params['disper'].value
     shift = params['shift'].value
+    background = params['background'].value
     liref = itp.interp1d(refmu, reftt, bounds_error=False, fill_value=np.nan)
     wave = np.arange(data.size)*disper*1e-4 + shift
     model = liref(wave) + scale + slope*wave
     select = (np.isfinite(model)) & (np.isfinite(data))
-    d = data.copy()
+    d = np.log10(10**(data.copy()) - background)
     weights = np.ones(d.size)
     if np.sum(~select) > 0:
         model[~select] = 1e0
@@ -1103,6 +1158,9 @@ def wcme(params, data, refmu=None, reftt=None, forward=True):
 # ----------------------------- --------------------------------------
 # -- TIME TO Z -- ----------------------------------------------------
 def time2z(time, ipct, tknot, sma, orbperiod, ecc, tperi=None, epsilon=1e-10):
+    '''
+G. ROUDIER: Time samples in [Days] to separation in [R*]
+    '''
     if tperi is not None:
         ft0 = (tperi - tknot) % orbperiod
         ft0 /= orbperiod
@@ -1142,6 +1200,10 @@ def time2z(time, ipct, tknot, sma, orbperiod, ecc, tperi=None, epsilon=1e-10):
 # --------------- ----------------------------------------------------
 # -- TRUE ANOMALY NEWTON RAPHSON SOLVER -- ---------------------------
 def solveme(M, e, eps):
+    '''
+G. ROUDIER: Newton Raphson solver for true anomaly
+M is a numpy array
+    '''
     E = np.copy(M)
     for i in np.arange(M.shape[0]):
         while abs(E[i] - e*np.sin(E[i]) - M[i]) > eps:
@@ -1156,7 +1218,7 @@ def solveme(M, e, eps):
 def starecal(clc, tim, tid, flttype, out,
              emptythr=1e3, frame2png=False, verbose=False, debug=False):
     '''
-WFC3 STARE Calibration
+G. ROUDIER: WFC3 STARE Calibration
     '''
     calibrated = False
     # VISIT ----------------------------------------------------------
@@ -1435,8 +1497,8 @@ WFC3 STARE Calibration
             cutoff = np.nanmax(spectrum)/scaleco
             spectrum[spectrum < cutoff] = np.nan
             spectrum = abs(spectrum)
-            w, d, s, si = wavesol(spectrum, tt, wavett, disper, ovszspc=ovszspc,
-                                  debug=False)
+            w, d, s, si, _bck = wavesol(spectrum, tt, wavett, disper, ovszspc=ovszspc,
+                                        debug=False)
             if (d > ldisp) and (d < udisp): spectralindex.append(si)
             pass
         pass
@@ -1456,8 +1518,8 @@ WFC3 STARE Calibration
             cutoff = np.nanmax(spectrum)/scaleco
             spectrum[spectrum < cutoff] = np.nan
             spectrum = abs(spectrum)
-            wave, disp, shift, si = wavesol(spectrum, tt, wavett, disper,
-                                            siv=siv, ovszspc=ovszspc)
+            wave, disp, shift, si, _bck = wavesol(spectrum, tt, wavett, disper,
+                                                  siv=siv, ovszspc=ovszspc)
             liref = itp.interp1d(wavett*1e-4, tt, bounds_error=False, fill_value=np.nan)
             phot2counts = liref(wave)
             data['PHT2CNT'][index] = phot2counts
