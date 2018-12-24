@@ -55,7 +55,7 @@ class autofill(dawgie.Algorithm):
         return 'autofill'
 
     def previous(self):
-        return [dawgie.ALG_REF(trg.all, self.__create)]
+        return [dawgie.ALG_REF(trg.analysis, self.__create)]
 
     def state_vectors(self):
         return [self.__out]
@@ -94,7 +94,7 @@ class scrape(dawgie.Algorithm):
         return 'scrape'
 
     def previous(self):
-        return [dawgie.ALG_REF(trg.factory, self.__autofill)]
+        return [dawgie.ALG_REF(trg.task, self.__autofill)]
 
     def state_vectors(self):
         return [self.__out]

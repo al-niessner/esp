@@ -23,7 +23,7 @@ class validate(dawgie.Algorithm):
         return 'validate'
 
     def previous(self):
-        return [dawgie.ALG_REF(trg.factory, self.__autofill)]
+        return [dawgie.ALG_REF(trg.task, self.__autofill)]
 
     def state_vectors(self):
         return [self.__out]
@@ -59,7 +59,7 @@ class finalize(dawgie.Algorithm):
         return 'finalize'
 
     def previous(self):
-        return [dawgie.ALG_REF(sys.factory, self.__val)]
+        return [dawgie.ALG_REF(sys.task, self.__val)]
 
     def state_vectors(self):
         return [self.__out]
