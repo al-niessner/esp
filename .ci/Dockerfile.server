@@ -2,7 +2,7 @@ FROM dawgie:ghrVersion
 ENTRYPOINT ["python3", "-m", "dawgie.pl.start"]
 CMD ["--context=excalibur.context", \
      "--context-ae-dir=/proj/src/ae/excalibur", \
-     "--context-ae-pkg='excalibur'", \
+     "--context-ae-pkg=excalibur", \
      "--context-db-impl=post", \
      "--context-db-name=ops", \
      "--context-db-port=5263", \
