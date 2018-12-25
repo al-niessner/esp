@@ -14,4 +14,4 @@ CMD ["--context=excalibur.context", \
      "--context-db-name=ops", \
      "--context-db-port=5263", \
      "--context-fe-path=/proj/src/front-end", \
-     "-l ops.log"]
+     "-l", "ops.log"]
