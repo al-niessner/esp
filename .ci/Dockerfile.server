@@ -1,4 +1,5 @@
 FROM esp_py:ghrVersion
+ENV PYTHONPATH /proj/src/ae
 ENTRYPOINT ["python3", "-m", "dawgie.pl.start"]
 CMD ["--context=excalibur.context", \
      "--context-ae-dir=/proj/src/ae/excalibur", \
