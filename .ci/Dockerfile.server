@@ -1,12 +1,11 @@
 FROM esp_py:ghrVersion
 ENV PYTHONPATH /proj/src/ae
-ENTRYPOINT ["python3", "-m", "dawgie.pl.start"]
-CMD ["--context=excalibur.context", \
-     "--context-ae-dir=/proj/src/ae/excalibur", \
-     "--context-ae-pkg=excalibur", \
-     "--context-db-host=mentor.jpl.nasa.gov", \
-     "--context-db-impl=post", \
-     "--context-db-name=ops", \
-     "--context-db-port=5263", \
-     "--context-fe-path=/proj/src/front-end", \
-     "-l", "ops.log"]
+ENTRYPOINT ["python3", "-m", "dawgie.pl.start", "-l", "ops.log", \
+            "--context=excalibur.context", \
+            "--context-ae-dir=/proj/src/ae/excalibur", \
+            "--context-ae-pkg=excalibur", \
+            "--context-db-host=mentor.jpl.nasa.gov", \
+            "--context-db-impl=post", \
+            "--context-db-name=ops", \
+            "--context-db-port=5263", \
+            "--context-fe-path=/proj/src/front-end"]
