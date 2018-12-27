@@ -1,10 +1,11 @@
 FROM esp_py:ghrVersion
 ENV DOCKER_GIT_REVISION esp-git-rev
+ENV PYTHONPATH /proj/src/ae
 RUN set -ex && \
     mkdir /tmp/esp && \
     /bin/dcp.py --port DCP_PORT_NUMBER -r setup.py excalibur /tmp/esp/ && \
     cd /tmp/esp && \
-    python3 setup.py install && \
+    python3 setup.py --homedir=/proj/src/ae install && \
     cd /tmp && rm -rf esp
 ENTRYPOINT ["python3", "-m", "dawgie.pl.worker"]
 CMD ["-a", "/proj/src/ae/excalibur", \
