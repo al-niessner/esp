@@ -6,7 +6,7 @@ CMD ["--context=excalibur.context", \
      "--context-ae-pkg=excalibur", \
      "--context-db-host=mentor.jpl.nasa.gov", \
      "--context-db-impl=post", \
-     "--context-db-name=sdp", \
+     "--context-db-name=ops", \
      "--context-db-port=5263", \
      "--context-fe-path=/proj/src/front-end", \
      "-l", "ops.log"]
