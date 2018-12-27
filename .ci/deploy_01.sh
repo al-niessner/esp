@@ -14,14 +14,16 @@ then
     do
         if [ "$destination" == "dawgie" ]
         then
+            lv=$(layer_versions)
             source="`lookup_source $destination`"
             version="`lookup_version $destination`"
+            layer_version="${lv:0:16}"
             
             if [ -z "$(docker images | grep esp_server:${version})" ]
             then
                python3 <<EOF
 with open ('.ci/Dockerfile.server', 'rt') as f: text = f.read()
-with open ('.ci/Dockerfile.1', 'tw') as f: f.write (text.replace ("ghrVersion", "${version}"))
+with open ('.ci/Dockerfile.1', 'tw') as f: f.write (text.replace ("ghrVersion", "${layer_version}"))
 EOF
                docker build --network=host -t esp_server:${version} - < .ci/Dockerfile.1
                rm .ci/Dockerfile.1 
