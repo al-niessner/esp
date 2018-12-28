@@ -11,6 +11,7 @@ RUN set -ex && \
 ENTRYPOINT ["python3", "-m", "dawgie.pl.worker"]
 CMD ["-a", "/proj/src/ae/lib/python/excalibur", \
      "-b", "excalibur", \
+     "-g", "/proj/src/gnupg", \
      "-i", "0", \
      "-n", "mentor0.jpl.nasa.gov", \
      "-p", "8081"]
