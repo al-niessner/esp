@@ -12,7 +12,7 @@ ENTRYPOINT ["python3", "-m", "dawgie.pl.worker"]
 CMD ["-a", "/proj/src/ae/lib/python/excalibur", \
      "-b", "excalibur", \
      "-c", "cluster", \
-     "-g", "/proj/src/gnupg", \
+     "-g", "/proj/data/gnupg", \
      "-i", "0", \
      "-n", "mentor0.jpl.nasa.gov", \
      "-p", "8081"]
