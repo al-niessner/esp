@@ -11,5 +11,5 @@ ENTRYPOINT ["python3", "-m", "dawgie.pl.worker"]
 CMD ["-a", "/proj/src/ae/excalibur", \
      "-b", "excalibur", \
      "-i", "0", \
-     "-n", "mentor.jpl.nasa.gov", \
+     "-n", "mentor0.jpl.nasa.gov", \
      "-p", "8081"]
