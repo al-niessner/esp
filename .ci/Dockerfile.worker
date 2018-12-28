@@ -1,6 +1,6 @@
 FROM esp_py:ghrVersion
 ENV DOCKER_GIT_REVISION esp-git-rev
-ENV GNUPGPHOME /proj/gnupg
+ENV GNUPGHOME /proj/gnupg
 ENV HOME /tmp
 ENV PYTHONPATH /proj/src/ae:/usr/local/lib/python
 RUN set -ex && \
