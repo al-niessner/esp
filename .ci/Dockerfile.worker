@@ -2,16 +2,16 @@ FROM esp_py:ghrVersion
 ENV DOCKER_GIT_REVISION esp-git-rev
 ENV GNUPGPHOME /proj/gnupg
 ENV HOME /tmp
-ENV PYTHONPATH /proj/src/ae/lib/python
+ENV PYTHONPATH /proj/src/ae:/usr/local/lib/python
 RUN set -ex && \
     mkdir /tmp/esp && \
     /bin/dcp.py --port DCP_PORT_NUMBER -r setup.py excalibur /tmp/esp/ && \
     cd /tmp/esp && \
-    mkdir -p /proj/src/ae/lib/python && \
-    python3 setup.py install --home=/proj/src/ae && \
+    mkdir -p /usr/local/lib/python && \
+    python3 setup.py install --home=/usr/local && \
     cd /tmp && rm -rf esp
 ENTRYPOINT ["python3", "-m", "dawgie.pl.worker", \
-            "-a", "/proj/src/ae/lib/python/excalibur", \
+            "-a", "/proj/src/ae", \
             "-b", "excalibur", \
             "-c", "cluster", \
             "-g", "/proj/gnupg"]
