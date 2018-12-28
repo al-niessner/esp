@@ -5,7 +5,7 @@ RUN set -ex && \
     mkdir /tmp/esp && \
     /bin/dcp.py --port DCP_PORT_NUMBER -r setup.py excalibur /tmp/esp/ && \
     cd /tmp/esp && \
-    mkdir /proj/src/ae && \
+    mkdir -p /proj/src/ae && \
     PYTHONPATH=/proj/src/ae python3 setup.py install --home=/proj/src/ae && \
     cd /tmp && rm -rf esp
 ENTRYPOINT ["python3", "-m", "dawgie.pl.worker"]
