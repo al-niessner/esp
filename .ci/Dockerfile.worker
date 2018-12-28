@@ -9,7 +9,7 @@ RUN set -ex && \
     python3 setup.py install --home=/proj/src/ae && \
     cd /tmp && rm -rf esp
 ENTRYPOINT ["python3", "-m", "dawgie.pl.worker"]
-CMD ["-a", "/proj/src/ae/excalibur", \
+CMD ["-a", "/proj/src/ae/lib/python/excalibur", \
      "-b", "excalibur", \
      "-i", "0", \
      "-n", "mentor0.jpl.nasa.gov", \
