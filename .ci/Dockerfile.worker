@@ -1,5 +1,7 @@
 FROM esp_py:ghrVersion
 ENV DOCKER_GIT_REVISION esp-git-rev
+ENV GNUPGPHOME /proj/gnupg
+ENV HOME /tmp
 ENV PYTHONPATH /proj/src/ae/lib/python
 RUN set -ex && \
     mkdir /tmp/esp && \
@@ -8,11 +10,11 @@ RUN set -ex && \
     mkdir -p /proj/src/ae/lib/python && \
     python3 setup.py install --home=/proj/src/ae && \
     cd /tmp && rm -rf esp
-ENTRYPOINT ["python3", "-m", "dawgie.pl.worker"]
-CMD ["-a", "/proj/src/ae/lib/python/excalibur", \
-     "-b", "excalibur", \
-     "-c", "cluster", \
-     "-g", "/proj/data/gnupg", \
-     "-i", "0", \
+ENTRYPOINT ["python3", "-m", "dawgie.pl.worker", \
+            "-a", "/proj/src/ae/lib/python/excalibur", \
+            "-b", "excalibur", \
+            "-c", "cluster", \
+            "-g", "/proj/gnupg"]
+CMD ["-i", "0", \
      "-n", "mentor0.jpl.nasa.gov", \
      "-p", "8081"]

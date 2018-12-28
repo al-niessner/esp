@@ -1,4 +1,6 @@
 FROM esp_py:ghrVersion
+ENV GNUPGPHOME /proj/gnupg
+ENV HOME /proj/src
 ENV PYTHONPATH /proj/src/ae
 ENTRYPOINT ["python3", "-m", "dawgie.pl.start", "-l", "ops.log", \
             "--context=excalibur.context", \
