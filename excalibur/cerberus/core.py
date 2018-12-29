@@ -8,7 +8,7 @@ import logging; log = logging.getLogger(__name__)
 try:
     import pymc as pm
     from pymc.distributions import Normal as pmnd, Uniform as pmud
-    pass
+    deterministic = pm.deterministic
 except ImportError:
     import pymc3 as pm
     import pymc3.distributions
@@ -21,6 +21,7 @@ except ImportError:
         def dummy (self): return self.__dist
         pass
 
+    deterministic = pm.Deterministic
     pmnd = Wrapper(pymc3.distributions.Normal).dist
     pmud = Wrapper(pymc3.distributions.Uniform).dist
     pass
@@ -347,7 +348,7 @@ def atmos(fin, xsl, spc, out, mclen=int(1e2), verbose=False):
                 pass
 
             # CERBERUS FM CALL
-            @pm.deterministic
+            @deterministic
             def fmcerberus(cop=compar, mdp=modelpar,
                            cleanup=cleanup, model=model, p=p, solidr=solidr,
                            tspectrum=tspectrum, xsl=xsl):

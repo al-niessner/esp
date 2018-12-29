@@ -19,7 +19,7 @@ try:
     from pymc.distributions import Normal as pmnd
     from pymc.distributions import Uniform as pmud
     from pymc.distributions import TruncatedNormal as pmtnd
-    pass
+    deterministic = pm.deterministic
 except ImportError:
     import pymc3 as pm
     import pymc3.distributions
@@ -32,6 +32,7 @@ except ImportError:
         def dummy (self): return self.__dist
         pass
 
+    deterministic = pm.Deterministic
     pmnd = Wrapper(pymc3.distributions.Normal).dist
     pmud = Wrapper(pymc3.distributions.Uniform).dist
     pmtnd = Wrapper(pymc3.distributions.TruncatedNormal).dist
@@ -586,7 +587,7 @@ G. ROUDIER: Orbital Parameters Recovery
                        aos=None, avi=None)
 
         # ORBITAL MODEL ----------------------------------------------
-        @pm.deterministic
+        @deterministic
         def orbital(r=rprs, icln=inc, atk=alltknot,
                     avs=allvslope, avi=allvitcp,
                     aos=alloslope, aolt=allologtau, aold=allologdelay,
@@ -1177,7 +1178,7 @@ G. ROUDIER: Exoplanet spectrum recovery
                            aos=None, avi=allvitcp)
 
             # LIGHT CURVE MODEL --------------------------------------
-            @pm.deterministic
+            @deterministic
             def lcmodel(r=rprs, avs=allvslope, aos=alloslope, ctxt=ctxt):
                 allimout = []
                 for iv in range(len(ctxt.visits)):
