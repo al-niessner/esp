@@ -11,7 +11,7 @@ try:
     pass
 except ImportError:
     import pymc3 as pm
-    from pymc3.distributions
+    import pymc3.distributions
     pmnd = pymc3.distributions.Normal.dist
     pmud = pymc3.distributions.Uniform.dist
     pass

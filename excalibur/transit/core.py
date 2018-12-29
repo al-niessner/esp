@@ -22,6 +22,7 @@ try:
     pass
 except ImportError:
     import pymc3 as pm
+    import pymc3.distributions
     pmnd = pymc3.distributions.Normal.dist
     pmud = pymc3.distributions.Uniform.dist
     pmtnd = pymc3.distributions.TruncatedNormal.dist
