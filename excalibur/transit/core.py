@@ -22,9 +22,9 @@ try:
     pass
 except ImportError:
     import pymc3 as pm
-    from pymc3.distributions import Normal as pmnd
-    from pymc3.distributions import Uniform as pmud
-    from pymc3.distributions import TruncatedNormal as pmtnd
+    pmnd = pymc3.distributions.Normal.dist
+    pmud = pymc3.distributions.Uniform.dist
+    pmtnd = pymc3.distributions.TruncatedNormal.dist
     pass
 
 import collections

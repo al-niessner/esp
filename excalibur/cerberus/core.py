@@ -11,7 +11,9 @@ try:
     pass
 except ImportError:
     import pymc3 as pm
-    from pymc3.distributions import Normal as pmnd.dist, Uniform.dist as pmud
+    from pymc3.distributions
+    pmnd = pymc3.distributions.Normal.dist
+    pmud = pymc3.distributions.Uniform.dist
     pass
 
 import numpy as np
