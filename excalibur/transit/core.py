@@ -14,29 +14,12 @@ import ldtk
 from ldtk import LDPSetCreator, BoxcarFilter
 from ldtk.ldmodel import LinearModel, QuadraticModel, NonlinearModel
 
-try:
-    import pymc as pm
-    from pymc.distributions import Normal as pmnd
-    from pymc.distributions import Uniform as pmud
-    from pymc.distributions import TruncatedNormal as pmtnd
-    deterministic = pm.deterministic
-except ImportError:
-    import pymc3 as pm
-    import pymc3.distributions
+import pymc3 as pm
+import pymc3.distributions
 
-    class Wrapper:
-        def __init__(self, dist): self.__dist = dist.dist
-        def dist (self, *args, **kwds):
-            del kwds['name']
-            return self.__dist (*args, **kwds)
-        def dummy (self): return self.__dist
-        pass
-
-    deterministic = pm.Deterministic
-    pmnd = Wrapper(pymc3.distributions.Normal).dist
-    pmud = Wrapper(pymc3.distributions.Uniform).dist
-    pmtnd = Wrapper(pymc3.distributions.TruncatedNormal).dist
-    pass
+pmnd = pymc3.distributions.Normal.dist
+pmud = pymc3.distributions.Uniform.dist
+pmtnd = pymc3.distributions.TruncatedNormal.dist
 
 import collections
 CONTEXT = collections.namedtuple('CONTEXT',
@@ -472,7 +455,7 @@ G. ROUDIER: Orbital Parameters Recovery
         flatoot = abs(flatz) > 1e0 + rpors
         ootstd = np.nanstd(flatwhite[flatoot])
         taurprs = 1e0/(rpors*1e-2)**2
-        rprs = pmtnd(name='rprs', mu=rpors, tau=taurprs, lower=rpors/2e0, upper=2e0*rpors)
+        rprs = pmtnd(mu=rpors, tau=taurprs, lower=rpors/2e0, upper=2e0*rpors)
         nodes = [rprs]
         ttrdur = np.arcsin((1e0+rpors)/smaors)
         trdura = priors[p]['period']*ttrdur/np.pi
@@ -489,7 +472,7 @@ G. ROUDIER: Orbital Parameters Recovery
             tautknot = 1e0/(3e0*np.min(mintscale))**2
             tknotmin = tmjd - np.max(maxtscale)/2e0
             tknotmax = tmjd + np.max(maxtscale)/2e0
-            alltknot[i] = pmtnd(name='dtk%i' % ttvi, mu=tmjd, tau=tautknot, lower=tknotmin, upper=tknotmax)
+            alltknot[i] = pmtnd(mu=tmjd, tau=tautknot, lower=tknotmin, upper=tknotmax)
             pass
         nodes.extend(alltknot)
         if priors[p]['inc'] != 9e1:
@@ -502,7 +485,7 @@ G. ROUDIER: Orbital Parameters Recovery
                 upinc = 9e1
                 pass
             tauinc = 1e0/(priors[p]['inc']*1e-2)**2
-            inc = pmtnd(name='inc', mu=priors[p]['inc'], tau=tauinc, lower=lowinc, upper=upinc)
+            inc = pmtnd(mu=priors[p]['inc'], tau=tauinc, lower=lowinc, upper=upinc)
             nodes.append(inc)
             pass
         # OOT ORBITS
@@ -544,21 +527,21 @@ G. ROUDIER: Orbital Parameters Recovery
             commonoim = False
             pass
         for i, vi in enumerate(visits):
-            allvslope[i] = pmtnd(name='vslope%i' % vi, mu=0e0, tau=tauvs, lower=-3e-2/trdura, upper=3e-2/trdura)
+            allvslope[i] = pmtnd(mu=0e0, tau=tauvs, lower=-3e-2/trdura, upper=3e-2/trdura)
             allvitcp[i] = pmtnd('vitcp%i' % vi, 1e0, tauvi,
                                 1e0 - 3e0*ootstd, 1e0 + 3e0*ootstd)
             if commonoim:
-                alloslope[i] = pmnd(name='oslope%i' % vi, mu=0e0, sd=tauvs)
-                allologtau[i] = pmud(name='ologtau%i' % vi, lower=minoscale, upper=maxoscale)
-                allologdelay[i] = pmud(name='ologdelay%i' % vi, lower=minoscale, upper=maxdelay)
+                alloslope[i] = pmnd(mu=0e0, sd=tauvs)
+                allologtau[i] = pmud(lower=minoscale, upper=maxoscale)
+                allologdelay[i] = pmud(lower=minoscale, upper=maxdelay)
                 pass
             pass
         if not commonoim:
             for i in range(totalindex):
-                alloslope[i] = pmtnd(name='oslope%i' % i, mu=0e0, tau=tauvs,
+                alloslope[i] = pmtnd(mu=0e0, tau=tauvs,
                                      lower=-3e-2/trdura, upper=3e-2/trdura)
-                allologtau[i] = pmud(name='ologtau%i' % i, lower=minoscale, upper=maxoscale)
-                allologdelay[i] = pmud(name='ologdelay%i' % i, lower=minoscale, upper=maxdelay)
+                allologtau[i] = pmud(lower=minoscale, upper=maxoscale)
+                allologdelay[i] = pmud(lower=minoscale, upper=maxdelay)
                 pass
             pass
         nodes.extend(allvslope)
@@ -627,7 +610,7 @@ G. ROUDIER: Orbital Parameters Recovery
             return np.array(out)[ctxt.selectfit]
         tauwhite = 1e0/((np.nanmedian(flaterrwhite))**2)
         if tauwhite == 0: tauwhite = 1e0/(ootstd**2)
-        whitedata = pmnd(name='whitedata', mu=orbital, tau=tauwhite,
+        whitedata = pmnd(mu=orbital, tau=tauwhite,
                          value=flatwhite[selectfit], observed=True)
         nodes.append(whitedata)
         allnodes = [n.__name__ for n in nodes if not n.observed]
@@ -1124,7 +1107,7 @@ G. ROUDIER: Exoplanet spectrum recovery
             mmw = mmw*cst.m_p  # [kg]
             Hs = cst.Boltzmann*eqtemp/(mmw*1e-2*(10.**priors[p]['logg']))  # [m]
             Hs = 3e0*Hs/(priors['R*']*sscmks['Rsun'])
-            rprs = pmnd(name='rprs', mu=whiterprs, sd=1e0/Hs**2)  # 95% within +/- 6Hs
+            rprs = pmnd(mu=whiterprs, sd=1e0/Hs**2)  # 95% within +/- 6Hs
             nodes = [rprs]
             tauvs = 1e0/((1e-2/trdura)**2)
             vslplm = 3e-2/trdura
@@ -1135,7 +1118,7 @@ G. ROUDIER: Exoplanet spectrum recovery
             allologtau = []
             allologdelay = []
             for i, v in enumerate(visits):
-                allvslope[i] = pmtnd(name='vslope%i' % v, mu=0e0, tau=tauvs, lower=-vslplm, upper=vslplm)
+                allvslope[i] = pmtnd(mu=0e0, tau=tauvs, lower=-vslplm, upper=vslplm)
                 allvitcp.append(wht['data'][p]['mcpost']['vitcp%i' % v]['quantiles'][50])
                 if commonoim:
                     temp = wht['data'][p]['mcpost']['ologtau%i' % v]['quantiles'][50]
@@ -1143,13 +1126,13 @@ G. ROUDIER: Exoplanet spectrum recovery
                     temp = wht['data'][p]['mcpost']['ologdelay%i' % v]['quantiles'][50]
                     allologdelay.append(temp)
                     temp = wht['data'][p]['mcpost']['oslope%i' % v]['quantiles'][50]
-                    alloslope[i] = pmtnd(name='oslope%i' % v, mu=temp, tau=tauvs, lower=-vslplm, upper=vslplm)
+                    alloslope[i] = pmtnd(mu=temp, tau=tauvs, lower=-vslplm, upper=vslplm)
                     pass
                 pass
             if not commonoim:
                 for i in range(totalindex):
                     temp = wht['data'][p]['mcpost']['oslope%i' % i]['quantiles'][50]
-                    alloslope[i] = pmtnd(name='oslope%i' % i, mu=temp, tau=tauvs, lower=-vslplm, upper=vslplm)
+                    alloslope[i] = pmtnd(mu=temp, tau=tauvs, lower=-vslplm, upper=vslplm)
                     temp = wht['data'][p]['mcpost']['ologtau%i' % i]['quantiles'][50]
                     allologtau.append(temp)
                     temp = wht['data'][p]['mcpost']['ologdelay%i' % i]['quantiles'][50]
@@ -1213,7 +1196,7 @@ G. ROUDIER: Exoplanet spectrum recovery
                 return out[ctxt.valid]
 
             tauwbdata = 1e0/dnoise**2
-            wbdata = pmnd(name='wbdata', mu=lcmodel,
+            wbdata = pmnd(mu=lcmodel,
                           tau=np.nanmedian(tauwbdata[valid]), value=data[valid],
                           observed=True)
             nodes.append(wbdata)

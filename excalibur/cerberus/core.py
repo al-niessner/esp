@@ -319,31 +319,31 @@ def atmos(fin, xsl, spc, out, mclen=int(1e2), verbose=False):
             # PRIORS
             nodes = []
             compar = np.empty(4, dtype=object)
-            compar[0] = pmud(name='CTP', lower=-6., upper=1.)
-            compar[1] = pmud(name='HScale', lower=-6e0, upper=6e0)
-            compar[2] = pmud(name='HIndex', lower=-4e0, upper=0e0)
-            compar[3] = pmud(name='T', lower=eqtemp/2e0, upper=2e0*eqtemp)
+            compar[0] = pmud(lower=-6., upper=1.)
+            compar[1] = pmud(lower=-6e0, upper=6e0)
+            compar[2] = pmud(lower=-4e0, upper=0e0)
+            compar[3] = pmud(lower=eqtemp/2e0, upper=2e0*eqtemp)
             nodes.extend(compar)
             modelpar = np.empty(4, dtype=object)
             if model == 'TEC':
-                modelpar[0] = pmud(name='XtoH', lower=-6e0, upper=3e0)
-                modelpar[1] = pmud(name='CtoO', lower=-6e0, upper=6e0)
-                modelpar[2] = pmud(name='dummy1', lower=-6e0, upper=6e0)
-                modelpar[3] = pmud(name='dummy2', lower=-6e0, upper=6e0)
+                modelpar[0] = pmud(lower=-6e0, upper=3e0)
+                modelpar[1] = pmud(lower=-6e0, upper=6e0)
+                modelpar[2] = pmud(lower=-6e0, upper=6e0)
+                modelpar[3] = pmud(lower=-6e0, upper=6e0)
                 nodes.extend(modelpar[0:2])
                 pass
             if model == 'PHOTOCHEM':
-                modelpar[0] = pmud(name='TIO', lower=-4e0, upper=4e0)
-                modelpar[1] = pmud(name='CH4', lower=-4e0, upper=4e0)
-                modelpar[2] = pmud(name='C2H2', lower=-4e0, upper=4e0)
-                modelpar[3] = pmud(name='NH3', lower=-4e0, upper=4e0)
+                modelpar[0] = pmud(lower=-4e0, upper=4e0)
+                modelpar[1] = pmud(lower=-4e0, upper=4e0)
+                modelpar[2] = pmud(lower=-4e0, upper=4e0)
+                modelpar[3] = pmud(lower=-4e0, upper=4e0)
                 nodes.extend(modelpar[0:4])
                 pass
             if model == 'HESC':
-                modelpar[0] = pmud(name='TIO', lower=-4e0, upper=4e0)
-                modelpar[1] = pmud(name='N2O', lower=-4e0, upper=4e0)
-                modelpar[2] = pmud(name='CO2', lower=-4e0, upper=4e0)
-                modelpar[3] = pmud(name='dummy1', lower=-6e0, upper=6e0)
+                modelpar[0] = pmud(lower=-4e0, upper=4e0)
+                modelpar[1] = pmud(lower=-4e0, upper=4e0)
+                modelpar[2] = pmud(lower=-4e0, upper=4e0)
+                modelpar[3] = pmud(lower=-6e0, upper=6e0)
                 nodes.extend(modelpar[0:3])
                 pass
 
@@ -385,7 +385,7 @@ def atmos(fin, xsl, spc, out, mclen=int(1e2), verbose=False):
                 fmc = fmc + np.nanmean(tspectrum[cleanup])
                 return fmc
             # CERBERUS MCMC
-            mcdata = pmnd(name='mcdata', mu=fmcerberus,
+            mcdata = pmnd(mu=fmcerberus,
                           tau=1e0/(np.nanmedian(tspecerr[cleanup])**2),
                           value=tspectrum[cleanup], observed=True)
             nodes.append(mcdata)
