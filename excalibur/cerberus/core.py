@@ -379,16 +379,15 @@ def atmos(fin, xsl, spc, out, mclen=int(1e2), verbose=False):
             nodes.append(mcdata)
             allnodes = [n.__name__ for n in nodes if not n.observed]
             log.warning('>-- MCMC nodes: %s', str(allnodes))
-            with pm.Model(nodes) as mcmcmodel:
-                markovc = pm.MCMC(mcmcmodel)
-                burnin = int(mclen/2)
-                markovc.sample(mclen, burn=burnin, progress_bar=verbose)
-                log.warning(' ')
-                mctrace = {}
-                for key in allnodes: mctrace[key] = markovc.trace(key)[:]
-                out['data'][p][model]['MCPOST'] = markovc.stats()
-                out['data'][p][model]['MCTRACE'] = mctrace
-                pass
+            mcmcmodel = pm.Model(nodes)
+            markovc = pm.MCMC(mcmcmodel)
+            burnin = int(mclen/2)
+            markovc.sample(mclen, burn=burnin, progress_bar=verbose)
+            log.warning(' ')
+            mctrace = {}
+            for key in allnodes: mctrace[key] = markovc.trace(key)[:]
+            out['data'][p][model]['MCPOST'] = markovc.stats()
+            out['data'][p][model]['MCTRACE'] = mctrace
             pass
         out['data'][p]['WAVELENGTH'] = np.array(spc['data'][p]['WB'])
         out['data'][p]['SPECTRUM'] = np.array(spc['data'][p]['ES'])

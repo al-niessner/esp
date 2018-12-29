@@ -4,7 +4,7 @@ RUN set -ex && \
                           ldtk==1.0 \
                           lmfit==0.9.11 \
                           matplotlib==2.2.3 \
-                          pymc3==3.5 \
+                          pymc==2.3.6 \
                           scipy==1.1.0 && \
    rm -rf ${HOME}/.cache && \
    mkdir /.theano && chmod 777 /.theano && \
