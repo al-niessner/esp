@@ -333,7 +333,7 @@ def atmos(fin, xsl, spc, out, mclen=int(1e2), verbose=False):
                 pass
 
             # CERBERUS FM CALL
-            @deterministic
+            # pm.deterministic
             def fmcerberus(cop=compar, mdp=modelpar,
                            cleanup=cleanup, model=model, p=p, solidr=solidr,
                            tspectrum=tspectrum, xsl=xsl):
