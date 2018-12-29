@@ -12,8 +12,16 @@ try:
 except ImportError:
     import pymc3 as pm
     import pymc3.distributions
-    pmnd = pymc3.distributions.Normal.dist
-    pmud = pymc3.distributions.Uniform.dist
+
+    class Wrapper:
+        def __init__(self, dist): self.__dist = dist.dist
+        def dist (self, *args, **kwds):
+            del kwds['name']
+            return self.__dist (*args, **kwds)
+        pass
+
+    pmnd = Wrapper(pymc3.distributions.Normal).dist
+    pmud = Wrapper(pymc3.distributions.Uniform).dist
     pass
 
 import numpy as np
