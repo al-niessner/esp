@@ -6,6 +6,7 @@ import scipy.stats
 import os
 
 context = {'data_cal':os.environ.get ('DATA_CALIBR', '/proj/data/cal'),
+           'data_dir':os.environ.get ('DATA_BASEDIR', '/proj/data'),
            'data_sci':os.environ.get ('DATA_SCIENC', '/proj/data/sci'),
            'ldtk_root':os.environ.get('LDTK_ROOT', '/proj/data/ldtk'),
            'target_list':os.environ.get('TARGET_LIST',

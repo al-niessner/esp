@@ -3,7 +3,9 @@ import os
 import logging; log = logging.getLogger(__name__)
 
 import dawgie
+import dawgie.context
 
+import excalibur
 import excalibur.system.core as syscore
 
 import numpy as np
@@ -1070,7 +1072,7 @@ G. ROUDIER: Builds total transmission filter
     return muref, ttp
 # ------------------------------------- ------------------------------
 # -- WFC3 CAL FITS -- ------------------------------------------------
-def loadcalf(name, muref, calloc='/proj/sdp/data/cal'):
+def loadcalf(name, muref, calloc=excalibur.context['data_cal']):
     '''
 G. ROUDIER: Loads optical element .fits calibration file
     '''
