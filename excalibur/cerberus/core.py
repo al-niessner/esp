@@ -5,26 +5,11 @@ import excalibur
 import os
 import logging; log = logging.getLogger(__name__)
 
-try:
-    import pymc as pm
-    from pymc.distributions import Normal as pmnd, Uniform as pmud
-    deterministic = pm.deterministic
-except ImportError:
-    import pymc3 as pm
-    import pymc3.distributions
+import pymc3 as pm
+import pymc3.distributions
 
-    class Wrapper:
-        def __init__(self, dist): self.__dist = dist.dist
-        def dist (self, *args, **kwds):
-            del kwds['name']
-            return self.__dist (*args, **kwds)
-        def dummy (self): return self.__dist
-        pass
-
-    deterministic = pm.Deterministic
-    pmnd = Wrapper(pymc3.distributions.Normal).dist
-    pmud = Wrapper(pymc3.distributions.Uniform).dist
-    pass
+pmnd = pymc3.distributions.Normal.dist
+pmud = pymc3.distributions.Uniform.dist
 
 import numpy as np
 import matplotlib.pyplot as plt
