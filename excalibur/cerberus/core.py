@@ -18,6 +18,7 @@ except ImportError:
         def dist (self, *args, **kwds):
             del kwds['name']
             return self.__dist (*args, **kwds)
+        def dummy (self): return self.__dist
         pass
 
     pmnd = Wrapper(pymc3.distributions.Normal).dist
