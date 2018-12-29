@@ -621,14 +621,15 @@ G. ROUDIER: Orbital Parameters Recovery
         nodes.append(whitedata)
         allnodes = [n.__name__ for n in nodes if not n.observed]
         log.warning('>-- MCMC nodes: %s', str(allnodes))
-        model = pm.Model(nodes)
-        mcmc = pm.MCMC(model)
-        burnin = int(chainlen/2)
-        mcmc.sample(chainlen, burn=burnin, progress_bar=verbose)
-        log.warning(' ')
-        mcpost = mcmc.stats()
-        mctrace = {}
-        for key in allnodes: mctrace[key] = mcmc.trace(key)[:]
+        with pm.Model(nodes) as model:
+            mcmc = pm.MCMC(model)
+            burnin = int(chainlen/2)
+            mcmc.sample(chainlen, burn=burnin, progress_bar=verbose)
+            log.warning(' ')
+            mcpost = mcmc.stats()
+            mctrace = {}
+            for key in allnodes: mctrace[key] = mcmc.trace(key)[:]
+            pass
         postlc = []
         postim = []
         postsep = []
@@ -1205,12 +1206,13 @@ G. ROUDIER: Exoplanet spectrum recovery
                           tau=np.nanmedian(tauwbdata[valid]), value=data[valid],
                           observed=True)
             nodes.append(wbdata)
-            model = pm.Model(nodes)
-            mcmc = pm.MCMC(model)
-            burnin = int(chainlen/2)
-            mcmc.sample(chainlen, burn=burnin, progress_bar=verbose)
-            if verbose: log.warning(' ')
-            mcpost = mcmc.stats()
+            with pm.Model(nodes) as model:
+                mcmc = pm.MCMC(model)
+                burnin = int(chainlen/2)
+                mcmc.sample(chainlen, burn=burnin, progress_bar=verbose)
+                if verbose: log.warning(' ')
+                mcpost = mcmc.stats()
+                pass
             out['data'][p]['ES'].append(mcpost['rprs']['quantiles'][50])
             out['data'][p]['ESerr'].append(mcpost['rprs']['standard deviation'])
             out['data'][p]['MCPOST'].append(mcpost)
