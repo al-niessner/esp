@@ -11,7 +11,7 @@ try:
     pass
 except ImportError:
     import pymc3 as pm
-    from pymc3.distributions import Normal as pmnd, Uniform as pmud
+    from pymc3.distributions import Normal as pmnd.dist, Uniform.dist as pmud
     pass
 
 import numpy as np
@@ -307,31 +307,31 @@ def atmos(fin, xsl, spc, out, mclen=int(1e2), verbose=False):
             # PRIORS
             nodes = []
             compar = np.empty(4, dtype=object)
-            compar[0] = pmud('CTP', -6., 1.).dist
-            compar[1] = pmud('HScale', -6e0, 6e0).dist
-            compar[2] = pmud('HIndex', -4e0, 0e0).dist
-            compar[3] = pmud('T', eqtemp/2e0, 2e0*eqtemp).dist
+            compar[0] = pmud('CTP', -6., 1.)
+            compar[1] = pmud('HScale', -6e0, 6e0)
+            compar[2] = pmud('HIndex', -4e0, 0e0)
+            compar[3] = pmud('T', eqtemp/2e0, 2e0*eqtemp)
             nodes.extend(compar)
             modelpar = np.empty(4, dtype=object)
             if model == 'TEC':
-                modelpar[0] = pmud('XtoH', -6e0, 3e0).dist
-                modelpar[1] = pmud('CtoO', -6e0, 6e0).dist
-                modelpar[2] = pmud('dummy1', -6e0, 6e0).dist
-                modelpar[3] = pmud('dummy2', -6e0, 6e0).dist
+                modelpar[0] = pmud('XtoH', -6e0, 3e0)
+                modelpar[1] = pmud('CtoO', -6e0, 6e0)
+                modelpar[2] = pmud('dummy1', -6e0, 6e0)
+                modelpar[3] = pmud('dummy2', -6e0, 6e0)
                 nodes.extend(modelpar[0:2])
                 pass
             if model == 'PHOTOCHEM':
-                modelpar[0] = pmud('TIO', -4e0, 4e0).dist
-                modelpar[1] = pmud('CH4', -4e0, 4e0).dist
-                modelpar[2] = pmud('C2H2', -4e0, 4e0).dist
-                modelpar[3] = pmud('NH3', -4e0, 4e0).dist
+                modelpar[0] = pmud('TIO', -4e0, 4e0)
+                modelpar[1] = pmud('CH4', -4e0, 4e0)
+                modelpar[2] = pmud('C2H2', -4e0, 4e0)
+                modelpar[3] = pmud('NH3', -4e0, 4e0)
                 nodes.extend(modelpar[0:4])
                 pass
             if model == 'HESC':
-                modelpar[0] = pmud('TIO', -4e0, 4e0).dist
-                modelpar[1] = pmud('N2O', -4e0, 4e0).dist
-                modelpar[2] = pmud('CO2', -4e0, 4e0).dist
-                modelpar[3] = pmud('dummy1', -6e0, 6e0).dist
+                modelpar[0] = pmud('TIO', -4e0, 4e0)
+                modelpar[1] = pmud('N2O', -4e0, 4e0)
+                modelpar[2] = pmud('CO2', -4e0, 4e0)
+                modelpar[3] = pmud('dummy1', -6e0, 6e0)
                 nodes.extend(modelpar[0:3])
                 pass
 
@@ -375,7 +375,7 @@ def atmos(fin, xsl, spc, out, mclen=int(1e2), verbose=False):
             # CERBERUS MCMC
             mcdata = pmnd('mcdata', mu=fmcerberus,
                           tau=1e0/(np.nanmedian(tspecerr[cleanup])**2),
-                          value=tspectrum[cleanup], observed=True).dist
+                          value=tspectrum[cleanup], observed=True)
             nodes.append(mcdata)
             allnodes = [n.__name__ for n in nodes if not n.observed]
             log.warning('>-- MCMC nodes: %s', str(allnodes))
