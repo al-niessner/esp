@@ -301,89 +301,94 @@ def atmos(fin, xsl, spc, out, mclen=int(1e2), verbose=False):
         solidr = orbp[p]['rp']*ssc['Rjup']  # MKS
         for model in modfam:
             out['data'][p][model] = {}
-            # PRIORS
-            nodes = []
-            compar = np.empty(4, dtype=object)
-            compar[0] = pmud(lower=-6., upper=1.)
-            compar[1] = pmud(lower=-6e0, upper=6e0)
-            compar[2] = pmud(lower=-4e0, upper=0e0)
-            compar[3] = pmud(lower=eqtemp/2e0, upper=2e0*eqtemp)
-            nodes.extend(compar)
-            modelpar = np.empty(4, dtype=object)
-            if model == 'TEC':
-                modelpar[0] = pmud(lower=-6e0, upper=3e0)
-                modelpar[1] = pmud(lower=-6e0, upper=6e0)
-                modelpar[2] = pmud(lower=-6e0, upper=6e0)
-                modelpar[3] = pmud(lower=-6e0, upper=6e0)
-                nodes.extend(modelpar[0:2])
-                pass
-            if model == 'PHOTOCHEM':
-                modelpar[0] = pmud(lower=-4e0, upper=4e0)
-                modelpar[1] = pmud(lower=-4e0, upper=4e0)
-                modelpar[2] = pmud(lower=-4e0, upper=4e0)
-                modelpar[3] = pmud(lower=-4e0, upper=4e0)
-                nodes.extend(modelpar[0:4])
-                pass
-            if model == 'HESC':
-                modelpar[0] = pmud(lower=-4e0, upper=4e0)
-                modelpar[1] = pmud(lower=-4e0, upper=4e0)
-                modelpar[2] = pmud(lower=-4e0, upper=4e0)
-                modelpar[3] = pmud(lower=-6e0, upper=6e0)
-                nodes.extend(modelpar[0:3])
-                pass
 
-            # CERBERUS FM CALL
-            # pm.deterministic
-            def fmcerberus(cop=compar, mdp=modelpar,
-                           cleanup=cleanup, model=model, p=p, solidr=solidr,
-                           tspectrum=tspectrum, xsl=xsl):
-                fmc = np.zeros(tspectrum.size)
+            with pm.Model() as _model:
+                # PRIORS
+                nodes = []
+                compar = np.empty(4, dtype=object)
+                compar[0] = pmud(lower=-6., upper=1.)
+                compar[1] = pmud(lower=-6e0, upper=6e0)
+                compar[2] = pmud(lower=-4e0, upper=0e0)
+                compar[3] = pmud(lower=eqtemp/2e0, upper=2e0*eqtemp)
+                nodes.extend(compar)
+                modelpar = np.empty(4, dtype=object)
                 if model == 'TEC':
-                    tceqdict = {}
-                    tceqdict['CtoO'] = float(mdp[1])
-                    tceqdict['XtoH'] = float(mdp[0])
-                    fmc = crbmodel(None, float(cop[1]), float(cop[0]), solidr, orbp,
-                                   xsl['data'][p]['XSECS'], xsl['data'][p]['QTGRID'],
-                                   float(cop[3]), np.array(spc['data'][p]['WB']),
-                                   hzslope=float(cop[2]), cheq=tceqdict, pnet=p,
-                                   verbose=False, debug=False)
+                    modelpar[0] = pmud(lower=-6e0, upper=3e0)
+                    modelpar[1] = pmud(lower=-6e0, upper=6e0)
+                    modelpar[2] = pmud(lower=-6e0, upper=6e0)
+                    modelpar[3] = pmud(lower=-6e0, upper=6e0)
+                    nodes.extend(modelpar[0:2])
                     pass
                 if model == 'PHOTOCHEM':
-                    mixratio = {'TIO':float(mdp[0]), 'CH4':float(mdp[1]),
-                                'C2H2':float(mdp[2]), 'NH3':float(mdp[3])}
-                    fmc = crbmodel(mixratio, float(cop[1]), float(cop[0]), solidr, orbp,
-                                   xsl['data'][p]['XSECS'], xsl['data'][p]['QTGRID'],
-                                   float(cop[3]), np.array(spc['data'][p]['WB']),
-                                   hzslope=float(cop[2]), cheq=None, pnet=p,
-                                   verbose=False, debug=False)
+                    modelpar[0] = pmud(lower=-4e0, upper=4e0)
+                    modelpar[1] = pmud(lower=-4e0, upper=4e0)
+                    modelpar[2] = pmud(lower=-4e0, upper=4e0)
+                    modelpar[3] = pmud(lower=-4e0, upper=4e0)
+                    nodes.extend(modelpar[0:4])
                     pass
                 if model == 'HESC':
-                    mixratio = {'TIO':float(mdp[0]), 'N2O':float(mdp[1]),
-                                'CO2':float(mdp[2])}
-                    fmc = crbmodel(mixratio, float(cop[1]), float(cop[0]), solidr, orbp,
-                                   xsl['data'][p]['XSECS'], xsl['data'][p]['QTGRID'],
-                                   float(cop[3]), np.array(spc['data'][p]['WB']),
-                                   hzslope=float(cop[2]), cheq=None, pnet=p,
-                                   verbose=False, debug=False)
+                    modelpar[0] = pmud(lower=-4e0, upper=4e0)
+                    modelpar[1] = pmud(lower=-4e0, upper=4e0)
+                    modelpar[2] = pmud(lower=-4e0, upper=4e0)
+                    modelpar[3] = pmud(lower=-6e0, upper=6e0)
+                    nodes.extend(modelpar[0:3])
                     pass
-                fmc = fmc[cleanup] - np.nanmean(fmc[cleanup])
-                fmc = fmc + np.nanmean(tspectrum[cleanup])
-                return fmc
-            # CERBERUS MCMC
-            mcdata = pmnd(mu=fmcerberus,
-                          tau=1e0/(np.nanmedian(tspecerr[cleanup])**2),
-                          value=tspectrum[cleanup], observed=True)
-            nodes.append(mcdata)
-            allnodes = [n.__name__ for n in nodes if not n.observed]
-            log.warning('>-- MCMC nodes: %s', str(allnodes))
-            with pm.Model(nodes) as mcmcmodel:
-                markovc = pm.MCMC(mcmcmodel)
+
+                # CERBERUS FM CALL
+                # pm.deterministic
+                def fmcerberus(cop=compar, mdp=modelpar,
+                               cleanup=cleanup, model=model, p=p, solidr=solidr,
+                               tspectrum=tspectrum, xsl=xsl):
+                    fmc = np.zeros(tspectrum.size)
+                    if model == 'TEC':
+                        tceqdict = {}
+                        tceqdict['CtoO'] = float(mdp[1])
+                        tceqdict['XtoH'] = float(mdp[0])
+                        fmc = crbmodel(None, float(cop[1]), float(cop[0]), solidr, orbp,
+                                       xsl['data'][p]['XSECS'], xsl['data'][p]['QTGRID'],
+                                       float(cop[3]), np.array(spc['data'][p]['WB']),
+                                       hzslope=float(cop[2]), cheq=tceqdict, pnet=p,
+                                       verbose=False, debug=False)
+                        pass
+                    if model == 'PHOTOCHEM':
+                        mixratio = {'TIO':float(mdp[0]), 'CH4':float(mdp[1]),
+                                    'C2H2':float(mdp[2]), 'NH3':float(mdp[3])}
+                        fmc = crbmodel(mixratio, float(cop[1]), float(cop[0]), solidr,
+                                       orbp,
+                                       xsl['data'][p]['XSECS'], xsl['data'][p]['QTGRID'],
+                                       float(cop[3]), np.array(spc['data'][p]['WB']),
+                                       hzslope=float(cop[2]), cheq=None, pnet=p,
+                                       verbose=False, debug=False)
+                        pass
+                    if model == 'HESC':
+                        mixratio = {'TIO':float(mdp[0]), 'N2O':float(mdp[1]),
+                                    'CO2':float(mdp[2])}
+                        fmc = crbmodel(mixratio, float(cop[1]), float(cop[0]), solidr,
+                                       orbp,
+                                       xsl['data'][p]['XSECS'], xsl['data'][p]['QTGRID'],
+                                       float(cop[3]), np.array(spc['data'][p]['WB']),
+                                       hzslope=float(cop[2]), cheq=None, pnet=p,
+                                       verbose=False, debug=False)
+                        pass
+                    fmc = fmc[cleanup] - np.nanmean(fmc[cleanup])
+                    fmc = fmc + np.nanmean(tspectrum[cleanup])
+                    return fmc
+                # CERBERUS MCMC
+                mcdata = pmnd(mu=fmcerberus,
+                              tau=1e0/(np.nanmedian(tspecerr[cleanup])**2),
+                              value=tspectrum[cleanup], observed=True)
+                nodes.append(mcdata)
+                allnodes = [n.__name__ for n in nodes if not n.observed]
+                log.warning('>-- MCMC nodes: %s', str(allnodes))
+
+                # markovc = pm.MCMC(mcmcmodel)
                 burnin = int(mclen/2)
-                markovc.sample(mclen, burn=burnin, progress_bar=verbose)
+                # markovc.sample(mclen, burn=burnin, progress_bar=verbose)
+                mctrace = pm.sample(mclen, burn=burnin, progress_bar=verbose)
                 log.warning(' ')
-                mctrace = {}
-                for key in allnodes: mctrace[key] = markovc.trace(key)[:]
-                out['data'][p][model]['MCPOST'] = markovc.stats()
+                # mctrace = {}
+                # for key in allnodes: mctrace[key] = markovc.trace(key)[:]
+                # out['data'][p][model]['MCPOST'] = markovc.stats()
                 out['data'][p][model]['MCTRACE'] = mctrace
                 pass
             pass
