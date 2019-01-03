@@ -508,6 +508,7 @@ G. ROUDIER: Orbital Parameters Recovery
             pass
         # INSTRUMENT MODEL PRIORS ------------------------------------
         with pm.Model() as _model:
+            import pdb; psb.set_trace()
             minoscale = np.log10(np.min(mintscale)*36e2*24)
             maxoscale = np.log10(np.max(maxtscale)*36e2*24)
             maxdelay = np.log10(5e0*np.max(maxtscale)*36e2*24)
