@@ -1,5 +1,6 @@
 FROM dawgie:ghrVersion
 RUN set -ex && \
+    apt-get install python3.6-gdbm && \
     /usr/bin/pip3 install astropy==3.0.4 \
                           ldtk==1.0 \
                           lmfit==0.9.11 \
