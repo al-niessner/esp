@@ -1,9 +1,11 @@
 FROM esp_py:ghrVersion
+ENV DB_HOST mentor.jpl.nasa.gov
 ENV DB_IMPL post
 ENV DB_NAME ops
 ENV DB_PATH sdpuser:h8pwds!
 ENV DB_PORT 5263
+ENV DOCKER_GIT_REVISION irrelevant
 ENV GNUPGHOME /proj/gnupg
 ENV HOME /proj/src
 ENV PYTHONPATH /proj/src/ae
-ENTRYPOINT ['python3', '-m']
+ENTRYPOINT ["python3", "-m"]
