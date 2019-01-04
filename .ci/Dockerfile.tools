@@ -1,7 +1,7 @@
 FROM esp_py:ghrVersion
 ENV DB_HOST mentor.jpl.nasa.gov
 ENV DB_IMPL post
-ENV DB_NAME sdp
+ENV DB_NAME ops
 ENV DB_PATH sdpuser:h8pwds!
 ENV DB_PORT 5263
 ENV DOCKER_GIT_REVISION irrelevant
