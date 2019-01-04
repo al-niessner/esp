@@ -14,7 +14,7 @@ then
     do
         if [ "$destination" == "dawgie" ]
         then
-            lv=$(layer_versions)
+            lv=$(layer_versions 1)
             source="`lookup_source $destination`"
             version="`lookup_version $destination`"
             layer_version="${lv:0:16}"

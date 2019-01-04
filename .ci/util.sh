@@ -11,8 +11,7 @@ export GHE4JPL_API_URL PATH
 
 cit_version ()
 {
-    lv="$(layer_versions)"
-    rm .ci/Dockerfile.1 .ci/Dockerfile.2
+    lv="$(layer_versions 1)"
     echo "${lv:17:16}"
 }
 
@@ -74,6 +73,8 @@ k = hashlib.blake2b (data, digest_size=8)
 print (k.hexdigest())
 EOF
            )
+
+    [[ $# -gt 0 ]] && rm .ci/Dockerfile.1 .ci/Dockerfile.2
     echo $pyVersion $citVersion
 }
 
