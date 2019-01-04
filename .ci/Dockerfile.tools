@@ -1,4 +1,6 @@
 FROM esp_py:ghrVersion
+ENV AE_BASE_PATH /proj/src/ae
+ENV AE_BASE_PACKAGE excalibur
 ENV DB_HOST mentor.jpl.nasa.gov
 ENV DB_IMPL post
 ENV DB_NAME ops
