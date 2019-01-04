@@ -6,3 +6,4 @@ ENV DB_PORT 5263
 ENV GNUPGHOME /proj/gnupg
 ENV HOME /proj/src
 ENV PYTHONPATH /proj/src/ae
+ENTRYPOINT ['python3', '-m']
