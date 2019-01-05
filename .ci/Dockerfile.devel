@@ -1,6 +1,6 @@
 FROM esp_py:ghrVersion
 ENV AE_BASE_PATH /proj/src/ae/excalibur
 ENV AE_BASE_PACKAGE excalibur
-ENV GNUPGHOME /proj/gnupg
-ENV HOME /proj/src
+ENV GNUPGHOME /proj/data/gnupg
+ENV HOME /proj/data
 ENV PYTHONPATH /proj/src/ae
