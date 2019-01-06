@@ -7,13 +7,12 @@ import dawgie.security
 
 import excalibur.transit.bot
 # ------------- ------------------------------------------------------
+fep = os.environ.get('FE_PORT', None)
 rid = int(os.environ.get('RUNID', None))
 tn = os.environ.get('TARGET_NAME', None)
-#dawgie.context._ports(int(os.environ.get('FE_PORT', None)))
-print(dawgie.context.db_impl)
-print(dawgie.context.gpg_home)
-#dawgie.context.fe_port = int(19990)
-dawgie.context.db_port = int(8083)
+
+if fep: dawgie.util.set_ports(int(fep))
+
 dawgie.security.initialize(os.path.expandvars(os.path.expanduser
                                               (dawgie.context.gpg_home)))
 dawgie.db.reopen()
