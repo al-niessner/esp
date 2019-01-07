@@ -4,7 +4,7 @@
 
 state="pending" # "success" "pending" "failure" "error"
 description="Build a tools to manage the AE"
-context="continuous-integration/01/esp-deploy-tools"
+context="continuous-integration/01/esp-build-tools"
 
 post_state "$context" "$description" "$state"
 
