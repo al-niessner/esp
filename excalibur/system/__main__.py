@@ -12,7 +12,7 @@ fep = os.environ.get('FE_PORT', None)
 rid = int(os.environ.get('RUNID', None))
 tn = os.environ.get('TARGET_NAME', None)
 
-if fep: dawgie.ytil.set_ports(int(fep))
+if fep: dawgie.util.set_ports(int(fep))
 
 dawgie.security.initialize(os.path.expandvars(os.path.expanduser
                                               (dawgie.context.gpg_home)))
