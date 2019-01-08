@@ -30,7 +30,7 @@ then
     ssh mentor1 docker load -i ${tempfn}
     ssh mentor2 docker load -i ${tempfn}
     ssh mentor3 docker load -i ${tempfn}
-    #curl -XPOST http://mentor.jpl.nasa.gov:8080/app/submit?changeset=$(git rev-parse HEAD)\&submission=now > /dev/null 2>&1
+    curl -XPOST http://mentor.jpl.nasa.gov:8080/app/submit?changeset=$(git rev-parse HEAD)\&submission=now > /dev/null 2>&1
     rm ${tempfn}
     state=`get_state`
 else
