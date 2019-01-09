@@ -1,6 +1,7 @@
 #! /usr/bin/env bash
 
 docker run \
+       -d \
        --rm \
        -e USER=$USER -e USERNAME=$USERNAME \
        --name ops_worker_$1 \
@@ -8,4 +9,3 @@ docker run \
        -u $UID:$GROUPS \
        -v /proj/sdp/data:/proj/data -v ${HOME}/.gnupg:/proj/gnupg \
        esp_worker:latest
-$(dirname $0)/crew.sh
