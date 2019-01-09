@@ -33,8 +33,8 @@ class whitelight(trnalg.whitelight):
         return
 
     def previous(self):
-        return [dawgie.ALG_REF(ecl.factory, self._nrm),
-                dawgie.ALG_REF(sys.factory, self.__fin)]
+        return [dawgie.ALG_REF(ecl.task, self._nrm),
+                dawgie.ALG_REF(sys.task, self.__fin)]
     pass
 
 class spectrum(trnalg.spectrum):
@@ -45,8 +45,8 @@ class spectrum(trnalg.spectrum):
         return
 
     def previous(self):
-        return [dawgie.ALG_REF(sys.factory, self.__fin),
-                dawgie.ALG_REF(ecl.factory, self._nrm),
-                dawgie.ALG_REF(ecl.factory, self._wht)]
+        return [dawgie.ALG_REF(sys.task, self.__fin),
+                dawgie.ALG_REF(ecl.task, self._nrm),
+                dawgie.ALG_REF(ecl.task, self._wht)]
     pass
 # ---------------- ---------------------------------------------------

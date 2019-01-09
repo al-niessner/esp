@@ -33,8 +33,8 @@ class collect(dawgie.Algorithm):
         return 'collect'
 
     def previous(self):
-        return [dawgie.ALG_REF(trg.all, self.__create),
-                dawgie.ALG_REF(trg.factory, self.__scrape)]
+        return [dawgie.ALG_REF(trg.analysis, self.__create),
+                dawgie.ALG_REF(trg.task, self.__scrape)]
 
     def state_vectors(self):
         return [self.__out]
@@ -79,8 +79,8 @@ class timing(dawgie.Algorithm):
         return 'timing'
 
     def previous(self):
-        return [dawgie.ALG_REF(sys.factory, self.__fin),
-                dawgie.ALG_REF(dat.factory, self.__col)]
+        return [dawgie.ALG_REF(sys.task, self.__fin),
+                dawgie.ALG_REF(dat.task, self.__col)]
 
     def state_vectors(self):
         return self.__out
@@ -138,8 +138,8 @@ class calibration(dawgie.Algorithm):
         return 'calibration'
 
     def previous(self):
-        return [dawgie.ALG_REF(dat.factory, self.__col),
-                dawgie.ALG_REF(dat.factory, self.__tim)]
+        return [dawgie.ALG_REF(dat.task, self.__col),
+                dawgie.ALG_REF(dat.task, self.__tim)]
 
     def state_vectors(self):
         return self.__out

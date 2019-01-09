@@ -31,7 +31,7 @@ class xslib(dawgie.Algorithm):
         return 'xslib'
 
     def previous(self):
-        return [dawgie.ALG_REF(trn.factory, self.__spc)]
+        return [dawgie.ALG_REF(trn.task, self.__spc)]
 
     def state_vectors(self):
         return self.__out
@@ -78,9 +78,9 @@ class atmos(dawgie.Algorithm):
         return 'atmos'
 
     def previous(self):
-        return [dawgie.ALG_REF(trn.factory, self.__spc),
-                dawgie.ALG_REF(sys.factory, self.__fin),
-                dawgie.ALG_REF(crb.factory, self.__xsl)]
+        return [dawgie.ALG_REF(trn.task, self.__spc),
+                dawgie.ALG_REF(sys.task, self.__fin),
+                dawgie.ALG_REF(crb.task, self.__xsl)]
 
     def state_vectors(self):
         return self.__out

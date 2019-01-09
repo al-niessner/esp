@@ -7,6 +7,8 @@ import excalibur
 
 import matplotlib.image as img
 import matplotlib.pyplot as plt
+
+import os
 # ------------- ------------------------------------------------------
 # -- SV -- -----------------------------------------------------------
 class xslibSV(dawgie.StateVector):
@@ -24,7 +26,8 @@ class xslibSV(dawgie.StateVector):
     def view(self, visitor:dawgie.Visitor)->None:
         if self['STATUS'][-1]:
             myfig = plt.figure()
-            crblogo = img.imread('/proj/sdp/data/CERBERUS/cerberus.png')
+            crblogo = img.imread(os.path.join (excalibur.context['data_dir'],
+                                               'CERBERUS/cerberus.png'))
             plt.imshow(crblogo)
             plt.axis('off')
             buf = io.BytesIO()
@@ -50,7 +53,8 @@ class atmosSV(dawgie.StateVector):
     def view(self, visitor:dawgie.Visitor)->None:
         if self['STATUS'][-1]:
             myfig = plt.figure()
-            crblogo = img.imread('/proj/sdp/data/CERBERUS/cerberus.png')
+            crblogo = img.imread(os.path.join (excalibur.context['data_dir'],
+                                               'CERBERUS/cerberus.png'))
             plt.imshow(crblogo)
             plt.axis('off')
             buf = io.BytesIO()

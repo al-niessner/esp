@@ -1,0 +1,13 @@
+FROM esp_py:ghrVersion
+ENV AE_BASE_PATH /proj/src/ae/excalibur
+ENV AE_BASE_PACKAGE excalibur
+ENV DB_HOST mentor.jpl.nasa.gov
+ENV DB_IMPL post
+ENV DB_NAME ops
+ENV DB_PATH sdpuser:h8pwds!
+ENV DB_PORT 5263
+ENV DOCKER_GIT_REVISION irrelevant
+ENV GNUPGHOME /proj/gnupg
+ENV HOME /proj/src
+ENV PYTHONPATH /proj/src/ae
+ENTRYPOINT ["python3", "-m"]

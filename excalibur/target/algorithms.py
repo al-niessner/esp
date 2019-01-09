@@ -5,6 +5,7 @@ import logging; log = logging.getLogger(__name__)
 import dawgie
 import dawgie.context
 
+import excalibur
 import excalibur.target as trg
 import excalibur.target.core as trgcore
 import excalibur.target.states as trgstates
@@ -15,7 +16,7 @@ genIDs = True
 # NEXSCI QUERY
 web = 'https://exoplanetarchive.ipac.caltech.edu/cgi-bin/nstedAPI/nph-nstedAPI?'
 # DATA ON DISK
-diskloc = '/proj/sdp/data/sci'
+diskloc = excalibur.context['data_dir']
 # MAST MIRRORS
 queryform = 'https://archive.stsci.edu/hst/search.php?target='
 mirror1 = 'http://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/data/pub/HSTCA/'
@@ -55,7 +56,7 @@ class autofill(dawgie.Algorithm):
         return 'autofill'
 
     def previous(self):
-        return [dawgie.ALG_REF(trg.all, self.__create)]
+        return [dawgie.ALG_REF(trg.analysis, self.__create)]
 
     def state_vectors(self):
         return [self.__out]
@@ -94,7 +95,7 @@ class scrape(dawgie.Algorithm):
         return 'scrape'
 
     def previous(self):
-        return [dawgie.ALG_REF(trg.factory, self.__autofill)]
+        return [dawgie.ALG_REF(trg.task, self.__autofill)]
 
     def state_vectors(self):
         return [self.__out]

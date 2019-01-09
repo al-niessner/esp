@@ -34,9 +34,9 @@ class normalization(dawgie.Algorithm):
         return 'normalization'
 
     def previous(self):
-        return [dawgie.ALG_REF(dat.factory, self.__cal),
-                dawgie.ALG_REF(dat.factory, self.__tme),
-                dawgie.ALG_REF(sys.factory, self.__fin)]
+        return [dawgie.ALG_REF(dat.task, self.__cal),
+                dawgie.ALG_REF(dat.task, self.__tme),
+                dawgie.ALG_REF(sys.task, self.__fin)]
 
     def state_vectors(self):
         return self.__out
@@ -91,8 +91,8 @@ G. ROUDIER: See inheritance and CI5 thread with A NIESSNER for __init__() method
         return 'whitelight'
 
     def previous(self):
-        return [dawgie.ALG_REF(trn.factory, self._nrm),
-                dawgie.ALG_REF(sys.factory, self.__fin)]
+        return [dawgie.ALG_REF(trn.task, self._nrm),
+                dawgie.ALG_REF(sys.task, self.__fin)]
 
     def state_vectors(self):
         return self.__out
@@ -146,9 +146,9 @@ G. ROUDIER: See inheritance and CI5 thread with A NIESSNER for __init__() method
         return 'spectrum'
 
     def previous(self):
-        return [dawgie.ALG_REF(sys.factory, self.__fin),
-                dawgie.ALG_REF(trn.factory, self._nrm),
-                dawgie.ALG_REF(trn.factory, self._wht)]
+        return [dawgie.ALG_REF(sys.task, self.__fin),
+                dawgie.ALG_REF(trn.task, self._nrm),
+                dawgie.ALG_REF(trn.task, self._wht)]
 
     def state_vectors(self):
         return self.__out

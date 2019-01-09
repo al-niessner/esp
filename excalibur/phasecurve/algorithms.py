@@ -31,8 +31,8 @@ class normalization(dawgie.Algorithm):
         return 'normalization'
 
     def previous(self):
-        return [dawgie.ALG_REF(dat.factory, self.__cal),
-                dawgie.ALG_REF(dat.factory, self.__tme)]
+        return [dawgie.ALG_REF(dat.task, self.__cal),
+                dawgie.ALG_REF(dat.task, self.__tme)]
 
     def state_vectors(self):
         return self.__out
