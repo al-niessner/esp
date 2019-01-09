@@ -22,16 +22,21 @@ version="$(lookup_version dawgie)"
 if current_state
 then
     tempfn=$(mktemp -p /proj/sdp/data/stg)
+    # save the docker images to a tarball
     docker save -o ${tempfn} esp_cit:${cit_version} esp_devel:${version} esp_py:${py_version} esp_server:${version} esp_tools:${version} esp_worker:latest
+    # delete unused copies of same tags
     ssh mentor0 docker rmi esp_cit:${cit_version} esp_devel:${version} esp_py:${py_version} esp_tools:${version} esp_worker:latest
     ssh mentor1 docker rmi esp_cit:${cit_version} esp_devel:${version} esp_py:${py_version} esp_tools:${version} esp_worker:latest
     ssh mentor2 docker rmi esp_cit:${cit_version} esp_devel:${version} esp_py:${py_version} esp_tools:${version} esp_worker:latest
     ssh mentor3 docker rmi esp_cit:${cit_version} esp_devel:${version} esp_py:${py_version} esp_tools:${version} esp_worker:latest
+    # install all of the new images
     ssh mentor0 docker load -i ${tempfn}
     ssh mentor1 docker load -i ${tempfn}
     ssh mentor2 docker load -i ${tempfn}
     ssh mentor3 docker load -i ${tempfn}
+    # notify the pipeline that it is ready
     curl -XPOST http://mentor.jpl.nasa.gov:8080/app/submit?changeset=$(git rev-parse HEAD)\&submission=now > /dev/null 2>&1
+    # cleanup
     rm ${tempfn}
     state=`get_state`
 else
