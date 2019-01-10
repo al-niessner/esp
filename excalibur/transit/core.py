@@ -2,32 +2,45 @@
 import excalibur.data.core as datcore
 import excalibur.system.core as syscore
 import excalibur.cerberus.core as crbcore
+# pylint: disable=import-self
+import excalibur.transit.core
 
 import logging; log = logging.getLogger(__name__)
-
 import numpy as np
 import lmfit as lm
+import pymc3 as pm
 import scipy.constants as cst
 import matplotlib.pyplot as plt
+
+import theano.tensor as tt
+import theano.compile.ops as tco
 
 import ldtk
 from ldtk import LDPSetCreator, BoxcarFilter
 from ldtk.ldmodel import LinearModel, QuadraticModel, NonlinearModel
-
-import pymc3 as pm
-import pymc3.distributions
-
-pmnd = pymc3.distributions.Normal.dist
-pmud = pymc3.distributions.Uniform.dist
-pmtnd = pymc3.distributions.TruncatedNormal.dist
-
-import collections
-CONTEXT = collections.namedtuple('CONTEXT',
-                                 ['alt', 'ald', 'allz', 'commonoim', 'ecc',
-                                  'g1', 'g2', 'g3', 'g4', 'ootoindex', 'ootorbits',
-                                  'orbits', 'period', 'selectfit', 'smaors', 'time',
-                                  'tmjd', 'ttv', 'valid', 'visits', 'aos', 'avi'])
-
+# -- GLOBAL CONTEXT FOR PYMC3 DETERMINISTICS ---------------------------------------------
+from collections import namedtuple
+CONTEXT = namedtuple('CONTEXT', ['alt', 'ald', 'allz', 'commonoim', 'ecc',
+                                 'g1', 'g2', 'g3', 'g4', 'ootoindex', 'ootorbits',
+                                 'orbits', 'period', 'selectfit', 'smaors', 'time',
+                                 'tmjd', 'ttv', 'valid', 'visits', 'aos', 'avi'])
+ctxt = CONTEXT(alt=None, ald=None, allz=None, commonoim=None, ecc=None,
+               g1=None, g2=None, g3=None, g4=None, ootoindex=None, ootorbits=None,
+               orbits=None, period=None, selectfit=None, smaors=None, time=None,
+               tmjd=None, ttv=None, valid=None, visits=None, aos=None, avi=None)
+def ctxtupdt(alt=None, ald=None, allz=None, commonoim=None, ecc=None, g1=None, g2=None,
+             g3=None, g4=None, ootoindex=None, ootorbits=None, orbits=None, period=None,
+             selectfit=None, smaors=None, time=None, tmjd=None, ttv=None, valid=None,
+             visits=None, aos=None, avi=None):
+    '''
+G. ROUDIER: Update context
+    '''
+    excalibur.transit.core.ctxt = CONTEXT(alt=alt, ald=ald, allz=allz, commonoim=commonoim,
+                                          ecc=ecc, g1=g1, g2=g2, g3=g3, g4=g4, ootoindex=ootoindex,
+                                          ootorbits=ootorbits, orbits=orbits, period=period, selectfit=selectfit,
+                                          smaors=smaors, time=time, tmjd=tmjd, ttv=ttv, valid=valid,
+                                          visits=visits, aos=aos, avi=avi)
+    return
 # A NIESSNER: INLINE HACK TO ldtk.LDPSet -- ----------------------------------------------
 class LDPSet(ldtk.LDPSet):
     '''
@@ -344,7 +357,7 @@ per wavelength bins
     return wavet, template
 # ---------------------- ---------------------------------------------
 # -- WHITE LIGHT CURVE -- --------------------------------------------
-def whitelight(nrm, fin, out, selftype, chainlen=int(4e4), verbose=False):
+def whitelight(nrm, fin, out, selftype, chainlen=int(4e2), verbose=False):
     '''
 G. ROUDIER: Orbital Parameters Recovery
     '''
@@ -455,26 +468,20 @@ G. ROUDIER: Orbital Parameters Recovery
         flatoot = abs(flatz) > 1e0 + rpors
         ootstd = np.nanstd(flatwhite[flatoot])
         taurprs = 1e0/(rpors*1e-2)**2
-        rprs = pmtnd(mu=rpors, tau=taurprs, lower=rpors/2e0, upper=2e0*rpors)
-        nodes = [rprs]
         ttrdur = np.arcsin((1e0+rpors)/smaors)
         trdura = priors[p]['period']*ttrdur/np.pi
-        alltknot = np.empty(len(ttv), dtype=object)
         mintscale = []
         maxtscale = []
         for i, tvs in enumerate(time):
-            mintscale.append(np.min(abs(np.diff(np.sort(tvs)))))
+            mintscale.append(np.nanmin(abs(np.diff(np.sort(tvs)))))
             for o in set(orbits[i]):
-                maxtscale.append(np.max(tvs[orbits[i] == o]) -
-                                 np.min(tvs[orbits[i] == o]))
+                maxtscale.append(np.nanmax(tvs[orbits[i] == o]) -
+                                 np.nanmin(tvs[orbits[i] == o]))
+                pass
             pass
-        for i, _ttvi in enumerate(ttv):
-            tautknot = 1e0/(3e0*np.min(mintscale))**2
-            tknotmin = tmjd - np.max(maxtscale)/2e0
-            tknotmax = tmjd + np.max(maxtscale)/2e0
-            alltknot[i] = pmtnd(mu=tmjd, tau=tautknot, lower=tknotmin, upper=tknotmax)
-            pass
-        nodes.extend(alltknot)
+        tautknot = 1e0/(3e0*np.nanmin(mintscale))**2
+        tknotmin = tmjd - np.nanmax(maxtscale)/2e0
+        tknotmax = tmjd + np.nanmax(maxtscale)/2e0
         if priors[p]['inc'] != 9e1:
             if priors[p]['inc'] > 9e1:
                 lowinc = 9e1
@@ -485,8 +492,6 @@ G. ROUDIER: Orbital Parameters Recovery
                 upinc = 9e1
                 pass
             tauinc = 1e0/(priors[p]['inc']*1e-2)**2
-            inc = pmtnd(mu=priors[p]['inc'], tau=tauinc, lower=lowinc, upper=upinc)
-            nodes.append(inc)
             pass
         # OOT ORBITS
         ootorbits = []
@@ -506,168 +511,121 @@ G. ROUDIER: Orbital Parameters Recovery
             ootorbits.append(oot2append)
             ootoindex.append(ooti2append)
             pass
-        # INSTRUMENT MODEL PRIORS ------------------------------------
-        with pm.Model() as _model:
-            minoscale = np.log10(np.min(mintscale)*36e2*24)
-            maxoscale = np.log10(np.max(maxtscale)*36e2*24)
-            maxdelay = np.log10(5e0*np.max(maxtscale)*36e2*24)
-            tauvs = 1e0/((1e-2/trdura)**2)
-            tauvi = 1e0/(ootstd**2)
-            allvslope = np.empty(len(visits), dtype=object)
-            allvitcp = np.empty(len(visits), dtype=object)
-            if visits.__len__() > 20:
-                alloslope = np.empty(len(visits), dtype=object)
-                allologtau = np.empty(len(visits), dtype=object)
-                allologdelay = np.empty(len(visits), dtype=object)
-                commonoim = True
+        # INSTRUMENT MODEL PRIORS --------------------------------------------------------
+        minoscale = np.log10(np.nanmin(mintscale)*36e2*24)
+        maxoscale = np.log10(np.nanmax(maxtscale)*36e2*24)
+        maxdelay = np.log10(5e0*np.nanmax(maxtscale)*36e2*24)
+        tauvs = 1e0/((1e-2/trdura)**2)
+        tauvi = 1e0/(ootstd**2)
+        commonoim = False
+        if visits.__len__() > 20: commonoim = True
+        selectfit = np.isfinite(flatwhite)
+        tauwhite = 1e0/((np.nanmedian(flaterrwhite))**2)
+        if tauwhite == 0: tauwhite = 1e0/(ootstd**2)
+        nodes = []
+        ctxtupdt(commonoim=commonoim, ecc=ecc,
+                 g1=g1, g2=g2, g3=g3, g4=g4, ootoindex=ootoindex, ootorbits=ootorbits,
+                 orbits=orbits, period=period, selectfit=selectfit, smaors=smaors,
+                 time=time, tmjd=tmjd, ttv=ttv, visits=visits)
+        # PYMC3 --------------------------------------------------------------------------
+        with pm.Model():
+            rprs = pm.TruncatedNormal('rprs', mu=rpors, tau=taurprs,
+                                      lower=rpors/2e0, upper=2e0*rpors)
+            alltknot = pm.TruncatedNormal('dtk', mu=tmjd, tau=tautknot,
+                                          lower=tknotmin, upper=tknotmax, shape=len(ttv))
+            if priors[p]['inc'] != 9e1:
+                inc = pm.TruncatedNormal('inc', mu=priors[p]['inc'], tau=tauinc,
+                                         lower=lowinc, upper=upinc)
+                pass
+            else: inc = pm.Constant('inc', c=priors[p]['inc'])
+            allvslope = pm.TruncatedNormal('vslope',
+                                           mu=0e0, tau=tauvs,
+                                           lower=-3e-2/trdura,
+                                           upper=3e-2/trdura, shape=len(visits))
+            allvitcp = pm.TruncatedNormal('vitcp',
+                                          mu=1e0, tau=tauvi,
+                                          lower=1e0 - 3e0*ootstd,
+                                          upper=1e0 + 3e0*ootstd, shape=len(visits))
+            if commonoim:
+                alloslope = pm.Normal('oslope', mu=0e0, tau=tauvs,
+                                      shape=len(visits))
+                allologtau = pm.Uniform('ologtau', lower=minoscale,
+                                        upper=maxoscale, shape=len(visits))
+                allologdelay = pm.Uniform('ologdelay', lower=minoscale,
+                                          upper=maxdelay, shape=len(visits))
                 pass
             else:
-                alloslope = np.empty(totalindex, dtype=object)
-                allologtau = np.empty(totalindex, dtype=object)
-                allologdelay = np.empty(totalindex, dtype=object)
-                commonoim = False
+                alloslope = pm.TruncatedNormal('oslope', mu=0e0, tau=tauvs,
+                                               lower=-3e-2/trdura,
+                                               upper=3e-2/trdura, shape=totalindex)
+                allologtau = pm.Uniform('ologtau', lower=minoscale,
+                                        upper=maxoscale, shape=totalindex)
+                allologdelay = pm.Uniform('ologdelay', lower=minoscale,
+                                          upper=maxdelay, shape=totalindex)
                 pass
-            for i, vi in enumerate(visits):
-                allvslope[i] = pmtnd(mu=0e0, tau=tauvs, lower=-3e-2/trdura,
-                                     upper=3e-2/trdura)
-                allvitcp[i] = pmtnd('vitcp%i' % vi, 1e0, tauvi,
-                                    1e0 - 3e0*ootstd, 1e0 + 3e0*ootstd)
-                if commonoim:
-                    alloslope[i] = pmnd(mu=0e0, sd=tauvs)
-                    allologtau[i] = pmud(lower=minoscale, upper=maxoscale)
-                    allologdelay[i] = pmud(lower=minoscale, upper=maxdelay)
-                    pass
+            nodes.append(rprs)
+            nodes.append(alltknot)
+            nodes.append(inc)
+            nodes.append(allvslope)
+            nodes.append(allvitcp)
+            nodes.append(alloslope)
+            nodes.append(allologtau)
+            nodes.append(allologdelay)
+            _whitedata = pm.Normal('whitedata', mu=orbital(*nodes),
+                                   tau=tauwhite, observed=flatwhite[selectfit])
+            log.warning('>-- MCMC nodes: %s', str([n.name for n in nodes]))
+            # ALL PRINTS ARE IN THE PM.SAMPLE CALL, CANNOT GET RID OF THEM
+            trace = pm.sample(chainlen, cores=4, tune=int(chainlen/2),
+                              compute_convergence_checks=False, step=pm.Metropolis(),
+                              progressbar=verbose)
+            mcpost = pm.summary(trace)
+            pass
+        mctrace = {}
+        for key in mcpost['mean'].keys():
+            tracekeys = key.split('__')
+            if tracekeys.__len__() > 1:
+                mctrace[key] = trace[tracekeys[0]][:, int(tracekeys[1])]
                 pass
-            if not commonoim:
-                for i in range(totalindex):
-                    alloslope[i] = pmtnd(mu=0e0, tau=tauvs,
-                                         lower=-3e-2/trdura, upper=3e-2/trdura)
-                    allologtau[i] = pmud(lower=minoscale, upper=maxoscale)
-                    allologdelay[i] = pmud(lower=minoscale, upper=maxdelay)
-                    pass
-                pass
-            nodes.extend(allvslope)
-            nodes.extend(allvitcp)
-            nodes.extend(alloslope)
-            nodes.extend(allologtau)
-            nodes.extend(allologdelay)
-            selectfit = np.isfinite(flatwhite)
-            ctxt = CONTEXT(alt=allologtau,
-                           ald=allologdelay,
-                           allz=None,
-                           commonoim=commonoim,
-                           ecc=ecc,
-                           g1=g1, g2=g2, g3=g3, g4=g4,
-                           ootoindex=ootoindex,
-                           ootorbits=ootorbits,
-                           orbits=orbits,
-                           period=period,
-                           selectfit=selectfit,
-                           smaors=smaors,
-                           time=time,
-                           tmjd=tmjd,
-                           ttv=ttv,
-                           valid=None,
-                           visits=visits, aos=None, avi=None)
-
-            # ORBITAL MODEL ----------------------------------------------
-            # pm.deterministic
-            def orbital(r=rprs, icln=inc, atk=alltknot,
-                        avs=allvslope, avi=allvitcp,
-                        aos=alloslope, aolt=allologtau, aold=allologdelay,
-                        ctxt=ctxt):
-                out = []
-                for i,v in enumerate(ctxt.visits):
-                    omt = ctxt.time[i]
-                    if v in ctxt.ttv: omtk = float(atk[ctxt.ttv.index(v)])
-                    else: omtk = ctxt.tmjd
-                    omz, _pmph = datcore.time2z(omt, float(icln), omtk,
-                                                ctxt.smaors, ctxt.period, ctxt.ecc)
-                    lcout = tldlc(abs(omz), float(r),
-                                  g1=ctxt.g1[0], g2=ctxt.g2[0], g3=ctxt.g3[0],
-                                  g4=ctxt.g4[0])
-                    if ctxt.commonoim:
-                        imout = timlc(omt, ctxt.orbits[i],
-                                      vslope=float(avs[i]),
-                                      vitcp=float(avi[i]),
-                                      oslope=float(aos[i]),
-                                      ologtau=float(aolt[i]),
-                                      ologdelay=float(aold[i]))
-                        pass
-                    else:
-                        ooti = ctxt.ootoindex[i]
-                        oslopetable = [float(aos[i]) for i in ooti]
-                        ologtautable = [float(aolt[i]) for i in ooti]
-                        ologdelaytable = [float(aold[i]) for i in ooti]
-                        imout = timlc(omt, ctxt.orbits[i],
-                                      vslope=float(avs[i]),
-                                      vitcp=float(avi[i]),
-                                      oslope=oslopetable,
-                                      ologtau=ologtautable,
-                                      ologdelay=ologdelaytable,
-                                      ooto=ctxt.ootorbits[i])
-                        pass
-                    out.extend(lcout*imout)
-                    pass
-                return np.array(out)[ctxt.selectfit]
-            tauwhite = 1e0/((np.nanmedian(flaterrwhite))**2)
-            if tauwhite == 0: tauwhite = 1e0/(ootstd**2)
-            whitedata = pmnd(mu=orbital, tau=tauwhite,
-                             value=flatwhite[selectfit], observed=True)
-            nodes.append(whitedata)
-            # allnodes = [n.__name__ for n in nodes if not n.observed]
-            allnodes = [key for key in nodes]
-            # log.warning('>-- MCMC nodes: %s', str(allnodes))
-            # mcmc = pm.MCMC(model)
-            burnin = int(chainlen/2)
-            # mcmc.sample(chainlen, burn=burnin, progress_bar=verbose)
-            mctrace = pm.sample(chainlen, burn=burnin, progress_bar=verbose)
-            log.warning(' ')
-            # mcpost = mcmc.stats()
-            mcpost = mctrace.stats()
-            # mctrace = {}
-            # for key in allnodes: mctrace[key] = mcmc.trace(key)[:]
+            else: mctrace[key] = trace[tracekeys[0]]
             pass
         postlc = []
         postim = []
         postsep = []
         postphase = []
         postflatphase = []
-        for i,v in enumerate(visits):
-            postt = time[i]
-            if v in ttv: posttk = mcpost['dtk%i' % v]['quantiles'][50]
-            else: posttk = tmjd
-            if 'inc' in allnodes:
-                postinc = mcpost['inc']['quantiles'][50]
-                postz, postph = datcore.time2z(postt, postinc, posttk, smaors, period,
-                                               ecc)
+        ttvindex = 0
+        for i, v in enumerate(visits):
+            if v in ttv:
+                posttk = np.nanmedian(mctrace['dtk__%i' % ttvindex])
+                ttvindex += 1
                 pass
-            else: postz, postph = datcore.time2z(postt, inc, posttk, smaors, period, ecc)
+            else: posttk = tmjd
+            postz, postph = datcore.time2z(time[i], np.nanmedian(mctrace['inc']),
+                                           posttk, smaors, period, ecc)
             if selftype in ['eclipse']: postph[postph < 0] = postph[postph < 0] + 1e0
             postsep.extend(postz)
             postphase.append(postph)
             postflatphase.extend(postph)
-            postlc.extend(tldlc(abs(postz), mcpost['rprs']['quantiles'][50],
+            postlc.extend(tldlc(abs(postz), np.nanmedian(mctrace['rprs']),
                                 g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0]))
             if commonoim:
-                postim.append(timlc(postt, orbits[i],
-                                    vslope=mcpost['vslope%i' % v]['quantiles'][50],
-                                    vitcp=mcpost['vitcp%i' % v]['quantiles'][50],
-                                    oslope=mcpost['oslope%i' % v]['quantiles'][50],
-                                    ologtau=mcpost['ologtau%i' % v]['quantiles'][50],
-                                    ologdelay=mcpost['ologdelay%i' % v]['quantiles'][50]))
+                postim.append(timlc(time[i], orbits[i],
+                                    vslope=np.nanmedian(mctrace['vslope__%i' % i]),
+                                    vitcp=np.nanmedian(mctrace['vitcp__%i' % i]),
+                                    oslope=np.nanmedian(mctrace['oslope__%i' % i]),
+                                    ologtau=np.nanmedian(mctrace['ologtau__%i' % i]),
+                                    ologdelay=np.nanmedian(mctrace['ologdelay__%i' % i])))
                 pass
             else:
-                ooti = ootoindex[i]
-                oslopetable = [mcpost['oslope%i' % i]['quantiles'][50]
-                               for i in ooti]
-                ologtautable = [mcpost['ologtau%i' % i]['quantiles'][50]
-                                for i in ooti]
-                ologdelaytable = [mcpost['ologdelay%i' % i]['quantiles'][50]
-                                  for i in ooti]
-                postim.append(timlc(postt, orbits[i],
-                                    vslope=mcpost['vslope%i' % v]['quantiles'][50],
-                                    vitcp=mcpost['vitcp%i' % v]['quantiles'][50],
+                oslopetable = [np.nanmedian(mctrace['oslope__%i' % ioo])
+                               for ioo in ootoindex[i]]
+                ologtautable = [np.nanmedian(mctrace['ologtau__%i' % ioo])
+                                for ioo in ootoindex[i]]
+                ologdelaytable = [np.nanmedian(mctrace['ologdelay__%i' % ioo])
+                                  for ioo in ootoindex[i]]
+                postim.append(timlc(time[i], orbits[i],
+                                    vslope=np.nanmedian(mctrace['vslope__%i' % i]),
+                                    vitcp=np.nanmedian(mctrace['vitcp__%i' % i]),
                                     oslope=oslopetable,
                                     ologtau=ologtautable,
                                     ologdelay=ologdelaytable,
@@ -1011,11 +969,11 @@ G. ROUDIER: WFC3 intrument model
     return vout*oout
 # ---------------------- ---------------------------------------------
 # -- SPECTRUM -- -----------------------------------------------------
-def spectrum(fin, nrm, wht, out, selftype, chainlen=int(2e4), verbose=False):
+def spectrum(fin, nrm, wht, out, selftype, chainlen=int(2e2), verbose=False):
     '''
 G. ROUDIER: Exoplanet spectrum recovery
     '''
-    if selftype in ['eclipse']: chainlen = int(1e2)
+    if selftype in ['eclipse']: chainlen = int(2e2)
     exospec = False
     priors = fin['priors'].copy()
     ssc = syscore.ssconstants()
@@ -1038,7 +996,7 @@ G. ROUDIER: Exoplanet spectrum recovery
         ootorbits = wht['data'][p]['ootorbits']
         ootoindex = wht['data'][p]['ootoindex']
         totalindex = wht['data'][p]['totalindex']
-        whiterprs = wht['data'][p]['mcpost']['rprs']['quantiles'][50]
+        whiterprs = np.nanmedian(wht['data'][p]['mctrace']['rprs'])
         allwave = []
         allspec = []
         allim = []
@@ -1077,146 +1035,98 @@ G. ROUDIER: Exoplanet spectrum recovery
         out['data'][p]['LD'] = []
         out['data'][p]['MCPOST'] = []
         for wl, wh in zip(lwavec[1:-1], hwavec[1:-1]):
-            with pm.Model() as _model:
-                out['data'][p]['WBlow'].append(wl)
-                out['data'][p]['WBup'].append(wh)
-                out['data'][p]['WB'].append(np.mean([wl, wh]))
-                select = [(w > wl) & (w < wh) for w in allwave]
-                data = np.array([np.nanmedian(d[s]) for d, s in zip(allspec, select)])
-                dnoise = np.array([np.nanmedian(n[s]) for n, s in zip(allpnoise, select)])
-                valid = np.isfinite(data)
-                if selftype in ['transit']:
-                    bld = createldgrid([wl], [wh], priors, segmentation=int(10))
-                    g1, g2, g3, g4 = bld['LD']
-                    pass
-                else: g1, g2, g3, g4 = [[0], [0], [0], [0]]
-                out['data'][p]['LD'].append([g1[0], g2[0], g3[0], g4[0]])
-                model = tldlc(abs(allz), whiterprs, g1=g1[0], g2=g2[0], g3=g3[0],
-                              g4=g4[0])
-                if verbose:
-                    plt.figure()
-                    plt.title(str(int(1e3*np.mean([wl, wh])))+' nm')
-                    plt.plot(allz[valid], data[valid]/allim[valid], 'o')
-                    plt.plot(allz[valid], model[valid], '^')
-                    plt.xlabel('Separation [R*]')
-                    plt.show()
-                    pass
-                # PRIORS -----------------------------------------------------------------
-                sscmks = syscore.ssconstants(mks=True)
-                eqtemp = priors['T*']*np.sqrt(priors['R*']*sscmks['Rsun/AU']/
-                                              (2.*priors[p]['sma']))
-                pgrid = np.arange(np.log(10.)-15., np.log(10.)+15./100, 15./99)
-                pgrid = np.exp(pgrid)
-                pressure = pgrid[::-1]
-                mixratio, fH2, fHe = crbcore.crbce(pressure, eqtemp)
-                mmw, fH2, fHe = crbcore.getmmw(mixratio, protosolar=False, fH2=fH2,
-                                               fHe=fHe)
-                mmw = mmw*cst.m_p  # [kg]
-                Hs = cst.Boltzmann*eqtemp/(mmw*1e-2*(10.**priors[p]['logg']))  # [m]
-                Hs = 3e0*Hs/(priors['R*']*sscmks['Rsun'])
-                rprs = pmnd(mu=whiterprs, sd=1e0/Hs**2)  # 95% within +/- 6Hs
-                nodes = [rprs]
-                tauvs = 1e0/((1e-2/trdura)**2)
-                vslplm = 3e-2/trdura
-                allvslope = np.empty(len(visits), dtype=object)
-                if commonoim: alloslope = np.empty(len(visits), dtype=object)
-                else: alloslope = np.empty(totalindex, dtype=object)
-                allvitcp = []
-                allologtau = []
-                allologdelay = []
-                for i, v in enumerate(visits):
-                    allvslope[i] = pmtnd(mu=0e0, tau=tauvs, lower=-vslplm, upper=vslplm)
-                    allvitcp.append(wht['data'][p]['mcpost']['vitcp%i' % v]['quantiles'][50])
-                    if commonoim:
-                        temp = wht['data'][p]['mcpost']['ologtau%i' % v]['quantiles'][50]
-                        allologtau.append(temp)
-                        temp = wht['data'][p]['mcpost']['ologdelay%i' % v]['quantiles'][50]
-                        allologdelay.append(temp)
-                        temp = wht['data'][p]['mcpost']['oslope%i' % v]['quantiles'][50]
-                        alloslope[i] = pmtnd(mu=temp, tau=tauvs, lower=-vslplm, upper=vslplm)
-                        pass
-                    pass
-                if not commonoim:
-                    for i in range(totalindex):
-                        temp = wht['data'][p]['mcpost']['oslope%i' % i]['quantiles'][50]
-                        alloslope[i] = pmtnd(mu=temp, tau=tauvs, lower=-vslplm, upper=vslplm)
-                        temp = wht['data'][p]['mcpost']['ologtau%i' % i]['quantiles'][50]
-                        allologtau.append(temp)
-                        temp = wht['data'][p]['mcpost']['ologdelay%i' % i]['quantiles'][50]
-                        allologdelay.append(temp)
-                        pass
-                    pass
-                nodes.extend(allvslope)
-                nodes.extend(alloslope)
-                ctxt = CONTEXT(alt=allologtau,
-                               ald=allologdelay,
-                               allz=allz,
-                               commonoim=commonoim,
-                               ecc=None,
-                               g1=g1, g2=g2, g3=g3, g4=g4,
-                               ootoindex=ootoindex,
-                               ootorbits=ootorbits,
-                               orbits=orbits,
-                               period=None,
-                               selectfit=None,
-                               smaors=smaors,
-                               time=time,
-                               tmjd=None,
-                               ttv=None,
-                               valid=valid,
-                               visits=visits,
-                               aos=None, avi=allvitcp)
-
-                # LIGHT CURVE MODEL --------------------------------------
-                # pm.deterministic
-                def lcmodel(r=rprs, avs=allvslope, aos=alloslope, ctxt=ctxt):
-                    allimout = []
-                    for iv in range(len(ctxt.visits)):
-                        if ctxt.commonoim:
-                            imout = timlc(ctxt.time[iv], ctxt.orbits[iv],
-                                          vslope=float(avs[iv]),
-                                          vitcp=float(ctxt.avi[iv]),
-                                          oslope=float(aos[iv]),
-                                          ologtau=float(ctxt.alt[iv]),
-                                          ologdelay=float(ctxt.ald[iv]))
-                            pass
-                        else:
-                            ooti = ctxt.ootoindex[iv]
-                            oslopetable = [float(aos[i]) for i in ooti]
-                            ologtautable = [float(ctxt.alt[i]) for i in ooti]
-                            ologdelaytable = [float(ctxt.ald[i]) for i in ooti]
-                            imout = timlc(ctxt.time[iv], ctxt.orbits[iv],
-                                          vslope=float(avs[iv]),
-                                          vitcp=float(ctxt.avi[iv]),
-                                          oslope=oslopetable, ologtau=ologtautable,
-                                          ologdelay=ologdelaytable,
-                                          ooto=ctxt.ootorbits[iv])
-                            pass
-                        allimout.extend(imout)
-                        pass
-                    if selftype == 'transit':
-                        out = tldlc(abs(ctxt.allz), float(r),
-                                    g1=float(ctxt.g1[0]), g2=float(ctxt.g2[0]),
-                                    g3=float(ctxt.g3[0]), g4=float(ctxt.g4[0]))
-                        pass
-                    else: out = tldlc(abs(ctxt.allz), float(r))
-                    out = out*np.array(allimout)
-                    return out[ctxt.valid]
-                tauwbdata = 1e0/dnoise**2
-                wbdata = pmnd(mu=lcmodel,
-                              tau=np.nanmedian(tauwbdata[valid]), value=data[valid],
-                              observed=True)
-                nodes.append(wbdata)
-
-                # mcmc = pm.MCMC(model)
-                burnin = int(chainlen/2)
-                # mcmc.sample(chainlen, burn=burnin, progress_bar=verbose)
-                mcpost = pm.sample(chainlen, burn=burnin, progress_bar=verbose)
-                if verbose: log.warning(' ')
-                # mcpost = mcmc.stats()
+            out['data'][p]['WBlow'].append(wl)
+            out['data'][p]['WBup'].append(wh)
+            out['data'][p]['WB'].append(np.mean([wl, wh]))
+            select = [(w > wl) & (w < wh) for w in allwave]
+            data = np.array([np.nanmedian(d[s]) for d, s in zip(allspec, select)])
+            dnoise = np.array([np.nanmedian(n[s]) for n, s in zip(allpnoise, select)])
+            valid = np.isfinite(data)
+            if selftype in ['transit']:
+                bld = createldgrid([wl], [wh], priors, segmentation=int(10))
+                g1, g2, g3, g4 = bld['LD']
                 pass
-            out['data'][p]['ES'].append(mcpost['rprs']['quantiles'][50])
-            out['data'][p]['ESerr'].append(mcpost['rprs']['standard deviation'])
+            else: g1, g2, g3, g4 = [[0], [0], [0], [0]]
+            out['data'][p]['LD'].append([g1[0], g2[0], g3[0], g4[0]])
+            model = tldlc(abs(allz), whiterprs, g1=g1[0], g2=g2[0], g3=g3[0],
+                          g4=g4[0])
+            if verbose:
+                plt.figure()
+                plt.title(str(int(1e3*np.mean([wl, wh])))+' nm')
+                plt.plot(allz[valid], data[valid]/allim[valid], 'o')
+                plt.plot(allz[valid], model[valid], '^')
+                plt.xlabel('Separation [R*]')
+                plt.show()
+                pass
+            # PRIORS -----------------------------------------------------------------
+            sscmks = syscore.ssconstants(mks=True)
+            eqtemp = priors['T*']*np.sqrt(priors['R*']*sscmks['Rsun/AU']/
+                                          (2.*priors[p]['sma']))
+            pgrid = np.arange(np.log(10.)-15., np.log(10.)+15./100, 15./99)
+            pgrid = np.exp(pgrid)
+            pressure = pgrid[::-1]
+            mixratio, fH2, fHe = crbcore.crbce(pressure, eqtemp)
+            mmw, fH2, fHe = crbcore.getmmw(mixratio, protosolar=False, fH2=fH2,
+                                           fHe=fHe)
+            mmw = mmw*cst.m_p  # [kg]
+            Hs = cst.Boltzmann*eqtemp/(mmw*1e-2*(10.**priors[p]['logg']))  # [m]
+            Hs = 3e0*Hs/(priors['R*']*sscmks['Rsun'])
+            tauvs = 1e0/((1e-2/trdura)**2)
+            nodes = []
+            allologtau = []
+            allologdelay = []
+            allvitcp = []
+            tauwbdata = 1e0/dnoise**2
+            for i, _v in enumerate(visits):
+                allvitcp.append(np.nanmedian(wht['data'][p]['mctrace']['vitcp__%i' % i]))
+                if commonoim:
+                    temp = np.nanmedian(wht['data'][p]['mctrace']['ologtau__%i' % i])
+                    allologtau.append(temp)
+                    temp = np.nanmedian(wht['data'][p]['mctrace']['ologdelay__%i' % i])
+                    allologdelay.append(temp)
+                    pass
+                pass
+            if not commonoim:
+                for i in range(totalindex):
+                    temp = np.nanmedian(wht['data'][p]['mctrace']['ologtau__%i' % i])
+                    allologtau.append(temp)
+                    temp = np.nanmedian(wht['data'][p]['mctrace']['ologdelay__%i' % i])
+                    allologdelay.append(temp)
+                    pass
+                pass
+            ctxtupdt(alt=allologtau, ald=allologdelay, allz=allz, commonoim=commonoim,
+                     g1=g1, g2=g2, g3=g3, g4=g4, ootoindex=ootoindex, ootorbits=ootorbits,
+                     orbits=orbits, smaors=smaors, time=time, valid=valid, visits=visits,
+                     avi=allvitcp)
+            # PYMC3 ----------------------------------------------------------------------
+            with pm.Model():
+                rprs = pm.Normal('rprs', mu=whiterprs, tau=1e0/Hs**2)
+                allvslope = pm.TruncatedNormal('vslope',
+                                               mu=0e0, tau=tauvs,
+                                               lower=-3e-2/trdura,
+                                               upper=3e-2/trdura, shape=len(visits))
+                if commonoim:
+                    alloslope = pm.Normal('oslope', mu=0, tau=tauvs, shape=len(visits))
+                    pass
+                else:
+                    alloslope = pm.TruncatedNormal('oslope', mu=0e0, tau=tauvs,
+                                                   lower=-3e-2/trdura,
+                                                   upper=3e-2/trdura, shape=totalindex)
+                    pass
+                nodes.append(rprs)
+                nodes.append(allvslope)
+                nodes.append(alloslope)
+                _wbdata = pm.Normal('wbdata', mu=lcmodel(*nodes),
+                                    tau=np.nanmedian(tauwbdata[valid]),
+                                    observed=data[valid])
+                # ALL PRINTS ARE IN THE PM.SAMPLE CALL, CANNOT GET RID OF THEM
+                trace = pm.sample(chainlen, cores=4, tune=int(chainlen/2),
+                                  compute_convergence_checks=False, step=pm.Metropolis(),
+                                  progressbar=verbose)
+                mcpost = pm.summary(trace)
+                pass
+            out['data'][p]['ES'].append(np.nanmedian(trace['rprs']))
+            out['data'][p]['ESerr'].append(np.nanstd(trace['rprs']))
             out['data'][p]['MCPOST'].append(mcpost)
             pass
         exospec = True
@@ -1238,4 +1148,83 @@ G. ROUDIER: Exoplanet spectrum recovery
             pass
         pass
     return exospec
-# ----------- -- -----------------------------------------------------
+# -------------- -----------------------------------------------------
+# -- PYMC3 DETERMINISTIC FUNCTIONS -- --------------------------------
+@tco.as_op(itypes=[tt.dscalar, tt.dvector, tt.dscalar, tt.dvector, tt.dvector,
+                   tt.dvector, tt.dvector, tt.dvector], otypes=[tt.dvector])
+def orbital(*whiteparams):
+    '''
+G. ROUDIER: Orbital model
+    '''
+    r, atk, icln, avs, avi, aos, aolt, aold = whiteparams
+    out = []
+    for i,v in enumerate(ctxt.visits):
+        omt = ctxt.time[i]
+        if v in ctxt.ttv: omtk = float(atk[ctxt.ttv.index(v)])
+        else: omtk = ctxt.tmjd
+        omz, _pmph = datcore.time2z(omt, float(icln), omtk,
+                                    ctxt.smaors, ctxt.period, ctxt.ecc)
+        lcout = tldlc(abs(omz), float(r),
+                      g1=ctxt.g1[0], g2=ctxt.g2[0], g3=ctxt.g3[0],
+                      g4=ctxt.g4[0])
+        if ctxt.commonoim:
+            imout = timlc(omt, ctxt.orbits[i],
+                          vslope=float(avs[i]),
+                          vitcp=float(avi[i]),
+                          oslope=float(aos[i]),
+                          ologtau=float(aolt[i]),
+                          ologdelay=float(aold[i]))
+            pass
+        else:
+            ooti = ctxt.ootoindex[i]
+            oslopetable = [float(aos[i]) for i in ooti]
+            ologtautable = [float(aolt[i]) for i in ooti]
+            ologdelaytable = [float(aold[i]) for i in ooti]
+            imout = timlc(omt, ctxt.orbits[i],
+                          vslope=float(avs[i]),
+                          vitcp=float(avi[i]),
+                          oslope=oslopetable,
+                          ologtau=ologtautable,
+                          ologdelay=ologdelaytable,
+                          ooto=ctxt.ootorbits[i])
+            pass
+        out.extend(lcout*imout)
+        pass
+    return np.array(out)[ctxt.selectfit]
+
+@tco.as_op(itypes=[tt.dscalar, tt.dvector, tt.dvector], otypes=[tt.dvector])
+def lcmodel(*specparams):
+    '''
+G. ROUDIER: Spectral light curve model
+    '''
+    r, avs, aos = specparams
+    allimout = []
+    for iv in range(len(ctxt.visits)):
+        if ctxt.commonoim:
+            imout = timlc(ctxt.time[iv], ctxt.orbits[iv],
+                          vslope=float(avs[iv]),
+                          vitcp=float(ctxt.avi[iv]),
+                          oslope=float(aos[iv]),
+                          ologtau=float(ctxt.alt[iv]),
+                          ologdelay=float(ctxt.ald[iv]))
+            pass
+        else:
+            ooti = ctxt.ootoindex[iv]
+            oslopetable = [float(aos[i]) for i in ooti]
+            ologtautable = [float(ctxt.alt[i]) for i in ooti]
+            ologdelaytable = [float(ctxt.ald[i]) for i in ooti]
+            imout = timlc(ctxt.time[iv], ctxt.orbits[iv],
+                          vslope=float(avs[iv]),
+                          vitcp=float(ctxt.avi[iv]),
+                          oslope=oslopetable, ologtau=ologtautable,
+                          ologdelay=ologdelaytable,
+                          ooto=ctxt.ootorbits[iv])
+            pass
+        allimout.extend(imout)
+        pass
+    out = tldlc(abs(ctxt.allz), float(r),
+                g1=float(ctxt.g1[0]), g2=float(ctxt.g2[0]),
+                g3=float(ctxt.g3[0]), g4=float(ctxt.g4[0]))
+    out = out*np.array(allimout)
+    return out[ctxt.valid]
+# ----------------------------------- --------------------------------
