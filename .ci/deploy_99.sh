@@ -25,10 +25,10 @@ then
     # save the docker images to a tarball
     docker save -o ${tempfn} esp_cit:${cit_version} esp_devel:${version} esp_py:${py_version} esp_server:${version} esp_tools:${version} esp_worker:latest
     # delete unused copies of same tags
-    ssh mentor0 docker rmi esp_cit:${cit_version} esp_devel:${version} esp_py:${py_version} esp_tools:${version} esp_worker:latest
-    ssh mentor1 docker rmi esp_cit:${cit_version} esp_devel:${version} esp_py:${py_version} esp_tools:${version} esp_worker:latest
-    ssh mentor2 docker rmi esp_cit:${cit_version} esp_devel:${version} esp_py:${py_version} esp_tools:${version} esp_worker:latest
-    ssh mentor3 docker rmi esp_cit:${cit_version} esp_devel:${version} esp_py:${py_version} esp_tools:${version} esp_worker:latest
+    ssh mentor0 docker rmi --force esp_cit:${cit_version} esp_devel:${version} esp_py:${py_version} esp_tools:${version} esp_worker:latest
+    ssh mentor1 docker rmi --force esp_cit:${cit_version} esp_devel:${version} esp_py:${py_version} esp_tools:${version} esp_worker:latest
+    ssh mentor2 docker rmi --force esp_cit:${cit_version} esp_devel:${version} esp_py:${py_version} esp_tools:${version} esp_worker:latest
+    ssh mentor3 docker rmi --force esp_cit:${cit_version} esp_devel:${version} esp_py:${py_version} esp_tools:${version} esp_worker:latest
     # install all of the new images
     ssh mentor0 docker load -i ${tempfn}
     ssh mentor1 docker load -i ${tempfn}
@@ -38,6 +38,11 @@ then
     curl -XPOST http://mentor.jpl.nasa.gov:8080/app/submit?changeset=$(git rev-parse HEAD)\&submission=now > /dev/null 2>&1
     # cleanup
     rm ${tempfn}
+    sleep 10
+    ssh mentor0 ${PWD}/.ci/docker_scrub.sh
+    ssh mentor1 ${PWD}/.ci/docker_scrub.sh
+    ssh mentor2 ${PWD}/.ci/docker_scrub.sh
+    ssh mentor3 ${PWD}/.ci/docker_scrub.sh
     state=`get_state`
 else
     sendmail -f no-reply@esp.jpl.nasa.gov sdp@jpl.nasa.gov<<EOF
