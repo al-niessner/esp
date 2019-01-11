@@ -5,7 +5,11 @@ import excalibur.cerberus.core as crbcore
 # pylint: disable=import-self
 import excalibur.transit.core
 
-import logging; log = logging.getLogger(__name__)
+import logging
+log = logging.getLogger(__name__)
+pymc3log = logging.getLogger('pymc3')
+pymc3log.setLevel(logging.ERROR)
+
 import numpy as np
 import lmfit as lm
 import pymc3 as pm
@@ -20,26 +24,28 @@ from ldtk import LDPSetCreator, BoxcarFilter
 from ldtk.ldmodel import LinearModel, QuadraticModel, NonlinearModel
 # -- GLOBAL CONTEXT FOR PYMC3 DETERMINISTICS ---------------------------------------------
 from collections import namedtuple
-CONTEXT = namedtuple('CONTEXT', ['alt', 'ald', 'allz', 'commonoim', 'ecc',
+CONTEXT = namedtuple('CONTEXT', ['alt', 'ald', 'allz', 'orbp', 'commonoim', 'ecc',
                                  'g1', 'g2', 'g3', 'g4', 'ootoindex', 'ootorbits',
                                  'orbits', 'period', 'selectfit', 'smaors', 'time',
                                  'tmjd', 'ttv', 'valid', 'visits', 'aos', 'avi'])
-ctxt = CONTEXT(alt=None, ald=None, allz=None, commonoim=None, ecc=None,
+ctxt = CONTEXT(alt=None, ald=None, allz=None, orbp=None, commonoim=None, ecc=None,
                g1=None, g2=None, g3=None, g4=None, ootoindex=None, ootorbits=None,
                orbits=None, period=None, selectfit=None, smaors=None, time=None,
                tmjd=None, ttv=None, valid=None, visits=None, aos=None, avi=None)
-def ctxtupdt(alt=None, ald=None, allz=None, commonoim=None, ecc=None, g1=None, g2=None,
-             g3=None, g4=None, ootoindex=None, ootorbits=None, orbits=None, period=None,
-             selectfit=None, smaors=None, time=None, tmjd=None, ttv=None, valid=None,
-             visits=None, aos=None, avi=None):
+def ctxtupdt(alt=None, ald=None, allz=None, orbp=None, commonoim=None, ecc=None,
+             g1=None, g2=None, g3=None, g4=None, ootoindex=None, ootorbits=None,
+             orbits=None, period=None, selectfit=None, smaors=None, time=None,
+             tmjd=None, ttv=None, valid=None, visits=None, aos=None, avi=None):
     '''
 G. ROUDIER: Update context
     '''
-    excalibur.transit.core.ctxt = CONTEXT(alt=alt, ald=ald, allz=allz, commonoim=commonoim,
-                                          ecc=ecc, g1=g1, g2=g2, g3=g3, g4=g4, ootoindex=ootoindex,
-                                          ootorbits=ootorbits, orbits=orbits, period=period, selectfit=selectfit,
-                                          smaors=smaors, time=time, tmjd=tmjd, ttv=ttv, valid=valid,
-                                          visits=visits, aos=aos, avi=avi)
+    excalibur.transit.core.ctxt = CONTEXT(alt=alt, ald=ald, allz=allz, orbp=orbp,
+                                          commonoim=commonoim, ecc=ecc, g1=g1, g2=g2,
+                                          g3=g3, g4=g4, ootoindex=ootoindex,
+                                          ootorbits=ootorbits, orbits=orbits,
+                                          period=period, selectfit=selectfit,
+                                          smaors=smaors, time=time, tmjd=tmjd, ttv=ttv,
+                                          valid=valid, visits=visits, aos=aos, avi=avi)
     return
 # A NIESSNER: INLINE HACK TO ldtk.LDPSet -- ----------------------------------------------
 class LDPSet(ldtk.LDPSet):
@@ -359,7 +365,7 @@ per wavelength bins
 # -- WHITE LIGHT CURVE -- --------------------------------------------
 def whitelight(nrm, fin, out, selftype, chainlen=int(4e2), verbose=False):
     '''
-G. ROUDIER: Orbital Parameters Recovery
+G. ROUDIER: Orbital parameters recovery
     '''
     wl = False
     priors = fin['priors'].copy()
@@ -491,8 +497,12 @@ G. ROUDIER: Orbital Parameters Recovery
                 lowinc = 9e1 - 18e1*np.arcsin(1e0/smaors)/np.pi
                 upinc = 9e1
                 pass
-            tauinc = 1e0/(priors[p]['inc']*1e-2)**2
             pass
+        else:
+            lowinc = 0e0
+            upinc = 9e1
+            pass
+        tauinc = 1e0/(priors[p]['inc']*1e-2)**2
         # OOT ORBITS
         ootorbits = []
         ootoindex = []
@@ -522,8 +532,14 @@ G. ROUDIER: Orbital Parameters Recovery
         selectfit = np.isfinite(flatwhite)
         tauwhite = 1e0/((np.nanmedian(flaterrwhite))**2)
         if tauwhite == 0: tauwhite = 1e0/(ootstd**2)
+        shapettv = 2
+        if shapettv < len(ttv): shapettv = len(ttv)
+        shapevis = 2
+        if shapevis < len(visits): shapevis = len(visits)
+        shapeorb = 2
+        if shapeorb < totalindex: shapeorb = totalindex
         nodes = []
-        ctxtupdt(commonoim=commonoim, ecc=ecc,
+        ctxtupdt(orbp=priors[p], commonoim=commonoim, ecc=ecc,
                  g1=g1, g2=g2, g3=g3, g4=g4, ootoindex=ootoindex, ootorbits=ootorbits,
                  orbits=orbits, period=period, selectfit=selectfit, smaors=smaors,
                  time=time, tmjd=tmjd, ttv=ttv, visits=visits)
@@ -532,36 +548,34 @@ G. ROUDIER: Orbital Parameters Recovery
             rprs = pm.TruncatedNormal('rprs', mu=rpors, tau=taurprs,
                                       lower=rpors/2e0, upper=2e0*rpors)
             alltknot = pm.TruncatedNormal('dtk', mu=tmjd, tau=tautknot,
-                                          lower=tknotmin, upper=tknotmax, shape=len(ttv))
-            if priors[p]['inc'] != 9e1:
-                inc = pm.TruncatedNormal('inc', mu=priors[p]['inc'], tau=tauinc,
-                                         lower=lowinc, upper=upinc)
-                pass
-            else: inc = pm.Constant('inc', c=priors[p]['inc'])
+                                          lower=tknotmin, upper=tknotmax,
+                                          shape=shapettv)
+            inc = pm.TruncatedNormal('inc', mu=priors[p]['inc'], tau=tauinc,
+                                     lower=lowinc, upper=upinc)
             allvslope = pm.TruncatedNormal('vslope',
                                            mu=0e0, tau=tauvs,
                                            lower=-3e-2/trdura,
-                                           upper=3e-2/trdura, shape=len(visits))
+                                           upper=3e-2/trdura, shape=shapevis)
             allvitcp = pm.TruncatedNormal('vitcp',
                                           mu=1e0, tau=tauvi,
                                           lower=1e0 - 3e0*ootstd,
-                                          upper=1e0 + 3e0*ootstd, shape=len(visits))
+                                          upper=1e0 + 3e0*ootstd, shape=shapevis)
             if commonoim:
                 alloslope = pm.Normal('oslope', mu=0e0, tau=tauvs,
                                       shape=len(visits))
                 allologtau = pm.Uniform('ologtau', lower=minoscale,
-                                        upper=maxoscale, shape=len(visits))
+                                        upper=maxoscale, shape=shapevis)
                 allologdelay = pm.Uniform('ologdelay', lower=minoscale,
-                                          upper=maxdelay, shape=len(visits))
+                                          upper=maxdelay, shape=shapevis)
                 pass
             else:
                 alloslope = pm.TruncatedNormal('oslope', mu=0e0, tau=tauvs,
                                                lower=-3e-2/trdura,
-                                               upper=3e-2/trdura, shape=totalindex)
+                                               upper=3e-2/trdura, shape=shapeorb)
                 allologtau = pm.Uniform('ologtau', lower=minoscale,
-                                        upper=maxoscale, shape=totalindex)
+                                        upper=maxoscale, shape=shapeorb)
                 allologdelay = pm.Uniform('ologdelay', lower=minoscale,
-                                          upper=maxdelay, shape=totalindex)
+                                          upper=maxdelay, shape=shapeorb)
                 pass
             nodes.append(rprs)
             nodes.append(alltknot)
@@ -574,7 +588,6 @@ G. ROUDIER: Orbital Parameters Recovery
             _whitedata = pm.Normal('whitedata', mu=orbital(*nodes),
                                    tau=tauwhite, observed=flatwhite[selectfit])
             log.warning('>-- MCMC nodes: %s', str([n.name for n in nodes]))
-            # ALL PRINTS ARE IN THE PM.SAMPLE CALL, CANNOT GET RID OF THEM
             trace = pm.sample(chainlen, cores=4, tune=int(chainlen/2),
                               compute_convergence_checks=False, step=pm.Metropolis(),
                               progressbar=verbose)
@@ -594,13 +607,15 @@ G. ROUDIER: Orbital Parameters Recovery
         postphase = []
         postflatphase = []
         ttvindex = 0
+        if priors[p]['inc'] != 9e1: inclination = np.nanmedian(mctrace['inc'])
+        else: inclination = 9e1
         for i, v in enumerate(visits):
             if v in ttv:
                 posttk = np.nanmedian(mctrace['dtk__%i' % ttvindex])
                 ttvindex += 1
                 pass
             else: posttk = tmjd
-            postz, postph = datcore.time2z(time[i], np.nanmedian(mctrace['inc']),
+            postz, postph = datcore.time2z(time[i], inclination,
                                            posttk, smaors, period, ecc)
             if selftype in ['eclipse']: postph[postph < 0] = postph[postph < 0] + 1e0
             postsep.extend(postz)
@@ -764,9 +779,9 @@ LDTK: Parviainen et al. https://github.com/hpparvi/ldtk
     feherr = np.sqrt(abs(orbp['FEH*_uperr']*orbp['FEH*_lowerr']))
     loggstar = orbp['LOGG*']
     loggerr = np.sqrt(abs(orbp['LOGG*_uperr']*orbp['LOGG*_lowerr']))
-    log.warning('>-- Temperature %s %s', str(tstar), str(terr))
-    log.warning('>-- Metallicity %s %s', str(fehstar), str(feherr))
-    log.warning('>-- Surface Gravity %s %s', str(loggstar), str(loggerr))
+    log.warning('>-- Temperature: %s +/- %s', str(tstar), str(terr))
+    log.warning('>-- Metallicity: %s +/- %s', str(fehstar), str(feherr))
+    log.warning('>-- Surface Gravity: %s +/- %s', str(loggstar), str(loggerr))
     niter = int(len(minmu)/segmentation) + 1
     allcl = None
     allel = None
@@ -811,19 +826,9 @@ LDTK: Parviainen et al. https://github.com/hpparvi/ldtk
     out['MU'] = avmu
     out['LD'] = allcl.T
     out['ERR'] = allel.T
-    if verbose:
-        plt.figure(figsize=(10, 6))
-        for i in np.arange((allcl.T).shape[0]):
-            thiscl = allcl.T[i]
-            thisel = allel.T[i]
-            plt.errorbar(avmu, thiscl, yerr=thisel)
-            plt.plot(avmu, thiscl, '*', label='$\\gamma$ %i' % i)
-            pass
-        plt.xlabel('Wavelength [$\\mu$m]')
-        plt.legend(bbox_to_anchor=(1, 0.5), loc=5, ncol=1, mode='expand', numpoints=1,
-                   borderaxespad=0., frameon=False)
-        plt.tight_layout(rect=[0,0,0.9,1])
-        plt.show()
+    for i in range(len(allcl.T)):
+        log.warning('>-- LD%s: %s +/- %s', str(int(i)),
+                    str(float(allcl.T[i])), str(float(allel.T[i])))
         pass
     return out
 # -------------------- -----------------------------------------------
@@ -1094,6 +1099,10 @@ G. ROUDIER: Exoplanet spectrum recovery
                     allologdelay.append(temp)
                     pass
                 pass
+            shapevis = 2
+            if shapevis < len(visits): shapevis = len(visits)
+            shapeorb = 2
+            if shapeorb < totalindex: shapeorb = totalindex
             ctxtupdt(alt=allologtau, ald=allologdelay, allz=allz, commonoim=commonoim,
                      g1=g1, g2=g2, g3=g3, g4=g4, ootoindex=ootoindex, ootorbits=ootorbits,
                      orbits=orbits, smaors=smaors, time=time, valid=valid, visits=visits,
@@ -1101,17 +1110,16 @@ G. ROUDIER: Exoplanet spectrum recovery
             # PYMC3 ----------------------------------------------------------------------
             with pm.Model():
                 rprs = pm.Normal('rprs', mu=whiterprs, tau=1e0/Hs**2)
-                allvslope = pm.TruncatedNormal('vslope',
-                                               mu=0e0, tau=tauvs,
+                allvslope = pm.TruncatedNormal('vslope', mu=0e0, tau=tauvs,
                                                lower=-3e-2/trdura,
-                                               upper=3e-2/trdura, shape=len(visits))
+                                               upper=3e-2/trdura, shape=shapevis)
                 if commonoim:
-                    alloslope = pm.Normal('oslope', mu=0, tau=tauvs, shape=len(visits))
+                    alloslope = pm.Normal('oslope', mu=0, tau=tauvs, shape=shapevis)
                     pass
                 else:
                     alloslope = pm.TruncatedNormal('oslope', mu=0e0, tau=tauvs,
                                                    lower=-3e-2/trdura,
-                                                   upper=3e-2/trdura, shape=totalindex)
+                                                   upper=3e-2/trdura, shape=shapeorb)
                     pass
                 nodes.append(rprs)
                 nodes.append(allvslope)
@@ -1119,7 +1127,6 @@ G. ROUDIER: Exoplanet spectrum recovery
                 _wbdata = pm.Normal('wbdata', mu=lcmodel(*nodes),
                                     tau=np.nanmedian(tauwbdata[valid]),
                                     observed=data[valid])
-                # ALL PRINTS ARE IN THE PM.SAMPLE CALL, CANNOT GET RID OF THEM
                 trace = pm.sample(chainlen, cores=4, tune=int(chainlen/2),
                                   compute_convergence_checks=False, step=pm.Metropolis(),
                                   progressbar=verbose)
@@ -1157,12 +1164,14 @@ def orbital(*whiteparams):
 G. ROUDIER: Orbital model
     '''
     r, atk, icln, avs, avi, aos, aolt, aold = whiteparams
+    if ctxt.orbp['inc'] == 9e1: inclination = 9e1
+    else: inclination = float(icln)
     out = []
     for i,v in enumerate(ctxt.visits):
         omt = ctxt.time[i]
         if v in ctxt.ttv: omtk = float(atk[ctxt.ttv.index(v)])
         else: omtk = ctxt.tmjd
-        omz, _pmph = datcore.time2z(omt, float(icln), omtk,
+        omz, _pmph = datcore.time2z(omt, inclination, omtk,
                                     ctxt.smaors, ctxt.period, ctxt.ecc)
         lcout = tldlc(abs(omz), float(r),
                       g1=ctxt.g1[0], g2=ctxt.g2[0], g3=ctxt.g3[0],
@@ -1222,8 +1231,7 @@ G. ROUDIER: Spectral light curve model
             pass
         allimout.extend(imout)
         pass
-    out = tldlc(abs(ctxt.allz), float(r),
-                g1=float(ctxt.g1[0]), g2=float(ctxt.g2[0]),
+    out = tldlc(abs(ctxt.allz), float(r), g1=float(ctxt.g1[0]), g2=float(ctxt.g2[0]),
                 g3=float(ctxt.g3[0]), g4=float(ctxt.g4[0]))
     out = out*np.array(allimout)
     return out[ctxt.valid]

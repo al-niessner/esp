@@ -4,7 +4,11 @@ import excalibur
 import excalibur.cerberus.core
 import excalibur.system.core as syscore
 
-import logging; log = logging.getLogger(__name__)
+import logging
+log = logging.getLogger(__name__)
+pymc3log = logging.getLogger('pymc3')
+pymc3log.setLevel(logging.ERROR)
+
 import os
 import pymc3 as pm
 import numpy as np
@@ -26,12 +30,17 @@ def ctxtupdt(cleanup=None, model=None, p=None, solidr=None, orbp=None, tspectrum
     '''
 G. ROUDIER: Update context
     '''
-    excalibur.cerberus.core.ctxt = CONTEXT(cleanup=cleanup, model=model, p=p, solidr=solidr, orbp=orbp,
-                                           tspectrum=tspectrum, xsl=xsl, spc=spc, modparlbl=modparlbl)
+    excalibur.cerberus.core.ctxt = CONTEXT(cleanup=cleanup, model=model, p=p,
+                                           solidr=solidr, orbp=orbp,
+                                           tspectrum=tspectrum, xsl=xsl, spc=spc,
+                                           modparlbl=modparlbl)
     return
 # ------------- ------------------------------------------------------
 # -- SV VALIDITY -- --------------------------------------------------
 def checksv(sv):
+    '''
+G. ROUDIER: Tests for empty SV shell
+    '''
     valid = False
     errstring = None
     if sv['STATUS'][-1]: valid = True
@@ -51,6 +60,9 @@ def myxsecs(spc, out,
             cialist=['H2-H', 'H2-H2', 'H2-He', 'He-H'].copy(),
             xmspecies=['TIO', 'CH4', 'H2O', 'H2CO', 'HCN', 'CO', 'CO2', 'NH3'].copy(),
             verbose=False):
+    '''
+G. ROUDIER: Builds Cerberus cross section library
+    '''
     cs = False
     for p in spc['data'].keys():
         out['data'][p] = {}
@@ -271,8 +283,10 @@ def myxsecs(spc, out,
 # ------------------------ -------------------------------------------
 # -- TOTAL PARTITION FUNCTION -- -------------------------------------
 def gettpf(tips, knownspecies, verbose=False):
+    '''
+G. ROUDIER: Wrapper around HITRAN partition functions (Gamache et al. 2011)
+    '''
     grid = {}
-    # Gamache et al. 2011
     tempgrid = list(np.arange(60., 3035., 25.))
     for ks in knownspecies:
         grid[ks] = {'T':tempgrid, 'Q':[], 'SPL':[]}
@@ -301,6 +315,9 @@ def gettpf(tips, knownspecies, verbose=False):
 # ------------------------------ -------------------------------------
 # -- ATMOS -- --------------------------------------------------------
 def atmos(fin, xsl, spc, out, mclen=int(1e2), verbose=False):
+    '''
+G. ROUDIER: Cerberus retrievial
+    '''
     am = False
     orbp = fin['priors'].copy()
     ssc = syscore.ssconstants(mks=True)
@@ -374,7 +391,7 @@ def crbmodel(mixratio, rayleigh, cloudtp, rp0, orbp, xsecs, qtgrid,
              cheq=None, h2rs=True, logx=False, pnet='b',
              verbose=False, debug=False):
     '''
-Cerberus forward model probing up to 'Hsmax' scale heights from solid radius 'solrad' evenly log divided amongst 'nlevels' steps
+G. ROUDIER: Cerberus forward model probing up to 'Hsmax' scale heights from solid radius solrad evenly log divided amongst nlevels steps
     '''
     ssc = syscore.ssconstants(mks=True)
     pgrid = np.arange(np.log(solrad)-Hsmax, np.log(solrad)+Hsmax/nlevels,
@@ -462,7 +479,9 @@ Cerberus forward model probing up to 'Hsmax' scale heights from solid radius 'so
 # -------------------- -----------------------------------------------
 # -- MEAN MOLECULAR WEIGHT -- ----------------------------------------
 def getmmw(mixratio, protosolar=True, fH2=None, fHe=None):
-    # Proton mass dominated
+    '''
+G. ROUDIER: Mean molecular weight estimate assuming proton mass dominated nucleous
+    '''
     molsum = 0.
     mmw = 0.
     weights = {'H2':2., 'He':4., 'CH4':16., 'NH3':17., 'H2O':18.,
@@ -490,6 +509,9 @@ def gettau(xsecs, qtgrid, temp, mixratio,
            xmollist, rayleigh, hzlib, hzp, hzslope, hztop,
            h2rs=True,
            debug=False):
+    '''
+G. ROUDIER: Builds optical depth matrix
+    '''
     firstelem = True
     vectauelem = []
     for myz in list(z):
@@ -610,6 +632,9 @@ def gettau(xsecs, qtgrid, temp, mixratio,
 # -- ATTENUATION COEFFICIENT -- --------------------------------------
 def absorb(xsecs, qtgrid, T, p, mmr, lbroadening, lshifting, wgrid,
            iso=0, Tref=296., debug=False):
+    '''
+G. ROUDIER: HITRAN HITEMP database parser
+    '''
     select = (np.array(xsecs['I']) == iso+1)
     S = np.array(xsecs['S'])[select]
     E = np.array(xsecs['Epp'])[select]
@@ -666,12 +691,18 @@ def absorb(xsecs, qtgrid, T, p, mmr, lbroadening, lshifting, wgrid,
 # ----------------------------- --------------------------------------
 # -- PRESSURE BROADENING -- ------------------------------------------
 def intflor(wave, dwave, nu, gamma):
+    '''
+G. ROUDIER: Pressure Broadening
+    '''
     f = 1e0/np.pi*(np.arctan((wave+dwave - nu)/gamma) -
                    np.arctan((wave-dwave - nu)/gamma))
     return f
 # ------------------------- ------------------------------------------
 # -- CIA -- ----------------------------------------------------------
 def getciaxs(temp, xsecs):
+    '''
+G. ROUDIER: Wrapper around CIA Cerberus library
+    '''
     sigma = np.array([thisspl(temp) for thisspl in xsecs['SPL']])
     nu = np.array(xsecs['SPLNU'])
     select = np.argsort(nu)
@@ -681,6 +712,9 @@ def getciaxs(temp, xsecs):
 # --------- ----------------------------------------------------------
 # -- EXOMOL -- -------------------------------------------------------
 def getxmolxs(temp, xsecs):
+    '''
+G. ROUDIER: Wrapper around EXOMOL Cerberus library
+    '''
     sigma = np.array([thisspl(temp) for thisspl in xsecs['SPL']])
     nu = np.array(xsecs['SPLNU'])
     select = np.argsort(nu)
@@ -689,9 +723,10 @@ def getxmolxs(temp, xsecs):
     return sigma, nu
 # ------------ -------------------------------------------------------
 # -- CHEMICAL EQUILIBRIUM -- -----------------------------------------
-# BURROWS AND SHARP 1998
 def crbce(p, temp, C2Or=0., X2Hr=0.):
-    # SOLAR ABUNDANCES (ANDERS & GREVESSE 1989)
+    '''
+G. ROUDIER: BURROWS AND SHARP 1998 + ANDERS & GREVESSE 1989
+    '''
     solar = {
         'nH':9.10e-1, 'nHe':8.87e-2, 'nO':7.76e-4, 'nC':3.29e-4,
         'nNE':1.12e-4, 'nN':1.02e-4, 'nMg':3.49e-5, 'nSi':3.26e-5,
