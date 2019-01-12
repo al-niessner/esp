@@ -18,6 +18,7 @@ version="$(lookup_version dawgie)"
 [ -z "$(docker images | grep "esp_server *${version}")" ] && ( echo -n 'failure' > .ci/status.txt  ; msg='${msg}\nSERVER not found' ) || ( msg='${msg}\nSERVER found')
 [ -z "$(docker images | grep "esp_tools *${version}")" ] && ( echo -n 'failure' > .ci/status.txt  ; msg='${msg}\nTOOLS not found' ) || ( msg='${msg}\nTOOLS found')
 [ -z "$(docker images | grep "esp_worker *latest")" ] && ( echo -n 'failure' > .ci/status.txt  ; msg='${msg}\nWORKER not found' ) || ( msg='${msg}\nWORKER found')
+echo "msg: ${msg}"
 
 if current_state
 then
