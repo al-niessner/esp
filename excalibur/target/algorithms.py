@@ -16,7 +16,7 @@ genIDs = True
 # NEXSCI QUERY
 web = 'https://exoplanetarchive.ipac.caltech.edu/cgi-bin/nstedAPI/nph-nstedAPI?'
 # DATA ON DISK
-diskloc = excalibur.context['data_dir']
+diskloc = os.path.join(excalibur.context['data_dir'], 'sci')
 # MAST MIRRORS
 queryform = 'https://archive.stsci.edu/hst/search.php?target='
 mirror1 = 'http://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/data/pub/HSTCA/'
