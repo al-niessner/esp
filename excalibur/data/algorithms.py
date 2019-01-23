@@ -22,6 +22,9 @@ fltrs = [t.strip() for t in fltrs if t.replace(' ', '').__len__() > 0]
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class collect(dawgie.Algorithm):
+    '''
+G. ROUDIER: Data collection by filters
+    '''
     def __init__(self):
         self._version_ = dawgie.VERSION(1,1,0)
         self.__create = trgalg.create()
@@ -68,6 +71,9 @@ class collect(dawgie.Algorithm):
     pass
 
 class timing(dawgie.Algorithm):
+    '''
+G. ROUDIER: Categorize data into 3 science purposes: TRANSIT, ECLIPSE, PHASE CURVE
+    '''
     def __init__(self):
         self._version_ = dawgie.VERSION(1,1,0)
         self.__fin = sysalg.finalize()
@@ -127,8 +133,11 @@ class timing(dawgie.Algorithm):
     pass
 
 class calibration(dawgie.Algorithm):
+    '''
+G. ROUDIER: Data re-calibration and reduction
+    '''
     def __init__(self):
-        self._version_ = dawgie.VERSION(1,1,0)
+        self._version_ = dawgie.VERSION(1,2,0)
         self.__col = collect()
         self.__tim = timing()
         self.__out = [datstates.CalibrateSV(ext) for ext in fltrs]

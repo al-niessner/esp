@@ -460,8 +460,15 @@ G. ROUDIER: Extracts and Wavelength calibrates WFC3 SCAN mode spectra
             for eachdiff in psdiff:
                 background = []
                 for eachcol in eachdiff.T:
-                    eachcol[eachcol < psmin] = np.nan
-                    thr = 1e2*scanwpi/eachdiff.shape[0]
+                    if True in np.isfinite(eachcol):
+                        selfinite = np.isfinite(eachcol)
+                        fineachcol = eachcol[selfinite]
+                        test = fineachcol < psmin
+                        if True in test: fineachcol[test] = np.nan
+                        eachcol[selfinite] = fineachcol
+                        pass
+                    nancounts = np.sum(~np.isfinite(eachcol))
+                    thr = 1e2*(1e0 - (scanwpi + nancounts)/eachcol.size)
                     bcke = np.nanmedian(eachcol[eachcol < np.nanpercentile(eachcol, thr)])
                     background.append(bcke)
                     pass
@@ -688,9 +695,16 @@ G. ROUDIER: Extracts and Wavelength calibrates WFC3 SCAN mode spectra
             spectrum = np.array(spectrum)
             spectrum -= np.nanmin(spectrum)
             # EXCLUDE RESIDUAL GLITCHES
-            template[~np.isfinite(template)] = np.nanmin(template)
-            nanme = (abs(spectrum - template)/template) > 1e0
-            if True in nanme: spectrum[nanme] = np.nan
+            seloutlrs = np.isfinite(template) & np.isfinite(spectrum)
+            if True in seloutlrs:
+                nanme = (abs(spectrum[seloutlrs] - template[seloutlrs])/
+                         template[seloutlrs]) > 1e0
+                if True in nanme: spectrum[seloutlrs][nanme] = np.nan
+                pass
+            else:
+                data['IGNORED'][index] = True
+                data['TRIAL'][index] = 'Invalid Spectrum/Template'
+                pass
             # TRUNCATED SPECTRUM
             testspec = spectrum[np.isfinite(spectrum)]
             if (np.all(testspec[-18:] > emptythr)) and not ovszspc:
@@ -734,10 +748,15 @@ G. ROUDIER: Extracts and Wavelength calibrates WFC3 SCAN mode spectra
         if not ignore:
             spectrum = data['SPECTRUM'][index].copy()
             cutoff = np.nanmax(spectrum)/scaleco
-            spectrum[spectrum < cutoff] = np.nan
-            w, d, s, si, bck = wavesol(abs(spectrum), tt, wavett, disper,
-                                       ovszspc=ovszspc, bck=None, debug=debug)
-            if (d > ldisp) and (d < udisp): spectralindex.append(si)
+            finitespec = spectrum[np.isfinite(spectrum)]
+            test = finitespec < cutoff
+            if True in test:
+                finitespec[test] = np.nan
+                spectrum[np.isfinite(spectrum)] = finitespec
+                pass
+            wave, disp, shift, si, bck = wavesol(abs(spectrum), tt, wavett, disper,
+                                                 ovszspc=ovszspc, bck=None, debug=debug)
+            if (disp > ldisp) and (disp < udisp): spectralindex.append(si)
             pass
         pass
     siv = np.nanmedian(spectralindex)
@@ -746,7 +765,12 @@ G. ROUDIER: Extracts and Wavelength calibrates WFC3 SCAN mode spectra
         if not ignore:
             spectrum = data['SPECTRUM'][index].copy()
             cutoff = np.nanmax(spectrum)/scaleco
-            spectrum[spectrum < cutoff] = np.nan
+            finitespec = spectrum[np.isfinite(spectrum)]
+            test = finitespec < cutoff
+            if True in test:
+                finitespec[test] = np.nan
+                spectrum[np.isfinite(spectrum)] = finitespec
+                pass
             wave, disp, shift, si, bck = wavesol(abs(spectrum), tt, wavett, disper,
                                                  siv=siv, ovszspc=ovszspc,
                                                  bck=None, debug=debug)
@@ -874,7 +898,7 @@ http://www.stsci.edu/hst/stis/design/gratings/documents/handbooks/currentIHB/c13
     '''
     fltr = flttype.split('-')[3]
     vrange = None
-    if fltr in ['G141']: vrange = [1.10, 1.65]  # MICRONS
+    if fltr in ['G141']: vrange = [1.12, 1.65]  # MICRONS
     if fltr in ['G102']: vrange = [0.80, 1.14]
     if fltr in ['G430L']: vrange = [0.30, 0.55]
     if fltr in ['G140M']: vrange = [0.12, 0.17]
@@ -1095,12 +1119,14 @@ edges, approximating the log(stellar spectrum) with a linear model
     mutt = wavett.copy()
     mutt /= 1e4
     xdata = np.arange(spectrum.size)
-    select = (tt == 0)
-    tt[select] = np.nan
-    select = np.isfinite(spectrum)
-    logspec = np.log10(spectrum)
+    test = tt == 0
+    if True in test: tt[test] = np.nan
     logtt = np.log10(tt)
+    test = spectrum == 0
+    if True in test: spectrum[test] = np.nan
+    logspec = np.log10(spectrum)
     wave = xdata*disper/1e4
+    select = np.isfinite(spectrum)
     minwave = np.nanmin(wave[select])
     select = np.isfinite(tt)
     reftt = np.nanmin(mutt[select])

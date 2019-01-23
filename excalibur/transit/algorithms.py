@@ -21,6 +21,9 @@ fltrs = [t.strip() for t in fltrs if t.replace(' ', '').__len__() > 0]
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class normalization(dawgie.Algorithm):
+    '''
+G. ROUDIER: Light curve normalization by Out Of Transit data
+    '''
     def __init__(self):
         self._version_ = dawgie.VERSION(1,1,0)
         self._type = 'transit'
