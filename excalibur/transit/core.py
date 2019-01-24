@@ -109,7 +109,6 @@ G. ROUDIER: Out of transit data normalization
             out['data'][p]['dispersion'] = []
             out['data'][p]['z'] = []
             out['data'][p]['phase'] = []
-            out['data'][p]['spect'] = []
             out['data'][p]['wavet'] = []
             out['data'][p]['photnoise'] = []
             out['data'][p]['trial'] = []
@@ -120,20 +119,22 @@ G. ROUDIER: Out of transit data normalization
                 if selftype in ['transit', 'phasecurve']:
                     select = (phase[selv] > 0.25) | (phase[selv] < -0.25)
                     vzoot = zoot[selv]
-                    vzoot[select] = vzoot[select] + 666
+                    vzoot[select] = np.nan
                     zoot[selv] = vzoot
                     pass
                 if selftype in ['eclipse']:
                     vzoot = zoot[selv]
                     select = (phase[selv] < 0.25) & (phase[selv] > -0.25)
-                    vzoot[select] = vzoot[select] + 666
+                    vzoot[select] = np.nan
                     zoot[selv] = vzoot
                     pass
+                selv = selv & np.isfinite(zoot)
                 # ORBIT SELECTION FOR HST BREATHING MODEL --------------------------------
                 ootplus = []
                 ootpv = []
                 ootminus = []
                 ootmv = []
+                inorb = []
                 for o in set(orbits[selv]):
                     zorb = zoot[selv][orbits[selv] == o]
                     medzorb = np.nanmedian(zorb)
@@ -141,19 +142,20 @@ G. ROUDIER: Out of transit data normalization
                         ootplus.append(o)
                         ootpv.append(medzorb)
                         pass
-                    if medzorb < -(1e0 + rpors):
+                    elif medzorb < -(1e0 + rpors):
                         ootminus.append(o)
                         ootmv.append(medzorb)
                         pass
+                    else: inorb.append(int(o))
                     pass
                 ootplus = np.array(ootplus)
                 ootpv = np.array(ootpv)
-                selord = np.argsort(ootplus)
+                selord = np.argsort(abs(ootplus - np.mean(inorb)))
                 ootplus = ootplus[selord]
                 ootpv = ootpv[selord]
                 ootminus = np.array(ootminus)
                 ootmv = np.array(ootmv)
-                selord = np.argsort(ootminus)[::-1]
+                selord = np.argsort(abs(ootminus - np.mean(inorb)))
                 ootminus = ootminus[selord]
                 ootmv = ootmv[selord]
                 trash = []
@@ -184,7 +186,12 @@ G. ROUDIER: Out of transit data normalization
                 if np.sum(zoot[selv] > (1e0 + rpors)) < 3: alertplus = True
                 if np.sum(zoot[selv] < -(1e0 + rpors)) < 3: alertminus = True
                 if alertplus or alertminus:
-                    for o in set(orbits[selv]): trash.append(o)
+                    for o in set(orbits[selv]): trash.append(int(o))
+                    pass
+                if debug:
+                    log.warning('>-- Visit %s', str(int(v)))
+                    log.warning('>-- Orbit %s', str(set(orbits[selv])))
+                    log.warning('>-- Trash %s', str(trash))
                     pass
                 # UPDATE IGNORE FLAG WITH REJECTED ORBITS --------------------------------
                 if True in selv: firstorb = np.min(orbits[selv])
@@ -396,7 +403,7 @@ G. ROUDIER: Out of transit data normalization
                         if selftype in ['eclipse']:
                             eclphase[eclphase < 0] = eclphase[eclphase < 0] + 1e0
                             pass
-                        out['data'][p]['visits'].append(v)
+                        out['data'][p]['visits'].append(int(v))
                         out['data'][p]['dvisnum'].append(set(visits[selv]))
                         out['data'][p]['nspec'].append(vnspec)
                         out['data'][p]['wavet'].append(cwave)
@@ -446,7 +453,6 @@ G. ROUDIER: Out of transit data normalization
                     out['data'][p]['visits'].pop(i2pop)
                     out['data'][p]['dvisnum'].pop(i2pop)
                     out['data'][p]['wavet'].pop(i2pop)
-                    out['data'][p]['spect'].pop(i2pop)
                     out['data'][p]['nspec'].pop(i2pop)
                     out['data'][p]['wave'].pop(i2pop)
                     out['data'][p]['time'].pop(i2pop)
@@ -525,7 +531,9 @@ per wavelength bins
                 template.append(np.nanmean(cloud))
                 pass
             pass
-        guess.append(np.mean(cluster) + vdisp)
+        finiteloop = np.mean(cluster) + vdisp
+        while finiteloop in guess: finiteloop += vdisp
+        guess.append(finiteloop)
         pass
     return wavet, template
 # ---------------------- ---------------------------------------------

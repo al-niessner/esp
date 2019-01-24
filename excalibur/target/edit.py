@@ -444,17 +444,17 @@ overwrite[starID] =
         'FEH*':-0.05, 'FEH*_uperr':0.17, 'FEH*_lowerr':-0.17,
         'FEH*_units':'[Fe/H]', 'FEH*_ref':'Hellier et al. 2011'}
     overwrite['WASP-6'] = {
-        'b':{'inc':88.47,
-             'inc_uperr':0.65, 'inc_lowerr':-0.47,
-             'inc_ref':'Gillon et al. 2009',
-             't0':2454596.433,
+        'b':{'inc':88.38,
+             'inc_uperr':0.31, 'inc_lowerr':-0.31,
+             'inc_ref':'Tregloan-Reed et al. 2015',
+             't0':2456132.41081,
              't0_uperr':0.00015, 't0_lowerr':-0.00015,
-             't0_ref':'Gillon et al. 2009',
-             'sma':0.0421,
-             'sma_uperr':0.0008,
-             'sma_lowerr':-0.0008,
-             'sma_ref':'Gillon et al. 2009',
-             'period':3.3610060,
-             'period_ref':'Gillon et al. 2009'}}
+             't0_ref':'Tregloan-Reed et al. 2015',
+             'sma':0.0414,
+             'sma_uperr':0.001,
+             'sma_lowerr':-0.001,
+             'sma_ref':'Tregloan-Reed et al. 2015',
+             'period':3.361,
+             'period_ref':'Tregloan-Reed et al. 2015'}}
     return overwrite
 # ---------------------------- ---------------------------------------

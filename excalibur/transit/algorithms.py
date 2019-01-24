@@ -25,7 +25,7 @@ class normalization(dawgie.Algorithm):
 G. ROUDIER: Light curve normalization by Out Of Transit data
     '''
     def __init__(self):
-        self._version_ = dawgie.VERSION(1,1,0)
+        self._version_ = dawgie.VERSION(1,1,1)
         self._type = 'transit'
         self.__cal = datalg.calibration()
         self.__tme = datalg.timing()
