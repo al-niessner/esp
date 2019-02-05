@@ -50,7 +50,7 @@ class validate(dawgie.Algorithm):
 
 class finalize(dawgie.Algorithm):
     def __init__(self):
-        self._version_ = dawgie.VERSION(1,1,2)
+        self._version_ = dawgie.VERSION(1,1,3)
         self.__val = validate()
         self.__out = sysstates.PriorsSV('parameters')
         return

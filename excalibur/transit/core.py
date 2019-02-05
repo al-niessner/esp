@@ -88,390 +88,420 @@ G. ROUDIER: Out of transit data normalization
     vrange = cal['data']['VRANGE']
     arcsec2pix = datcore.dps(ext)
     scanlen = np.floor(scanlen/arcsec2pix)
-    if tme[selftype].__len__() > 0:
-        for p in [p for p in tme['data'].keys() if p in priors.keys()]:
-            out['data'][p] = {}
-            rpors = priors[p]['rp']/priors['R*']*ssc['Rjup/Rsun']
-            ignore = np.array(tme['data'][p]['ignore']) | np.array(cal['data']['IGNORED'])
-            orbits = tme['data'][p]['orbits']
-            dvisits = tme['data'][p]['dvisits']
-            visits = tme['data'][p]['visits']
-            phase = tme['data'][p]['phase']
-            z = tme['data'][p]['z']
-            zoot = z.copy()
-            out['data'][p]['vrange'] = vrange
-            out['data'][p]['visits'] = []
-            out['data'][p]['dvisnum'] = []
-            out['data'][p]['nspec'] = []
-            out['data'][p]['wave'] = []
-            out['data'][p]['time'] = []
-            out['data'][p]['orbits'] = []
-            out['data'][p]['dispersion'] = []
-            out['data'][p]['z'] = []
-            out['data'][p]['phase'] = []
-            out['data'][p]['wavet'] = []
-            out['data'][p]['photnoise'] = []
-            out['data'][p]['trial'] = []
-            out['data'][p]['vignore'] = []
-            out['data'][p]['stdns'] = []
-            for v in set(visits):
-                selv = (visits == v) & ~ignore
-                if selftype in ['transit', 'phasecurve']:
-                    select = (phase[selv] > 0.25) | (phase[selv] < -0.25)
-                    vzoot = zoot[selv]
-                    vzoot[select] = np.nan
-                    zoot[selv] = vzoot
+    events = [pnet for pnet in tme['data'].keys()
+              if (pnet in priors.keys()) and tme['data'][pnet][selftype]]
+    for p in events:
+        log.warning('>-- Planet: %s', p)
+        out['data'][p] = {}
+        rpors = priors[p]['rp']/priors['R*']*ssc['Rjup/Rsun']
+        ignore = np.array(tme['data'][p]['ignore']) | np.array(cal['data']['IGNORED'])
+        orbits = tme['data'][p]['orbits']
+        dvisits = tme['data'][p]['dvisits']
+        visits = tme['data'][p]['visits']
+        phase = tme['data'][p]['phase']
+        z = tme['data'][p]['z']
+        zoot = z.copy()
+        out['data'][p]['vrange'] = vrange
+        out['data'][p]['visits'] = []
+        out['data'][p]['dvisnum'] = []
+        out['data'][p]['nspec'] = []
+        out['data'][p]['wave'] = []
+        out['data'][p]['time'] = []
+        out['data'][p]['orbits'] = []
+        out['data'][p]['dispersion'] = []
+        out['data'][p]['z'] = []
+        out['data'][p]['phase'] = []
+        out['data'][p]['wavet'] = []
+        out['data'][p]['photnoise'] = []
+        out['data'][p]['trial'] = []
+        out['data'][p]['vignore'] = []
+        out['data'][p]['stdns'] = []
+        for v in set(visits):
+            selv = (visits == v) & ~ignore
+            if selftype in ['transit', 'phasecurve']:
+                select = (phase[selv] > 0.25) | (phase[selv] < -0.25)
+                vzoot = zoot[selv]
+                vzoot[select] = np.nan
+                zoot[selv] = vzoot
+                pass
+            if selftype in ['eclipse']:
+                vzoot = zoot[selv]
+                select = (phase[selv] < 0.25) & (phase[selv] > -0.25)
+                vzoot[select] = np.nan
+                zoot[selv] = vzoot
+                pass
+            selv = selv & np.isfinite(zoot)
+            # ORBIT SELECTION FOR HST BREATHING MODEL ------------------------------------
+            ootplus = []
+            ootpv = []
+            ootminus = []
+            ootmv = []
+            inorb = []
+            for o in set(orbits[selv]):
+                zorb = zoot[selv][orbits[selv] == o]
+                medzorb = np.nanmedian(zorb)
+                if (medzorb > 0) and (np.nanmin(zorb) > (1e0 + rpors)):
+                    ootplus.append(o)
+                    ootpv.append(medzorb)
                     pass
-                if selftype in ['eclipse']:
-                    vzoot = zoot[selv]
-                    select = (phase[selv] < 0.25) & (phase[selv] > -0.25)
-                    vzoot[select] = np.nan
-                    zoot[selv] = vzoot
+                elif medzorb < -(1e0 + rpors):
+                    ootminus.append(o)
+                    ootmv.append(medzorb)
                     pass
-                selv = selv & np.isfinite(zoot)
-                # ORBIT SELECTION FOR HST BREATHING MODEL --------------------------------
-                ootplus = []
-                ootpv = []
-                ootminus = []
-                ootmv = []
-                inorb = []
-                for o in set(orbits[selv]):
-                    zorb = zoot[selv][orbits[selv] == o]
-                    medzorb = np.nanmedian(zorb)
-                    if (medzorb > 0) and (np.nanmin(zorb) > (1e0 + rpors)):
-                        ootplus.append(o)
-                        ootpv.append(medzorb)
+                else: inorb.append(int(o))
+                pass
+            ootplus = np.array(ootplus)
+            ootpv = np.array(ootpv)
+            selord = np.argsort(abs(ootplus - np.mean(inorb)))
+            ootplus = ootplus[selord]
+            ootpv = ootpv[selord]
+            ootminus = np.array(ootminus)
+            ootmv = np.array(ootmv)
+            selord = np.argsort(abs(ootminus - np.mean(inorb)))
+            ootminus = ootminus[selord]
+            ootmv = ootmv[selord]
+            trash = []
+            pureoot = []
+            keep = None
+            for thisorb in ootplus:
+                ckeep = keep is not None
+                badcond = np.sum(orbits[selv] == thisorb) < 3
+                if ckeep or badcond: trash.append(int(thisorb))
+                else:
+                    keep = thisorb
+                    pureoot.append(thisorb)
+                    pass
+                pass
+            keep = None
+            for thisorb in ootminus:
+                ckeep = keep is not None
+                zorb = zoot[selv][orbits[selv] == thisorb]
+                badcond = np.sum(zorb < -(1e0 + rpors)) < 3
+                if ckeep or badcond: trash.append(int(thisorb))
+                else:
+                    keep = thisorb
+                    pureoot.append(thisorb)
+                    pass
+                pass
+            # COMPENSATE UNBALANCED OOT DATA ---------------------------------------------
+            innout = [int(o) for o in set(orbits[selv]) if o not in trash]
+            pickmeup = [int(o) for o in trash if o in ootminus]
+            if (np.sum(zoot[selv] > (1e0 + rpors)) < 3) and pickmeup:
+                dist = list(np.array(pickmeup) - np.mean(innout))
+                trash.pop(trash.index(pickmeup[dist.index(min(dist))]))
+                log.warning('--< Missing OOT+ data, adding orbit: %s',
+                            str(int(pickmeup[dist.index(min(dist))])))
+                pass
+            pickmeup = [int(o) for o in trash if o in ootplus]
+            if (np.sum(zoot[selv] < -(1e0 + rpors)) < 3) and pickmeup:
+                dist = list(np.array(pickmeup) - np.mean(innout))
+                trash.pop(trash.index(pickmeup[dist.index(min(dist))]))
+                log.warning('--< Missing OOT- data, adding orbit: %s',
+                            str(int(pickmeup[dist.index(min(dist))])))
+                pass
+            log.warning('>-- Visit %s', str(int(v)))
+            log.warning('>-- Orbit %s', str([int(o) for o in set(orbits[selv])]))
+            log.warning('>-- Trash %s', str(trash))
+            # UPDATE IGNORE FLAG WITH REJECTED ORBITS ------------------------------------
+            if True in selv: firstorb = int(np.min(orbits[selv]))
+            else: firstorb = int(1)
+            if trash and (selftype in ['transit', 'eclipse']):
+                for o in trash:
+                    select = orbits[selv] == o
+                    vignore = ignore[selv]
+                    vignore[select] = True
+                    ignore[selv] = vignore
+                    pass
+                pass
+            # VISIT SELECTION ------------------------------------------------------------
+            selv = selv & (~ignore)
+            viss = [s for s in np.array(spectra)[selv]]
+            visw = np.array([w for w in np.array(wave)[selv]])
+            cwave, _t = tplbuild(viss, visw, vrange, disp[selv]*1e-4, medest=True)
+            # OUT OF TRANSIT ORBITS SELECTION --------------------------------------------
+            selvoot = selv & np.array([(test in pureoot) for test in orbits])
+            selvoot = selvoot & (abs(zoot) > (1e0 + rpors))
+            voots = [s for s in np.array(spectra)[selvoot]]
+            vootw = [w for w in np.array(wave)[selvoot]]
+            ivoots = []
+            for s, w in zip(voots, vootw):
+                itps = np.interp(np.array(cwave), w, s, left=np.nan, right=np.nan)
+                ivoots.append(itps)
+                pass
+            pureootext = pureoot.copy()
+            if firstorb in orbits[selv]:
+                fovoots = [s for s in np.array(spectra)[selv]]
+                fovootw = [w for w in np.array(wave)[selv]]
+                pureootext.append(firstorb)
+                foivoots = []
+                for s, w in zip(fovoots, fovootw):
+                    itps = np.interp(np.array(cwave), w, s, left=np.nan, right=np.nan)
+                    foivoots.append(itps)
+                    pass
+                pass
+            if True in selvoot:
+                # BREATHING CORRECTION ---------------------------------------------------
+                hstbreath = {}
+                for thisorb in pureootext:
+                    alltfo = []
+                    alldfo = []
+                    if thisorb in [firstorb]:
+                        selorb = (orbits[selv] == thisorb)
+                        fotime = time[selv][selorb]
+                        specin = [s for s, ok in zip(foivoots, selorb) if ok]
+                        wavein = [cwave]*len(specin)
+                        _t, fos = tplbuild(specin, wavein, vrange,
+                                           (disp[selv][selorb])*1e-4, superres=True)
                         pass
-                    elif medzorb < -(1e0 + rpors):
-                        ootminus.append(o)
-                        ootmv.append(medzorb)
-                        pass
-                    else: inorb.append(int(o))
-                    pass
-                ootplus = np.array(ootplus)
-                ootpv = np.array(ootpv)
-                selord = np.argsort(abs(ootplus - np.mean(inorb)))
-                ootplus = ootplus[selord]
-                ootpv = ootpv[selord]
-                ootminus = np.array(ootminus)
-                ootmv = np.array(ootmv)
-                selord = np.argsort(abs(ootminus - np.mean(inorb)))
-                ootminus = ootminus[selord]
-                ootmv = ootmv[selord]
-                trash = []
-                pureoot = []
-                keep = None
-                for thisorb in ootplus:
-                    ckeep = keep is not None
-                    badcond = np.sum(orbits[selv] == thisorb) < 3
-                    if ckeep or badcond: trash.append(thisorb)
                     else:
-                        keep = thisorb
-                        pureoot.append(thisorb)
-                        pass
-                    pass
-                keep = None
-                for thisorb in ootminus:
-                    ckeep = keep is not None
-                    zorb = zoot[selv][orbits[selv] == thisorb]
-                    badcond = np.sum(zorb < -(1e0 + rpors)) < 3
-                    if ckeep or badcond: trash.append(thisorb)
-                    else:
-                        keep = thisorb
-                        pureoot.append(thisorb)
-                        pass
-                    pass
-                alertplus = False
-                alertminus = False
-                if np.sum(zoot[selv] > (1e0 + rpors)) < 3: alertplus = True
-                if np.sum(zoot[selv] < -(1e0 + rpors)) < 3: alertminus = True
-                if alertplus or alertminus:
-                    for o in set(orbits[selv]): trash.append(int(o))
-                    pass
-                if debug:
-                    log.warning('>-- Visit %s', str(int(v)))
-                    log.warning('>-- Orbit %s', str(set(orbits[selv])))
-                    log.warning('>-- Trash %s', str(trash))
-                    pass
-                # UPDATE IGNORE FLAG WITH REJECTED ORBITS --------------------------------
-                if True in selv: firstorb = np.min(orbits[selv])
-                if (trash.__len__() > 0) and (selftype in ['transit', 'eclipse']):
-                    for o in trash:
-                        select = orbits[selv] == o
-                        vignore = ignore[selv]
-                        vignore[select] = True
-                        ignore[selv] = vignore
-                        pass
-                    pass
-                # VISIT SELECTION --------------------------------------------------------
-                selv = selv & (~ignore)
-                viss = [s for s in np.array(spectra)[selv]]
-                visw = np.array([w for w in np.array(wave)[selv]])
-                # OUT OF TRANSIT ORBITS SELECTION ----------------------------------------
-                selvoot = selv & np.array([(test in pureoot) for test in orbits])
-                selvoot = selvoot & (abs(zoot) > (1e0 + rpors))
-                voots = [s for s in np.array(spectra)[selvoot]]
-                vootw = [w for w in np.array(wave)[selvoot]]
-                if True in selvoot:
-                    # BREATHING CORRECTION -----------------------------------------------
-                    cwave, _t = tplbuild(viss, visw, vrange, disp[selv]*1e-4, medest=True)
-                    ivoots = []
-                    for s, w in zip(voots, vootw):
-                        itps = np.interp(np.array(cwave), w, s, left=np.nan, right=np.nan)
-                        ivoots.append(itps)
-                        pass
-                    hstbreath = {}
-                    for thisorb in pureoot:
-                        alltfo = []
-                        alldfo = []
                         selorb = (orbits[selvoot] == thisorb)
                         fotime = time[selvoot][selorb]
                         specin = [s for s, ok in zip(ivoots, selorb) if ok]
                         wavein = [cwave]*len(specin)
                         _t, fos = tplbuild(specin, wavein, vrange,
                                            (disp[selvoot][selorb])*1e-4, superres=True)
-                        for eachfos in fos:
-                            mintscale = np.min(abs(np.diff(np.sort(fotime))))
-                            maxtscale = np.max(fotime) - np.min(fotime)
-                            minoscale = np.log10(mintscale*36e2*24)
-                            maxoscale = np.log10(maxtscale*36e2*24)
-                            maxdelay = np.log10(5e0*maxtscale*36e2*24)
-                            maxrfos = np.nanmax(fos)/np.nanmedian(fos)
-                            minrfos = np.nanmin(fos)/np.nanmedian(fos)
-                            params = lm.Parameters()
-                            params.add('oitcp', value=1e0, min=minrfos, max=maxrfos)
-                            params.add('oslope', value=1e-4,
-                                       min=(minrfos - maxrfos)/maxtscale,
-                                       max=(maxrfos - minrfos)/maxtscale)
-                            params.add('ologtau', value=np.mean([minoscale, maxoscale]),
-                                       min=minoscale, max=maxoscale)
-                            params.add('ologdelay', value=np.mean([minoscale, maxdelay]),
-                                       min=minoscale, max=maxdelay)
-                            ndata = np.array(eachfos)/np.nanmedian(eachfos)
+                        pass
+                    for eachfos in fos:
+                        mintscale = np.min(abs(np.diff(np.sort(fotime))))
+                        maxtscale = np.max(fotime) - np.min(fotime)
+                        minoscale = np.log10(mintscale*36e2*24)
+                        maxoscale = np.log10(maxtscale*36e2*24)
+                        maxdelay = np.log10(5e0*maxtscale*36e2*24)
+                        maxrfos = np.nanmax(fos)/np.nanmedian(fos)
+                        minrfos = np.nanmin(fos)/np.nanmedian(fos)
+                        params = lm.Parameters()
+                        params.add('oitcp', value=1e0, min=minrfos, max=maxrfos)
+                        params.add('oslope', value=1e-4,
+                                   min=(minrfos - maxrfos)/maxtscale,
+                                   max=(maxrfos - minrfos)/maxtscale)
+                        params.add('ologtau', value=np.mean([minoscale, maxoscale]),
+                                   min=minoscale, max=maxoscale)
+                        params.add('ologdelay', value=np.mean([minoscale, maxdelay]),
+                                   min=minoscale, max=maxdelay)
+                        ndata = np.array(eachfos)/np.nanmedian(eachfos)
+                        if np.sum(np.isfinite(ndata)) > 4:
                             lmout = lm.minimize(hstramp, params,
                                                 args=(fotime, ndata), method='cg')
                             alltfo.append(lmout.params['ologtau'].value)
                             alldfo.append(lmout.params['ologdelay'].value)
-                            if debug:
-                                plt.figure()
-                                plt.plot(fotime, ndata, 'o')
-                                plt.plot(fotime, hstramp(lmout.params, fotime), '*')
-                                plt.show()
-                                pass
                             pass
-                        params = lm.Parameters()
-                        params.add('oitcp', value=1e0)
-                        params.add('oslope', value=0e0)
-                        params.add('ologtau', value=np.nanmedian(alltfo))
-                        params.add('ologdelay', value=np.nanmedian(alldfo))
                         if debug:
                             plt.figure()
-                            plt.plot(fotime, hstramp(params, fotime), 'o')
+                            plt.plot(fotime, ndata, 'o')
+                            plt.plot(fotime, hstramp(lmout.params, fotime), '*')
                             plt.show()
                             pass
-                        hstbreath[str(int(thisorb))] = params
                         pass
-                    viss = np.array(viss)
-                    for spec in viss.T:
-                        for orb in set(orbits[selv]):
-                            selorb = orbits[selv] == orb
-                            if orb in [firstorb]:
-                                model = hstramp(hstbreath[str(int(orb))],
-                                                time[selv][selorb])
-                                pass
-                            elif hstbreath.__len__() > 0:
-                                choice = [int(key) for key in hstbreath]
-                                diff = list(np.array(choice) - orb)
-                                closest = diff.index(min(diff))
-                                model = hstramp(hstbreath[str(choice[closest])],
-                                                time[selv][selorb])
-                                pass
-                            else: model = np.array([1e0]*np.sum(selorb))
-                            spec[selorb] /= model
+                    params = lm.Parameters()
+                    params.add('oitcp', value=1e0)
+                    params.add('oslope', value=0e0)
+                    params.add('ologtau', value=np.nanmedian(alltfo))
+                    params.add('ologdelay', value=np.nanmedian(alldfo))
+                    if debug:
+                        plt.figure()
+                        plt.plot(fotime, hstramp(params, fotime), 'o')
+                        plt.show()
+                        pass
+                    hstbreath[str(int(thisorb))] = params
+                    pass
+                viss = np.array(viss)
+                for spec in viss.T:
+                    for orb in set(orbits[selv]):
+                        selorb = orbits[selv] == orb
+                        if (orb in pureoot) or (orb in [firstorb]):
+                            model = hstramp(hstbreath[str(int(orb))], time[selv][selorb])
                             pass
-                        pass
-                    # DOUBLE SCAN CORRECTION ---------------------------------------------
-                    cwave, _t = tplbuild(viss, visw, vrange, disp[selv]*1e-4, medest=True)
-                    iviss = []
-                    for s, w in zip(viss, visw):
-                        itps = np.interp(np.array(cwave), w, s, left=np.nan, right=np.nan)
-                        iviss.append(itps)
-                        pass
-                    iviss = np.array(iviss)
-                    vlincorr = visits[selv]
-                    if set(dvisits[selv]).__len__() > 1: vlincorr = dvisits[selv]
-                    dscan = {}
-                    ordsetds = np.sort(list(set(vlincorr))).astype(int)
-                    for scann, eachds in enumerate(ordsetds):
-                        dssel = vlincorr == eachds
-                        seldscan = abs(zoot[selv]) > (1e0 + rpors)
-                        dstime = time[selv][dssel & seldscan]
-                        dscan[str(scann)] = {}
-                        for windex, dslc in enumerate(iviss.T):
-                            if True in np.isfinite(dslc[dssel & seldscan]):
-                                data = dslc[dssel & seldscan]
-                                selfinite = np.isfinite(data)
-                                dscanmod = np.poly1d(np.polyfit(dstime[selfinite],
-                                                                data[selfinite], 1))
-                                dscan[str(scann)][str(windex)] = dscanmod
-                                if debug:
-                                    plt.figure()
-                                    plt.plot(time[selv][dssel], dslc[dssel], '+')
-                                    plt.plot(time[selv][dssel],
-                                             dscanmod(time[selv][dssel]), 'o')
-                                    plt.show()
-                                    pass
-                                pass
+                        elif hstbreath:
+                            choice = [int(key) for key in hstbreath]
+                            if firstorb in choice: choice.pop(choice.index(firstorb))
+                            diff = list(np.array(choice) - orb)
+                            closest = diff.index(min(diff))
+                            model = hstramp(hstbreath[str(choice[closest])],
+                                            time[selv][selorb])
                             pass
+                        else: model = np.array([1e0]*np.sum(selorb))
+                        spec[selorb] /= model
                         pass
-                    photnoise = np.sqrt(abs(viss.copy()))
-                    for spec, wspec, phnoise in zip(viss.T, visw.T, photnoise.T):
-                        for scann, eachds in enumerate(ordsetds):
-                            dssel = vlincorr == eachds
-                            dstime = time[selv][dssel]
-                            clstsel = abs(zoot[selv][dssel]) > (1e0 + rpors)
-                            normspec = []
-                            for w, t in zip(wspec[dssel], dstime):
-                                if (w < np.min(cwave)) or (w > np.max(cwave)):
-                                    normspec.append(np.nan)
-                                    pass
-                                else:
-                                    diff = list(cwave - w)
-                                    closest = diff.index(min(diff))
-                                    n = dscan[str(scann)][str(closest)](t)
-                                    normspec.append(n)
-                                    pass
-                                pass
-                            normspec = np.array(normspec)
-                            spec[dssel] = spec[dssel]/normspec
-                            phnoise[dssel] = phnoise[dssel]/normspec
-                            renorm = np.nanmedian(spec[dssel][clstsel])
-                            spec[dssel] /= renorm
-                            phnoise[dssel] /= renorm
-                            pass
-                        phnoise /= np.sqrt(scanlen[selv])
-                        pass
-                    # WAVELENGTH INTERPOLATION -------------------------------------------
-                    ootinv = abs(zoot[selv]) > (1e0 + rpors)
-                    wfos, fos = tplbuild(viss[ootinv], visw[ootinv], vrange,
-                                         (disp[selv][ootinv])*1e-4, superres=True)
-                    witp = {}
-                    refwavec = [np.nanmedian(w) for w in wfos]
-                    for eachwfos, eachfos in zip(wfos, fos):
-                        eachwfos = np.array(eachwfos)
-                        eachfos = np.array(eachfos)
-                        finval = np.isfinite(eachfos)
-                        key = refwavec.index(np.nanmedian(eachwfos))
-                        if np.sum(finval) > 2:
-                            poly = np.poly1d(np.polyfit(eachwfos[finval],
-                                                        eachfos[finval], 2))
-                            witp[str(key)] = poly
+                    pass
+                # DOUBLE SCAN CORRECTION -------------------------------------------------
+                cwave, _t = tplbuild(viss, visw, vrange, disp[selv]*1e-4, medest=True)
+                iviss = []
+                for s, w in zip(viss, visw):
+                    itps = np.interp(np.array(cwave), w, s, left=np.nan, right=np.nan)
+                    iviss.append(itps)
+                    pass
+                iviss = np.array(iviss)
+                vlincorr = visits[selv]
+                if set(dvisits[selv]).__len__() > 1: vlincorr = dvisits[selv]
+                dscan = {}
+                ordsetds = np.sort(list(set(vlincorr))).astype(int)
+                for scann, eachds in enumerate(ordsetds):
+                    dssel = vlincorr == eachds
+                    seldscan = abs(zoot[selv]) > (1e0 + rpors)
+                    dstime = time[selv][dssel & seldscan]
+                    dscan[str(scann)] = {}
+                    for windex, dslc in enumerate(iviss.T):
+                        if True in np.isfinite(dslc[dssel & seldscan]):
+                            data = dslc[dssel & seldscan]
+                            selfinite = np.isfinite(data)
+                            dscanmod = np.poly1d(np.polyfit(dstime[selfinite],
+                                                            data[selfinite], 1))
+                            dscan[str(scann)][str(windex)] = dscanmod
                             if debug:
                                 plt.figure()
-                                plt.plot(eachwfos[finval], eachfos[finval], '+')
-                                plt.plot(eachwfos[finval], poly(eachwfos[finval]), 'o')
+                                plt.plot(time[selv][dssel], dslc[dssel], '+')
+                                plt.plot(time[selv][dssel], dscanmod(time[selv][dssel]),
+                                         'o')
                                 plt.show()
                                 pass
                             pass
                         pass
-                    for spec, wspec, phnoise in zip(viss.T, visw.T, photnoise.T):
-                        wavecorr = []
-                        for w in wspec:
-                            if (w < np.min(vrange)) or (w > np.max(vrange)):
-                                wavecorr.append(np.nan)
+                    pass
+                photnoise = np.sqrt(abs(viss.copy()))
+                for spec, wspec, phnoise in zip(viss.T, visw.T, photnoise.T):
+                    for scann, eachds in enumerate(ordsetds):
+                        dssel = vlincorr == eachds
+                        dstime = time[selv][dssel]
+                        clstsel = abs(zoot[selv][dssel]) > (1e0 + rpors)
+                        normspec = []
+                        for w, t in zip(wspec[dssel], dstime):
+                            if (w < np.min(cwave)) or (w > np.max(cwave)):
+                                normspec.append(np.nan)
                                 pass
                             else:
-                                diff = list(np.array(refwavec) - w)
+                                diff = list(cwave - w)
                                 closest = diff.index(min(diff))
-                                if str(closest) in witp.keys():
-                                    wavecorr.append(witp[str(closest)](w))
-                                    pass
-                                else: wavecorr.append(np.nan)
+                                n = dscan[str(scann)][str(closest)](t)
+                                normspec.append(n)
                                 pass
                             pass
-                        wavecorr = np.array(wavecorr)
-                        spec = spec/wavecorr
-                        phnoise = phnoise/wavecorr
+                        normspec = np.array(normspec)
+                        spec[dssel] = spec[dssel]/normspec
+                        phnoise[dssel] = phnoise[dssel]/normspec
+                        renorm = np.nanmedian(spec[dssel][clstsel])
+                        spec[dssel] /= renorm
+                        phnoise[dssel] /= renorm
                         pass
-                    check = np.array([np.nanstd(s) < 9e0*np.nanmedian(p)
-                                      for s, p in zip(viss, photnoise)])
-                    if np.sum(check) > 9:
-                        vnspec = np.array(viss)[check]
-                        nphotn = np.array(photnoise)[check]
-                        visw = np.array(visw)
-                        eclphase = phase[selv][check]
-                        if selftype in ['eclipse']:
-                            eclphase[eclphase < 0] = eclphase[eclphase < 0] + 1e0
-                            pass
-                        out['data'][p]['visits'].append(int(v))
-                        out['data'][p]['dvisnum'].append(set(visits[selv]))
-                        out['data'][p]['nspec'].append(vnspec)
-                        out['data'][p]['wavet'].append(cwave)
-                        out['data'][p]['wave'].append(visw[check])
-                        out['data'][p]['time'].append(time[selv][check])
-                        out['data'][p]['orbits'].append(orbits[selv][check])
-                        out['data'][p]['dispersion'].append(disp[selv][check])
-                        out['data'][p]['z'].append(z[selv][check])
-                        out['data'][p]['phase'].append(eclphase)
-                        out['data'][p]['photnoise'].append(nphotn)
-                        out['data'][p]['stdns'].append(np.nanstd(np.nanmedian(viss,
-                                                                              axis=1)))
-                        if verbose:
+                    phnoise /= np.sqrt(scanlen[selv])
+                    pass
+                # WAVELENGTH INTERPOLATION -----------------------------------------------
+                ootinv = abs(zoot[selv]) > (1e0 + rpors)
+                wfos, fos = tplbuild(viss[ootinv], visw[ootinv], vrange,
+                                     (disp[selv][ootinv])*1e-4, superres=True)
+                witp = {}
+                refwavec = [np.nanmedian(w) for w in wfos]
+                for eachwfos, eachfos in zip(wfos, fos):
+                    eachwfos = np.array(eachwfos)
+                    eachfos = np.array(eachfos)
+                    finval = np.isfinite(eachfos)
+                    key = refwavec.index(np.nanmedian(eachwfos))
+                    if np.sum(finval) > 2:
+                        poly = np.poly1d(np.polyfit(eachwfos[finval], eachfos[finval], 2))
+                        witp[str(key)] = poly
+                        if debug:
                             plt.figure()
-                            for w,s in zip(visw[check], vnspec):
-                                select = (w > np.min(vrange)) & (w < np.max(vrange))
-                                plt.plot(w[select], s[select], 'o')
-                                pass
-                            plt.ylabel('Normalized Spectra')
-                            plt.xlabel('Wavelength [$\\mu$m]')
-                            plt.xlim(np.min(vrange), np.max(vrange))
+                            plt.plot(eachwfos[finval], eachfos[finval], '+')
+                            plt.plot(eachwfos[finval], poly(eachwfos[finval]), 'o')
                             plt.show()
                             pass
                         pass
-                    else:
-                        out['data'][p]['trial'].append('Variance Excess')
-                        out['data'][p]['vignore'].append(v)
+                    pass
+                for spec, wspec, phnoise in zip(viss.T, visw.T, photnoise.T):
+                    wavecorr = []
+                    for w in wspec:
+                        if (w < np.min(vrange)) or (w > np.max(vrange)):
+                            wavecorr.append(np.nan)
+                            pass
+                        else:
+                            diff = list(np.array(refwavec) - w)
+                            closest = diff.index(min(diff))
+                            if str(closest) in witp.keys():
+                                wavecorr.append(witp[str(closest)](w))
+                                pass
+                            else: wavecorr.append(np.nan)
+                            pass
+                        pass
+                    wavecorr = np.array(wavecorr)
+                    spec = spec/wavecorr
+                    phnoise = phnoise/wavecorr
+                    pass
+                check = np.array([np.nanstd(s) < 15e0*np.nanmedian(phn)
+                                  for s, phn in zip(viss, photnoise)])
+                if np.sum(check) > 9:
+                    vnspec = np.array(viss)[check]
+                    nphotn = np.array(photnoise)[check]
+                    visw = np.array(visw)
+                    eclphase = phase[selv][check]
+                    if selftype in ['eclipse']:
+                        eclphase[eclphase < 0] = eclphase[eclphase < 0] + 1e0
+                        pass
+                    out['data'][p]['visits'].append(int(v))
+                    out['data'][p]['dvisnum'].append(set(visits[selv]))
+                    out['data'][p]['nspec'].append(vnspec)
+                    out['data'][p]['wavet'].append(cwave)
+                    out['data'][p]['wave'].append(visw[check])
+                    out['data'][p]['time'].append(time[selv][check])
+                    out['data'][p]['orbits'].append(orbits[selv][check])
+                    out['data'][p]['dispersion'].append(disp[selv][check])
+                    out['data'][p]['z'].append(z[selv][check])
+                    out['data'][p]['phase'].append(eclphase)
+                    out['data'][p]['photnoise'].append(nphotn)
+                    out['data'][p]['stdns'].append(np.nanstd(np.nanmedian(viss, axis=1)))
+                    if verbose:
+                        plt.figure()
+                        for w,s in zip(visw[check], vnspec):
+                            select = (w > np.min(vrange)) & (w < np.max(vrange))
+                            plt.plot(w[select], s[select], 'o')
+                            pass
+                        plt.ylabel('Normalized Spectra')
+                        plt.xlabel('Wavelength [$\\mu$m]')
+                        plt.xlim(np.min(vrange), np.max(vrange))
+                        plt.show()
                         pass
                     pass
                 else:
-                    out['data'][p]['trial'].append('Not Enough OOT Data')
+                    out['data'][p]['trial'].append('Variance Excess')
                     out['data'][p]['vignore'].append(v)
                     pass
                 pass
-            # VARIANCE EXCESS FROM LOST GUIDANCE -----------------------------------------
-            kickout = []
-            if out['data'][p]['stdns'].__len__() > 2:
-                stdns = np.array(out['data'][p]['stdns'])
-                vthr = np.nanpercentile(stdns, 66, interpolation='nearest')
-                ref = np.nanmean(stdns[stdns <= vthr])
-                stdref = np.nanstd(stdns[stdns <= vthr])
-                kickout = np.array(out['data'][p]['visits'])[stdns > ref + 3e0*stdref]
+            else:
+                out['data'][p]['trial'].append('Not Enough OOT Data')
+                out['data'][p]['vignore'].append(v)
                 pass
-            if kickout.__len__() > 0:
-                for v in kickout:
-                    i2pop = out['data'][p]['visits'].index(v)
-                    out['data'][p]['visits'].pop(i2pop)
-                    out['data'][p]['dvisnum'].pop(i2pop)
-                    out['data'][p]['wavet'].pop(i2pop)
-                    out['data'][p]['nspec'].pop(i2pop)
-                    out['data'][p]['wave'].pop(i2pop)
-                    out['data'][p]['time'].pop(i2pop)
-                    out['data'][p]['orbits'].pop(i2pop)
-                    out['data'][p]['dispersion'].pop(i2pop)
-                    out['data'][p]['z'].pop(i2pop)
-                    out['data'][p]['phase'].pop(i2pop)
-                    out['data'][p]['photnoise'].pop(i2pop)
-                    out['data'][p]['trial'].append('Lost Guidance Variance Excess')
-                    out['data'][p]['vignore'].append(v)
-                    pass
+            pass
+        # VARIANCE EXCESS FROM LOST GUIDANCE ---------------------------------------------
+        kickout = []
+        if out['data'][p]['stdns'].__len__() > 2:
+            stdns = np.array(out['data'][p]['stdns'])
+            vthr = np.nanpercentile(stdns, 66, interpolation='nearest')
+            ref = np.nanmean(stdns[stdns <= vthr])
+            stdref = np.nanstd(stdns[stdns <= vthr])
+            kickout = np.array(out['data'][p]['visits'])[stdns > ref + 3e0*stdref]
+            pass
+        if kickout.__len__() > 0:
+            for v in kickout:
+                i2pop = out['data'][p]['visits'].index(v)
+                out['data'][p]['visits'].pop(i2pop)
+                out['data'][p]['dvisnum'].pop(i2pop)
+                out['data'][p]['wavet'].pop(i2pop)
+                out['data'][p]['nspec'].pop(i2pop)
+                out['data'][p]['wave'].pop(i2pop)
+                out['data'][p]['time'].pop(i2pop)
+                out['data'][p]['orbits'].pop(i2pop)
+                out['data'][p]['dispersion'].pop(i2pop)
+                out['data'][p]['z'].pop(i2pop)
+                out['data'][p]['phase'].pop(i2pop)
+                out['data'][p]['photnoise'].pop(i2pop)
+                out['data'][p]['trial'].append('Lost Guidance Variance Excess')
+                out['data'][p]['vignore'].append(v)
                 pass
-            for v, m in zip(out['data'][p]['vignore'], out['data'][p]['trial']):
-                log.warning('>-- Visit %s: %s', str(int(v)), str(m))
-                pass
-            if out['data'][p]['visits'].__len__() > 0:
-                normed = True
-                out['STATUS'].append(True)
-                pass
+            pass
+        for v, m in zip(out['data'][p]['vignore'], out['data'][p]['trial']):
+            log.warning('--< Visit %s: %s', str(int(v)), str(m))
+            pass
+        if out['data'][p]['visits'].__len__() > 0:
+            normed = True
+            out['STATUS'].append(True)
             pass
         pass
     return normed
@@ -497,41 +527,49 @@ per wavelength bins
         selwave = list(allwave[dist < vdisp])
         selspec = list(allspec[dist < vdisp])
         seldist = list(dist[dist < vdisp])
-        cluster = [selwave[seldist.index(min(seldist))]]
-        cloud = [selspec[seldist.index(min(seldist))]]
-        selwave.pop(seldist.index(min(seldist)))
-        selspec.pop(seldist.index(min(seldist)))
-        while len(cluster) < disp.size:
-            seldist = list(abs(np.array(selwave) - np.mean(cluster)))
-            if seldist.__len__() > 0:
-                cluster.append(selwave[seldist.index(min(seldist))])
-                cloud.append(selspec[seldist.index(min(seldist))])
+        if seldist:
+            if np.min(seldist) < (vdisp/2e0):
+                cluster = [selwave[seldist.index(min(seldist))]]
+                cloud = [selspec[seldist.index(min(seldist))]]
                 selwave.pop(seldist.index(min(seldist)))
                 selspec.pop(seldist.index(min(seldist)))
+                while (cluster.__len__() < disp.size) and selwave:
+                    seldist = abs(np.array(selwave) - np.median(cluster))
+                    if np.min(seldist) < (vdisp/2e0):
+                        seldist = list(seldist)
+                        cluster.append(selwave[seldist.index(min(seldist))])
+                        cloud.append(selspec[seldist.index(min(seldist))])
+                        selwave.pop(seldist.index(min(seldist)))
+                        selspec.pop(seldist.index(min(seldist)))
+                        pass
+                    else:
+                        seldist = list(seldist)
+                        selwave.pop(seldist.index(min(seldist)))
+                        selspec.pop(seldist.index(min(seldist)))
+                        pass
+                    pass
+                if superres:
+                    wavet.append(cluster)
+                    template.append(cloud)
+                    pass
+                elif True in np.isfinite(cloud):
+                    if medest:
+                        arrcluster = np.array(cluster)
+                        arrcloud = np.array(cloud)
+                        wavet.append(np.median(arrcluster[np.isfinite(arrcloud)]))
+                        template.append(np.median(arrcloud[np.isfinite(arrcloud)]))
+                        pass
+                    else:
+                        arrcluster = np.array(cluster)
+                        arrcloud = np.array(cloud)
+                        wavet.append(np.mean(arrcluster[np.isfinite(arrcloud)]))
+                        template.append(np.mean(arrcloud[np.isfinite(arrcloud)]))
+                        pass
+                    pass
                 pass
-            else:
-                disp = list(disp)
-                disp.pop(-1)
-                disp = np.array(disp)
-                pass
+            finiteloop = np.median(cluster) + vdisp
             pass
-        if superres:
-            wavet.append(cluster)
-            template.append(cloud)
-            pass
-        else:
-            if medest:
-                arrcluster = np.array(cluster)
-                arrcloud = np.array(cloud)
-                wavet.append(np.median(arrcluster[np.isfinite(arrcloud)]))
-                template.append(np.median(arrcloud[np.isfinite(arrcloud)]))
-                pass
-            else:
-                wavet.append(np.nanmean(cluster))
-                template.append(np.nanmean(cloud))
-                pass
-            pass
-        finiteloop = np.mean(cluster) + vdisp
+        else: finiteloop = guess[-1] + vdisp
         while finiteloop in guess: finiteloop += vdisp
         guess.append(finiteloop)
         pass
@@ -706,17 +744,12 @@ G. ROUDIER: Orbital parameters recovery
                                            mu=0e0, tau=tauvs,
                                            lower=-3e-2/trdura,
                                            upper=3e-2/trdura, shape=shapevis)
-            allvitcp = pm.TruncatedNormal('vitcp',
-                                          mu=1e0, tau=tauvi,
-                                          lower=1e0 - 3e0*ootstd,
-                                          upper=1e0 + 3e0*ootstd, shape=shapevis)
             alloslope = pm.Normal('oslope', mu=0e0, tau=tauvs, shape=shapevis)
             alloitcp = pm.Normal('oitcp', mu=1e0, tau=tauvi, shape=shapevis)
             nodes.append(rprs)
             nodes.append(alltknot)
             nodes.append(inc)
             nodes.append(allvslope)
-            nodes.append(allvitcp)
             nodes.append(alloslope)
             nodes.append(alloitcp)
             _whitedata = pm.Normal('whitedata', mu=orbital(*nodes),
@@ -759,7 +792,7 @@ G. ROUDIER: Orbital parameters recovery
                                 g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0]))
             postim.append(timlc(time[i], orbits[i],
                                 vslope=np.nanmedian(mctrace['vslope__%i' % i]),
-                                vitcp=np.nanmedian(mctrace['vitcp__%i' % i]),
+                                vitcp=1e0,
                                 oslope=np.nanmedian(mctrace['oslope__%i' % i]),
                                 oitcp=np.nanmedian(mctrace['oitcp__%i' % i])))
             pass
@@ -869,7 +902,11 @@ G. ROUDIER: Stellar surface occulation model
         s1[s1 > 1e0] = 1e0
         s2 = (np.square(redz) + rprs**2 - np.square(redxrs))/(2e0*redz*rprs)
         s2[s2 > 1e0] = 1e0
-        s3 = (-redz + redxrs + rprs)*(redz + redxrs - rprs)*(redz - redxrs + rprs)*(redz + redxrs + rprs)
+        fs3 = -redz + redxrs + rprs
+        ss3 = redz + redxrs - rprs
+        ts3 = redz - redxrs + rprs
+        os3 = redz + redxrs + rprs
+        s3 = fs3*ss3*ts3*os3
         zselect = s3 < 0e0
         if True in zselect: s3[zselect] = 0e0
         out[select & ~zzero] = (np.square(redxrs)*np.arccos(s1) +
@@ -968,30 +1005,24 @@ OPTIONAL mumin set up on HAT-P-41 stellar class
     if debug: plt.figure()
     for iwave in np.arange(nwave):
         if model == 'linear':
-            out = lm.minimize(lnldx, params, args=(fitmup,
-                                                   fitprfs[iwave], fitsprfs[iwave]))
+            out = lm.minimize(lnldx, params,
+                              args=(fitmup, fitprfs[iwave], fitsprfs[iwave]))
             cl.append([out.params['gamma1'].value])
             el.append([out.params['gamma1'].stderr])
             pass
         if model == 'quadratic':
-            out = lm.minimize(qdldx, params, args=(fitmup,
-                                                   fitprfs[iwave], fitsprfs[iwave]))
-            cl.append([out.params['gamma1'].value,
-                       out.params['gamma2'].value])
-            el.append([out.params['gamma1'].stderr,
-                       out.params['gamma2'].stderr])
+            out = lm.minimize(qdldx, params,
+                              args=(fitmup, fitprfs[iwave], fitsprfs[iwave]))
+            cl.append([out.params['gamma1'].value, out.params['gamma2'].value])
+            el.append([out.params['gamma1'].stderr, out.params['gamma2'].stderr])
             pass
         if model == 'nonlinear':
-            out = lm.minimize(nlldx, params, args=(fitmup,
-                                                   fitprfs[iwave], fitsprfs[iwave]))
-            cl.append([out.params['gamma1'].value,
-                       out.params['gamma2'].value,
-                       out.params['gamma3'].value,
-                       out.params['gamma4'].value])
-            el.append([out.params['gamma1'].stderr,
-                       out.params['gamma2'].stderr,
-                       out.params['gamma3'].stderr,
-                       out.params['gamma4'].stderr])
+            out = lm.minimize(nlldx, params,
+                              args=(fitmup, fitprfs[iwave], fitsprfs[iwave]))
+            cl.append([out.params['gamma1'].value, out.params['gamma2'].value,
+                       out.params['gamma3'].value, out.params['gamma4'].value])
+            el.append([out.params['gamma1'].stderr, out.params['gamma2'].stderr,
+                       out.params['gamma3'].stderr, out.params['gamma4'].stderr])
             pass
         if debug:
             plt.plot(mup, prfs[iwave], 'k^')
@@ -1152,8 +1183,7 @@ G. ROUDIER: Exoplanet spectrum recovery
                 pass
             else: g1, g2, g3, g4 = [[0], [0], [0], [0]]
             out['data'][p]['LD'].append([g1[0], g2[0], g3[0], g4[0]])
-            model = tldlc(abs(allz), whiterprs, g1=g1[0], g2=g2[0], g3=g3[0],
-                          g4=g4[0])
+            model = tldlc(abs(allz), whiterprs, g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0])
             if verbose:
                 plt.figure()
                 plt.title(str(int(1e3*np.mean([wl, wh])))+' nm')
@@ -1170,8 +1200,7 @@ G. ROUDIER: Exoplanet spectrum recovery
             pgrid = np.exp(pgrid)
             pressure = pgrid[::-1]
             mixratio, fH2, fHe = crbcore.crbce(pressure, eqtemp)
-            mmw, fH2, fHe = crbcore.getmmw(mixratio, protosolar=False, fH2=fH2,
-                                           fHe=fHe)
+            mmw, fH2, fHe = crbcore.getmmw(mixratio, protosolar=False, fH2=fH2, fHe=fHe)
             mmw = mmw*cst.m_p  # [kg]
             Hs = cst.Boltzmann*eqtemp/(mmw*1e-2*(10.**priors[p]['logg']))  # [m]
             Hs = 3e0*Hs/(priors['R*']*sscmks['Rsun'])
@@ -1190,15 +1219,10 @@ G. ROUDIER: Exoplanet spectrum recovery
                 allvslope = pm.TruncatedNormal('vslope', mu=0e0, tau=tauvs,
                                                lower=-3e-2/trdura,
                                                upper=3e-2/trdura, shape=shapevis)
-                allvitcp = pm.TruncatedNormal('vitcp',
-                                              mu=1e0, tau=tauvi,
-                                              lower=1e0 - 3e0*ootstd,
-                                              upper=1e0 + 3e0*ootstd, shape=shapevis)
                 alloslope = pm.Normal('oslope', mu=0, tau=tauvs, shape=shapevis)
                 alloitcp = pm.Normal('oitcp', mu=1e0, tau=tauvi, shape=shapevis)
                 nodes.append(rprs)
                 nodes.append(allvslope)
-                nodes.append(allvitcp)
                 nodes.append(alloslope)
                 nodes.append(alloitcp)
                 _wbdata = pm.Normal('wbdata', mu=lcmodel(*nodes),
@@ -1235,12 +1259,12 @@ G. ROUDIER: Exoplanet spectrum recovery
 # -------------- -----------------------------------------------------
 # -- PYMC3 DETERMINISTIC FUNCTIONS -- --------------------------------
 @tco.as_op(itypes=[tt.dscalar, tt.dvector, tt.dscalar,
-                   tt.dvector, tt.dvector, tt.dvector, tt.dvector], otypes=[tt.dvector])
+                   tt.dvector, tt.dvector, tt.dvector], otypes=[tt.dvector])
 def orbital(*whiteparams):
     '''
 G. ROUDIER: Orbital model
     '''
-    r, atk, icln, avs, avi, aos, aoi = whiteparams
+    r, atk, icln, avs, aos, aoi = whiteparams
     if ctxt.orbp['inc'] == 9e1: inclination = 9e1
     else: inclination = float(icln)
     out = []
@@ -1253,23 +1277,23 @@ G. ROUDIER: Orbital model
         lcout = tldlc(abs(omz), float(r),
                       g1=ctxt.g1[0], g2=ctxt.g2[0], g3=ctxt.g3[0], g4=ctxt.g4[0])
         imout = timlc(omt, ctxt.orbits[i],
-                      vslope=float(avs[i]), vitcp=float(avi[i]),
+                      vslope=float(avs[i]), vitcp=1e0,
                       oslope=float(aos[i]), oitcp=float(aoi[i]))
         out.extend(lcout*imout)
         pass
     return np.array(out)[ctxt.selectfit]
 
-@tco.as_op(itypes=[tt.dscalar, tt.dvector, tt.dvector, tt.dvector, tt.dvector],
+@tco.as_op(itypes=[tt.dscalar, tt.dvector, tt.dvector, tt.dvector],
            otypes=[tt.dvector])
 def lcmodel(*specparams):
     '''
 G. ROUDIER: Spectral light curve model
     '''
-    r, avs, avi, aos, aoi = specparams
+    r, avs, aos, aoi = specparams
     allimout = []
     for iv in range(len(ctxt.visits)):
         imout = timlc(ctxt.time[iv], ctxt.orbits[iv],
-                      vslope=float(avs[iv]), vitcp=float(avi[iv]),
+                      vslope=float(avs[iv]), vitcp=1e0,
                       oslope=float(aos[iv]), oitcp=float(aoi[iv]))
         allimout.extend(imout)
         pass

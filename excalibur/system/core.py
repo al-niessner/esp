@@ -6,7 +6,7 @@ import numpy as np
 # -- SOLAR SYSTEM CONSTANTS -- ---------------------------------------
 def ssconstants(mks=False, cgs=False):
     '''
-IAU 2012
+G. ROUDIER: IAU 2012
     '''
     if mks and cgs: ssc = {'Idiot':True}
     if not(mks or cgs):
@@ -37,6 +37,9 @@ IAU 2012
 # ---------------------------- ---------------------------------------
 # -- SV VALIDITY -- --------------------------------------------------
 def checksv(sv):
+    '''
+G. ROUDIER: Tests for empty SV shell
+    '''
     valid = False
     errstring = None
     if sv['STATUS'][-1]: valid = True
@@ -45,6 +48,9 @@ def checksv(sv):
 # ----------------- --------------------------------------------------
 # -- BUILD SYSTEM PRIORS -- ------------------------------------------
 def buildsp(autofill, out):
+    '''
+G. ROUDIER: Surjection from target.autofill.parameters to dictionary output
+    '''
     target = [t for t in autofill['starID'].keys()]
     target = target[0]
     for p in autofill['starID'][target]['planets']: out['priors'][p] = {}
@@ -206,7 +212,7 @@ def buildsp(autofill, out):
             out['autofill'].append(p+':inc')
             index = out['needed'].index(p+':inc')
             out['needed'].pop(index)
-            out['priors'][p]['inc_units'] = ['[degree]']
+            out['priors'][p]['inc_units'] = '[degree]'
             out['priors'][p]['inc_ref'] = 'System Prior Auto Fill'
             for ext in out['extsmdt']:
                 err = inc/1e1
@@ -268,6 +274,9 @@ def buildsp(autofill, out):
 # ------------------------- ------------------------------------------
 # -- FORCE PRIOR PARAMETERS -- ---------------------------------------
 def forcepar(overwrite, out):
+    '''
+G. ROUDIER: Completes/Overrides parameters using target/edit.py
+    '''
     forced = True
     for key in overwrite.keys():
         mainkey = key.split(':')[0]

@@ -124,7 +124,8 @@ G. ROUDIER: See inheritance and CI5 thread with A NIESSNER for __init__() method
         return
 
     def _whitelight(self, nrm, fin, out):
-        wl = trncore.whitelight(nrm, fin, out, self._type, verbose=False)
+        wl = trncore.whitelight(nrm, fin, out, self._type,
+                                chainlen=int(1e4), verbose=False)
         return wl
 
     def _failure(self, errstr):
@@ -181,7 +182,8 @@ G. ROUDIER: See inheritance and CI5 thread with A NIESSNER for __init__() method
         return
 
     def _spectrum(self, fin, nrm, wht, out):
-        s = trncore.spectrum(fin, nrm, wht, out, self._type, verbose=False)
+        s = trncore.spectrum(fin, nrm, wht, out, self._type,
+                             chainlen=int(1e4), verbose=False)
         return s
 
     def _failure(self, errstr):
