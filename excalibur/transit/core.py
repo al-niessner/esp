@@ -442,8 +442,15 @@ G. ROUDIER: Out of transit data normalization
                         phnoise = phnoise/wavecorr
                         pass
                     pass
-                check = np.array([np.nanstd(s) < 15e0*np.nanmedian(phn)
-                                  for s, phn in zip(viss, photnoise)])
+                check = []
+                for w, s, pn in zip(visw, viss, photnoise):
+                    wselect = (w >= np.min(vrange)) & (w <= np.max(vrange))
+                    if True in wselect:
+                        check.append(np.nanstd(s[wselect]) < (15e0*np.nanmedian(pn)))
+                        pass
+                    else: check.append(False)
+                    pass
+                check = np.array(check)
                 if np.sum(check) > 9:
                     vnspec = np.array(viss)[check]
                     nphotn = np.array(photnoise)[check]
@@ -583,8 +590,9 @@ per wavelength bins
                         template.append(np.mean(arrcloud[np.isfinite(arrcloud)]))
                         pass
                     pass
+                finiteloop = np.median(cluster) + vdisp
                 pass
-            finiteloop = np.median(cluster) + vdisp
+            finiteloop = guess[-1] + vdisp
             pass
         else: finiteloop = guess[-1] + vdisp
         while finiteloop in guess: finiteloop += vdisp
