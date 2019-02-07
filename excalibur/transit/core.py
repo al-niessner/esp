@@ -6,23 +6,20 @@ import excalibur.cerberus.core as crbcore
 import excalibur.transit.core
 
 import logging
+import numpy as np
+import lmfit as lm
+
+import pymc3 as pm
 log = logging.getLogger(__name__)
 pymc3log = logging.getLogger('pymc3')
 pymc3log.setLevel(logging.ERROR)
 
-import numpy as np
-import lmfit as lm
-import pymc3 as pm
 import scipy.constants as cst
 import matplotlib.pyplot as plt
 
 import theano.tensor as tt
 import theano.compile.ops as tco
 
-import ldtk
-from ldtk import LDPSetCreator, BoxcarFilter
-from ldtk.ldmodel import LinearModel, QuadraticModel, NonlinearModel
-# -- GLOBAL CONTEXT FOR PYMC3 DETERMINISTICS ---------------------------------------------
 from collections import namedtuple
 CONTEXT = namedtuple('CONTEXT', ['alt', 'ald', 'allz', 'orbp', 'commonoim', 'ecc',
                                  'g1', 'g2', 'g3', 'g4', 'ootoindex', 'ootorbits',
@@ -37,7 +34,7 @@ def ctxtupdt(alt=None, ald=None, allz=None, orbp=None, commonoim=None, ecc=None,
              orbits=None, period=None, selectfit=None, smaors=None, time=None,
              tmjd=None, ttv=None, valid=None, visits=None, aos=None, avi=None):
     '''
-G. ROUDIER: Update context
+G. ROUDIER: Update global context for pymc3 deterministics
     '''
     excalibur.transit.core.ctxt = CONTEXT(alt=alt, ald=ald, allz=allz, orbp=orbp,
                                           commonoim=commonoim, ecc=ecc, g1=g1, g2=g2,
@@ -47,10 +44,13 @@ G. ROUDIER: Update context
                                           smaors=smaors, time=time, tmjd=tmjd, ttv=ttv,
                                           valid=valid, visits=visits, aos=aos, avi=avi)
     return
-# A NIESSNER: INLINE HACK TO ldtk.LDPSet -- ----------------------------------------------
+
+import ldtk
+from ldtk import LDPSetCreator, BoxcarFilter
+from ldtk.ldmodel import LinearModel, QuadraticModel, NonlinearModel
 class LDPSet(ldtk.LDPSet):
     '''
-A. NIESSNER: Despotic bypass of CIs
+A. NIESSNER: INLINE HACK TO ldtk.LDPSet
     '''
     @staticmethod
     def is_mime(): return True
@@ -94,6 +94,8 @@ G. ROUDIER: Out of transit data normalization
         log.warning('>-- Planet: %s', p)
         out['data'][p] = {}
         rpors = priors[p]['rp']/priors['R*']*ssc['Rjup/Rsun']
+        mttref = priors[p]['t0']
+        if mttref > 2400000.5: mttref -= 2400000.5
         ignore = np.array(tme['data'][p]['ignore']) | np.array(cal['data']['IGNORED'])
         orbits = tme['data'][p]['orbits']
         dvisits = tme['data'][p]['dvisits']
@@ -303,6 +305,10 @@ G. ROUDIER: Out of transit data normalization
                         plt.show()
                         pass
                     hstbreath[str(int(thisorb))] = params
+                    if False in np.isfinite([np.nanmedian(alltfo), np.nanmedian(alldfo)]):
+                        log.warning('--< No ramp for Visit :%s Orbit: %s',
+                                    str(int(v)), str(int(thisorb)))
+                        pass
                     pass
                 viss = np.array(viss)
                 for spec in viss.T:
@@ -313,14 +319,16 @@ G. ROUDIER: Out of transit data normalization
                             pass
                         elif hstbreath:
                             choice = [int(key) for key in hstbreath]
-                            if firstorb in choice: choice.pop(choice.index(firstorb))
-                            diff = list(np.array(choice) - orb)
+                            if (firstorb in choice) and (choice.__len__() > 1):
+                                choice.pop(choice.index(firstorb))
+                                pass
+                            diff = list(abs(np.array(choice) - orb))
                             closest = diff.index(min(diff))
                             model = hstramp(hstbreath[str(choice[closest])],
                                             time[selv][selorb])
                             pass
                         else: model = np.array([1e0]*np.sum(selorb))
-                        spec[selorb] /= model
+                        if np.all(np.isfinite(model)): spec[selorb] /= model
                         pass
                     pass
                 # DOUBLE SCAN CORRECTION -------------------------------------------------
@@ -338,7 +346,7 @@ G. ROUDIER: Out of transit data normalization
                 for scann, eachds in enumerate(ordsetds):
                     dssel = vlincorr == eachds
                     seldscan = abs(zoot[selv]) > (1e0 + rpors)
-                    dstime = time[selv][dssel & seldscan]
+                    dstime = time[selv][dssel & seldscan] - mttref
                     dscan[str(scann)] = {}
                     for windex, dslc in enumerate(iviss.T):
                         if True in np.isfinite(dslc[dssel & seldscan]):
@@ -348,10 +356,10 @@ G. ROUDIER: Out of transit data normalization
                                                             data[selfinite], 1))
                             dscan[str(scann)][str(windex)] = dscanmod
                             if debug:
+                                tdebug = time[selv][dssel] - mttref
                                 plt.figure()
-                                plt.plot(time[selv][dssel], dslc[dssel], '+')
-                                plt.plot(time[selv][dssel], dscanmod(time[selv][dssel]),
-                                         'o')
+                                plt.plot(tdebug, dslc[dssel], '+')
+                                plt.plot(tdebug, dscanmod(tdebug), 'o')
                                 plt.show()
                                 pass
                             pass
@@ -361,7 +369,7 @@ G. ROUDIER: Out of transit data normalization
                 for spec, wspec, phnoise in zip(viss.T, visw.T, photnoise.T):
                     for scann, eachds in enumerate(ordsetds):
                         dssel = vlincorr == eachds
-                        dstime = time[selv][dssel]
+                        dstime = time[selv][dssel] - mttref
                         clstsel = abs(zoot[selv][dssel]) > (1e0 + rpors)
                         normspec = []
                         for w, t in zip(wspec[dssel], dstime):
@@ -369,18 +377,25 @@ G. ROUDIER: Out of transit data normalization
                                 normspec.append(np.nan)
                                 pass
                             else:
-                                diff = list(cwave - w)
+                                diff = list(abs(cwave - w))
                                 closest = diff.index(min(diff))
-                                n = dscan[str(scann)][str(closest)](t)
-                                normspec.append(n)
+                                if str(closest) in dscan[str(scann)]:
+                                    n = dscan[str(scann)][str(closest)](t)
+                                    normspec.append(n)
+                                    pass
+                                else: normspec.append(np.nan)
                                 pass
                             pass
                         normspec = np.array(normspec)
-                        spec[dssel] = spec[dssel]/normspec
-                        phnoise[dssel] = phnoise[dssel]/normspec
+                        if True in np.isfinite(normspec):
+                            spec[dssel] = spec[dssel]/normspec
+                            phnoise[dssel] = phnoise[dssel]/normspec
+                            pass
                         renorm = np.nanmedian(spec[dssel][clstsel])
-                        spec[dssel] /= renorm
-                        phnoise[dssel] /= renorm
+                        if np.isfinite(renorm):
+                            spec[dssel] /= renorm
+                            phnoise[dssel] /= renorm
+                            pass
                         pass
                     phnoise /= np.sqrt(scanlen[selv])
                     pass
@@ -413,7 +428,7 @@ G. ROUDIER: Out of transit data normalization
                             wavecorr.append(np.nan)
                             pass
                         else:
-                            diff = list(np.array(refwavec) - w)
+                            diff = list(abs(np.array(refwavec) - w))
                             closest = diff.index(min(diff))
                             if str(closest) in witp.keys():
                                 wavecorr.append(witp[str(closest)](w))
@@ -422,8 +437,10 @@ G. ROUDIER: Out of transit data normalization
                             pass
                         pass
                     wavecorr = np.array(wavecorr)
-                    spec = spec/wavecorr
-                    phnoise = phnoise/wavecorr
+                    if True in np.isfinite(wavecorr):
+                        spec = spec/wavecorr
+                        phnoise = phnoise/wavecorr
+                        pass
                     pass
                 check = np.array([np.nanstd(s) < 15e0*np.nanmedian(phn)
                                   for s, phn in zip(viss, photnoise)])
