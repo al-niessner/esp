@@ -63,10 +63,10 @@ G. ROUDIER: Uses system orbital parameters to guide the dataset towards transit,
     '''
     chunked = False
     priors = force['priors'].copy()
+    dbs = os.path.join(dawgie.context.data_dbs, 'mast')
+    data = {'LOC':[], 'SCANANGLE':[], 'TIME':[], 'EXPLEN':[]}
     # LOAD DATA ------------------------------------------------------
-    if 'WFC3' in ext:
-        dbs = os.path.join(dawgie.context.data_dbs, 'mast')
-        data = {'LOC':[], 'SCANANGLE':[], 'TIME':[], 'EXPLEN':[]}
+    if ('WFC3' in ext) and ('SCAN' in ext):
         for loc in sorted(clc['LOC']):
             fullloc = os.path.join(dbs, loc)
             with pyfits.open(fullloc) as hdulist:
@@ -83,6 +83,32 @@ G. ROUDIER: Uses system orbital parameters to guide the dataset towards transit,
                 data['LOC'].append(loc)
                 data['TIME'].append(np.nanmean(ftime))
                 data['EXPLEN'].append(header0['EXPTIME'])
+                pass
+            pass
+        pass
+    elif 'STARE' in ext:
+        for loc in sorted(clc['LOC']):
+            fullloc = os.path.join(dbs, loc)
+            with pyfits.open(fullloc) as hdulist:
+                header0 = hdulist[0].header
+                if 'SCAN_ANG' in header0: scanangle = header0['SCAN_ANG']
+                elif 'PA_V3' in header0: scanangle = header0['PA_V3']
+                else: scanangle = 666
+                ftime = []
+                allexplen = []
+                allloc = []
+                for fits in hdulist:
+                    if (fits.size != 0) and (fits.header['EXTNAME'] in ['SCI']):
+                        ftime.append(float(fits.header['EXPEND']))
+                        allexplen.append(float(fits.header['EXPTIME']))
+                        allloc.append(fits.header['EXPNAME'])
+                        pass
+                    pass
+                allscanangle = [scanangle]*len(allexplen)
+                data['SCANANGLE'].extend(allscanangle)
+                data['LOC'].extend(allloc)
+                data['TIME'].extend(ftime)
+                data['EXPLEN'].extend(allexplen)
                 pass
             pass
         pass
@@ -895,6 +921,7 @@ http://www.stsci.edu/hst/wfc3/documents/ISRs/WFC3-2009-18.pdf
 http://www.stsci.edu/hst/wfc3/documents/ISRs/WFC3-2009-17.pdf
 http://www.stsci.edu/hst/stis/design/gratings/documents/handbooks/currentIHB/c13_specref07.html
 http://www.stsci.edu/hst/stis/design/gratings/documents/handbooks/currentIHB/c13_specref16.html
+http://www.stsci.edu/hst/stis/design/gratings/documents/handbooks/currentIHB/c13_specref05.html
     '''
     fltr = flttype.split('-')[3]
     vrange = None
@@ -902,6 +929,7 @@ http://www.stsci.edu/hst/stis/design/gratings/documents/handbooks/currentIHB/c13
     if fltr in ['G102']: vrange = [0.80, 1.14]
     if fltr in ['G430L']: vrange = [0.30, 0.55]
     if fltr in ['G140M']: vrange = [0.12, 0.17]
+    if fltr in ['G750L']: vrange = [0.55, 0.95]
     return vrange
 # ----------------------------- --------------------------------------
 # -- FILTERS AND GRISMS -- -------------------------------------------
@@ -912,6 +940,9 @@ G. ROUDIER: Filters and grisms
 http://www.stsci.edu/hst/wfc3/documents/handbooks/currentDHB/wfc3_dhb.pdf
 G102 http://www.stsci.edu/hst/wfc3/documents/ISRs/WFC3-2009-18.pdf
 G141 http://www.stsci.edu/hst/wfc3/documents/ISRs/WFC3-2009-17.pdf
+http://www.stsci.edu/hst/stis/design/gratings/documents/handbooks/currentIHB/c13_specref07.html
+http://www.stsci.edu/hst/stis/design/gratings/documents/handbooks/currentIHB/c13_specref16.html
+http://www.stsci.edu/hst/stis/design/gratings/documents/handbooks/currentIHB/c13_specref05.html
     '''
     fltr = flttype.split('-')[3]
     wvrng = None
@@ -933,6 +964,12 @@ G141 http://www.stsci.edu/hst/wfc3/documents/ISRs/WFC3-2009-17.pdf
         disp = 2.73  # Angstroms/Pixel
         llim = 2.6
         ulim = 2.9
+        pass
+    if fltr == 'G750L':
+        wvrng = [524e1, 1027e1]  # Angstroms
+        disp = 4.92  # Angstroms/Pixel
+        llim = 4.91
+        ulim = 4.93
         pass
     return wvrng, disp, llim, ulim
 # ------------------------ -------------------------------------------
@@ -1056,6 +1093,7 @@ ftp://ftp.stsci.edu/cdbs/comp/wfc3/
     if grism == 'G141': lightpath.append('WFC3/wfc3_ir_g141_src_004_syn.fits')
     if grism == 'G102': lightpath.append('WFC3/wfc3_ir_g102_src_003_syn.fits')
     if grism == 'G430L': lightpath.append('STIS/stis_g430l_009_syn.fits')
+    if grism == 'G750L': lightpath.append('STIS/stis_g750l_009_syn.fits')
     if detector == 'IR':
         lightpath.extend(['WFC3/wfc3_ir_rcp_001_syn.fits',
                           'WFC3/wfc3_ir_mask_001_syn.fits',
@@ -1110,7 +1148,7 @@ G. ROUDIER: Loads optical element .fits calibration file
     return muref, t
 # ------------------- ------------------------------------------------
 # -- WAVELENGTH SOLUTION -- ------------------------------------------
-def wavesol(spectrum, tt, wavett, disper, siv=None, fd=False, bck=None,
+def wavesol(spectrum, tt, wavett, disper, siv=None, fd=False, bck=None, fs=False,
             debug=False, ovszspc=False):
     '''
 G. ROUDIER: Wavelength calibration on log10 spectrum to emphasize the
@@ -1140,7 +1178,7 @@ edges, approximating the log(stellar spectrum) with a linear model
     else: params.add('slope', value=siv, vary=False)
     if fd or ovszspc: params.add('disper', value=disper, vary=False)
     else: params.add('disper', value=disper)
-    if fd: params.add('shift', value=shift, vary=False)
+    if fs: params.add('shift', value=shift, vary=False)
     else: params.add('shift', value=shift)
     out = lm.minimize(wcme, params, args=(logspec, mutt, logtt, False))
     disper = out.params['disper'].value
@@ -1625,3 +1663,338 @@ G. ROUDIER: WFC3 STARE Calibration
     if calibrated: out['STATUS'].append(True)
     return calibrated
 # -------------------------- -----------------------------------------
+# -- STIS CALIBRATION -- ---------------------------------------------
+def stiscal(clc, tim, tid, flttype, out,
+            verbose=False, debug=True):
+    '''
+R. ESTRELA: STIS .flt data extraction and wavelength calibration
+    '''
+    calibrated = False
+    # VISIT NUMBERING --------------------------------------------------------------------
+    for pkey in tim['data'].keys(): visits = np.array(tim['data'][pkey]['dvisits'])
+    # OPTICS AND FILTER ------------------------------------------------------------------
+    vrange = validrange(flttype)
+    _wvrng, disp, ldisp, udisp = fng(flttype)
+    # DATA FORMAT ------------------------------------------------------------------------
+    dbs = os.path.join(dawgie.context.data_dbs, 'mast')
+    data = {'LOC':[], 'EPS':[], 'DISPLIM':[ldisp, udisp],
+            'SCANRATE':[], 'SCANLENGTH':[], 'SCANANGLE':[],
+            'EXP':[], 'EXPERR':[], 'EXPFLAG':[], 'VRANGE':vrange,
+            'TIME':[], 'EXPLEN':[], 'MIN':[], 'MAX':[], 'TRIAL':[]}
+    # LOAD DATA --------------------------------------------------------------------------
+    for loc in sorted(clc['LOC']):
+        fullloc = os.path.join(dbs, loc)
+        with pyfits.open(fullloc) as hdulist:
+            header0 = hdulist[0].header
+            if 'SCAN_ANG' in header0: scanangle = header0['SCAN_ANG']
+            elif 'PA_V3' in header0: scanangle = header0['PA_V3']
+            else: scanangle = 666
+            allloc = []
+            alltime = []
+            allexplen = []
+            alleps = []
+            allexp = []
+            allexperr = []
+            allmask = []
+            allmin = []
+            allmax = []
+            for fits in hdulist:
+                if (fits.size != 0) and (fits.header['EXTNAME']=='SCI'):
+                    allloc.append(fits.header['EXPNAME'])
+                    alltime.append(float(fits.header['EXPEND']))
+                    allexplen.append(float(fits.header['EXPTIME']))
+                    fitsdata = np.empty(fits.data.shape)
+                    fitsdata[:] = fits.data[:]
+                    test = fits.header['BUNIT']
+                    eps = False
+                    if test != 'COUNTS': eps = True
+                    alleps.append(eps)
+                    allmin.append(float(fits.header['GOODMIN']))
+                    allmax.append(float(fits.header['GOODMAX']))
+                    # BINARIES
+                    # GMR: Let's put that in the mask someday
+                    if tid in ['HAT-P-1']: allexp.append(fitsdata[0:120, :])
+                    else: allexp.append(fitsdata)
+                    del fits.data
+                    pass
+                if 'EXTNAME' in fits.header:
+                    if (fits.header['EXTNAME'] in ['ERR', 'DQ']):
+                        fitsdata = np.empty(fits.data.shape)
+                        fitsdata[:] = fits.data[:]
+                        if fits.header['EXTNAME'] == 'ERR': allexperr.append(fitsdata)
+                        if fits.header['EXTNAME'] == 'DQ': allmask.append(fitsdata)
+                        del fits.data
+                        pass
+                    if eps:
+                        eps2count = allexplen[-1]*float(header0['CCDGAIN'])
+                        allexp[-1] = allexp[-1]*eps2count
+                        allexperr[-1] = allexperr[-1]*eps2count
+                        pass
+                    pass
+                pass
+            allscanangle = [scanangle]*len(allloc)
+            allscanlength = [1e0]*len(allloc)
+            allscanrate = [0e0]*len(allloc)
+            data['LOC'].extend(allloc)
+            data['EPS'].extend(alleps)
+            data['SCANRATE'].extend(allscanrate)
+            data['SCANLENGTH'].extend(allscanlength)
+            data['SCANANGLE'].extend(allscanangle)
+            data['EXP'].extend(allexp)
+            data['EXPERR'].extend(allexperr)
+            data['TIME'].extend(alltime)
+            data['EXPLEN'].extend(allexplen)
+            data['MIN'].extend(allmin)
+            data['MAX'].extend(allmax)
+            pass
+        pass
+    data['MEXP'] = data['EXP'].copy()
+    data['MASK'] = data['EXPFLAG'].copy()
+    data['IGNORED'] = np.array([False]*len(data['LOC']))
+    data['FLOODLVL'] = [np.nan]*len(data['LOC'])
+    data['TRIAL'] = ['']*len(data['LOC'])
+    data['SPECTRUM'] = [np.array([np.nan])]*len(data['LOC'])
+    data['SPECERR'] = [np.array([np.nan])]*len(data['LOC'])
+    data['TEMPLATE'] = [np.array([np.nan])]*len(data['LOC'])
+    data['NSPEC'] = [1e0]*len(data['LOC'])
+    # REJECT OUTLIERS IN EXPOSURE LENGTH -------------------------------------------------
+    for v in set(visits):
+        select = visits == v
+        visitexplength = np.array(data['EXPLEN'])[select]
+        visitignore = data['IGNORED'][select]
+        ref = np.nanmedian(visitexplength)
+        visitignore[visitexplength != ref] = True
+        data['IGNORED'][select] = visitignore
+        pass
+    for index, ignore in enumerate(data['IGNORED']):
+        frame = data['MEXP'][index].copy()
+        if not ignore:
+            data['SPECTRUM'][index] = np.nansum(frame, axis=0)
+            data['SPECERR'][index] = np.sqrt(np.nansum(frame, axis=0))
+            pass
+        else:
+            data['SPECTRUM'][index] = np.nansum(frame, axis=0)*np.nan
+            data['SPECERR'][index] = np.nansum(frame, axis=0)*np.nan
+            data['TRIAL'][index] = 'Exposure Length Outlier'
+            pass
+        pass
+    # MASK BAD PIXELS IN SPECTRUM --------------------------------------------------------
+    for v in set(visits):
+        select = (visits == v) & ~(data['IGNORED'])
+        specarray = np.array([s for s, ok in zip(data['SPECTRUM'], select) if ok])
+        trans = np.transpose(specarray)
+        template = np.nanmedian(trans, axis=1)
+        # TEMPLATE MEDIAN 5 POINTS LOW PASS FILTER ---------------------------------------
+        smootht = []
+        smootht.extend([template[0]]*2)
+        smootht.extend(template)
+        smootht.extend([template[-1]]*2)
+        for index in np.arange(len(template)):
+            medianvalue = np.nanmedian(template[index:index+5])
+            smootht[2+index] = medianvalue
+            pass
+        smootht = smootht[2:-2]
+        if debug:
+            plt.figure()
+            plt.plot(template, 'o')
+            plt.plot(smootht)
+            plt.show()
+            pass
+        template = np.array(smootht)
+        for vindex, valid in enumerate(select):
+            if valid: data['TEMPLATE'][vindex] = template
+            pass
+        pass
+    wavett, tt = ag2ttf(flttype)
+    # COSMIC RAYS REJECTION --------------------------------------------------------------
+    data['PHT2CNT'] = [np.nan]*len(data['LOC'])
+    data['WAVE'] = [np.array([np.nan])]*len(data['LOC'])
+    data['DISPERSION'] = [np.nan]*len(data['LOC'])
+    data['SHIFT'] = [np.nan]*len(data['LOC'])
+    allsi = []
+    for index, rejected in enumerate(data['IGNORED']):
+        if not rejected:
+            template = data['TEMPLATE'][index]
+            spec = data['SPECTRUM'][index]
+            temp_spec = spec/template
+            ht25 = np.nanpercentile(temp_spec,25)
+            lt75 = np.nanpercentile(temp_spec,75)
+            std = np.std(temp_spec[(temp_spec > ht25) & (temp_spec < lt75)])
+            # BAD PIXEL THRESHOLD --------------------------------------------------------
+            bpthr = temp_spec > np.nanmedian(temp_spec) + 3e0*std
+            if True in bpthr: spec[bpthr] = np.nan
+            data['SPECTRUM'][index] = spec
+            # FIRST WAVESOL --------------------------------------------------------------
+            # scaleco = np.nanmax(tt) / np.nanmin(tt[tt > 0])
+            scaleco = 1e1
+            if np.sum(np.isfinite(spec)) > (spec.size/2):
+                wavecalspec = spec.copy()
+                finitespec = np.isfinite(spec)
+                nanme = spec[finitespec] < (np.nanmax(wavecalspec)/scaleco)
+                if True in nanme:
+                    finwavecalspec = wavecalspec[finitespec]
+                    finwavecalspec[nanme] = np.nan
+                    wavecalspec[finitespec] = finwavecalspec
+                    pass
+                selref = tt > (np.nanmax(tt)/scaleco)
+                # dispersion is fixed, shift is not
+                w, d, s, si, _bck = wavesol(abs(wavecalspec), tt[selref], wavett[selref], disp,
+                                            fd=True, fs=False, debug=False)
+                data['WAVE'][index] = w
+                allsi.append(si)
+                pass
+            else:
+                data['IGNORED'][index] = True
+                data['TRIAL'][index] = 'Not Enough Valid Points In Extracted Spectrum'
+                pass
+            pass
+        pass
+    # Plot first wavelength calibration
+    if debug:
+        for v in set(visits):
+            select = (visits == v) & ~(data['IGNORED'])
+            plt.figure()
+            for index, valid in enumerate(select):
+                if valid: plt.plot(data['WAVE'][index], data['SPECTRUM'][index], 'o')
+                pass
+            plt.xlabel('Wavelength [microns]')
+            plt.ylabel('Counts')
+            plt.title('Visit number: '+str(int(v)))
+            pass
+        plt.show()
+        pass
+    # SECOND Wavesol
+    for index, rejected in enumerate(data['IGNORED']):
+        if not rejected:
+            template = data['TEMPLATE'][index]
+            spec = data['SPECTRUM'][index]
+            temp_spec = spec/template
+            ht25 = np.nanpercentile(temp_spec,25)
+            lt75 = np.nanpercentile(temp_spec,75)
+            selfin = np.isfinite(temp_spec)
+            std1 = np.nanstd(temp_spec[selfin][(temp_spec[selfin] > ht25) & (temp_spec[selfin] < lt75)])
+            # BAD PIXEL THRESHOLD --------------------------------------------------------
+            bpthr = temp_spec[selfin] > np.nanmedian(temp_spec) + 3e0*std1
+            temp_cut=template.copy()
+            spec_cut = spec.copy()
+            if True in bpthr:
+                temptrash = spec_cut[selfin]
+                temptrash[bpthr] = np.nan
+                spec_cut[selfin] = temptrash
+                temptrash = temp_cut[selfin]
+                temptrash[bpthr] = np.nan
+                temp_cut[selfin] = temptrash
+                pass
+            # SECOND SIGMA CLIPPING
+            temp_spec2 = spec_cut/temp_cut
+            ht25 = np.nanpercentile(temp_spec2,25)
+            lt75 = np.nanpercentile(temp_spec2,75)
+            selfin = np.isfinite(temp_spec2)
+            std2 = np.nanstd(temp_spec2[selfin][(temp_spec2[selfin] > ht25) & (temp_spec2[selfin] < lt75)])
+            bpthr2 = temp_spec2[selfin] > np.nanmedian(temp_spec2) + 5e0*std2
+            spec_cut2 = spec_cut.copy()
+            if True in bpthr2:
+                temptrash = spec_cut2[selfin]
+                temptrash[bpthr2] = np.nan
+                spec_cut2[selfin] = temptrash
+                pass
+            data['SPECTRUM'][index] = spec_cut2
+            if debug:
+                plt.figure()
+                plt.plot(spec_cut,'o',markersize='0.5',color='green')
+                plt.plot(spec_cut2,'o',markersize='0.5',color='red')
+                plt.show()
+                pass
+            # FIRST WAVESOL --------------------------------------------------------------
+            # scaleco = np.nanmax(tt) / np.nanmin(tt[tt > 0])
+            scaleco = 1e1
+            if np.sum(np.isfinite(spec)) > (spec.size/2):
+                wavecalspec = spec.copy()
+                selfinspec = np.isfinite(spec)
+                nanme = spec[selfinspec] < (np.nanmax(wavecalspec)/scaleco)
+                if True in nanme:
+                    wavefin = wavecalspec[selfinspec]
+                    wavefin[nanme] = np.nan
+                    wavecalspec[selfinspec] = wavefin
+                    pass
+                selref = tt > (np.nanmax(tt)/scaleco)
+                # dispersion is fixed, shift is not
+                w, d, s, si, _bck = wavesol(abs(wavecalspec), tt[selref], wavett[selref], disp,
+                                            siv=np.nanmedian(allsi), fd=True, fs=False, debug=False)
+                liref = itp.interp1d(wavett*1e-4, tt,
+                                     bounds_error=False, fill_value=np.nan)
+                phot2counts = liref(w)
+                data['PHT2CNT'][index] = phot2counts
+                data['WAVE'][index] = w
+                data['DISPERSION'][index] = d
+                data['SHIFT'][index] = s
+                pass
+            else:
+                data['IGNORED'][index] = True
+                data['TRIAL'][index] = 'Not Enough Valid Points In Extracted Spectrum'
+                pass
+            pass
+        pass
+    # PLOTS ------------------------------------------------------------------------------
+    if verbose and (not np.all(data['IGNORED'])):
+        alltime = np.array([d for d,i in zip(data['TIME'], data['IGNORED']) if not i])
+        dispersion = np.array([d for d,i in zip(data['DISPERSION'], data['IGNORED'])
+                               if not i])
+        shift = np.array([d for d,i in zip(data['SHIFT'], data['IGNORED']) if not i])
+        spec = np.array([d for d,i in zip(data['SPECTRUM'], data['IGNORED']) if not i])
+        photoc = np.array([d for d,i in zip(data['PHT2CNT'], data['IGNORED']) if not i])
+        wave = np.array([d for d,i in zip(data['WAVE'], data['IGNORED']) if not i])
+        errspec = np.array([d for d,i in zip(data['SPECERR'], data['IGNORED']) if not i])
+        torder = np.argsort(alltime)
+        vrange = data['VRANGE']
+        allerr = []
+        for s, e, w in zip(spec, errspec, wave):
+            select = (w > vrange[0]) & (w < vrange[1])
+            allerr.extend(e[select]/np.sqrt(s[select]))
+            pass
+        allerr = np.array(allerr)
+        select = np.isfinite(allerr)
+        allerr = allerr[select]
+        allerr = allerr[allerr > 0.9]
+
+        plt.figure()
+        for spectrum in data['SPECTRUM']: plt.plot(spectrum)
+        plt.ylabel('Stellar Spectra [Counts]')
+        plt.xlabel('Pixel Number')
+
+        plt.figure()
+        for w, p, s in zip(wave, photoc, spec):
+            select = (w > vrange[0]) & (w < vrange[1])
+            plt.plot(w[select], s[select]/p[select])
+            pass
+        plt.ylabel('Stellar Spectra [Photons]')
+        plt.xlabel('Wavelength [microns]')
+
+        plt.figure()
+        plt.hist(allerr)
+        plt.xlabel('Error Distribution [Noise Model Units]')
+
+        plt.figure()
+        plt.plot(dispersion[torder], 'o')
+        plt.xlabel('Time Ordered Frame Number')
+        plt.ylabel('Dispersion [Angstroms/Pixel]')
+        plt.ylim(data['DISPLIM'][0], data['DISPLIM'][1])
+
+        plt.figure()
+        plt.plot(shift[torder] - np.nanmin(shift), 'o')
+        plt.xlabel('Time Ordered Frame Number')
+        plt.ylabel('Shift [Pixels]')
+        plt.show()
+        pass
+    allignore = data['IGNORED']
+    allculprits = data['TRIAL']
+    log.warning('>-- IGNORED: %s / %s', str(np.nansum(allignore)), str(len(allignore)))
+    for index, ignore in enumerate(allignore):
+        if ignore: log.warning('>-- %s: %s', str(index), str(allculprits[index]))
+        pass
+    data.pop('EXP', None)
+    for key in data: out['data'][key] = data[key]
+    calibrated = not np.all(data['IGNORED'])
+    if calibrated: out['STATUS'].append(True)
+    return calibrated
+# ---------------------- ---------------------------------------------

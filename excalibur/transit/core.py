@@ -150,7 +150,7 @@ G. ROUDIER: Out of transit data normalization
                     ootminus.append(o)
                     ootmv.append(medzorb)
                     pass
-                else: inorb.append(int(o))
+                if np.any(abs(zorb) < (1e0 + rpors)): inorb.append(int(o))
                 pass
             ootplus = np.array(ootplus)
             ootpv = np.array(ootpv)
@@ -176,27 +176,29 @@ G. ROUDIER: Out of transit data normalization
                 pass
             keep = None
             for thisorb in ootminus:
-                ckeep = keep is not None
-                zorb = zoot[selv][orbits[selv] == thisorb]
-                badcond = np.sum(zorb < -(1e0 + rpors)) < 3
-                if ckeep or badcond: trash.append(int(thisorb))
-                else:
-                    keep = thisorb
-                    pureoot.append(thisorb)
+                if thisorb not in inorb:
+                    ckeep = keep is not None
+                    zorb = zoot[selv][orbits[selv] == thisorb]
+                    badcond = np.sum(zorb < -(1e0 + rpors)) < 3
+                    if ckeep or badcond: trash.append(int(thisorb))
+                    else:
+                        keep = thisorb
+                        pureoot.append(thisorb)
+                        pass
                     pass
                 pass
             # COMPENSATE UNBALANCED OOT DATA ---------------------------------------------
             innout = [int(o) for o in set(orbits[selv]) if o not in trash]
             pickmeup = [int(o) for o in trash if o in ootminus]
             if (np.sum(zoot[selv] > (1e0 + rpors)) < 3) and pickmeup:
-                dist = list(np.array(pickmeup) - np.mean(innout))
+                dist = list(abs(np.array(pickmeup) - np.mean(innout)))
                 trash.pop(trash.index(pickmeup[dist.index(min(dist))]))
                 log.warning('--< Missing OOT+ data, adding orbit: %s',
                             str(int(pickmeup[dist.index(min(dist))])))
                 pass
             pickmeup = [int(o) for o in trash if o in ootplus]
             if (np.sum(zoot[selv] < -(1e0 + rpors)) < 3) and pickmeup:
-                dist = list(np.array(pickmeup) - np.mean(innout))
+                dist = list(abs(np.array(pickmeup) - np.mean(innout)))
                 trash.pop(trash.index(pickmeup[dist.index(min(dist))]))
                 log.warning('--< Missing OOT- data, adding orbit: %s',
                             str(int(pickmeup[dist.index(min(dist))])))
@@ -250,6 +252,7 @@ G. ROUDIER: Out of transit data normalization
                     if thisorb in [firstorb]:
                         selorb = (orbits[selv] == thisorb)
                         fotime = time[selv][selorb]
+                        zorb = zoot[selv][selorb]
                         specin = [s for s, ok in zip(foivoots, selorb) if ok]
                         wavein = [cwave]*len(specin)
                         _t, fos = tplbuild(specin, wavein, vrange,
@@ -258,6 +261,7 @@ G. ROUDIER: Out of transit data normalization
                     else:
                         selorb = (orbits[selvoot] == thisorb)
                         fotime = time[selvoot][selorb]
+                        zorb = zoot[selvoot][selorb]
                         specin = [s for s, ok in zip(ivoots, selorb) if ok]
                         wavein = [cwave]*len(specin)
                         _t, fos = tplbuild(specin, wavein, vrange,
@@ -280,7 +284,12 @@ G. ROUDIER: Out of transit data normalization
                                    min=minoscale, max=maxoscale)
                         params.add('ologdelay', value=np.mean([minoscale, maxdelay]),
                                    min=minoscale, max=maxdelay)
-                        ndata = np.array(eachfos)/np.nanmedian(eachfos)
+                        normcond = zorb > np.nanmedian(zorb)
+                        if True in normcond:
+                            normfordata = np.nanmedian(np.array(eachfos)[normcond])
+                            ndata = np.array(eachfos)/normfordata
+                            pass
+                        else: ndata = np.array(eachfos)/np.nanmedian(eachfos)
                         if np.sum(np.isfinite(ndata)) > 4:
                             lmout = lm.minimize(hstramp, params,
                                                 args=(fotime, ndata), method='cg')
@@ -301,6 +310,7 @@ G. ROUDIER: Out of transit data normalization
                     params.add('ologdelay', value=np.nanmedian(alldfo))
                     if debug:
                         plt.figure()
+                        plt.title('Breathing ramp orbit: ' + str(int(thisorb)))
                         plt.plot(fotime, hstramp(params, fotime), 'o')
                         plt.show()
                         pass
@@ -446,12 +456,13 @@ G. ROUDIER: Out of transit data normalization
                 for w, s, pn in zip(visw, viss, photnoise):
                     wselect = (w >= np.min(vrange)) & (w <= np.max(vrange))
                     if True in wselect:
-                        check.append(np.nanstd(s[wselect]) < (15e0*np.nanmedian(pn)))
+                        check.append(np.nanstd(s[wselect]) < (5e0*np.nanmedian(pn)))
                         pass
                     else: check.append(False)
                     pass
                 check = np.array(check)
-                if np.sum(check) > 9:
+                wellcondin = np.sum(abs(z[selv][check]) < (1e0 + rpors)) > 3
+                if (np.sum(check) > 9) and wellcondin:
                     vnspec = np.array(viss)[check]
                     nphotn = np.array(photnoise)[check]
                     visw = np.array(visw)
@@ -484,7 +495,10 @@ G. ROUDIER: Out of transit data normalization
                         pass
                     pass
                 else:
-                    out['data'][p]['trial'].append('Variance Excess')
+                    if wellcondin:
+                        out['data'][p]['trial'].append('Spectral Variance Excess')
+                        pass
+                    else: out['data'][p]['trial'].append('Missing IT Data')
                     out['data'][p]['vignore'].append(v)
                     pass
                 pass
@@ -499,10 +513,10 @@ G. ROUDIER: Out of transit data normalization
             stdns = np.array(out['data'][p]['stdns'])
             vthr = np.nanpercentile(stdns, 66, interpolation='nearest')
             ref = np.nanmean(stdns[stdns <= vthr])
-            stdref = np.nanstd(stdns[stdns <= vthr])
-            kickout = np.array(out['data'][p]['visits'])[stdns > ref + 3e0*stdref]
+            vesel = abs((stdns/ref - 1e0)*1e2) > 5e1
+            kickout = np.array(out['data'][p]['visits'])[vesel]
             pass
-        if kickout.__len__() > 0:
+        if kickout:
             for v in kickout:
                 i2pop = out['data'][p]['visits'].index(v)
                 out['data'][p]['visits'].pop(i2pop)
@@ -523,7 +537,7 @@ G. ROUDIER: Out of transit data normalization
         for v, m in zip(out['data'][p]['vignore'], out['data'][p]['trial']):
             log.warning('--< Visit %s: %s', str(int(v)), str(m))
             pass
-        if out['data'][p]['visits'].__len__() > 0:
+        if out['data'][p]['visits']:
             normed = True
             out['STATUS'].append(True)
             pass
@@ -608,7 +622,7 @@ G. ROUDIER: Orbital parameters recovery
     wl = False
     priors = fin['priors'].copy()
     ssc = syscore.ssconstants()
-    planetloop = [p for p in nrm['data'].keys() if nrm['data'][p]['visits'].__len__() > 0]
+    planetloop = [p for p in nrm['data'].keys() if nrm['data'][p]['visits']]
     for p in planetloop:
         rpors = priors[p]['rp']/priors['R*']*ssc['Rjup/Rsun']
         visits = nrm['data'][p]['visits']
@@ -1150,8 +1164,10 @@ G. ROUDIER: Exoplanet spectrum recovery
         ttrdur = np.arcsin((1e0+rpors)/smaors)
         trdura = priors[p]['period']*ttrdur/np.pi
         wave = nrm['data'][p]['wavet']
+        waves = nrm['data'][p]['wave']
         nspec = nrm['data'][p]['nspec']
         photnoise = nrm['data'][p]['photnoise']
+        # mid_bin, lower_bin = binnagem(wave, 100)
         time = nrm['data'][p]['time']
         visits = nrm['data'][p]['visits']
         orbits = nrm['data'][p]['orbits']
@@ -1162,7 +1178,7 @@ G. ROUDIER: Exoplanet spectrum recovery
         allspec = []
         allim = []
         allpnoise = []
-        for w, s, i, n in zip(nrm['data'][p]['wave'], nspec, im, photnoise):
+        for w, s, i, n in zip(waves, nspec, im, photnoise):
             allwave.extend(w)
             allspec.extend(s)
             allim.extend(i)
@@ -1327,3 +1343,13 @@ G. ROUDIER: Spectral light curve model
     out = out*np.array(allimout)
     return out[ctxt.valid]
 # ----------------------------------- --------------------------------
+# -- BINNING FUNCTION -- ---------------------------------------------
+def binnagem(t, nbins):
+    '''
+R. ESTRELA: Binning the wavelength template
+    '''
+    _events, edges = np.histogram(t, bins=nbins)
+    lower = np.resize(edges, len(edges)-1)
+    tmid = lower + 0.5*np.diff(edges)
+    return tmid, lower
+# ---------------------- ---------------------------------------------

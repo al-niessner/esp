@@ -99,7 +99,7 @@ G. ROUDIER: Categorize data into 3 science purposes: TRANSIT, ECLIPSE, PHASE CUR
         vcol, ecol = datcore.checksv(col)
         validtype = []
         for test in col['activefilters'].keys():
-            if ('WFC3' in test) and (('SCAN' in test) or ('STARE' in test)):
+            if ('SCAN' in test) or ('STIS' in test):
                 if test in fltrs: validtype.append(test)
                 pass
             pass
@@ -159,7 +159,7 @@ G. ROUDIER: Data re-calibration and reduction
         vcll, ecll = datcore.checksv(cll)
         validtype = []
         for test in cll['activefilters'].keys():
-            if ('WFC3' in test) and (('SCAN' in test) or ('STARE' in test)):
+            if ('SCAN' in test) or ('STARE' in test):
                 if test in fltrs: validtype.append(test)
                 pass
             pass
@@ -189,6 +189,9 @@ G. ROUDIER: Data re-calibration and reduction
         caled = False
         if 'SCAN' in flttype:
             caled = datcore.scancal(cll, tim, tid, flttype, out, verbose=False)
+            pass
+        if 'STIS' in flttype:
+            caled = datcore.stiscal(cll, tim, tid, flttype, out, verbose=False)
             pass
         return caled
 

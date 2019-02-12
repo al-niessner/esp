@@ -73,13 +73,6 @@ class WhiteLightSV(dawgie.StateVector):
                 postphase = self['data'][p]['postphase']
                 postlc = self['data'][p]['postlc']
                 postflatphase = self['data'][p]['postflatphase']
-                mcpost = self['data'][p]['mcpost']
-                visitor.add_declaration(p)
-                for kn in ['inc', 'rprs', 'dtk', 'vslope', 'vitcp',
-                           'oslope', 'ologtau', 'ologdelay']:
-                    showme = ' '.join(sorted([k for k in mcpost.keys() if kn in k]))
-                    visitor.add_declaration(showme)
-                    pass
                 myfig = plt.figure(figsize=(10, 6))
                 plt.title(p)
                 for index, v in enumerate(visits):

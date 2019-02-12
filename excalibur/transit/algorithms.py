@@ -18,6 +18,7 @@ import excalibur.target.edit as trgedit
 # FILTERS
 fltrs = (trgedit.activefilters.__doc__).split('\n')
 fltrs = [t.strip() for t in fltrs if t.replace(' ', '').__len__() > 0]
+fltrs = [f for f in fltrs if 'STIS' not in f]
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class normalization(dawgie.Algorithm):
@@ -169,7 +170,7 @@ G. ROUDIER: See inheritance and CI5 thread with A NIESSNER for __init__() method
                 update = self._spectrum(self.__fin.sv_as_dict()['parameters'],
                                         self._nrm.sv_as_dict()[ext],
                                         self._wht.sv_as_dict()[ext],
-                                        self.__out[index])
+                                        self.__out[index], ext)
                 pass
             else:
                 errstr = [m for m in [sfin, snrm, swht] if m is not None]
@@ -181,7 +182,8 @@ G. ROUDIER: See inheritance and CI5 thread with A NIESSNER for __init__() method
         if self.__out.__len__() > 0: ds.update()
         return
 
-    def _spectrum(self, fin, nrm, wht, out):
+    def _spectrum(self, fin, nrm, wht, out, ext):
+        if 'STIS' in ext: log.warning('--< BIN ME SOMEDAY!')
         s = trncore.spectrum(fin, nrm, wht, out, self._type,
                              chainlen=int(1e4), verbose=False)
         return s
