@@ -17,8 +17,8 @@ import excalibur.target.edit as trgedit
 # -- ALGO RUN OPTIONS -- ---------------------------------------------
 # FILTERS
 fltrs = (trgedit.activefilters.__doc__).split('\n')
-fltrs = [t.strip() for t in fltrs if t.replace(' ', '').__len__() > 0]
-fltrs = [f for f in fltrs if 'STIS' not in f]
+fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
+# fltrs = [f for f in fltrs if 'G141' in f]
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class normalization(dawgie.Algorithm):
@@ -66,7 +66,7 @@ G. ROUDIER: Light curve normalization by Out Of Transit data
             if update: svupdate.append(self.__out[fltrs.index(ext)])
             pass
         self.__out = svupdate
-        if self.__out.__len__() > 0: ds.update()
+        if self.__out: ds.update()
         return
 
     def _norm(self, cal, tme, fin, index):
@@ -121,7 +121,7 @@ G. ROUDIER: See inheritance and CI5 thread with A NIESSNER for __init__() method
             if update: svupdate.append(self.__out[index])
             pass
         self.__out = svupdate
-        if self.__out.__len__() > 0: ds.update()
+        if self.__out: ds.update()
         return
 
     def _whitelight(self, nrm, fin, out):
@@ -179,13 +179,14 @@ G. ROUDIER: See inheritance and CI5 thread with A NIESSNER for __init__() method
             if update: svupdate.append(self.__out[index])
             pass
         self.__out = svupdate
-        if self.__out.__len__() > 0: ds.update()
+        if self.__out: ds.update()
         return
 
     def _spectrum(self, fin, nrm, wht, out, ext):
-        if 'STIS' in ext: log.warning('--< BIN ME SOMEDAY!')
-        s = trncore.spectrum(fin, nrm, wht, out, self._type,
-                             chainlen=int(1e4), verbose=False)
+        if 'WFC3' in ext:
+            s = trncore.spectrum(fin, nrm, wht, out, self._type,
+                                 chainlen=int(1e4), verbose=False)
+            pass
         return s
 
     def _failure(self, errstr):

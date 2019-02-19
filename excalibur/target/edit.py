@@ -210,6 +210,10 @@ overwrite[starID] =
 }
     '''
     overwrite = {}
+    overwrite['GJ 3053'] = {
+        'b':{'t0':2456915.70654,
+             't0_uperr':0.00004, 't0_lowerr':-0.00004,
+             't0_ref':'GMR'}}
     overwrite['GJ 436'] = {
         'b':{'inc':86.774,
              'inc_uperr':0.03, 'inc_lowerr':-0.03,
@@ -276,22 +280,31 @@ overwrite[starID] =
              'logg':2.7275412570285562,
              'logg_uperr':0.15, 'logg_lowerr':-0.15,
              'logg_ref':'Prieto-Arranz et al. 2018', 'logg_units':'log10[cm.s-2]'}}
+    overwrite['HAT-P-1'] = {
+        'b':{'t0':2453979.92802,
+             't0_uperr':0.00004, 't0_lowerr':-0.00004,
+             't0_ref':'GMR'}}
     overwrite['HAT-P-11'] = {
-        'b':{'inc':89.549,
+        'R*':0.683, 'R*_uperr':0.009, 'R*_lowerr':-0.009,
+        'R*_ref':'Yee et al. 2018',
+        'b':{'inc':90,
              'inc_uperr':0.114, 'inc_lowerr':-0.114,
-             'inc_ref':'Fraine et al. 2014',
-             'rp':0.3895538538577743,
-             'rp_uperr':0.0016542969842779612, 'rp_lowerr':-0.0016542969842779612,
-             'rp_ref':'Fraine et al. 2014',
-             'sma':0.05415469125390434,
-             'sma_uperr':0.00018973906424725608, 'sma_lowerr':-0.00018973906424725608,
-             'sma_ref':'Fraine et al. 2014',
-             'ecc':0.232,
-             'ecc_uperr':0.054, 'ecc_lowerr':-0.054,
-             'ecc_ref':'Fraine et al. 2014',
-             'period':4.8878018,
+             'inc_ref':'Yee et al. 2018',
+             't0':2454957.8132067,
+             't0_uperr':0.0000663, 't0_lowerr':-0.0000663,
+             't0_ref':'Yee et al. 2018',
+             'rp':0.3889738152520562,
+             'rp_uperr':0.0017, 'rp_lowerr':-0.0017,
+             'rp_ref':'Yee et al. 2018',
+             'sma':0.05254,
+             'sma_uperr':0.00064, 'sma_lowerr':-0.00064,
+             'sma_ref':'Yee et al. 2018',
+             'ecc':0,
+             'ecc_uperr':0.034, 'ecc_lowerr':-0.034,
+             'ecc_ref':'Yee et al. 2018',
+             'period':4.887802443,
              'period_uperr':0.0000071, 'period_lowerr':-0.0000071,
-             'period_ref':'Fraine et al. 2014'}}
+             'period_ref':'Yee et al. 2018'}}
     overwrite['HAT-P-17'] = {
         'R*':0.838, 'R*_uperr':0.021, 'R*_lowerr':-0.021,
         'R*_ref':'Howard et al. 2012',
@@ -551,5 +564,9 @@ overwrite[starID] =
              'sma_ref':'Tregloan-Reed et al. 2015',
              'period':3.361,
              'period_ref':'Tregloan-Reed et al. 2015'}}
+    overwrite['XO-2'] = {
+        'b':{'t0':2455565.54048,
+             't0_uperr':0.005, 't0_lowerr':-0.005,
+             't0_ref':'GMR'}}
     return overwrite
 # ---------------------------- ---------------------------------------

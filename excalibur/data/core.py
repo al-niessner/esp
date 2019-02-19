@@ -245,9 +245,10 @@ G. ROUDIER: Uses system orbital parameters to guide the dataset towards transit,
             orb[ordt] = orbto.astype(int)
             dvis[ordt] = dvisto.astype(int)
             ignore[ordt] = ignto
-            log.warning('>-- TRANSIT: %s', str(out['transit']))
-            log.warning('>-- ECLIPSE: %s', str(out['eclipse']))
-            log.warning('>-- PHASE CURVE: %s', str(out['phasecurve']))
+            log.warning('>-- Planet: %s', p)
+            log.warning('>-- Transit: %s', str(out['data'][p]['transit']))
+            log.warning('>-- Eclipse: %s', str(out['data'][p]['eclipse']))
+            log.warning('>-- Phase Curve: %s', str(out['data'][p]['phasecurve']))
             # PLOTS ------------------------------------------------------
             if verbose:
                 plt.figure()
@@ -297,9 +298,7 @@ G. ROUDIER: Uses system orbital parameters to guide the dataset towards transit,
             out['STATUS'].append(True)
             pass
         pass
-    if ((out['transit'].__len__() > 0) or
-        (out['eclipse'].__len__() > 0) or
-        (out['phasecurve'].__len__() > 0)): chunked = True
+    if out['transit'] or out['eclipse'] or out['phasecurve']: chunked = True
     return chunked
 # ------------ -------------------------------------------------------
 # -- CALIBRATE SCAN DATA -- ------------------------------------------

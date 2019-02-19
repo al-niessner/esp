@@ -133,6 +133,8 @@ G. ROUDIER: Out of transit data normalization
                 zoot[selv] = vzoot
                 pass
             selv = selv & np.isfinite(zoot)
+            if True in selv: firstorb = int(np.min(orbits[selv]))
+            else: firstorb = int(1)
             # ORBIT SELECTION FOR HST BREATHING MODEL ------------------------------------
             ootplus = []
             ootpv = []
@@ -167,7 +169,7 @@ G. ROUDIER: Out of transit data normalization
             keep = None
             for thisorb in ootplus:
                 ckeep = keep is not None
-                badcond = np.sum(orbits[selv] == thisorb) < 3
+                badcond = np.sum(orbits[selv] == thisorb) < 7
                 if ckeep or badcond: trash.append(int(thisorb))
                 else:
                     keep = thisorb
@@ -176,12 +178,14 @@ G. ROUDIER: Out of transit data normalization
                 pass
             keep = None
             for thisorb in ootminus:
+                ckeep = keep is not None
+                zorb = zoot[selv][orbits[selv] == thisorb]
+                badcond = np.sum(zorb < -(1e0 + rpors)) < 7
                 if thisorb not in inorb:
-                    ckeep = keep is not None
-                    zorb = zoot[selv][orbits[selv] == thisorb]
-                    badcond = np.sum(zorb < -(1e0 + rpors)) < 3
-                    if ckeep or badcond: trash.append(int(thisorb))
-                    else:
+                    if ckeep or badcond or (thisorb in [firstorb]):
+                        trash.append(int(thisorb))
+                        pass
+                    elif (thisorb not in inorb) and (thisorb not in [firstorb]):
                         keep = thisorb
                         pureoot.append(thisorb)
                         pass
@@ -192,23 +196,25 @@ G. ROUDIER: Out of transit data normalization
             pickmeup = [int(o) for o in trash if o in ootminus]
             if (np.sum(zoot[selv] > (1e0 + rpors)) < 3) and pickmeup:
                 dist = list(abs(np.array(pickmeup) - np.mean(innout)))
-                trash.pop(trash.index(pickmeup[dist.index(min(dist))]))
-                log.warning('--< Missing OOT+ data, adding orbit: %s',
-                            str(int(pickmeup[dist.index(min(dist))])))
+                if pickmeup[dist.index(min(dist))] not in [firstorb]:
+                    trash.pop(trash.index(pickmeup[dist.index(min(dist))]))
+                    log.warning('--< Missing OOT+ data, adding orbit: %s',
+                                str(int(pickmeup[dist.index(min(dist))])))
+                    pass
                 pass
             pickmeup = [int(o) for o in trash if o in ootplus]
             if (np.sum(zoot[selv] < -(1e0 + rpors)) < 3) and pickmeup:
                 dist = list(abs(np.array(pickmeup) - np.mean(innout)))
-                trash.pop(trash.index(pickmeup[dist.index(min(dist))]))
-                log.warning('--< Missing OOT- data, adding orbit: %s',
-                            str(int(pickmeup[dist.index(min(dist))])))
+                if pickmeup[dist.index(min(dist))] not in [firstorb]:
+                    trash.pop(trash.index(pickmeup[dist.index(min(dist))]))
+                    log.warning('--< Missing OOT- data, adding orbit: %s',
+                                str(int(pickmeup[dist.index(min(dist))])))
+                    pass
                 pass
             log.warning('>-- Visit %s', str(int(v)))
             log.warning('>-- Orbit %s', str([int(o) for o in set(orbits[selv])]))
             log.warning('>-- Trash %s', str(trash))
             # UPDATE IGNORE FLAG WITH REJECTED ORBITS ------------------------------------
-            if True in selv: firstorb = int(np.min(orbits[selv]))
-            else: firstorb = int(1)
             if trash and (selftype in ['transit', 'eclipse']):
                 for o in trash:
                     select = orbits[selv] == o
@@ -249,6 +255,8 @@ G. ROUDIER: Out of transit data normalization
                 for thisorb in pureootext:
                     alltfo = []
                     alldfo = []
+                    allito = []
+                    allslo = []
                     if thisorb in [firstorb]:
                         selorb = (orbits[selv] == thisorb)
                         fotime = time[selv][selorb]
@@ -295,6 +303,8 @@ G. ROUDIER: Out of transit data normalization
                                                 args=(fotime, ndata), method='cg')
                             alltfo.append(lmout.params['ologtau'].value)
                             alldfo.append(lmout.params['ologdelay'].value)
+                            allito.append(lmout.params['oitcp'].value)
+                            allslo.append(lmout.params['oslope'].value)
                             pass
                         if debug:
                             plt.figure()
@@ -304,8 +314,8 @@ G. ROUDIER: Out of transit data normalization
                             pass
                         pass
                     params = lm.Parameters()
-                    params.add('oitcp', value=1e0)
-                    params.add('oslope', value=0e0)
+                    params.add('oitcp', value=np.nanmedian(allito))
+                    params.add('oslope', value=np.nanmedian(allslo))
                     params.add('ologtau', value=np.nanmedian(alltfo))
                     params.add('ologdelay', value=np.nanmedian(alldfo))
                     if debug:
@@ -351,56 +361,12 @@ G. ROUDIER: Out of transit data normalization
                 iviss = np.array(iviss)
                 vlincorr = visits[selv]
                 if set(dvisits[selv]).__len__() > 1: vlincorr = dvisits[selv]
-                dscan = {}
                 ordsetds = np.sort(list(set(vlincorr))).astype(int)
-                for scann, eachds in enumerate(ordsetds):
-                    dssel = vlincorr == eachds
-                    seldscan = abs(zoot[selv]) > (1e0 + rpors)
-                    dstime = time[selv][dssel & seldscan] - mttref
-                    dscan[str(scann)] = {}
-                    for windex, dslc in enumerate(iviss.T):
-                        if True in np.isfinite(dslc[dssel & seldscan]):
-                            data = dslc[dssel & seldscan]
-                            selfinite = np.isfinite(data)
-                            dscanmod = np.poly1d(np.polyfit(dstime[selfinite],
-                                                            data[selfinite], 1))
-                            dscan[str(scann)][str(windex)] = dscanmod
-                            if debug:
-                                tdebug = time[selv][dssel] - mttref
-                                plt.figure()
-                                plt.plot(tdebug, dslc[dssel], '+')
-                                plt.plot(tdebug, dscanmod(tdebug), 'o')
-                                plt.show()
-                                pass
-                            pass
-                        pass
-                    pass
                 photnoise = np.sqrt(abs(viss.copy()))
                 for spec, wspec, phnoise in zip(viss.T, visw.T, photnoise.T):
-                    for scann, eachds in enumerate(ordsetds):
+                    for eachds in ordsetds:
                         dssel = vlincorr == eachds
-                        dstime = time[selv][dssel] - mttref
                         clstsel = abs(zoot[selv][dssel]) > (1e0 + rpors)
-                        normspec = []
-                        for w, t in zip(wspec[dssel], dstime):
-                            if (w < np.min(cwave)) or (w > np.max(cwave)):
-                                normspec.append(np.nan)
-                                pass
-                            else:
-                                diff = list(abs(cwave - w))
-                                closest = diff.index(min(diff))
-                                if str(closest) in dscan[str(scann)]:
-                                    n = dscan[str(scann)][str(closest)](t)
-                                    normspec.append(n)
-                                    pass
-                                else: normspec.append(np.nan)
-                                pass
-                            pass
-                        normspec = np.array(normspec)
-                        if True in np.isfinite(normspec):
-                            spec[dssel] = spec[dssel]/normspec
-                            phnoise[dssel] = phnoise[dssel]/normspec
-                            pass
                         renorm = np.nanmedian(spec[dssel][clstsel])
                         if np.isfinite(renorm):
                             spec[dssel] /= renorm
@@ -514,7 +480,7 @@ G. ROUDIER: Out of transit data normalization
             vthr = np.nanpercentile(stdns, 66, interpolation='nearest')
             ref = np.nanmean(stdns[stdns <= vthr])
             vesel = abs((stdns/ref - 1e0)*1e2) > 5e1
-            kickout = np.array(out['data'][p]['visits'])[vesel]
+            kickout = list(np.array(out['data'][p]['visits'])[vesel])
             pass
         if kickout:
             for v in kickout:
@@ -1156,7 +1122,7 @@ G. ROUDIER: Exoplanet spectrum recovery
     exospec = False
     priors = fin['priors'].copy()
     ssc = syscore.ssconstants()
-    planetloop = [p for p in nrm['data'].keys() if nrm['data'][p]['visits'].__len__() > 0]
+    planetloop = [p for p in nrm['data'].keys() if nrm['data'][p]['visits']]
     for p in planetloop:
         out['data'][p] = {'LD':[]}
         rpors = priors[p]['rp']/priors['R*']*ssc['Rjup/Rsun']
