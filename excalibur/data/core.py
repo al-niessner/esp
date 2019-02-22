@@ -1671,6 +1671,8 @@ R. ESTRELA: STIS .flt data extraction and wavelength calibration
     calibrated = False
     # VISIT NUMBERING --------------------------------------------------------------------
     for pkey in tim['data'].keys(): visits = np.array(tim['data'][pkey]['dvisits'])
+    # PHASE ------------------------------------------------------------------------------
+    for pkey in tim['data'].keys(): phase = np.array(tim['data'][pkey]['phase'])
     # OPTICS AND FILTER ------------------------------------------------------------------
     vrange = validrange(flttype)
     _wvrng, disp, ldisp, udisp = fng(flttype)
@@ -1898,12 +1900,6 @@ R. ESTRELA: STIS .flt data extraction and wavelength calibration
                 spec_cut2[selfin] = temptrash
                 pass
             data['SPECTRUM'][index] = spec_cut2
-            if debug:
-                plt.figure()
-                plt.plot(spec_cut,'o',markersize='0.5',color='green')
-                plt.plot(spec_cut2,'o',markersize='0.5',color='red')
-                plt.show()
-                pass
             # FIRST WAVESOL --------------------------------------------------------------
             # scaleco = np.nanmax(tt) / np.nanmin(tt[tt > 0])
             scaleco = 1e1
@@ -1931,6 +1927,27 @@ R. ESTRELA: STIS .flt data extraction and wavelength calibration
             else:
                 data['IGNORED'][index] = True
                 data['TRIAL'][index] = 'Not Enough Valid Points In Extracted Spectrum'
+                pass
+            pass
+        pass
+        if debug:
+            inte_res=[]
+            phase_all=[]
+            for v in set(visits):
+                select = (visits == v) & ~(data['IGNORED'])
+                for raissaindex, valid in enumerate(select):
+                    if valid:
+                        phase_sel = phase[raissaindex]
+                        phase_all.append(phase_sel)
+                        wav = np.array(data['WAVE'][raissaindex])
+                        spec = np.array(data['SPECTRUM'][raissaindex])
+                        fin = np.isfinite(spec)
+                        wav_fin = wav[fin]
+                        spec_fin = spec[fin]
+                        cond = np.where((wav_fin > 0.55) & (wav_fin < 0.95))
+                        inte = np.sum(spec_fin[cond]*(wav_fin[cond[0]+1]-wav_fin[cond[0]]))
+                        inte_res.append(inte)
+                    pass
                 pass
             pass
         pass

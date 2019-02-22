@@ -1115,7 +1115,7 @@ G. ROUDIER: HST breathing model
     return out
 # ---------------- ---------------------------------------------------
 # -- SPECTRUM -- -----------------------------------------------------
-def spectrum(fin, nrm, wht, out, selftype, chainlen=int(1e4), verbose=False):
+def spectrum(fin, nrm, wht, out, ext, selftype, chainlen=int(1e4), verbose=False):
     '''
 G. ROUDIER: Exoplanet spectrum recovery
     '''
@@ -1133,7 +1133,10 @@ G. ROUDIER: Exoplanet spectrum recovery
         waves = nrm['data'][p]['wave']
         nspec = nrm['data'][p]['nspec']
         photnoise = nrm['data'][p]['photnoise']
-        # mid_bin, lower_bin = binnagem(wave, 100)
+        if 'STIS' in ext:
+            wave, _trash = binnagem(wave, 100)
+            wave = np.resize(wave,(1,100))
+            pass
         time = nrm['data'][p]['time']
         visits = nrm['data'][p]['visits']
         orbits = nrm['data'][p]['orbits']
@@ -1162,7 +1165,10 @@ G. ROUDIER: Exoplanet spectrum recovery
         allnanc = []
         for wl, wh in zip(lwavec, hwavec):
             select = [(w > wl) & (w < wh) for w in allwave]
-            data = np.array([np.median(d[s]) for d, s in zip(allspec, select)])
+            if 'STIS' in ext:
+                data = np.array([np.nanmean(d[s]) for d, s in zip(allspec, select)])
+                pass
+            else: data = np.array([np.median(d[s]) for d, s in zip(allspec, select)])
             if np.all(~np.isfinite(data)): allnanc.append(True)
             else: allnanc.append(False)
             pass
@@ -1181,8 +1187,14 @@ G. ROUDIER: Exoplanet spectrum recovery
             out['data'][p]['WBup'].append(wh)
             out['data'][p]['WB'].append(np.mean([wl, wh]))
             select = [(w > wl) & (w < wh) for w in allwave]
-            data = np.array([np.nanmedian(d[s]) for d, s in zip(allspec, select)])
-            dnoise = np.array([np.nanmedian(n[s]) for n, s in zip(allpnoise, select)])
+            if 'STIS' in ext:
+                data = np.array([np.nanmean(d[s]) for d, s in zip(allspec, select)])
+                dnoise = np.array([(1e0/np.sum(s))*np.sqrt(np.nansum((n[s])**2)) for n, s in zip(allpnoise, select)])
+                pass
+            else:
+                data = np.array([np.nanmedian(d[s]) for d, s in zip(allspec, select)])
+                dnoise = np.array([np.nanmedian(n[s]) for n, s in zip(allpnoise, select)])
+                pass
             valid = np.isfinite(data)
             if selftype in ['transit']:
                 bld = createldgrid([wl], [wh], priors, segmentation=int(10))
@@ -1254,11 +1266,21 @@ G. ROUDIER: Exoplanet spectrum recovery
             specwave = np.array(out['data'][p]['WB'])
             specerr = abs(vspectrum**2 - (vspectrum + specerr)**2)
             vspectrum = vspectrum**2
-            plt.figure(figsize=(8,6))
-            plt.title(p)
-            plt.errorbar(specwave, 1e2*vspectrum, fmt='.', yerr=1e2*specerr)
-            plt.xlabel(str('Wavelength [$\\mu m$]'))
-            plt.ylabel(str('$(R_p/R_*)^2$ [%]'))
+            Rstar = priors['R*']*sscmks['Rsun']
+            Rp = priors[p]['rp']*7.14E7  # m
+            Hs = cst.Boltzmann*eqtemp/(mmw*1e-2*(10.**priors[p]['logg']))  # m
+            noatm = Rp**2/(Rstar)**2
+            rp0hs = np.sqrt(noatm*(Rstar)**2)
+            _fig, ax0 = plt.subplots(figsize=(10,6))
+            ax0.errorbar(specwave, 1e2*spectrum, fmt='.', yerr=1e2*specerr)
+            ax0.set_xlabel(str('Wavelength [$\\mu m$]'))
+            ax0.set_ylabel(str('$(R_p/R_*)^2$ [%]'))
+            ax1 = ax0.twinx()
+            yaxmin, yaxmax = ax0.get_ylim()
+            ax2min = (np.sqrt(1e-2*yaxmin)*Rstar - rp0hs)/Hs
+            ax2max = (np.sqrt(1e-2*yaxmax)*Rstar - rp0hs)/Hs
+            ax1.set_ylabel('Transit Depth Modulation [Hs]')
+            ax1.set_ylim(ax2min, ax2max)
             plt.show()
             pass
         pass
@@ -1314,8 +1336,11 @@ def binnagem(t, nbins):
     '''
 R. ESTRELA: Binning the wavelength template
     '''
-    _events, edges = np.histogram(t, bins=nbins)
-    lower = np.resize(edges, len(edges)-1)
-    tmid = lower + 0.5*np.diff(edges)
+    tmax = t[0][-1]
+    tmin = t[0][0]
+    tbin = (tmax-tmin)*np.arange(nbins+1)/nbins
+    tbin = tbin + tmin
+    lower = np.resize(tbin, len(tbin)-1)
+    tmid = lower + 0.5*np.diff(tbin)
     return tmid, lower
 # ---------------------- ---------------------------------------------

@@ -183,10 +183,8 @@ G. ROUDIER: See inheritance and CI5 thread with A NIESSNER for __init__() method
         return
 
     def _spectrum(self, fin, nrm, wht, out, ext):
-        if 'WFC3' in ext:
-            s = trncore.spectrum(fin, nrm, wht, out, self._type,
-                                 chainlen=int(1e4), verbose=False)
-            pass
+        s = trncore.spectrum(fin, nrm, wht, out, ext, self._type,
+                             chainlen=int(1e4), verbose=False)
         return s
 
     def _failure(self, errstr):
