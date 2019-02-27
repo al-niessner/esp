@@ -118,6 +118,8 @@ G. ROUDIER: Out of transit data normalization
         out['data'][p]['trial'] = []
         out['data'][p]['vignore'] = []
         out['data'][p]['stdns'] = []
+        singlevisit = False
+        if list(set(visits)).__len__() < 2: singlevisit = True
         for v in set(visits):
             selv = (visits == v) & ~ignore
             if selftype in ['transit', 'phasecurve']:
@@ -351,32 +353,47 @@ G. ROUDIER: Out of transit data normalization
                         if np.all(np.isfinite(model)): spec[selorb] /= model
                         pass
                     pass
+                # PHOTON NOISE ESTIMATE --------------------------------------------------
+                photnoise = np.sqrt(abs(viss.copy()))
+                for phnoise in photnoise.T: phnoise /= np.sqrt(scanlen[selv])
                 # DOUBLE SCAN CORRECTION -------------------------------------------------
-                cwave, _t = tplbuild(viss, visw, vrange, disp[selv]*1e-4, medest=True)
-                iviss = []
-                for s, w in zip(viss, visw):
-                    itps = np.interp(np.array(cwave), w, s, left=np.nan, right=np.nan)
-                    iviss.append(itps)
-                    pass
-                iviss = np.array(iviss)
                 vlincorr = visits[selv]
                 if set(dvisits[selv]).__len__() > 1: vlincorr = dvisits[selv]
                 ordsetds = np.sort(list(set(vlincorr))).astype(int)
-                photnoise = np.sqrt(abs(viss.copy()))
-                for spec, wspec, phnoise in zip(viss.T, visw.T, photnoise.T):
-                    for eachds in ordsetds:
-                        dssel = vlincorr == eachds
-                        clstsel = abs(zoot[selv][dssel]) > (1e0 + rpors)
-                        renorm = np.nanmedian(spec[dssel][clstsel])
-                        if np.isfinite(renorm):
-                            spec[dssel] /= renorm
-                            phnoise[dssel] /= renorm
+                ootinv = abs(zoot[selv]) > (1e0 + rpors)
+                for dsscan in ordsetds:
+                    thisscan = (vlincorr == dsscan) & ootinv
+                    cwavescan, tnorm = tplbuild(viss[thisscan], visw[thisscan], vrange,
+                                                (disp[selv][thisscan])*1e-4, medest=True)
+                    thisscan = vlincorr == dsscan
+                    ctviss = []
+                    ctphotnoise = []
+                    for spec, wspec, phnoise in zip(viss[thisscan].T,
+                                                    visw[thisscan].T,
+                                                    photnoise[thisscan].T):
+                        specnorm = []
+                        for w in wspec:
+                            if (w < np.min(cwavescan)) or (w > np.max(cwavescan)):
+                                specnorm.append(np.nan)
+                                pass
+                            else:
+                                distance = list(abs(np.array(cwavescan) - w))
+                                mindisti = distance.index(np.min(distance))
+                                specnorm.append(tnorm[mindisti])
+                                pass
                             pass
+                        ctviss.append(spec/np.array(specnorm))
+                        ctphotnoise.append(phnoise/np.array(specnorm))
                         pass
-                    phnoise /= np.sqrt(scanlen[selv])
+                    viss[thisscan] = np.array(ctviss).T
+                    photnoise[thisscan] = np.array(ctphotnoise).T
+                    pass
+                if debug:
+                    plt.figure()
+                    plt.plot(visw.T, viss.T, 'o')
+                    plt.show()
                     pass
                 # WAVELENGTH INTERPOLATION -----------------------------------------------
-                ootinv = abs(zoot[selv]) > (1e0 + rpors)
                 wfos, fos = tplbuild(viss[ootinv], visw[ootinv], vrange,
                                      (disp[selv][ootinv])*1e-4, superres=True)
                 witp = {}
@@ -413,11 +430,15 @@ G. ROUDIER: Out of transit data normalization
                             pass
                         pass
                     wavecorr = np.array(wavecorr)
-                    if True in np.isfinite(wavecorr):
-                        spec = spec/wavecorr
-                        phnoise = phnoise/wavecorr
-                        pass
+                    spec /= wavecorr
+                    phnoise /= wavecorr
                     pass
+                if debug:
+                    plt.figure()
+                    plt.plot(visw.T, viss.T, 'o')
+                    plt.show()
+                    pass
+                # DATA CONSISTENCY AND QUALITY CHECK -------------------------------------
                 check = []
                 for w, s, pn in zip(visw, viss, photnoise):
                     wselect = (w >= np.min(vrange)) & (w <= np.max(vrange))
@@ -428,6 +449,12 @@ G. ROUDIER: Out of transit data normalization
                     pass
                 check = np.array(check)
                 wellcondin = np.sum(abs(z[selv][check]) < (1e0 + rpors)) > 3
+                if not((np.sum(check) > 9) and wellcondin) and singlevisit:
+                    wellcondin = True
+                    check = check | True
+                    log.warning('--< Visit %s: %s', str(int(v)),
+                                'Single visit failed IT check')
+                    pass
                 if (np.sum(check) > 9) and wellcondin:
                     vnspec = np.array(viss)[check]
                     nphotn = np.array(photnoise)[check]

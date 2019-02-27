@@ -39,13 +39,21 @@ DATA
 TRANSIT
 - normalization (scaling of stellar spectrum to Out Of Transit relative quantities)
 - whitelight (orbital solution and instrumental behavior recovery)
-- spectrum (exoplanet spectrum recovery)
+- spectrum (exoplanet transmission spectrum recovery)
 
 ECLIPSE
+- normalization (scaling of stellar spectrum to Out Of Transit relative quantities)
+- whitelight (orbital solution and instrumental behavior recovery)
+- spectrum (exoplanet emission spectrum recovery)
 
 PHASECURVE
+- normalization (scaling of stellar spectrum to Out Of Transit relative quantities)
+- whitelight (orbital solution and instrumental behavior recovery)
+- spectrum (exoplanet phase curve recovery)
 
 CERBERUS
+- xslib (cross section library from EXOMOL and HITEMP/HITRAN)
+- atmos (model selection and atmospheric content recovery)
 
 ### --< Source Code >--
 
