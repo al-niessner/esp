@@ -430,8 +430,8 @@ G. ROUDIER: Out of transit data normalization
                             pass
                         pass
                     wavecorr = np.array(wavecorr)
-                    spec /= wavecorr
-                    phnoise /= wavecorr
+                    # spec /= wavecorr
+                    # phnoise /= wavecorr
                     pass
                 if debug:
                     plt.figure()
