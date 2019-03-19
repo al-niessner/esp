@@ -126,7 +126,7 @@ G. ROUDIER: See inheritance and CI5 thread with A NIESSNER for __init__() method
 
     def _whitelight(self, nrm, fin, out):
         wl = trncore.whitelight(nrm, fin, out, self._type,
-                                chainlen=int(1e4), verbose=False)
+                                chainlen=int(2e4), verbose=False)
         return wl
 
     def _failure(self, errstr):

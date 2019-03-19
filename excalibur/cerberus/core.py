@@ -314,7 +314,7 @@ G. ROUDIER: Wrapper around HITRAN partition functions (Gamache et al. 2011)
     return grid
 # ------------------------------ -------------------------------------
 # -- ATMOS -- --------------------------------------------------------
-def atmos(fin, xsl, spc, out, mclen=int(1e2), verbose=False):
+def atmos(fin, xsl, spc, out, mclen=int(1e4), verbose=False):
     '''
 G. ROUDIER: Cerberus retrievial
     '''

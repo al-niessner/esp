@@ -387,7 +387,7 @@ G. ROUDIER: Out of transit data normalization
                         eachfos = np.array(eachfos)
                         finval = np.isfinite(eachfos)
                         key = cwave.index(cw)
-                        polyorder = 2
+                        polyorder = 1
                         if np.sum(finval) > (polyorder + 1):
                             poly = np.poly1d(np.polyfit(eachwfos[finval], eachfos[finval],
                                                         polyorder))
@@ -442,29 +442,35 @@ G. ROUDIER: Out of transit data normalization
                 nscale = np.round(np.percentile(wanted, 50))
                 log.warning('--< Visit %s: Noise scale %s', str(int(v)), str(nscale))
                 if nscale < 5e0: nscale = 5e0
-                elif (nscale >= 10) and (not singlevisit):
+                elif (nscale >= 1e1) and (not singlevisit):
                     nscale = 5e0
                     log.warning('--< Visit %s: Noise scale above threshold', str(int(v)))
                     pass
                 check = []
-                for w, s, pn, zv in zip(visw, viss, photnoise, zoot[selv]):
+                for w, s, pn in zip(visw, viss, photnoise):
                     wselect = (w >= np.min(vrange)) & (w <= np.max(vrange))
                     if True in wselect:
                         crit = np.nanstd(s[wselect]) < (nscale*np.nanmedian(pn))
-                        if abs(zv) < (1e0 + rpors): crit = True
                         check.append(crit)
                         pass
                     else: check.append(False)
                     pass
                 check = np.array(check)
-                rejrate = int(100 - (np.sum(check)*1e2/check.size))
-                log.warning('--< Visit %s: Rejected %s/100', str(int(v)), str(rejrate))
-                stdoot = np.nanstd(viss[(abs(z[selv]) > (1e0 + rpors)) & check])
+                rejrate = check.size - np.sum(check)
+                log.warning('--< Visit %s: Rejected %s/%s',
+                            str(int(v)), str(rejrate), str(check.size))
+                dataoot = viss[(abs(z[selv]) > (1e0 + rpors)) & check]
+                waveoot = visw[(abs(z[selv]) > (1e0 + rpors)) & check]
+                stdoot = []
+                for s, w in zip(dataoot, waveoot):
+                    wselect = (w >= np.min(vrange)) & (w <= np.max(vrange))
+                    if True in wselect: stdoot.append(np.nanstd(s[wselect]))
+                    pass
+                thrz = np.nanmedian(stdoot) + 3e0*np.nanstd(stdoot)
                 checkz = []
                 for w, s, zv in zip(visw, viss, zoot[selv]):
                     wselect = (w >= np.min(vrange)) & (w <= np.max(vrange))
                     if (True in wselect) and (abs(zv) > (1e0 + rpors)):
-                        thrz = nscale*stdoot/np.sqrt(1e0*np.sum(wselect))
                         critz = abs(1e0 - np.nanmean(s[wselect])) < thrz
                         checkz.append(critz)
                         if not critz:
@@ -694,11 +700,11 @@ G. ROUDIER: Orbital parameters recovery
         flatphase = np.array(flatphase)
         allwwmin = min(flatminww)
         allwwmax = max(flatmaxww)
-        renorm = np.nanmedian(flatwhite[abs(flatz) > 1e0 + rpors])
+        renorm = np.nanmean(flatwhite[abs(flatz) > 1e0 + rpors])
         flatwhite /= renorm
         flaterrwhite /= renorm
-        allwhite = np.array(allwhite)/renorm
-        allerrwhite = np.array(allerrwhite)/renorm
+        allwhite = [np.array(aw)/renorm for aw in allwhite]
+        allerrwhite = [np.array(aew)/renorm for aew in allerrwhite]
         out['data'][p]['allwhite'] = allwhite
         out['data'][p]['phase'] = phase
         out['data'][p]['flatphase'] = flatphase
@@ -1276,7 +1282,7 @@ G. ROUDIER: Exoplanet spectrum recovery
             else: g1, g2, g3, g4 = [[0], [0], [0], [0]]
             out['data'][p]['LD'].append([g1[0], g2[0], g3[0], g4[0]])
             model = tldlc(abs(allz), whiterprs, g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0])
-            renorm = np.nanmedian(data[abs(allz) > (1e0 + whiterprs)])
+            renorm = np.nanmean(data[abs(allz) > (1e0 + whiterprs)])
             data /= renorm
             dnoise /= renorm
             if verbose:
