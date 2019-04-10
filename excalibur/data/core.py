@@ -309,6 +309,7 @@ G. ROUDIER: Extracts and Wavelength calibrates WFC3 SCAN mode spectra
     '''
     # VISIT ------------------------------------------------------------------------------
     for pkey in tim['data'].keys(): visits = np.array(tim['data'][pkey]['visits'])
+    for pkey in tim['data'].keys(): dvisits = np.array(tim['data'][pkey]['dvisits'])
     # DATA TYPE --------------------------------------------------------------------------
     arcsec2pix = dps(flttype)
     vrange = validrange(flttype)
@@ -381,6 +382,8 @@ G. ROUDIER: Extracts and Wavelength calibrates WFC3 SCAN mode spectra
     data['MASK'] = data['EXPFLAG'].copy()
     data['IGNORED'] = [False]*len(data['LOC'])
     data['FLOODLVL'] = [np.nan]*len(data['LOC'])
+    data['UP'] = [np.nan]*len(data['LOC'])
+    data['DOWN'] = [np.nan]*len(data['LOC'])
     data['TRIAL'] = ['']*len(data['LOC'])
     for index, nm in enumerate(data['LOC']):
         maskedexp = []
@@ -405,12 +408,11 @@ G. ROUDIER: Extracts and Wavelength calibrates WFC3 SCAN mode spectra
         data['MASK'][index] = masks
         data['IGNORED'][index] = ignore
         pass
-    # DATA CUBE --------------------------------------------------------------------------
+    # ALL FLOOD LEVELS -------------------------------------------------------------------
     for index, nm in enumerate(data['LOC']):
         ignore = data['IGNORED'][index]
-        # MINKOWSKI FLOOD LEVEL ----------------------------------------------------------
+        # MINKOWSKI ----------------------------------------------------------------------
         psdiff = np.diff(data['MEXP'][index][::-1].copy(), axis=0)
-        psmin = np.nansum(data['MIN'][index])
         floatsw = data['SCANLENGTH'][index]/arcsec2pix
         scanwdw = np.round(floatsw)
         if (scanwdw > psdiff[0].shape[0]) or (len(psdiff) < 2):
@@ -447,6 +449,75 @@ G. ROUDIER: Extracts and Wavelength calibrates WFC3 SCAN mode spectra
             pass
         pass
     allfloodlvl = np.array(data['FLOODLVL'])
+    for dv in set(dvisits):
+        allfloodlvl[dvisits == dv] = np.nanmedian(allfloodlvl[dvisits == dv])
+        pass
+    data['FLOODLVL'] = allfloodlvl
+    # ALL LIMITS  ------------------------------------------------------------------------
+    for index, nm in enumerate(data['LOC']):
+        ignore = data['IGNORED'][index]
+        # MINKOWSKI FLOOD LEVEL ----------------------------------------------------------
+        psdiff = np.diff(data['MEXP'][index][::-1].copy(), axis=0)
+        floatsw = data['SCANLENGTH'][index]/arcsec2pix
+        scanwdw = np.round(floatsw)
+        if (scanwdw > psdiff[0].shape[0]) or (len(psdiff) < 2):
+            scanwpi = np.round(floatsw/(len(psdiff)))
+            pass
+        else: scanwpi = np.round(floatsw/(len(psdiff) - 1))
+        if scanwpi < 1:
+            data['TRIAL'][index] = 'Subexposure Scan Length < 1 Pixel'
+            ignore = True
+            pass
+        if not ignore:
+            targetn = 0
+            if tid in ['XO-2', 'HAT-P-1']: targetn = -1
+            minlocs = []
+            maxlocs = []
+            for de, md in zip(psdiff.copy()[::-1], data['MIN'][index][::-1]):
+                lmn, lmx = isolate(de, md, spectrace, scanwpi, targetn,
+                                   data['FLOODLVL'][index])
+                minlocs.append(lmn)
+                maxlocs.append(lmx)
+                pass
+            # HEAVILY FLAGGED SCAN -------------------------------------------------------
+            nanlocs = np.all(~np.isfinite(minlocs)) or np.all(~np.isfinite(maxlocs))
+            almstare = scanwpi < 5
+            if nanlocs or almstare:
+                for de, md in zip(psdiff.copy()[::-1], data['MIN'][index][::-1]):
+                    if (scanwpi/3) < 2: redscanwpi = scanwpi/2
+                    else: redscanwpi = scanwpi/3
+                    lmn, lmx = isolate(de, md, spectrace, redscanwpi, targetn,
+                                       data['FLOODLVL'][index])
+                    minlocs.append(lmn)
+                    maxlocs.append(lmx)
+                    pass
+                pass
+            ignore = ignore or not((np.any(np.isfinite(minlocs))) and
+                                   (np.any(np.isfinite(maxlocs))))
+            if not ignore:
+                minl = np.nanmin(minlocs)
+                maxl = np.nanmax(maxlocs)
+                # CONTAMINATION FROM ANOTHER SOURCE IN THE UPPER FRAME -------------------
+                if (tid in ['HAT-P-41']) and ((maxl - minl) > 15): minl = maxl - 15
+                if minl < 10: minl = 10
+                if maxl > (psdiff[0].shape[0] - 10): maxl = psdiff[0].shape[0] - 10
+                pass
+            else:
+                minl = np.nan
+                maxl = np.nan
+                pass
+            data['UP'][index] = minl
+            data['DOWN'][index] = maxl
+            pass
+        pass
+    allminl = np.array(data['UP'])
+    allmaxl = np.array(data['DOWN'])
+    for dv in set(dvisits):
+        allminl[dv == dvisits] = np.nanpercentile(allminl[dv == dvisits], 2.5)
+        allmaxl[dv == dvisits] = np.nanpercentile(allmaxl[dv == dvisits], 97.5)
+        pass
+    data['UP'] = allminl
+    data['DOWN'] = allmaxl
     allscanlen = np.array(data['SCANLENGTH'])
     allignore = np.array(data['IGNORED'])
     alltrials = np.array(['Exposure Scan Length Rejection']*len(data['TRIAL']))
@@ -464,22 +535,15 @@ G. ROUDIER: Extracts and Wavelength calibrates WFC3 SCAN mode spectra
     data['IGNORED'] = list(allignore)
     data['TRIAL'] = list(alltrials)
     ovszspc = False
+    # BACKGROUND SUB AND ISOLATE ---------------------------------------------------------
     for index, nm in enumerate(data['LOC']):
         ignore = data['IGNORED'][index]
-        # ISOLATE SCAN Y -----------------------------------------------------------------
         psdiff = np.diff(data['MEXP'][index][::-1].copy(), axis=0)
         psminsel = np.array(data['MIN'][index]) < 0
         if True in psminsel: psmin = np.nansum(np.array(data['MIN'][index])[psminsel])
         else: psmin = np.nanmin(data['MIN'][index])
-        floatsw = data['SCANLENGTH'][index]/arcsec2pix
-        if (scanwdw > psdiff[0].shape[0]) or (len(psdiff) < 2):
-            scanwpi = np.round(floatsw/(len(psdiff)))
-            pass
-        else: scanwpi = np.round(floatsw/(len(psdiff) - 1))
-        if scanwpi < 1:
-            data['TRIAL'][index] = 'Subexposure Scan Length < 1 Pixel'
-            ignore = True
-            pass
+        minl = data['UP'][index]
+        maxl = data['DOWN'][index]
         if not ignore:
             # BACKGROUND SUBTRACTION -----------------------------------------------------
             for eachdiff in psdiff:
@@ -494,49 +558,16 @@ G. ROUDIER: Extracts and Wavelength calibrates WFC3 SCAN mode spectra
                         pass
                     nancounts = np.sum(~np.isfinite(eachcol))
                     thr = 1e2*(1e0 - (scanwpi + nancounts)/eachcol.size)
-                    bcke = np.nanmedian(eachcol[eachcol < np.nanpercentile(eachcol, thr)])
+                    if thr <= 0: bcke = np.nan
+                    else:
+                        test = eachcol < np.nanpercentile(eachcol, thr)
+                        if True in test: bcke = np.nanmedian(eachcol[test])
+                        else: bcke = np.nan
+                        pass
                     background.append(bcke)
                     pass
                 background = np.array([np.array(background)]*eachdiff.shape[0])
                 eachdiff -= background
-                pass
-            targetn = 0
-            if tid in ['XO-2', 'HAT-P-1']: targetn = -1
-            minlocs = []
-            maxlocs = []
-            fldthr = data['FLOODLVL'][index]
-            for de, md in zip(psdiff.copy()[::-1], data['MIN'][index][::-1]):
-                lmn, lmx = isolate(de, md, spectrace, scanwpi, targetn, fldthr)
-                minlocs.append(lmn)
-                maxlocs.append(lmx)
-                pass
-            # HEAVILY FLAGGED SCAN -------------------------------------------------------
-            nanlocs = np.all(~np.isfinite(minlocs)) or np.all(~np.isfinite(maxlocs))
-            almstare = scanwpi < 5
-            if nanlocs or almstare:
-                for de, md in zip(psdiff.copy()[::-1], data['MIN'][index][::-1]):
-                    if (scanwpi/3) < 2: redscanwpi = scanwpi/2
-                    else: redscanwpi = scanwpi/3
-                    lmn, lmx = isolate(de, md, spectrace, redscanwpi, targetn, fldthr)
-                    minlocs.append(lmn)
-                    maxlocs.append(lmx)
-                    pass
-                pass
-            pass
-        else:
-            minlocs = [np.nan]
-            maxlocs = [np.nan]
-            pass
-        ignore = ignore or not((np.any(np.isfinite(minlocs))) and
-                               (np.any(np.isfinite(maxlocs))))
-        if not ignore:
-            minl = np.nanmin(minlocs)
-            maxl = np.nanmax(maxlocs)
-            # CONTAMINATION FROM ANOTHER SOURCE IN THE UPPER FRAME -----------------------
-            if (tid in ['HAT-P-41']) and ((maxl - minl) > 15): minl = maxl - 15
-            if minl < 10: minl = 10
-            if maxl > (psdiff[0].shape[0] - 10): maxl = psdiff[0].shape[0] - 10
-            for eachdiff in psdiff:
                 eachdiff[:int(minl),:] = 0
                 eachdiff[int(maxl):,:] = 0
                 pass
@@ -550,7 +581,7 @@ G. ROUDIER: Extracts and Wavelength calibrates WFC3 SCAN mode spectra
                 show = thispstamp.copy()
                 valid = np.isfinite(show)
                 show[~valid] = 0
-                show[show < fldthr] = np.nan
+                show[show < data['FLOODLVL'][index]] = np.nan
                 plt.figure()
                 plt.title('Isolate Flood Level')
                 plt.imshow(show)
@@ -573,8 +604,8 @@ G. ROUDIER: Extracts and Wavelength calibrates WFC3 SCAN mode spectra
             mltord = thispstamp.copy()
             targetn = 0
             if tid in ['XO-2']: targetn = -1
-            minx, maxx = isolate(mltord, psmin, spectrace, scanwpi, targetn, fldthr,
-                                 axis=0, debug=False)
+            minx, maxx = isolate(mltord, psmin, spectrace, scanwpi, targetn,
+                                 data['FLOODLVL'][index], axis=0, debug=False)
             if np.isfinite(minx*maxx):
                 minx -= (1.5*12)
                 maxx += (1.5*12)

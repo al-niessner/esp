@@ -441,9 +441,9 @@ G. ROUDIER: Out of transit data normalization
                     pass
                 nscale = np.round(np.percentile(wanted, 50))
                 log.warning('--< Visit %s: Noise scale %s', str(int(v)), str(nscale))
-                if nscale < 5e0: nscale = 5e0
-                elif (nscale >= 1e1) and (not singlevisit):
-                    nscale = 5e0
+                if nscale <= 5e0: nscale = 5e0
+                elif (nscale > 5e0) and (not singlevisit):
+                    nscale = 2e0
                     log.warning('--< Visit %s: Noise scale above threshold', str(int(v)))
                     pass
                 check = []
@@ -470,8 +470,11 @@ G. ROUDIER: Out of transit data normalization
                 checkz = []
                 for w, s, zv in zip(visw, viss, zoot[selv]):
                     wselect = (w >= np.min(vrange)) & (w <= np.max(vrange))
-                    if (True in wselect) and (abs(zv) > (1e0 + rpors)):
-                        critz = abs(1e0 - np.nanmean(s[wselect])) < thrz
+                    if True in wselect:
+                        if abs(zv) > (1e0 + rpors):
+                            critz = abs(1e0 - np.nanmean(s[wselect])) < thrz
+                            pass
+                        else: critz = np.nanmean(s[wselect]) - 1e0 < thrz
                         checkz.append(critz)
                         if not critz:
                             log.warning('--< Visit %s: Excluding averaged spectrum %s',
