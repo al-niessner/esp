@@ -1695,7 +1695,7 @@ G. ROUDIER: WFC3 STARE Calibration
 # -------------------------- -----------------------------------------
 # -- STIS CALIBRATION -- ---------------------------------------------
 def stiscal(clc, tim, tid, flttype, out,
-            verbose=False, debug=True):
+            verbose=False, debug=False):
     '''
 R. ESTRELA: STIS .flt data extraction and wavelength calibration
     '''

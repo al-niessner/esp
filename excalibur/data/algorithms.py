@@ -18,7 +18,7 @@ import excalibur.system.algorithms as sysalg
 # -- ALGO RUN OPTIONS -- ---------------------------------------------
 # FILTERS
 fltrs = (trgedit.activefilters.__doc__).split('\n')
-fltrs = [t.strip() for t in fltrs if t.replace(' ', '').__len__() > 0]
+fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class collect(dawgie.Algorithm):

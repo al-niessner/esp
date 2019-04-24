@@ -125,7 +125,7 @@ G. ROUDIER: Out of transit data normalization
                 log.warning('--< Single Visit Observation')
                 pass
             pass
-        for v in set(visits):
+        for v in tme[selftype]:  # DOUBLE SCAN NUMBERING
             selv = (visits == v) & ~ignore
             if selftype in ['transit', 'phasecurve']:
                 select = (phase[selv] > 0.25) | (phase[selv] < -0.25)
@@ -1262,6 +1262,7 @@ G. ROUDIER: Exoplanet spectrum recovery
         out['data'][p]['ESerr'] = []
         out['data'][p]['LD'] = []
         out['data'][p]['MCPOST'] = []
+        tdmemory = whiterprs
         for wl, wh in zip(lwavec, hwavec):
             out['data'][p]['WBlow'].append(wl)
             out['data'][p]['WBup'].append(wh)
@@ -1307,7 +1308,7 @@ G. ROUDIER: Exoplanet spectrum recovery
             mmw, fH2, fHe = crbcore.getmmw(mixratio, protosolar=False, fH2=fH2, fHe=fHe)
             mmw = mmw*cst.m_p  # [kg]
             Hs = cst.Boltzmann*eqtemp/(mmw*1e-2*(10.**priors[p]['logg']))  # [m]
-            Hs = 3e0*Hs/(priors['R*']*sscmks['Rsun'])
+            Hs = Hs/(priors['R*']*sscmks['Rsun'])
             tauvs = 1e0/((1e-2/trdura)**2)
             ootstd = np.nanstd(data[abs(allz) > (1e0 + whiterprs)])
             tauvi = 1e0/(ootstd**2)
@@ -1319,7 +1320,7 @@ G. ROUDIER: Exoplanet spectrum recovery
                      orbits=orbits, smaors=smaors, time=time, valid=valid, visits=visits)
             # PYMC3 ----------------------------------------------------------------------
             with pm.Model():
-                rprs = pm.Normal('rprs', mu=whiterprs, tau=1e0/Hs**2)
+                rprs = pm.Normal('rprs', mu=tdmemory, tau=1e0/Hs**2)
                 allvslope = pm.TruncatedNormal('vslope', mu=0e0, tau=tauvs,
                                                lower=-3e-2/trdura,
                                                upper=3e-2/trdura, shape=shapevis)
@@ -1340,6 +1341,7 @@ G. ROUDIER: Exoplanet spectrum recovery
             out['data'][p]['ES'].append(np.nanmedian(trace['rprs']))
             out['data'][p]['ESerr'].append(np.nanstd(trace['rprs']))
             out['data'][p]['MCPOST'].append(mcpost)
+            tdmemory = np.nanmedian(trace['rprs'])
             pass
         exospec = True
         out['STATUS'].append(True)
