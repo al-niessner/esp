@@ -119,11 +119,9 @@ G. ROUDIER: Out of transit data normalization
         out['data'][p]['vignore'] = []
         out['data'][p]['stdns'] = []
         singlevisit = False
-        if selftype in tme:
-            if tme[selftype].__len__() == 1:
-                singlevisit = True
-                log.warning('--< Single Visit Observation')
-                pass
+        if tme[selftype].__len__() == 1:
+            singlevisit = True
+            log.warning('--< Single Visit Observation')
             pass
         for v in tme[selftype]:  # DOUBLE SCAN NUMBERING
             selv = (visits == v) & ~ignore
@@ -528,11 +526,17 @@ G. ROUDIER: Out of transit data normalization
                         pass
                     else: out['data'][p]['trial'].append('Missing IT Data')
                     out['data'][p]['vignore'].append(v)
+                    if (len(tme[selftype]) - len(out['data'][p]['vignore'])) < 2:
+                        singlevisit = True
+                        pass
                     pass
                 pass
             else:
                 out['data'][p]['trial'].append('Not Enough OOT Data')
                 out['data'][p]['vignore'].append(v)
+                if (len(tme[selftype]) - len(out['data'][p]['vignore'])) < 2:
+                    singlevisit = True
+                    pass
                 pass
             pass
         # VARIANCE EXCESS FROM LOST GUIDANCE ---------------------------------------------
@@ -1308,7 +1312,7 @@ G. ROUDIER: Exoplanet spectrum recovery
             mmw, fH2, fHe = crbcore.getmmw(mixratio, protosolar=False, fH2=fH2, fHe=fHe)
             mmw = mmw*cst.m_p  # [kg]
             Hs = cst.Boltzmann*eqtemp/(mmw*1e-2*(10.**priors[p]['logg']))  # [m]
-            Hs = Hs/(priors['R*']*sscmks['Rsun'])
+            boostHs = 2e0*Hs/(priors['R*']*sscmks['Rsun'])
             tauvs = 1e0/((1e-2/trdura)**2)
             ootstd = np.nanstd(data[abs(allz) > (1e0 + whiterprs)])
             tauvi = 1e0/(ootstd**2)
@@ -1320,7 +1324,7 @@ G. ROUDIER: Exoplanet spectrum recovery
                      orbits=orbits, smaors=smaors, time=time, valid=valid, visits=visits)
             # PYMC3 ----------------------------------------------------------------------
             with pm.Model():
-                rprs = pm.Normal('rprs', mu=tdmemory, tau=1e0/Hs**2)
+                rprs = pm.Normal('rprs', mu=tdmemory, tau=1e0/(boostHs**2))
                 allvslope = pm.TruncatedNormal('vslope', mu=0e0, tau=tauvs,
                                                lower=-3e-2/trdura,
                                                upper=3e-2/trdura, shape=shapevis)

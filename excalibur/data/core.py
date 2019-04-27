@@ -762,11 +762,11 @@ G. ROUDIER: Extracts and Wavelength calibrates WFC3 SCAN mode spectra
                 data['TRIAL'][index] = 'Invalid Spectrum/Template'
                 pass
             # TRUNCATED SPECTRUM
-            testspec = spectrum[np.isfinite(spectrum)]
-            if (np.all(testspec[-18:] > emptythr)) and not ovszspc:
-                data['IGNORED'][index] = True
-                data['TRIAL'][index] = 'Truncated Spectrum'
-                pass
+            # testspec = spectrum[np.isfinite(spectrum)]
+            # if (np.all(testspec[-18:] > emptythr)) and not ovszspc:
+            #    data['IGNORED'][index] = True
+            #    data['TRIAL'][index] = 'Truncated Spectrum'
+            #    pass
             data['SPECTRUM'][index] = np.array(spectrum)
             data['SPECERR'][index] = np.array(specerr)
             data['NSPEC'][index] = np.array(nspectrum)
