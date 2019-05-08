@@ -139,7 +139,7 @@ class spectrum(dawgie.Algorithm):
 G. ROUDIER: See inheritance and CI5 thread with A NIESSNER for __init__() method and class attributes https://github-fn.jpl.nasa.gov/EXCALIBUR/esp/pull/86
     '''
     def __init__(self, nrm=normalization(), wht=whitelight()):
-        self._version_ = dawgie.VERSION(1,1,0)
+        self._version_ = dawgie.VERSION(1,1,1)
         self._type = 'transit'
         self.__fin = sysalg.finalize()
         self._nrm = nrm

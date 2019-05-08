@@ -1268,6 +1268,7 @@ G. ROUDIER: Exoplanet spectrum recovery
         out['data'][p]['MCPOST'] = []
         tdmemory = whiterprs
         for wl, wh in zip(lwavec, hwavec):
+            waveindex = list(lwavec).index(wl)
             out['data'][p]['WBlow'].append(wl)
             out['data'][p]['WBup'].append(wh)
             out['data'][p]['WB'].append(np.mean([wl, wh]))
@@ -1312,19 +1313,38 @@ G. ROUDIER: Exoplanet spectrum recovery
             mmw, fH2, fHe = crbcore.getmmw(mixratio, protosolar=False, fH2=fH2, fHe=fHe)
             mmw = mmw*cst.m_p  # [kg]
             Hs = cst.Boltzmann*eqtemp/(mmw*1e-2*(10.**priors[p]['logg']))  # [m]
-            boostHs = 2e0*Hs/(priors['R*']*sscmks['Rsun'])
+            Hs = Hs/(priors['R*']*sscmks['Rsun'])
             tauvs = 1e0/((1e-2/trdura)**2)
             ootstd = np.nanstd(data[abs(allz) > (1e0 + whiterprs)])
             tauvi = 1e0/(ootstd**2)
             nodes = []
             tauwbdata = 1e0/dnoise**2
+            noot = np.sum(abs(allz) > (1e0 + whiterprs))
+            nit = allz.size - noot
+            # Noise propagation forecast on transit depth
+            propphn = np.nanmedian(dnoise)*(1e0 - tdmemory**2)*np.sqrt(1e0/nit + 1e0/noot)
+            propdv = ootstd*(1e0 - tdmemory**2)*np.sqrt(1e0/nit + 1e0/noot)
+            # Dirty approximation for rp/rs original distribution
+            dirtypn = np.sqrt(propphn + tdmemory**2) - tdmemory
+            dirtydv = np.sqrt(propdv + tdmemory**2) - tdmemory
+            # Options for prior widths: [Physical (Hs), Photon noise, Data variance]
+            allwidths = 2e0*np.array([Hs, dirtypn, dirtydv])
+            # Dynamic choice for allowed channel to channel covariance
+            mpstart = allwidths[2]
+            magicprior = np.nanmin(allwidths)
+            choice = ['Scale Height', 'Photon Noise', 'Data Variance']
+            log.warning('--< Prior based on %s',
+                        choice[list(allwidths).index(magicprior)])
             shapevis = 2
             if shapevis < len(visits): shapevis = len(visits)
             ctxtupdt(allz=allz, g1=g1, g2=g2, g3=g3, g4=g4,
                      orbits=orbits, smaors=smaors, time=time, valid=valid, visits=visits)
             # PYMC3 ----------------------------------------------------------------------
             with pm.Model():
-                rprs = pm.Normal('rprs', mu=tdmemory, tau=1e0/(boostHs**2))
+                if waveindex < 1:
+                    rprs = pm.Normal('rprs', mu=tdmemory, tau=1e0/(mpstart**2))
+                    pass
+                else: rprs = pm.Normal('rprs', mu=tdmemory, tau=1e0/(magicprior**2))
                 allvslope = pm.TruncatedNormal('vslope', mu=0e0, tau=tauvs,
                                                lower=-3e-2/trdura,
                                                upper=3e-2/trdura, shape=shapevis)
