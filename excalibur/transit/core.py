@@ -481,7 +481,7 @@ G. ROUDIER: Out of transit data normalization
                         pass
                     else: checkz.append(True)
                     pass
-                check = check & np.array(checkz)
+                check = check & np.array(checkz)  # comment if G430L
                 wellcondin = np.sum(abs(zoot[selv][check]) < (1e0 + rpors)) > 3
                 if not((np.sum(check) > 9) and wellcondin) and singlevisit:
                     wellcondin = True
@@ -1045,7 +1045,9 @@ LDTK: Parviainen et al. https://github.com/hpparvi/ldtk
     out['MU'] = avmu
     out['LD'] = allcl.T
     out['ERR'] = allel.T
-    for i in range(len(allcl.T)):
+    for i in range(0,len(allcl.T)):
+        log.warning('>-- LD%s: %s', str(int(i)),
+                    str(float(allcl.T[i])))
         log.warning('>-- LD%s: %s +/- %s', str(int(i)),
                     str(float(allcl.T[i])), str(float(allel.T[i])))
         pass
@@ -1057,17 +1059,17 @@ def ldx(psmu, psmean, psstd, mumin=1e-1, debug=False, model='nonlinear'):
 G. ROUDIER: Limb darkening coefficient retrievial on PHOENIX GRID models,
 OPTIONAL mumin set up on HAT-P-41 stellar class
     '''
-    mup = np.array(psmu).copy()
-    prfs = np.array(psmean).copy()
-    sprfs = np.array(psstd).copy()
-    nwave = prfs.shape[0]
-    select = (mup > mumin)
-    fitmup = mup[select]
-    fitprfs = prfs[:, select]
-    fitsprfs = sprfs[:, select]
-    cl = []
-    el = []
-    params = lm.Parameters()
+    mup=np.array(psmu).copy()
+    prfs=np.array(psmean).copy()
+    sprfs=np.array(psstd).copy()
+    nwave=prfs.shape[0]
+    select=(mup > mumin)
+    fitmup=mup[select]
+    fitprfs=prfs[:, select]
+    fitsprfs=sprfs[:, select]
+    cl=[]
+    el=[]
+    params=lm.Parameters()
     params.add('gamma1', value=1e-1)
     params.add('gamma2', value=5e-1)
     params.add('gamma3', value=1e-1)
@@ -1075,20 +1077,30 @@ OPTIONAL mumin set up on HAT-P-41 stellar class
     if debug: plt.figure()
     for iwave in np.arange(nwave):
         if model == 'linear':
-            out = lm.minimize(lnldx, params,
-                              args=(fitmup, fitprfs[iwave], fitsprfs[iwave]))
+            params['gamma1'].value = 0
+            params['gamma1'].vary = False
+            params['gamma3'].value = 0
+            params['gamma3'].vary = False
+            params['gamma4'].value = 0
+            params['gamma4'].vary = False
+            out=lm.minimize(lnldx, params,
+                            args=(fitmup, fitprfs[iwave], fitsprfs[iwave]))
             cl.append([out.params['gamma1'].value])
             el.append([out.params['gamma1'].stderr])
             pass
         if model == 'quadratic':
-            out = lm.minimize(qdldx, params,
-                              args=(fitmup, fitprfs[iwave], fitsprfs[iwave]))
+            params['gamma1'].value = 0
+            params['gamma1'].vary = False
+            params['gamma3'].value = 0
+            params['gamma3'].vary = False
+            out=lm.minimize(qdldx, params,
+                            args=(mup, prfs[iwave], sprfs[iwave]))
             cl.append([out.params['gamma1'].value, out.params['gamma2'].value])
             el.append([out.params['gamma1'].stderr, out.params['gamma2'].stderr])
             pass
         if model == 'nonlinear':
-            out = lm.minimize(nlldx, params,
-                              args=(fitmup, fitprfs[iwave], fitsprfs[iwave]))
+            out=lm.minimize(nlldx, params,
+                            args=(fitmup, fitprfs[iwave], fitsprfs[iwave]))
             cl.append([out.params['gamma1'].value, out.params['gamma2'].value,
                        out.params['gamma3'].value, out.params['gamma4'].value])
             el.append([out.params['gamma1'].stderr, out.params['gamma2'].stderr,
@@ -1115,8 +1127,8 @@ def lnldx(params, x, data=None, weights=None):
     '''
 G. ROUDIER: Linear law
     '''
-    gamma1 = params['gamma1'].value
-    model = LinearModel.evaluate(x, [gamma1])
+    gamma1=params['gamma1'].value
+    model=LinearModel.evaluate(x, [gamma1])
     if data is None: return model
     if weights is None: return data - model
     return (data - model)/weights
@@ -1252,7 +1264,10 @@ G. ROUDIER: Exoplanet spectrum recovery
         allnanc = []
         for wl, wh in zip(lwavec, hwavec):
             select = [(w > wl) & (w < wh) for w in allwave]
-            data = np.array([np.median(d[s]) for d, s in zip(allspec, select)])
+            if 'STIS' in ext:
+                data = np.array([np.nanmean(d[s]) for d, s in zip(allspec, select)])
+                pass
+            else: data = np.array([np.median(d[s]) for d, s in zip(allspec, select)])
             if np.all(~np.isfinite(data)): allnanc.append(True)
             else: allnanc.append(False)
             pass
@@ -1286,11 +1301,18 @@ G. ROUDIER: Exoplanet spectrum recovery
             valid = np.isfinite(data)
             if selftype in ['transit']:
                 bld = createldgrid([wl], [wh], priors, segmentation=int(10))
-                g1, g2, g3, g4 = bld['LD']
+                if len(bld['LD']) > 2:
+                    g1, g2, g3, g4 = bld['LD']
+                else:
+                    g1, g2 = bld['LD']
                 pass
             else: g1, g2, g3, g4 = [[0], [0], [0], [0]]
-            out['data'][p]['LD'].append([g1[0], g2[0], g3[0], g4[0]])
-            model = tldlc(abs(allz), whiterprs, g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0])
+            if len(bld['LD']) > 2:
+                out['data'][p]['LD'].append([g1[0], g2[0], g3[0], g4[0]])
+                model = tldlc(abs(allz), whiterprs, g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0])
+            else:
+                out['data'][p]['LD'].append([g1[0], g2[0]])
+                model = tldlc(abs(allz), whiterprs, g1=g1[0], g2=g2[0])
             renorm = np.nanmean(data[abs(allz) > (1e0 + whiterprs)])
             data /= renorm
             dnoise /= renorm
@@ -1337,8 +1359,12 @@ G. ROUDIER: Exoplanet spectrum recovery
                         choice[list(allwidths).index(magicprior)])
             shapevis = 2
             if shapevis < len(visits): shapevis = len(visits)
-            ctxtupdt(allz=allz, g1=g1, g2=g2, g3=g3, g4=g4,
-                     orbits=orbits, smaors=smaors, time=time, valid=valid, visits=visits)
+            if len(bld['LD']) > 2:
+                ctxtupdt(allz=allz, g1=g1, g2=g2, g3=g3, g4=g4,
+                         orbits=orbits, smaors=smaors, time=time, valid=valid, visits=visits)
+            else:
+                ctxtupdt(allz=allz, g1=g1,
+                         orbits=orbits, smaors=smaors, time=time, valid=valid, visits=visits)
             # PYMC3 ----------------------------------------------------------------------
             with pm.Model():
                 if waveindex < 1:

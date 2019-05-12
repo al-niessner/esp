@@ -1,5 +1,6 @@
 # -- IMPORTS -- ------------------------------------------------------
 import os
+import glob
 import logging; log = logging.getLogger(__name__)
 
 import dawgie
@@ -9,10 +10,14 @@ import excalibur
 import excalibur.system.core as syscore
 
 import numpy as np
+import numpy.polynomial.polynomial as poly
 import lmfit as lm
 import scipy.interpolate as itp
+import scipy.signal
 import matplotlib.pyplot as plt
 import astropy.io.fits as pyfits
+import time as raissatime
+import datetime
 # ------------- ------------------------------------------------------
 # -- SV VALIDITY -- --------------------------------------------------
 def checksv(sv):
@@ -1100,7 +1105,7 @@ G ROUDIER: Aperture and filter to total transmission filter
         ttp = ttp[select]
         pass
     if grism == 'G430L':
-        select = (mu > 2.92e3) & (mu < 5.7394e3)
+        select = (mu > 2.9e3) & (mu < 5.7394e3)
         mu = mu[select]
         ttp = ttp[select]
         pass
@@ -1703,7 +1708,7 @@ R. ESTRELA: STIS .flt data extraction and wavelength calibration
     # VISIT NUMBERING --------------------------------------------------------------------
     for pkey in tim['data'].keys(): visits = np.array(tim['data'][pkey]['dvisits'])
     # PHASE ------------------------------------------------------------------------------
-    for pkey in tim['data'].keys(): phase = np.array(tim['data'][pkey]['phase'])
+    # for pkey in tim['data'].keys(): phase = np.array(tim['data'][pkey]['phase'])
     # OPTICS AND FILTER ------------------------------------------------------------------
     vrange = validrange(flttype)
     _wvrng, disp, ldisp, udisp = fng(flttype)
@@ -1712,7 +1717,7 @@ R. ESTRELA: STIS .flt data extraction and wavelength calibration
     data = {'LOC':[], 'EPS':[], 'DISPLIM':[ldisp, udisp],
             'SCANRATE':[], 'SCANLENGTH':[], 'SCANANGLE':[],
             'EXP':[], 'EXPERR':[], 'EXPFLAG':[], 'VRANGE':vrange,
-            'TIME':[], 'EXPLEN':[], 'MIN':[], 'MAX':[], 'TRIAL':[]}
+            'TIME':[], 'EXPLEN':[], 'MIN':[], 'MAX':[], 'TRIAL':[], 'TIMEOBS':[], 'DATEOBS':[]}
     # LOAD DATA --------------------------------------------------------------------------
     for loc in sorted(clc['LOC']):
         fullloc = os.path.join(dbs, loc)
@@ -1730,11 +1735,15 @@ R. ESTRELA: STIS .flt data extraction and wavelength calibration
             allmask = []
             allmin = []
             allmax = []
+            alldate = []
+            alltimeobs = []
             for fits in hdulist:
                 if (fits.size != 0) and (fits.header['EXTNAME']=='SCI'):
                     allloc.append(fits.header['EXPNAME'])
                     alltime.append(float(fits.header['EXPEND']))
                     allexplen.append(float(fits.header['EXPTIME']))
+                    alldate.append(header0['TDATEOBS'])
+                    alltimeobs.append(header0['TTIMEOBS'])
                     fitsdata = np.empty(fits.data.shape)
                     fitsdata[:] = fits.data[:]
                     test = fits.header['BUNIT']
@@ -1745,7 +1754,8 @@ R. ESTRELA: STIS .flt data extraction and wavelength calibration
                     allmax.append(float(fits.header['GOODMAX']))
                     # BINARIES
                     # GMR: Let's put that in the mask someday
-                    if tid in ['HAT-P-1']: allexp.append(fitsdata[0:120, :])
+                    nam = 'MIDPOINT'
+                    if tid in ['HAT-P-1'] and nam in header0['TARGNAME']: allexp.append(fitsdata[200:380, :])
                     else: allexp.append(fitsdata)
                     del fits.data
                     pass
@@ -1778,10 +1788,14 @@ R. ESTRELA: STIS .flt data extraction and wavelength calibration
             data['EXPLEN'].extend(allexplen)
             data['MIN'].extend(allmin)
             data['MAX'].extend(allmax)
+            data['TIMEOBS'].extend(alltimeobs)
+            data['DATEOBS'].extend(alldate)
             pass
         pass
     data['MEXP'] = data['EXP'].copy()
     data['MASK'] = data['EXPFLAG'].copy()
+    data['ALLDATEOBS'] = data['DATEOBS'].copy()
+    data['ALLTIMEOBS'] = data['TIMEOBS'].copy()
     data['IGNORED'] = np.array([False]*len(data['LOC']))
     data['FLOODLVL'] = [np.nan]*len(data['LOC'])
     data['TRIAL'] = ['']*len(data['LOC'])
@@ -1799,20 +1813,132 @@ R. ESTRELA: STIS .flt data extraction and wavelength calibration
         data['IGNORED'][select] = visitignore
         pass
     for index, ignore in enumerate(data['IGNORED']):
+        # SELECT DATE AND TIME OF THE EXPOSURE FOR FLAT FRINGE SELECTION
         frame = data['MEXP'][index].copy()
-        if not ignore:
-            data['SPECTRUM'][index] = np.nansum(frame, axis=0)
-            data['SPECERR'][index] = np.sqrt(np.nansum(frame, axis=0))
+        dateobs_exp = data['ALLDATEOBS'][index]
+        timeobs_exp = data['ALLTIMEOBS'][index]
+        tog_exp = dateobs_exp +' '+ timeobs_exp
+        time_exp = raissatime.mktime(datetime.datetime.strptime(tog_exp, "%Y-%m-%d %H:%M:%S").timetuple())
+        # LOAD FRINGE FLAT -------------------------------------------------------------------
+        obs_name = clc['ROOTNAME'][0]
+        name_sel = obs_name[:-5]
+        lightpath_fringe = ('STIS/CCDFLAT/')
+        calloc = excalibur.context['data_cal']
+        filefringe = os.path.join(calloc,lightpath_fringe)
+        if tid in ['HD 209458']:
+            lightpath_fringe = ('STIS/CCDFLAT/h230851ao_pfl.fits')
+            calloc = excalibur.context['data_cal']
+            filefringe = os.path.join(calloc,lightpath_fringe)
+            hdu = pyfits.open(filefringe)
+            data_fringe = hdu[1].data
+            err_fringe = hdu[2].data
             pass
         else:
-            data['SPECTRUM'][index] = np.nansum(frame, axis=0)*np.nan
-            data['SPECERR'][index] = np.nansum(frame, axis=0)*np.nan
+            diff_list = []
+            all_infile = []
+            for infile in glob.glob('%s/%s*_flt.fits' % (filefringe,name_sel)):
+                hdu = pyfits.open(infile)
+                all_infile.append(infile)
+                header_flat = hdu[0].header
+                date_time=header_flat['TDATEOBS']
+                hour_time=header_flat['TTIMEOBS']
+                tog = date_time +' '+ hour_time
+                time_flat_s = raissatime.mktime(datetime.datetime.strptime(tog, "%Y-%m-%d %H:%M:%S").timetuple())
+                diff = abs(time_exp-time_flat_s)
+                diff_list.append(diff)
+                pass
+            cond_win = np.where(diff_list == np.min(diff_list))
+            all_infile = np.array(all_infile)
+            sel_flatfile = all_infile[cond_win][0]
+            hdulist = pyfits.open(sel_flatfile)
+            data_fringe = hdulist[4].data
+            err_fringe = hdulist[5].data
+            pass
+        smooth_fringe = scipy.signal.medfilt(data_fringe, 7)
+        sigma_fringe = np.median(err_fringe)
+        bad_fringe = (np.abs(data_fringe - smooth_fringe) / sigma_fringe) > 2
+        img_fringe = data_fringe.copy()
+        img_fringe[bad_fringe] = smooth_fringe[bad_fringe]
+        if debug:
+            plt.figure()
+            for i in range(0,len(data_fringe)):
+                plt.plot(img_fringe[i,:])
+                pass
+            pass
+        cont_data = img_fringe.copy()
+        div_list=[]
+        for i in range(508,515):
+            pixels = np.arange(0,1024,1)
+            coefs = poly.polyfit(pixels,cont_data[i,:], 11)
+            ffit = poly.polyval(pixels, coefs)
+            div = cont_data[i,:]/ffit
+            div_list.append(div)
+            if debug:
+                plt.figure()
+                plt.plot(pixels, ffit,color='red')
+                plt.plot(cont_data[i,:],color='blue')
+                plt.xlabel('Pixels')
+                plt.title('Contemporaneous Flat Fringe - Polynomial fit')
+                pass
+            pass
+        #############
+        # COSMIC RAY REJECTION IN THE 2D IMAGE
+        img_cr = frame.copy()
+        allframe_list = []
+        for i in range(0,len(frame)):
+            img_sm = scipy.signal.medfilt(img_cr[i,:], 9)
+            # std = np.std(img_cr[i,:] - img_sm)
+            std = np.std(img_sm)
+            bad = np.abs(img_cr[i,:] - img_sm) > 3*std
+            line = img_cr[i,:]
+            line[bad] = img_sm[bad]
+            allframe_list.append(line)
+            pass
+        allframe = np.array(allframe_list)
+        # APPLY FLAT FRINGE
+        # plt.figure()
+        find_spec = np.where(allframe == np.max(allframe))
+        spec_idx = find_spec[0][0]
+        spec_idx_up = spec_idx+4
+        spec_idx_dwn = spec_idx-3
+        spec_idx_all = np.arange(spec_idx_dwn,spec_idx_up,1)
+        frame2 = allframe.copy()
+        for i,flatnorm in zip(spec_idx_all,div_list):
+            frame_sel = allframe[i,:]
+            coefs_f = poly.polyfit(pixels,frame_sel, 12)
+            ffit_f = poly.polyval(pixels, coefs_f)
+            frame2[i,400:1023] = frame2[i,400:1023]/flatnorm[400:1023]
+            if debug:
+                plt.subplot(2, 1, 1)
+                plt.plot(pixels,frame_sel,color='blue')
+                plt.plot(pixels, ffit_f,color='red')
+                plt.subplot(2, 1, 2)
+                norm = frame_sel/ffit_f
+                plt.plot(norm, color='orange')
+                plt.plot(flatnorm,color='blue')
+                pass
+            pass
+        if not ignore:
+            data['SPECTRUM'][index] = np.nansum(frame2, axis=0)
+            data['SPECERR'][index] = np.sqrt(np.nansum(frame2, axis=0))
+            pass
+        else:
+            data['SPECTRUM'][index] = np.nansum(frame2, axis=0)*np.nan
+            data['SPECERR'][index] = np.nansum(frame2, axis=0)*np.nan
             data['TRIAL'][index] = 'Exposure Length Outlier'
             pass
         pass
+    ####
     # MASK BAD PIXELS IN SPECTRUM --------------------------------------------------------
     for v in set(visits):
         select = (visits == v) & ~(data['IGNORED'])
+        # for index, valid in enumerate(select):
+        #    spec_ind = data['SPECTRUM'][index]
+        #    if valid and 'G750' in flttype:
+        #            b, a = signal.butter(3., 0.05)
+        #            zi = signal.lfilter_zi(b, a)
+        #            spec0 = spec_ind[500:1024]
+        #            spec_ind[500:1024], _ = signal.lfilter(b, a, spec_ind[500:1024], zi=zi*spec0[0])
         specarray = np.array([s for s, ok in zip(data['SPECTRUM'], select) if ok])
         trans = np.transpose(specarray)
         template = np.nanmedian(trans, axis=1)
@@ -1855,11 +1981,17 @@ R. ESTRELA: STIS .flt data extraction and wavelength calibration
             # BAD PIXEL THRESHOLD --------------------------------------------------------
             bpthr = temp_spec > np.nanmedian(temp_spec) + 3e0*std
             if True in bpthr: spec[bpthr] = np.nan
-            data['SPECTRUM'][index] = spec
+            # if 'G430' in flttype:
+            #    cond_max = np.where(spec == np.nanmax(spec))
+            #    spec[cond_max] = np.nan
+            #    data['SPECTRUM'][index] = spec
+            # else:
+            #    data['SPECTRUM'][index] = spec
+
             # FIRST WAVESOL --------------------------------------------------------------
             # scaleco = np.nanmax(tt) / np.nanmin(tt[tt > 0])
             scaleco = 1e1
-            if np.sum(np.isfinite(spec)) > (spec.size/2):
+            if np.sum(np.isfinite(spec)) > (spec.size/2) and 'G750' in flttype:
                 wavecalspec = spec.copy()
                 finitespec = np.isfinite(spec)
                 nanme = spec[finitespec] < (np.nanmax(wavecalspec)/scaleco)
@@ -1879,6 +2011,16 @@ R. ESTRELA: STIS .flt data extraction and wavelength calibration
                 data['IGNORED'][index] = True
                 data['TRIAL'][index] = 'Not Enough Valid Points In Extracted Spectrum'
                 pass
+            if 'G430' in flttype:
+                pixel = np.arange(len(spec))
+                w = (pixel + 1079.96)/0.37
+                data['WAVE'][index] = w*1e-4
+                liref = itp.interp1d(wavett*1e-4, tt, bounds_error=False, fill_value=np.nan)
+                phot2counts = liref(w*1e-4)
+                data['PHT2CNT'][index] = phot2counts
+                data['DISPERSION'][index] = 2.70
+                data['SHIFT'][index] = -1079.96
+                pass
             pass
         pass
     # Plot first wavelength calibration
@@ -1896,45 +2038,27 @@ R. ESTRELA: STIS .flt data extraction and wavelength calibration
         plt.show()
         pass
     # SECOND Wavesol
+    # SECOND SIGMA CLIPPING
     for index, rejected in enumerate(data['IGNORED']):
         if not rejected:
-            template = data['TEMPLATE'][index]
-            spec = data['SPECTRUM'][index]
-            temp_spec = spec/template
-            ht25 = np.nanpercentile(temp_spec,25)
-            lt75 = np.nanpercentile(temp_spec,75)
-            selfin = np.isfinite(temp_spec)
-            std1 = np.nanstd(temp_spec[selfin][(temp_spec[selfin] > ht25) & (temp_spec[selfin] < lt75)])
+            # template = data['TEMPLATE'][index]
+            # spec = data['SPECTRUM'][index]
+            # temp_spec = spec/template
+            # ht25 = np.nanpercentile(temp_spec,25)
+            # lt75 = np.nanpercentile(temp_spec,75)
+            # selfin = np.isfinite(temp_spec)
+            # std1 = np.nanstd(temp_spec[selfin][(temp_spec[selfin] > ht25) & (temp_spec[selfin] < lt75)])
             # BAD PIXEL THRESHOLD --------------------------------------------------------
-            bpthr = temp_spec[selfin] > np.nanmedian(temp_spec) + 3e0*std1
-            temp_cut=template.copy()
-            spec_cut = spec.copy()
-            if True in bpthr:
-                temptrash = spec_cut[selfin]
-                temptrash[bpthr] = np.nan
-                spec_cut[selfin] = temptrash
-                temptrash = temp_cut[selfin]
-                temptrash[bpthr] = np.nan
-                temp_cut[selfin] = temptrash
-                pass
-            # SECOND SIGMA CLIPPING
-            temp_spec2 = spec_cut/temp_cut
-            ht25 = np.nanpercentile(temp_spec2,25)
-            lt75 = np.nanpercentile(temp_spec2,75)
-            selfin = np.isfinite(temp_spec2)
-            std2 = np.nanstd(temp_spec2[selfin][(temp_spec2[selfin] > ht25) & (temp_spec2[selfin] < lt75)])
-            bpthr2 = temp_spec2[selfin] > np.nanmedian(temp_spec2) + 5e0*std2
-            spec_cut2 = spec_cut.copy()
-            if True in bpthr2:
-                temptrash = spec_cut2[selfin]
-                temptrash[bpthr2] = np.nan
-                spec_cut2[selfin] = temptrash
-                pass
-            data['SPECTRUM'][index] = spec_cut2
-            # FIRST WAVESOL --------------------------------------------------------------
+            # bpthr = temp_spec[selfin] > np.nanmedian(temp_spec) + 2e0*std1
+            # temp_cut=template.copy()
+            # spec_cut = spec.copy()
+            # data['SPECTRUM'][index] = spec_cut
+
+            # SECOND WAVESOL --------------------------------------------------------------
             # scaleco = np.nanmax(tt) / np.nanmin(tt[tt > 0])
             scaleco = 1e1
-            if np.sum(np.isfinite(spec)) > (spec.size/2):
+
+            if np.sum(np.isfinite(spec)) > (spec.size/2) and 'G750' in flttype:
                 wavecalspec = spec.copy()
                 selfinspec = np.isfinite(spec)
                 nanme = spec[selfinspec] < (np.nanmax(wavecalspec)/scaleco)
@@ -1955,31 +2079,21 @@ R. ESTRELA: STIS .flt data extraction and wavelength calibration
                 data['DISPERSION'][index] = d
                 data['SHIFT'][index] = s
                 pass
-            else:
-                data['IGNORED'][index] = True
-                data['TRIAL'][index] = 'Not Enough Valid Points In Extracted Spectrum'
+            # else:
+                # data['IGNORED'][index] = True
+                # data['TRIAL'][index] = 'Not Enough Valid Points In Extracted Spectrum'
                 pass
-            pass
-        pass
-        if debug:
-            inte_res=[]
-            phase_all=[]
-            for v in set(visits):
-                select = (visits == v) & ~(data['IGNORED'])
-                for raissaindex, valid in enumerate(select):
-                    if valid:
-                        phase_sel = phase[raissaindex]
-                        phase_all.append(phase_sel)
-                        wav = np.array(data['WAVE'][raissaindex])
-                        spec = np.array(data['SPECTRUM'][raissaindex])
-                        fin = np.isfinite(spec)
-                        wav_fin = wav[fin]
-                        spec_fin = spec[fin]
-                        cond = np.where((wav_fin > 0.55) & (wav_fin < 0.95))
-                        inte = np.sum(spec_fin[cond]*(wav_fin[cond[0]+1]-wav_fin[cond[0]]))
-                        inte_res.append(inte)
-                    pass
-                pass
+
+            # WAVELENGTH CALIBRATION - G430L
+            if 'G430' in flttype:
+                pixel = np.arange(len(spec))
+                w = (pixel + 1079.96)/0.37
+                data['WAVE'][index] = w*1e-4
+                liref = itp.interp1d(wavett*1e-4, tt, bounds_error=False, fill_value=np.nan)
+                phot2counts = liref(w*1e-4)
+                data['PHT2CNT'][index] = phot2counts
+                data['DISPERSION'][index] = 2.70
+                data['SHIFT'][index] = -1079.96
             pass
         pass
     # PLOTS ------------------------------------------------------------------------------
@@ -2045,3 +2159,4 @@ R. ESTRELA: STIS .flt data extraction and wavelength calibration
     if calibrated: out['STATUS'].append(True)
     return calibrated
 # ---------------------- ---------------------------------------------
+# -------------------------- -----------------------------------------
