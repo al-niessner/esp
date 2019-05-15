@@ -1897,34 +1897,34 @@ R. ESTRELA: STIS .flt data extraction and wavelength calibration
         allframe = np.array(allframe_list)
         # APPLY FLAT FRINGE
         # plt.figure()
-        find_spec = np.where(allframe == np.max(allframe))
-        spec_idx = find_spec[0][0]
-        spec_idx_up = spec_idx+4
-        spec_idx_dwn = spec_idx-3
-        spec_idx_all = np.arange(spec_idx_dwn,spec_idx_up,1)
-        frame2 = allframe.copy()
-        for i,flatnorm in zip(spec_idx_all,div_list):
-            frame_sel = allframe[i,:]
-            coefs_f = poly.polyfit(pixels,frame_sel, 12)
-            ffit_f = poly.polyval(pixels, coefs_f)
-            frame2[i,400:1023] = frame2[i,400:1023]/flatnorm[400:1023]
-            if debug:
-                plt.subplot(2, 1, 1)
-                plt.plot(pixels,frame_sel,color='blue')
-                plt.plot(pixels, ffit_f,color='red')
-                plt.subplot(2, 1, 2)
-                norm = frame_sel/ffit_f
-                plt.plot(norm, color='orange')
-                plt.plot(flatnorm,color='blue')
-                pass
-            pass
         if not ignore:
-            data['SPECTRUM'][index] = np.nansum(frame2, axis=0)
-            data['SPECERR'][index] = np.sqrt(np.nansum(frame2, axis=0))
-            pass
+            find_spec = np.where(allframe == np.max(allframe))
+            spec_idx = find_spec[0][0]
+            spec_idx_up = spec_idx+4
+            spec_idx_dwn = spec_idx-3
+            spec_idx_all = np.arange(spec_idx_dwn,spec_idx_up,1)
+            frame2 = allframe.copy()
+            for i,flatnorm in zip(spec_idx_all,div_list):
+                frame_sel = allframe[i,:]
+                coefs_f = poly.polyfit(pixels,frame_sel, 12)
+                ffit_f = poly.polyval(pixels, coefs_f)
+                frame2[i,400:1023] = frame2[i,400:1023]/flatnorm[400:1023]
+                if debug:
+                    plt.subplot(2, 1, 1)
+                    plt.plot(pixels,frame_sel,color='blue')
+                    plt.plot(pixels, ffit_f,color='red')
+                    plt.subplot(2, 1, 2)
+                    norm = frame_sel/ffit_f
+                    plt.plot(norm, color='orange')
+                    plt.plot(flatnorm,color='blue')
+                    pass
+                pass
+                data['SPECTRUM'][index] = np.nansum(frame2, axis=0)
+                data['SPECERR'][index] = np.sqrt(np.nansum(frame2, axis=0))
+                pass
         else:
-            data['SPECTRUM'][index] = np.nansum(frame2, axis=0)*np.nan
-            data['SPECERR'][index] = np.nansum(frame2, axis=0)*np.nan
+            data['SPECTRUM'][index] = np.nansum(frame, axis=0)*np.nan
+            data['SPECERR'][index] = np.nansum(frame, axis=0)*np.nan
             data['TRIAL'][index] = 'Exposure Length Outlier'
             pass
         pass

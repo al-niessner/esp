@@ -1281,6 +1281,9 @@ G. ROUDIER: Exoplanet spectrum recovery
         out['data'][p]['ESerr'] = []
         out['data'][p]['LD'] = []
         out['data'][p]['MCPOST'] = []
+        out['data'][p]['RSTAR'] = []
+        out['data'][p]['rp0hs'] = []
+        out['data'][p]['Hs'] = []
         tdmemory = whiterprs
         for wl, wh in zip(lwavec, hwavec):
             waveindex = list(lwavec).index(wl)
@@ -1392,6 +1395,14 @@ G. ROUDIER: Exoplanet spectrum recovery
                 pass
             tdmemory = np.nanmedian(trace['rprs'])
             pass
+        Rstar = priors['R*']*sscmks['Rsun']
+        Rp = priors[p]['rp']*7.14E7  # m
+        Hs = cst.Boltzmann*eqtemp/(mmw*1e-2*(10.**priors[p]['logg']))  # m
+        noatm = Rp**2/(Rstar)**2
+        rp0hs = np.sqrt(noatm*(Rstar)**2)
+        out['data'][p]['RSTAR'].append(Rstar)
+        out['data'][p]['rp0hs'].append(rp0hs)
+        out['data'][p]['Hs'].append(Hs)
         exospec = True
         out['STATUS'].append(True)
         pass
