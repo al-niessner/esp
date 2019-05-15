@@ -1307,12 +1307,8 @@ G. ROUDIER: Exoplanet spectrum recovery
                     g1, g2 = bld['LD']
                 pass
             else: g1, g2, g3, g4 = [[0], [0], [0], [0]]
-            if len(bld['LD']) > 2:
-                out['data'][p]['LD'].append([g1[0], g2[0], g3[0], g4[0]])
-                model = tldlc(abs(allz), whiterprs, g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0])
-            else:
-                out['data'][p]['LD'].append([g1[0], g2[0]])
-                model = tldlc(abs(allz), whiterprs, g1=g1[0], g2=g2[0])
+            out['data'][p]['LD'].append([g1[0], g2[0], g3[0], g4[0]])
+            model = tldlc(abs(allz), whiterprs, g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0])
             renorm = np.nanmean(data[abs(allz) > (1e0 + whiterprs)])
             data /= renorm
             dnoise /= renorm
@@ -1350,25 +1346,25 @@ G. ROUDIER: Exoplanet spectrum recovery
             dirtypn = np.sqrt(propphn + tdmemory**2) - tdmemory
             dirtydv = np.sqrt(propdv + tdmemory**2) - tdmemory
             # Options for prior widths: [Physical (Hs), Photon noise, Data variance]
-            allwidths = 2e0*np.array([Hs, dirtypn, dirtydv])
-            # Dynamic choice for allowed channel to channel covariance
-            mpstart = allwidths[2]
-            magicprior = np.nanmin(allwidths)
+            allwidths = np.array([Hs, dirtypn, dirtydv])
+            # Geometric average between Hs and Photon noise
+            # Trade off between physics and signal quality
+            magicprior = np.min(allwidths)
             choice = ['Scale Height', 'Photon Noise', 'Data Variance']
             log.warning('--< Prior based on %s',
                         choice[list(allwidths).index(magicprior)])
+            magicprior = np.sqrt(Hs*dirtypn)
             shapevis = 2
             if shapevis < len(visits): shapevis = len(visits)
-            if len(bld['LD']) > 2:
-                ctxtupdt(allz=allz, g1=g1, g2=g2, g3=g3, g4=g4,
-                         orbits=orbits, smaors=smaors, time=time, valid=valid, visits=visits)
-            else:
-                ctxtupdt(allz=allz, g1=g1,
-                         orbits=orbits, smaors=smaors, time=time, valid=valid, visits=visits)
+            ctxtupdt(allz=allz, g1=g1, g2=g2, g3=g3, g4=g4,
+                     orbits=orbits, smaors=smaors, time=time, valid=valid, visits=visits)
             # PYMC3 ----------------------------------------------------------------------
             with pm.Model():
                 if waveindex < 1:
-                    rprs = pm.Normal('rprs', mu=tdmemory, tau=1e0/(mpstart**2))
+                    lowstart = tdmemory - 5e0*Hs
+                    if lowstart < 0: lowstart = 0
+                    upstart = tdmemory + 5e0*Hs
+                    rprs = pm.Uniform('rprs', lower=lowstart, upper=upstart)
                     pass
                 else: rprs = pm.Normal('rprs', mu=tdmemory, tau=1e0/(magicprior**2))
                 allvslope = pm.TruncatedNormal('vslope', mu=0e0, tau=tauvs,
@@ -1388,9 +1384,12 @@ G. ROUDIER: Exoplanet spectrum recovery
                                   progressbar=verbose)
                 mcpost = pm.summary(trace)
                 pass
-            out['data'][p]['ES'].append(np.nanmedian(trace['rprs']))
-            out['data'][p]['ESerr'].append(np.nanstd(trace['rprs']))
-            out['data'][p]['MCPOST'].append(mcpost)
+            # Exclude first channel with Uniform prior
+            if waveindex > 0:
+                out['data'][p]['ES'].append(np.nanmedian(trace['rprs']))
+                out['data'][p]['ESerr'].append(np.nanstd(trace['rprs']))
+                out['data'][p]['MCPOST'].append(mcpost)
+                pass
             tdmemory = np.nanmedian(trace['rprs'])
             pass
         exospec = True
