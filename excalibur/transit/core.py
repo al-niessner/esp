@@ -1287,9 +1287,6 @@ G. ROUDIER: Exoplanet spectrum recovery
         tdmemory = whiterprs
         for wl, wh in zip(lwavec, hwavec):
             waveindex = list(lwavec).index(wl)
-            out['data'][p]['WBlow'].append(wl)
-            out['data'][p]['WBup'].append(wh)
-            out['data'][p]['WB'].append(np.mean([wl, wh]))
             select = [(w > wl) & (w < wh) for w in allwave]
             if 'STIS' in ext:
                 data = np.array([np.nanmean(d[s]) for d, s in zip(allspec, select)])
@@ -1392,6 +1389,9 @@ G. ROUDIER: Exoplanet spectrum recovery
                 out['data'][p]['ES'].append(np.nanmedian(trace['rprs']))
                 out['data'][p]['ESerr'].append(np.nanstd(trace['rprs']))
                 out['data'][p]['MCPOST'].append(mcpost)
+                out['data'][p]['WBlow'].append(wl)
+                out['data'][p]['WBup'].append(wh)
+                out['data'][p]['WB'].append(np.mean([wl, wh]))
                 pass
             tdmemory = np.nanmedian(trace['rprs'])
             pass
