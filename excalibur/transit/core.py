@@ -1354,7 +1354,7 @@ G. ROUDIER: Exoplanet spectrum recovery
             log.warning('--< Prior based on %s',
                         choice[list(allwidths).index(magicprior)])
             # Forces Hs as prior width choice in all cases
-            magicprior = np.sqrt(Hs)
+            magicprior = Hs
             shapevis = 2
             if shapevis < len(visits): shapevis = len(visits)
             ctxtupdt(allz=allz, g1=g1, g2=g2, g3=g3, g4=g4,
