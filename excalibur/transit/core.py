@@ -1046,10 +1046,8 @@ LDTK: Parviainen et al. https://github.com/hpparvi/ldtk
     out['LD'] = allcl.T
     out['ERR'] = allel.T
     for i in range(0,len(allcl.T)):
-        log.warning('>-- LD%s: %s', str(int(i)),
-                    str(float(allcl.T[i])))
-        log.warning('>-- LD%s: %s +/- %s', str(int(i)),
-                    str(float(allcl.T[i])), str(float(allel.T[i])))
+        log.warning('>-- LD%s: %s +/- %s',
+                    str(int(i)), str(float(allcl.T[i])), str(float(allel.T[i])))
         pass
     return out
 # -------------------- -----------------------------------------------
@@ -1285,7 +1283,8 @@ G. ROUDIER: Exoplanet spectrum recovery
         out['data'][p]['rp0hs'] = []
         out['data'][p]['Hs'] = []
         tdmemory = whiterprs
-        for wl, wh in zip(lwavec, hwavec):
+        # Invert specrum recovery order
+        for wl, wh in zip(lwavec[::-1], hwavec[::-1]):
             waveindex = list(lwavec).index(wl)
             select = [(w > wl) & (w < wh) for w in allwave]
             if 'STIS' in ext:
