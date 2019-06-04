@@ -1283,9 +1283,9 @@ G. ROUDIER: Exoplanet spectrum recovery
         out['data'][p]['rp0hs'] = []
         out['data'][p]['Hs'] = []
         tdmemory = whiterprs
+        startflag = True
         # Invert specrum recovery order
         for wl, wh in zip(lwavec[::-1], hwavec[::-1]):
-            waveindex = list(lwavec).index(wl)
             select = [(w > wl) & (w < wh) for w in allwave]
             if 'STIS' in ext:
                 data = np.array([np.nanmean(d[s]) for d, s in zip(allspec, select)])
@@ -1352,15 +1352,15 @@ G. ROUDIER: Exoplanet spectrum recovery
             choice = ['Scale Height', 'Photon Noise', 'Data Variance']
             log.warning('--< Prior based on %s',
                         choice[list(allwidths).index(magicprior)])
-            # Forces Hs as prior width choice in all cases
-            magicprior = Hs
+            # Prior width
+            magicprior = np.sqrt(Hs*dirtypn)
             shapevis = 2
             if shapevis < len(visits): shapevis = len(visits)
             ctxtupdt(allz=allz, g1=g1, g2=g2, g3=g3, g4=g4,
                      orbits=orbits, smaors=smaors, time=time, valid=valid, visits=visits)
             # PYMC3 ----------------------------------------------------------------------
             with pm.Model():
-                if waveindex < 1:
+                if startflag:
                     lowstart = tdmemory - 5e0*Hs
                     if lowstart < 0: lowstart = 0
                     upstart = tdmemory + 5e0*Hs
@@ -1385,7 +1385,7 @@ G. ROUDIER: Exoplanet spectrum recovery
                 mcpost = pm.summary(trace)
                 pass
             # Exclude first channel with Uniform prior
-            if waveindex > 0:
+            if not startflag:
                 out['data'][p]['ES'].append(np.nanmedian(trace['rprs']))
                 out['data'][p]['ESerr'].append(np.nanstd(trace['rprs']))
                 out['data'][p]['MCPOST'].append(mcpost)
@@ -1394,14 +1394,9 @@ G. ROUDIER: Exoplanet spectrum recovery
                 out['data'][p]['WB'].append(np.mean([wl, wh]))
                 pass
             tdmemory = np.nanmedian(trace['rprs'])
+            startflag = False
             pass
-        Rstar = priors['R*']*sscmks['Rsun']
-        Rp = priors[p]['rp']*7.14E7  # m
-        Hs = cst.Boltzmann*eqtemp/(mmw*1e-2*(10.**priors[p]['logg']))  # m
-        noatm = Rp**2/(Rstar)**2
-        rp0hs = np.sqrt(noatm*(Rstar)**2)
-        out['data'][p]['RSTAR'].append(Rstar)
-        out['data'][p]['rp0hs'].append(rp0hs)
+        out['data'][p]['RSTAR'].append(priors['R*']*sscmks['Rsun'])
         out['data'][p]['Hs'].append(Hs)
         exospec = True
         out['STATUS'].append(True)
