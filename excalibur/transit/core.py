@@ -1404,7 +1404,7 @@ G. ROUDIER: Exoplanet spectrum recovery
         out['data'][p]['Teq'] = eqtemp
         # Wavelength re-ordering for Cerberus
         orderme = np.argsort(out['data'][p]['WB'])
-        for keytoord in ['ES', 'ESerr', 'MCPOST', 'WBlow', 'WBup', 'WB']:
+        for keytoord in ['ES', 'ESerr', 'WBlow', 'WBup', 'WB']:
             temparr = np.array(out['data'][p][keytoord])
             out['data'][p][keytoord] = temparr[orderme]
             pass
@@ -1424,7 +1424,7 @@ G. ROUDIER: Exoplanet spectrum recovery
             noatm = Rp**2/(Rstar)**2
             rp0hs = np.sqrt(noatm*(Rstar)**2)
             _fig, ax0 = plt.subplots(figsize=(10,6))
-            ax0.errorbar(specwave, 1e2*spectrum, fmt='.', yerr=1e2*specerr)
+            ax0.errorbar(specwave, 1e2*vspectrum, fmt='.', yerr=1e2*specerr)
             ax0.set_xlabel(str('Wavelength [$\\mu m$]'))
             ax0.set_ylabel(str('$(R_p/R_*)^2$ [%]'))
             ax1 = ax0.twinx()
