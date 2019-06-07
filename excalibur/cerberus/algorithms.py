@@ -20,6 +20,7 @@ fltrs = (trgedit.activefilters.__doc__).split('\n')
 fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
 # Disable Cerberus
 fltrs = []
+# fltrs = [f for f in fltrs if 'G141' in f]
 # ----------------------- --------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class xslib(dawgie.Algorithm):

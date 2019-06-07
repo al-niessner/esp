@@ -1219,6 +1219,7 @@ G. ROUDIER: Exoplanet spectrum recovery
         disp = nrm['data'][p]['dispersion']
         im = wht['data'][p]['postim']
         allz = wht['data'][p]['postsep']
+        allphase = np.array(wht['data'][p]['postflatphase'])
         whiterprs = np.nanmedian(wht['data'][p]['mctrace']['rprs'])
         allwave = []
         allspec = []
@@ -1284,8 +1285,7 @@ G. ROUDIER: Exoplanet spectrum recovery
         out['data'][p]['Hs'] = []
         tdmemory = whiterprs
         startflag = True
-        # Invert specrum recovery order
-        for wl, wh in zip(lwavec[::-1], hwavec[::-1]):
+        for wl, wh in zip(lwavec, hwavec):
             select = [(w > wl) & (w < wh) for w in allwave]
             if 'STIS' in ext:
                 data = np.array([np.nanmean(d[s]) for d, s in zip(allspec, select)])
@@ -1293,17 +1293,15 @@ G. ROUDIER: Exoplanet spectrum recovery
                                    for n, s in zip(allpnoise, select)])
                 pass
             else:
-                data = np.array([np.nanmean(d[s]) for d, s in zip(allspec, select)])
+                data = np.array([np.nanmean(d[s])
+                                 for d, s in zip(allspec, select)])
                 dnoise = np.array([np.nanmedian(n[s])/np.sqrt(np.nansum(s))
                                    for n, s in zip(allpnoise, select)])
                 pass
             valid = np.isfinite(data)
             if selftype in ['transit']:
                 bld = createldgrid([wl], [wh], priors, segmentation=int(10))
-                if len(bld['LD']) > 2:
-                    g1, g2, g3, g4 = bld['LD']
-                else:
-                    g1, g2 = bld['LD']
+                g1, g2, g3, g4 = bld['LD']
                 pass
             else: g1, g2, g3, g4 = [[0], [0], [0], [0]]
             out['data'][p]['LD'].append([g1[0], g2[0], g3[0], g4[0]])
@@ -1314,9 +1312,9 @@ G. ROUDIER: Exoplanet spectrum recovery
             if verbose:
                 plt.figure()
                 plt.title(str(int(1e3*np.mean([wl, wh])))+' nm')
-                plt.plot(allz[valid], data[valid]/allim[valid], 'o')
-                plt.plot(allz[valid], model[valid], '^')
-                plt.xlabel('Separation [R*]')
+                plt.plot(allphase[valid], data[valid]/allim[valid], 'o')
+                plt.plot(allphase[valid], model[valid], '^')
+                plt.xlabel('Orbital phase')
                 plt.show()
                 pass
             # PRIORS -----------------------------------------------------------------
@@ -1336,24 +1334,29 @@ G. ROUDIER: Exoplanet spectrum recovery
             tauvi = 1e0/(ootstd**2)
             nodes = []
             tauwbdata = 1e0/dnoise**2
+            # PRIOR WIDTH ----------------------------------------------------------------
             noot = np.sum(abs(allz) > (1e0 + whiterprs))
             nit = allz.size - noot
             # Noise propagation forecast on transit depth
             propphn = np.nanmedian(dnoise)*(1e0 - tdmemory**2)*np.sqrt(1e0/nit + 1e0/noot)
-            propdv = ootstd*(1e0 - tdmemory**2)*np.sqrt(1e0/nit + 1e0/noot)
-            # Dirty approximation for rp/rs original distribution
             dirtypn = np.sqrt(propphn + tdmemory**2) - tdmemory
-            dirtydv = np.sqrt(propdv + tdmemory**2) - tdmemory
-            # Options for prior widths: [Physical (Hs), Photon noise, Data variance]
-            allwidths = np.array([Hs, dirtypn, dirtydv])
-            # Geometric average between Hs and Photon noise
-            # Trade off between physics and signal quality
-            magicprior = np.min(allwidths)
-            choice = ['Scale Height', 'Photon Noise', 'Data Variance']
-            log.warning('--< Prior based on %s',
-                        choice[list(allwidths).index(magicprior)])
-            # Prior width
-            magicprior = np.sqrt(Hs*dirtypn)
+            prwidth = np.sqrt(Hs*dirtypn)
+            # PRIOR CENTER ---------------------------------------------------------------
+            lmdata = data/allim
+            lmparams = lm.Parameters()
+            lmparams.add('lmrprs', value=whiterprs,
+                         min=whiterprs - 5e0*Hs, max=whiterprs + 5e0*Hs)
+            def lmcenter(lmtd, allz=allz, g1=g1, g2=g2, g3=g3, g4=g4,
+                         valid=valid, lmdata=lmdata):
+                out = tldlc(allz, lmtd['lmrprs'].value,
+                            g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0])
+                return out[valid] - lmdata[valid]
+            lmout = lm.minimize(lmcenter, lmparams,
+                                args=(allz, g1, g2, g3, g4, valid, lmdata))
+            prcenter = lmout.params['lmrprs'].value
+            if not np.isfinite(prcenter): prcenter = tdmemory
+            if abs(tdmemory - prcenter) > 10*Hs: prcenter = tdmemory
+            # UPDATE GLOBALS -------------------------------------------------------------
             shapevis = 2
             if shapevis < len(visits): shapevis = len(visits)
             ctxtupdt(allz=allz, g1=g1, g2=g2, g3=g3, g4=g4,
@@ -1366,7 +1369,7 @@ G. ROUDIER: Exoplanet spectrum recovery
                     upstart = tdmemory + 5e0*Hs
                     rprs = pm.Uniform('rprs', lower=lowstart, upper=upstart)
                     pass
-                else: rprs = pm.Normal('rprs', mu=tdmemory, tau=1e0/(magicprior**2))
+                else: rprs = pm.Normal('rprs', mu=prcenter, tau=1e0/(prwidth**2))
                 allvslope = pm.TruncatedNormal('vslope', mu=0e0, tau=tauvs,
                                                lower=-3e-2/trdura,
                                                upper=3e-2/trdura, shape=shapevis)
@@ -1398,6 +1401,13 @@ G. ROUDIER: Exoplanet spectrum recovery
             pass
         out['data'][p]['RSTAR'].append(priors['R*']*sscmks['Rsun'])
         out['data'][p]['Hs'].append(Hs)
+        out['data'][p]['Teq'] = eqtemp
+        # Wavelength re-ordering for Cerberus
+        orderme = np.argsort(out['data'][p]['WB'])
+        for keytoord in ['ES', 'ESerr', 'MCPOST', 'WBlow', 'WBup', 'WB']:
+            temparr = np.array(out['data'][p][keytoord])
+            out['data'][p][keytoord] = temparr[orderme]
+            pass
         exospec = True
         out['STATUS'].append(True)
         pass

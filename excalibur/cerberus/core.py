@@ -49,13 +49,10 @@ G. ROUDIER: Tests for empty SV shell
 # ----------------- --------------------------------------------------
 # -- X SECTIONS LIBRARY -- -------------------------------------------
 def myxsecs(spc, out,
-            hitemp=os.path.join (excalibur.context['data_dir'],
-                                 'CERBERUS/HITEMP'),
-            tips=os.path.join (excalibur.context['data_dir'], 'CERBERUS/TIPS'),
-            ciadir=os.path.join (excalibur.context['data_dir'],
-                                 'CERBERUS/HITRAN/CIA'),
-            exomoldir=os.path.join (excalibur.context['data_dir'],
-                                    'CERBERUS/EXOMOL'),
+            hitemp=os.path.join(excalibur.context['data_dir'], 'CERBERUS/HITEMP'),
+            tips=os.path.join(excalibur.context['data_dir'], 'CERBERUS/TIPS'),
+            ciadir=os.path.join(excalibur.context['data_dir'], 'CERBERUS/HITRAN/CIA'),
+            exomoldir=os.path.join(excalibur.context['data_dir'], 'CERBERUS/EXOMOL'),
             knownspecies=['NO', 'OH', 'C2H2', 'N2', 'N2O', 'O3', 'O2'].copy(),
             cialist=['H2-H', 'H2-H2', 'H2-He', 'He-H'].copy(),
             xmspecies=['TIO', 'CH4', 'H2O', 'H2CO', 'HCN', 'CO', 'CO2', 'NH3'].copy(),
