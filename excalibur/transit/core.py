@@ -1306,9 +1306,9 @@ G. ROUDIER: Exoplanet spectrum recovery
             else: g1, g2, g3, g4 = [[0], [0], [0], [0]]
             out['data'][p]['LD'].append([g1[0], g2[0], g3[0], g4[0]])
             model = tldlc(abs(allz), whiterprs, g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0])
-            renorm = np.nanmean(data[abs(allz) > (1e0 + whiterprs)])
-            data /= renorm
-            dnoise /= renorm
+            # renorm = np.nanmean(data[abs(allz) > (1e0 + whiterprs)])
+            # data /= renorm
+            # dnoise /= renorm
             if verbose:
                 plt.figure()
                 plt.title(str(int(1e3*np.mean([wl, wh])))+' nm')
@@ -1354,8 +1354,8 @@ G. ROUDIER: Exoplanet spectrum recovery
             lmout = lm.minimize(lmcenter, lmparams,
                                 args=(allz, g1, g2, g3, g4, valid, lmdata))
             prcenter = lmout.params['lmrprs'].value
-            if not np.isfinite(prcenter): prcenter = tdmemory
-            if abs(tdmemory - prcenter) > 10*Hs: prcenter = tdmemory
+            if not np.isfinite(prcenter): prcenter = whiterprs
+            if abs(tdmemory - prcenter) > 10*Hs: prcenter = whiterprs
             # UPDATE GLOBALS -------------------------------------------------------------
             shapevis = 2
             if shapevis < len(visits): shapevis = len(visits)
