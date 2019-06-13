@@ -385,7 +385,7 @@ G. ROUDIER: Out of transit data normalization
                         eachfos = np.array(eachfos)
                         finval = np.isfinite(eachfos)
                         key = cwave.index(cw)
-                        polyorder = 1
+                        polyorder = 3
                         if np.sum(finval) > (polyorder + 1):
                             poly = np.poly1d(np.polyfit(eachwfos[finval], eachfos[finval],
                                                         polyorder))
