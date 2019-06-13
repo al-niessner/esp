@@ -32,9 +32,39 @@ then
         do
             source="`lookup_source $destination`"
             version="`lookup_version $destination`"
-            echo "V: ${version} D: ${destination} S:${source}"
-            docker pull cae-artifactory.jpl.nasa.gov:$(which_port ${version})${source}:${version}
-            docker tag cae-artifactory.jpl.nasa.gov:$(which_port ${version})${source}:${version} ${destination}:${version}
+            echo "V: ${version} D: ${destination} S: ${source}"
+
+            if [[ "${destination}" == "dawgie" ]]
+            then
+                if [ -z "$(docker images | grep dawgie | grep ${version})" ]
+                then
+                    tempdir=$(mktemp -d)
+                    cd ${tempdir}
+                    wget -O src.tgz https://github.com/${source}/${version}.tar.gz
+                    tar --strip-components=1 -xzf src.tgz
+                    declare -i count=1
+                    for filename in .ci/Dockerfile.os .ci/Dockerfile.py .ci/Dockerfile.ap
+                    do
+                        echo "Building dawige ${filename}"
+                        python3 <<EOF
+with open ('${filename}', 'rt') as f: text = f.read()
+with open ('.ci/Dockerfile.${count}', 'tw') as f: f.write (text.replace ('ghrVersion', '${version}'))          
+EOF
+                        count=count+1
+                    done
+                    ghrVersion=${version} .ci/deploy_02.sh
+                    ghrVersion=${version} .ci/deploy_03.sh
+                    ghrVersion=${version} .ci/deploy_04.sh
+                    ghrVersion=${version} .ci/deploy_05.sh
+                    docker tag ap:${version} dawgie:${version}
+                    docker rmi ap:${version} py:${version} os:${version}
+                    cd -
+                    rm -r ${tempdir}
+                fi
+            else
+                docker pull cae-artifactory.jpl.nasa.gov:$(which_port ${version})${source}:${version}
+                docker tag cae-artifactory.jpl.nasa.gov:$(which_port ${version})${source}:${version} ${destination}:${version}
+            fi
         done
         docker logout cae-artifactory.jpl.nasa.gov:16001
         docker logout cae-artifactory.jpl.nasa.gov:16002
