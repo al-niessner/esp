@@ -18,7 +18,7 @@ import excalibur.system.algorithms as sysalg
 # -- ALGO RUN OPTIONS -- ---------------------------------------------
 # FILTERS
 fltrs = (trgedit.activefilters.__doc__).split('\n')
-fltrs = [t.strip() for t in fltrs if t.replace(' ', '').__len__() > 0]
+fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class collect(dawgie.Algorithm):
@@ -137,7 +137,7 @@ class calibration(dawgie.Algorithm):
 G. ROUDIER: Data re-calibration and reduction
     '''
     def __init__(self):
-        self._version_ = dawgie.VERSION(1,2,0)
+        self._version_ = dawgie.VERSION(1,3,0)
         self.__col = collect()
         self.__tim = timing()
         self.__out = [datstates.CalibrateSV(ext) for ext in fltrs]

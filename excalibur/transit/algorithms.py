@@ -18,7 +18,8 @@ import excalibur.target.edit as trgedit
 # FILTERS
 fltrs = (trgedit.activefilters.__doc__).split('\n')
 fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
-# fltrs = [f for f in fltrs if 'G141' in f]
+# Only G141 makes it through
+fltrs = [f for f in fltrs if 'WFC3' in f]
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class normalization(dawgie.Algorithm):
@@ -126,7 +127,7 @@ G. ROUDIER: See inheritance and CI5 thread with A NIESSNER for __init__() method
 
     def _whitelight(self, nrm, fin, out):
         wl = trncore.whitelight(nrm, fin, out, self._type,
-                                chainlen=int(1e4), verbose=False)
+                                chainlen=int(2e4), verbose=False)
         return wl
 
     def _failure(self, errstr):
@@ -139,7 +140,7 @@ class spectrum(dawgie.Algorithm):
 G. ROUDIER: See inheritance and CI5 thread with A NIESSNER for __init__() method and class attributes https://github-fn.jpl.nasa.gov/EXCALIBUR/esp/pull/86
     '''
     def __init__(self, nrm=normalization(), wht=whitelight()):
-        self._version_ = dawgie.VERSION(1,1,0)
+        self._version_ = dawgie.VERSION(1,1,1)
         self._type = 'transit'
         self.__fin = sysalg.finalize()
         self._nrm = nrm

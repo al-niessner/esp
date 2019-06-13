@@ -119,8 +119,11 @@ G. ROUDIER: Out of transit data normalization
         out['data'][p]['vignore'] = []
         out['data'][p]['stdns'] = []
         singlevisit = False
-        if list(set(visits)).__len__() < 2: singlevisit = True
-        for v in set(visits):
+        if tme[selftype].__len__() == 1:
+            singlevisit = True
+            log.warning('--< Single Visit Observation')
+            pass
+        for v in tme[selftype]:  # DOUBLE SCAN NUMBERING
             selv = (visits == v) & ~ignore
             if selftype in ['transit', 'phasecurve']:
                 select = (phase[selv] > 0.25) | (phase[selv] < -0.25)
@@ -362,76 +365,64 @@ G. ROUDIER: Out of transit data normalization
                 ordsetds = np.sort(list(set(vlincorr))).astype(int)
                 ootinv = abs(zoot[selv]) > (1e0 + rpors)
                 for dsscan in ordsetds:
+                    # WAVELENGTH INTERPOLATION -------------------------------------------
                     thisscan = (vlincorr == dsscan) & ootinv
-                    cwavescan, tnorm = tplbuild(viss[thisscan], visw[thisscan], vrange,
-                                                (disp[selv][thisscan])*1e-4, medest=True)
+                    fos = []
+                    wfos = []
+                    allvissts = viss[thisscan].flatten()
+                    allviswts = visw[thisscan].flatten()
+                    dcwave = [np.diff(cwave)[0]]
+                    dcwave.extend(np.diff(cwave))
+                    for cw, dcw in zip(cwave, dcwave):
+                        select = (allviswts > (cw - dcw/2e0))
+                        select = select & (allviswts < (cw + dcw/2e0))
+                        fos.append(allvissts[select])
+                        wfos.append(allviswts[select])
+                        pass
+                    witp = {}
+                    for eachwfos, eachfos, cw in zip(wfos, fos, cwave):
+                        eachwfos = np.array(eachwfos)
+                        eachfos = np.array(eachfos)
+                        finval = np.isfinite(eachfos)
+                        key = cwave.index(cw)
+                        polyorder = 3
+                        if np.sum(finval) > (polyorder + 1):
+                            poly = np.poly1d(np.polyfit(eachwfos[finval], eachfos[finval],
+                                                        polyorder))
+                            witp[str(key)] = poly
+                            if debug:
+                                plt.figure()
+                                plt.plot(eachwfos[finval], eachfos[finval], '+')
+                                plt.plot(eachwfos[finval], poly(eachwfos[finval]), 'o')
+                                plt.show()
+                                pass
+                            pass
+                        pass
                     thisscan = vlincorr == dsscan
-                    ctviss = []
-                    ctphotnoise = []
-                    for spec, wspec, phnoise in zip(viss[thisscan].T,
-                                                    visw[thisscan].T,
-                                                    photnoise[thisscan].T):
-                        specnorm = []
+                    vtsdt = []
+                    ptsdt = []
+                    for spec, wspec, phnoise in zip(viss[thisscan], visw[thisscan],
+                                                    photnoise[thisscan]):
+                        wavecorr = []
                         for w in wspec:
-                            if (w < np.min(cwavescan)) or (w > np.max(cwavescan)):
-                                specnorm.append(np.nan)
+                            if (w < np.min(vrange)) or (w > np.max(vrange)):
+                                wavecorr.append(np.nan)
                                 pass
                             else:
-                                distance = list(abs(np.array(cwavescan) - w))
-                                mindisti = distance.index(np.min(distance))
-                                specnorm.append(tnorm[mindisti])
+                                diff = list(abs(np.array(cwave) - w))
+                                closest = diff.index(min(diff))
+                                if str(closest) in witp.keys():
+                                    wavecorr.append(witp[str(closest)](w))
+                                    pass
+                                else: wavecorr.append(np.nan)
                                 pass
                             pass
-                        ctviss.append(spec/np.array(specnorm))
-                        ctphotnoise.append(phnoise/np.array(specnorm))
+                        wavecorr = np.array(wavecorr)
+                        vtsdt.append(spec/wavecorr)
+                        ptsdt.append(phnoise/wavecorr)
                         pass
-                    viss[thisscan] = np.array(ctviss).T
-                    photnoise[thisscan] = np.array(ctphotnoise).T
-                    pass
-                if debug:
-                    plt.figure()
-                    plt.plot(visw.T, viss.T, 'o')
-                    plt.show()
-                    pass
-                # WAVELENGTH INTERPOLATION -----------------------------------------------
-                wfos, fos = tplbuild(viss[ootinv], visw[ootinv], vrange,
-                                     (disp[selv][ootinv])*1e-4, superres=True)
-                witp = {}
-                refwavec = [np.nanmedian(w) for w in wfos]
-                for eachwfos, eachfos in zip(wfos, fos):
-                    eachwfos = np.array(eachwfos)
-                    eachfos = np.array(eachfos)
-                    finval = np.isfinite(eachfos)
-                    key = refwavec.index(np.nanmedian(eachwfos))
-                    if np.sum(finval) > 2:
-                        poly = np.poly1d(np.polyfit(eachwfos[finval], eachfos[finval], 2))
-                        witp[str(key)] = poly
-                        if debug:
-                            plt.figure()
-                            plt.plot(eachwfos[finval], eachfos[finval], '+')
-                            plt.plot(eachwfos[finval], poly(eachwfos[finval]), 'o')
-                            plt.show()
-                            pass
-                        pass
-                    pass
-                for spec, wspec, phnoise in zip(viss.T, visw.T, photnoise.T):
-                    wavecorr = []
-                    for w in wspec:
-                        if (w < np.min(vrange)) or (w > np.max(vrange)):
-                            wavecorr.append(np.nan)
-                            pass
-                        else:
-                            diff = list(abs(np.array(refwavec) - w))
-                            closest = diff.index(min(diff))
-                            if str(closest) in witp.keys():
-                                wavecorr.append(witp[str(closest)](w))
-                                pass
-                            else: wavecorr.append(np.nan)
-                            pass
-                        pass
-                    wavecorr = np.array(wavecorr)
-                    # spec /= wavecorr
-                    # phnoise /= wavecorr
+                    viss[thisscan] = np.array(vtsdt)
+                    photnoise[thisscan] = np.array(ptsdt)
                     pass
                 if debug:
                     plt.figure()
@@ -439,21 +430,63 @@ G. ROUDIER: Out of transit data normalization
                     plt.show()
                     pass
                 # DATA CONSISTENCY AND QUALITY CHECK -------------------------------------
+                wanted = []
+                for w, s, pn, zv in zip(visw, viss, photnoise, zoot[selv]):
+                    wselect = (w >= np.min(vrange)) & (w <= np.max(vrange))
+                    if (True in wselect) and (abs(zv) > (1e0 + rpors)):
+                        wanted.append(np.nanstd(s[wselect])/np.nanmedian(pn))
+                        pass
+                    pass
+                nscale = np.round(np.percentile(wanted, 50))
+                log.warning('--< Visit %s: Noise scale %s', str(int(v)), str(nscale))
+                if nscale <= 5e0: nscale = 5e0
+                elif (nscale > 5e0) and (not singlevisit):
+                    nscale = 2e0
+                    log.warning('--< Visit %s: Noise scale above threshold', str(int(v)))
+                    pass
                 check = []
                 for w, s, pn in zip(visw, viss, photnoise):
                     wselect = (w >= np.min(vrange)) & (w <= np.max(vrange))
                     if True in wselect:
-                        check.append(np.nanstd(s[wselect]) < (5e0*np.nanmedian(pn)))
+                        crit = np.nanstd(s[wselect]) < (nscale*np.nanmedian(pn))
+                        check.append(crit)
                         pass
                     else: check.append(False)
                     pass
                 check = np.array(check)
-                wellcondin = np.sum(abs(z[selv][check]) < (1e0 + rpors)) > 3
+                rejrate = check.size - np.sum(check)
+                log.warning('--< Visit %s: Rejected %s/%s',
+                            str(int(v)), str(rejrate), str(check.size))
+                dataoot = viss[(abs(z[selv]) > (1e0 + rpors)) & check]
+                waveoot = visw[(abs(z[selv]) > (1e0 + rpors)) & check]
+                stdoot = []
+                for s, w in zip(dataoot, waveoot):
+                    wselect = (w >= np.min(vrange)) & (w <= np.max(vrange))
+                    if True in wselect: stdoot.append(np.nanstd(s[wselect]))
+                    pass
+                thrz = np.nanmedian(stdoot) + 3e0*np.nanstd(stdoot)
+                checkz = []
+                for w, s, zv in zip(visw, viss, zoot[selv]):
+                    wselect = (w >= np.min(vrange)) & (w <= np.max(vrange))
+                    if True in wselect:
+                        if abs(zv) > (1e0 + rpors):
+                            critz = abs(1e0 - np.nanmean(s[wselect])) < thrz
+                            pass
+                        else: critz = np.nanmean(s[wselect]) - 1e0 < thrz
+                        checkz.append(critz)
+                        if not critz:
+                            log.warning('--< Visit %s: Excluding averaged spectrum %s',
+                                        str(int(v)), str(np.nanmean(s[wselect])))
+                            pass
+                        pass
+                    else: checkz.append(True)
+                    pass
+                check = check & np.array(checkz)  # comment if G430L
+                wellcondin = np.sum(abs(zoot[selv][check]) < (1e0 + rpors)) > 3
                 if not((np.sum(check) > 9) and wellcondin) and singlevisit:
                     wellcondin = True
                     check = check | True
-                    log.warning('--< Visit %s: %s', str(int(v)),
-                                'Single visit failed IT check')
+                    log.warning('--< Visit %s: %s', str(int(v)), 'Single visit exception')
                     pass
                 if (np.sum(check) > 9) and wellcondin:
                     vnspec = np.array(viss)[check]
@@ -493,11 +526,17 @@ G. ROUDIER: Out of transit data normalization
                         pass
                     else: out['data'][p]['trial'].append('Missing IT Data')
                     out['data'][p]['vignore'].append(v)
+                    if (len(tme[selftype]) - len(out['data'][p]['vignore'])) < 2:
+                        singlevisit = True
+                        pass
                     pass
                 pass
             else:
                 out['data'][p]['trial'].append('Not Enough OOT Data')
                 out['data'][p]['vignore'].append(v)
+                if (len(tme[selftype]) - len(out['data'][p]['vignore'])) < 2:
+                    singlevisit = True
+                    pass
                 pass
             pass
         # VARIANCE EXCESS FROM LOST GUIDANCE ---------------------------------------------
@@ -625,8 +664,6 @@ G. ROUDIER: Orbital parameters recovery
         nspec = nrm['data'][p]['nspec']
         sep = nrm['data'][p]['z']
         phase = nrm['data'][p]['phase']
-        wavet = nrm['data'][p]['wavet']
-        disp = nrm['data'][p]['dispersion']
         photnoise = nrm['data'][p]['photnoise']
         out['data'][p] = {}
         out['data'][p]['nspec'] = nspec
@@ -637,16 +674,13 @@ G. ROUDIER: Orbital parameters recovery
         allerrwhite = []
         flatminww = []
         flatmaxww = []
-        for index, v in enumerate(visits):
-            vdisp = np.mean(disp[index])*1e-4
-            vwavet = np.array(wavet[index])
+        for index, _v in enumerate(visits):
             white = []
             errwhite = []
             for w, s, e in zip(wave[index], nspec[index], photnoise[index]):
-                select = ((w > (min(vwavet) + vdisp/2e0)) &
-                          (w < (max(vwavet) - vdisp/2e0)))
+                select = np.isfinite(s)
                 if True in select:
-                    white.append(np.nanmedian(s[select]))
+                    white.append(np.nanmean(s[select]))
                     errwhite.append(np.nanmedian(e[select])/np.sqrt(np.nansum(select)))
                     pass
                 else:
@@ -673,6 +707,11 @@ G. ROUDIER: Orbital parameters recovery
         flatphase = np.array(flatphase)
         allwwmin = min(flatminww)
         allwwmax = max(flatmaxww)
+        renorm = np.nanmean(flatwhite[abs(flatz) > 1e0 + rpors])
+        flatwhite /= renorm
+        flaterrwhite /= renorm
+        allwhite = [np.array(aw)/renorm for aw in allwhite]
+        allerrwhite = [np.array(aew)/renorm for aew in allerrwhite]
         out['data'][p]['allwhite'] = allwhite
         out['data'][p]['phase'] = phase
         out['data'][p]['flatphase'] = flatphase
@@ -716,8 +755,7 @@ G. ROUDIER: Orbital parameters recovery
         ecc = priors[p]['ecc']
         inc = priors[p]['inc']
         smaors = priors[p]['sma']/priors['R*']/ssc['Rsun/AU']
-        flatoot = abs(flatz) > 1e0 + rpors
-        ootstd = np.nanstd(flatwhite[flatoot])
+        ootstd = np.nanstd(flatwhite[abs(flatz) > 1e0 + rpors])
         taurprs = 1e0/(rpors*1e-2)**2
         ttrdur = np.arcsin((1e0+rpors)/smaors)
         trdura = priors[p]['period']*ttrdur/np.pi
@@ -1007,9 +1045,9 @@ LDTK: Parviainen et al. https://github.com/hpparvi/ldtk
     out['MU'] = avmu
     out['LD'] = allcl.T
     out['ERR'] = allel.T
-    for i in range(len(allcl.T)):
-        log.warning('>-- LD%s: %s +/- %s', str(int(i)),
-                    str(float(allcl.T[i])), str(float(allel.T[i])))
+    for i in range(0,len(allcl.T)):
+        log.warning('>-- LD%s: %s +/- %s',
+                    str(int(i)), str(float(allcl.T[i])), str(float(allel.T[i])))
         pass
     return out
 # -------------------- -----------------------------------------------
@@ -1019,17 +1057,17 @@ def ldx(psmu, psmean, psstd, mumin=1e-1, debug=False, model='nonlinear'):
 G. ROUDIER: Limb darkening coefficient retrievial on PHOENIX GRID models,
 OPTIONAL mumin set up on HAT-P-41 stellar class
     '''
-    mup = np.array(psmu).copy()
-    prfs = np.array(psmean).copy()
-    sprfs = np.array(psstd).copy()
-    nwave = prfs.shape[0]
-    select = (mup > mumin)
-    fitmup = mup[select]
-    fitprfs = prfs[:, select]
-    fitsprfs = sprfs[:, select]
-    cl = []
-    el = []
-    params = lm.Parameters()
+    mup=np.array(psmu).copy()
+    prfs=np.array(psmean).copy()
+    sprfs=np.array(psstd).copy()
+    nwave=prfs.shape[0]
+    select=(mup > mumin)
+    fitmup=mup[select]
+    fitprfs=prfs[:, select]
+    fitsprfs=sprfs[:, select]
+    cl=[]
+    el=[]
+    params=lm.Parameters()
     params.add('gamma1', value=1e-1)
     params.add('gamma2', value=5e-1)
     params.add('gamma3', value=1e-1)
@@ -1037,20 +1075,30 @@ OPTIONAL mumin set up on HAT-P-41 stellar class
     if debug: plt.figure()
     for iwave in np.arange(nwave):
         if model == 'linear':
-            out = lm.minimize(lnldx, params,
-                              args=(fitmup, fitprfs[iwave], fitsprfs[iwave]))
+            params['gamma1'].value = 0
+            params['gamma1'].vary = False
+            params['gamma3'].value = 0
+            params['gamma3'].vary = False
+            params['gamma4'].value = 0
+            params['gamma4'].vary = False
+            out=lm.minimize(lnldx, params,
+                            args=(fitmup, fitprfs[iwave], fitsprfs[iwave]))
             cl.append([out.params['gamma1'].value])
             el.append([out.params['gamma1'].stderr])
             pass
         if model == 'quadratic':
-            out = lm.minimize(qdldx, params,
-                              args=(fitmup, fitprfs[iwave], fitsprfs[iwave]))
+            params['gamma1'].value = 0
+            params['gamma1'].vary = False
+            params['gamma3'].value = 0
+            params['gamma3'].vary = False
+            out=lm.minimize(qdldx, params,
+                            args=(mup, prfs[iwave], sprfs[iwave]))
             cl.append([out.params['gamma1'].value, out.params['gamma2'].value])
             el.append([out.params['gamma1'].stderr, out.params['gamma2'].stderr])
             pass
         if model == 'nonlinear':
-            out = lm.minimize(nlldx, params,
-                              args=(fitmup, fitprfs[iwave], fitsprfs[iwave]))
+            out=lm.minimize(nlldx, params,
+                            args=(fitmup, fitprfs[iwave], fitsprfs[iwave]))
             cl.append([out.params['gamma1'].value, out.params['gamma2'].value,
                        out.params['gamma3'].value, out.params['gamma4'].value])
             el.append([out.params['gamma1'].stderr, out.params['gamma2'].stderr,
@@ -1077,8 +1125,8 @@ def lnldx(params, x, data=None, weights=None):
     '''
 G. ROUDIER: Linear law
     '''
-    gamma1 = params['gamma1'].value
-    model = LinearModel.evaluate(x, [gamma1])
+    gamma1=params['gamma1'].value
+    model=LinearModel.evaluate(x, [gamma1])
     if data is None: return model
     if weights is None: return data - model
     return (data - model)/weights
@@ -1156,6 +1204,7 @@ G. ROUDIER: Exoplanet spectrum recovery
         smaors = priors[p]['sma']/priors['R*']/ssc['Rsun/AU']
         ttrdur = np.arcsin((1e0+rpors)/smaors)
         trdura = priors[p]['period']*ttrdur/np.pi
+        vrange = nrm['data'][p]['vrange']
         wave = nrm['data'][p]['wavet']
         waves = nrm['data'][p]['wave']
         nspec = nrm['data'][p]['nspec']
@@ -1167,27 +1216,49 @@ G. ROUDIER: Exoplanet spectrum recovery
         time = nrm['data'][p]['time']
         visits = nrm['data'][p]['visits']
         orbits = nrm['data'][p]['orbits']
+        disp = nrm['data'][p]['dispersion']
         im = wht['data'][p]['postim']
         allz = wht['data'][p]['postsep']
+        allphase = np.array(wht['data'][p]['postflatphase'])
         whiterprs = np.nanmedian(wht['data'][p]['mctrace']['rprs'])
         allwave = []
         allspec = []
         allim = []
         allpnoise = []
-        for w, s, i, n in zip(waves, nspec, im, photnoise):
+        alldisp = []
+        for w, s, i, n, d in zip(waves, nspec, im, photnoise, disp):
             allwave.extend(w)
             allspec.extend(s)
             allim.extend(i)
             allpnoise.extend(n)
+            alldisp.extend(d)
             pass
+        alldisp = np.array(alldisp)
         allim = np.array(allim)
         allz = np.array(allz)
-        disp = np.median([np.median(np.diff(w)) for w in wave])
-        nbin = np.min([len(w) for w in wave])
-        wavel = [np.min(w) for w in wave]
-        wavec = np.arange(nbin)*disp + np.mean([np.max(wavel), np.min(wavel)])
-        lwavec = wavec - disp/2e0
-        hwavec = wavec + disp/2e0
+        if 'STIS' in ext:
+            disp = np.median([np.median(np.diff(w)) for w in wave])
+            nbin = np.min([len(w) for w in wave])
+            wavel = [np.min(w) for w in wave]
+            wavec = np.arange(nbin)*disp + np.mean([np.max(wavel), np.min(wavel)])
+            lwavec = wavec - disp/2e0
+            hwavec = wavec + disp/2e0
+            pass
+        # MULTI VISITS COMMON WAVELENGTH GRID --------------------------------------------
+        if 'WFC3' in ext:
+            wavec, _t = tplbuild(allspec, allwave, vrange, alldisp*1e-4, medest=True)
+            wavec = np.array(wavec)
+            temp = [np.diff(wavec)[0]]
+            temp.extend(np.diff(wavec))
+            lwavec = wavec - np.array(temp)/2e0
+            temp = list(np.diff(wavec))
+            temp.append(np.diff(wavec)[-1])
+            hwavec = wavec + np.array(temp)/2e0
+            pass
+        # EXCLUDE PARTIAL LIGHT CURVES AT THE EDGES --------------------------------------
+        wavec = wavec[1:-2]
+        lwavec = lwavec[1:-2]
+        hwavec = hwavec[1:-2]
         # EXCLUDE ALL NAN CHANNELS -------------------------------------------------------
         allnanc = []
         for wl, wh in zip(lwavec, hwavec):
@@ -1209,18 +1280,23 @@ G. ROUDIER: Exoplanet spectrum recovery
         out['data'][p]['ESerr'] = []
         out['data'][p]['LD'] = []
         out['data'][p]['MCPOST'] = []
-        for wl, wh in zip(lwavec[1:-1], hwavec[1:-1]):
-            out['data'][p]['WBlow'].append(wl)
-            out['data'][p]['WBup'].append(wh)
-            out['data'][p]['WB'].append(np.mean([wl, wh]))
+        out['data'][p]['RSTAR'] = []
+        out['data'][p]['rp0hs'] = []
+        out['data'][p]['Hs'] = []
+        tdmemory = whiterprs
+        startflag = True
+        for wl, wh in zip(lwavec, hwavec):
             select = [(w > wl) & (w < wh) for w in allwave]
             if 'STIS' in ext:
                 data = np.array([np.nanmean(d[s]) for d, s in zip(allspec, select)])
-                dnoise = np.array([(1e0/np.sum(s))*np.sqrt(np.nansum((n[s])**2)) for n, s in zip(allpnoise, select)])
+                dnoise = np.array([(1e0/np.sum(s))*np.sqrt(np.nansum((n[s])**2))
+                                   for n, s in zip(allpnoise, select)])
                 pass
             else:
-                data = np.array([np.nanmedian(d[s]) for d, s in zip(allspec, select)])
-                dnoise = np.array([np.nanmedian(n[s]) for n, s in zip(allpnoise, select)])
+                data = np.array([np.nanmean(d[s])
+                                 for d, s in zip(allspec, select)])
+                dnoise = np.array([np.nanmedian(n[s])/np.sqrt(np.nansum(s))
+                                   for n, s in zip(allpnoise, select)])
                 pass
             valid = np.isfinite(data)
             if selftype in ['transit']:
@@ -1230,12 +1306,15 @@ G. ROUDIER: Exoplanet spectrum recovery
             else: g1, g2, g3, g4 = [[0], [0], [0], [0]]
             out['data'][p]['LD'].append([g1[0], g2[0], g3[0], g4[0]])
             model = tldlc(abs(allz), whiterprs, g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0])
+            # renorm = np.nanmean(data[abs(allz) > (1e0 + whiterprs)])
+            # data /= renorm
+            # dnoise /= renorm
             if verbose:
                 plt.figure()
                 plt.title(str(int(1e3*np.mean([wl, wh])))+' nm')
-                plt.plot(allz[valid], data[valid]/allim[valid], 'o')
-                plt.plot(allz[valid], model[valid], '^')
-                plt.xlabel('Separation [R*]')
+                plt.plot(allphase[valid], data[valid]/allim[valid], 'o')
+                plt.plot(allphase[valid], model[valid], '^')
+                plt.xlabel('Orbital phase')
                 plt.show()
                 pass
             # PRIORS -----------------------------------------------------------------
@@ -1249,19 +1328,48 @@ G. ROUDIER: Exoplanet spectrum recovery
             mmw, fH2, fHe = crbcore.getmmw(mixratio, protosolar=False, fH2=fH2, fHe=fHe)
             mmw = mmw*cst.m_p  # [kg]
             Hs = cst.Boltzmann*eqtemp/(mmw*1e-2*(10.**priors[p]['logg']))  # [m]
-            Hs = 3e0*Hs/(priors['R*']*sscmks['Rsun'])
+            Hs = Hs/(priors['R*']*sscmks['Rsun'])
             tauvs = 1e0/((1e-2/trdura)**2)
             ootstd = np.nanstd(data[abs(allz) > (1e0 + whiterprs)])
             tauvi = 1e0/(ootstd**2)
             nodes = []
             tauwbdata = 1e0/dnoise**2
+            # PRIOR WIDTH ----------------------------------------------------------------
+            noot = np.sum(abs(allz) > (1e0 + whiterprs))
+            nit = allz.size - noot
+            # Noise propagation forecast on transit depth
+            propphn = np.nanmedian(dnoise)*(1e0 - tdmemory**2)*np.sqrt(1e0/nit + 1e0/noot)
+            dirtypn = np.sqrt(propphn + tdmemory**2) - tdmemory
+            prwidth = np.sqrt(Hs*dirtypn)
+            # PRIOR CENTER ---------------------------------------------------------------
+            lmdata = data/allim
+            lmparams = lm.Parameters()
+            lmparams.add('lmrprs', value=whiterprs,
+                         min=whiterprs - 5e0*Hs, max=whiterprs + 5e0*Hs)
+            def lmcenter(lmtd, allz=allz, g1=g1, g2=g2, g3=g3, g4=g4,
+                         valid=valid, lmdata=lmdata):
+                out = tldlc(allz, lmtd['lmrprs'].value,
+                            g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0])
+                return out[valid] - lmdata[valid]
+            lmout = lm.minimize(lmcenter, lmparams,
+                                args=(allz, g1, g2, g3, g4, valid, lmdata))
+            prcenter = lmout.params['lmrprs'].value
+            if not np.isfinite(prcenter): prcenter = whiterprs
+            if abs(tdmemory - prcenter) > 10*Hs: prcenter = whiterprs
+            # UPDATE GLOBALS -------------------------------------------------------------
             shapevis = 2
             if shapevis < len(visits): shapevis = len(visits)
             ctxtupdt(allz=allz, g1=g1, g2=g2, g3=g3, g4=g4,
                      orbits=orbits, smaors=smaors, time=time, valid=valid, visits=visits)
             # PYMC3 ----------------------------------------------------------------------
             with pm.Model():
-                rprs = pm.Normal('rprs', mu=whiterprs, tau=1e0/Hs**2)
+                if startflag:
+                    lowstart = tdmemory - 5e0*Hs
+                    if lowstart < 0: lowstart = 0
+                    upstart = tdmemory + 5e0*Hs
+                    rprs = pm.Uniform('rprs', lower=lowstart, upper=upstart)
+                    pass
+                else: rprs = pm.Normal('rprs', mu=prcenter, tau=1e0/(prwidth**2))
                 allvslope = pm.TruncatedNormal('vslope', mu=0e0, tau=tauvs,
                                                lower=-3e-2/trdura,
                                                upper=3e-2/trdura, shape=shapevis)
@@ -1279,9 +1387,26 @@ G. ROUDIER: Exoplanet spectrum recovery
                                   progressbar=verbose)
                 mcpost = pm.summary(trace)
                 pass
-            out['data'][p]['ES'].append(np.nanmedian(trace['rprs']))
-            out['data'][p]['ESerr'].append(np.nanstd(trace['rprs']))
-            out['data'][p]['MCPOST'].append(mcpost)
+            # Exclude first channel with Uniform prior
+            if not startflag:
+                out['data'][p]['ES'].append(np.nanmedian(trace['rprs']))
+                out['data'][p]['ESerr'].append(np.nanstd(trace['rprs']))
+                out['data'][p]['MCPOST'].append(mcpost)
+                out['data'][p]['WBlow'].append(wl)
+                out['data'][p]['WBup'].append(wh)
+                out['data'][p]['WB'].append(np.mean([wl, wh]))
+                pass
+            tdmemory = np.nanmedian(trace['rprs'])
+            startflag = False
+            pass
+        out['data'][p]['RSTAR'].append(priors['R*']*sscmks['Rsun'])
+        out['data'][p]['Hs'].append(Hs)
+        out['data'][p]['Teq'] = eqtemp
+        # Wavelength re-ordering for Cerberus
+        orderme = np.argsort(out['data'][p]['WB'])
+        for keytoord in ['ES', 'ESerr', 'WBlow', 'WBup', 'WB']:
+            temparr = np.array(out['data'][p][keytoord])
+            out['data'][p][keytoord] = temparr[orderme]
             pass
         exospec = True
         out['STATUS'].append(True)
@@ -1299,7 +1424,7 @@ G. ROUDIER: Exoplanet spectrum recovery
             noatm = Rp**2/(Rstar)**2
             rp0hs = np.sqrt(noatm*(Rstar)**2)
             _fig, ax0 = plt.subplots(figsize=(10,6))
-            ax0.errorbar(specwave, 1e2*spectrum, fmt='.', yerr=1e2*specerr)
+            ax0.errorbar(specwave, 1e2*vspectrum, fmt='.', yerr=1e2*specerr)
             ax0.set_xlabel(str('Wavelength [$\\mu m$]'))
             ax0.set_ylabel(str('$(R_p/R_*)^2$ [%]'))
             ax1 = ax0.twinx()

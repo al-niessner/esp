@@ -17,8 +17,10 @@ import excalibur.target.edit as trgedit
 # -- ALGOS RUN OPTIONS -- --------------------------------------------
 # FILTERS
 fltrs = (trgedit.activefilters.__doc__).split('\n')
-fltrs = [t.strip() for t in fltrs if t.replace(' ', '').__len__() > 0]
-fltrs = [f for f in fltrs if 'STIS' not in f]
+fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
+# Disable Cerberus
+fltrs = []
+# fltrs = [f for f in fltrs if 'G141' in f]
 # ----------------------- --------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class xslib(dawgie.Algorithm):
@@ -111,7 +113,8 @@ class atmos(dawgie.Algorithm):
         return
 
     def _atmos(self, fin, xsl, spc, index):
-        am = crbcore.atmos(fin, xsl, spc, self.__out[index], verbose=False)
+        am = crbcore.atmos(fin, xsl, spc, self.__out[index],
+                           mclen=int(1e4), verbose=False)
         return am
 
     @staticmethod

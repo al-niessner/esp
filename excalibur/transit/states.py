@@ -112,16 +112,32 @@ class SpectrumSV(dawgie.StateVector):
     def view(self, visitor:dawgie.Visitor)->None:
         if self['STATUS'][-1]:
             for p in self['data'].keys():
+                if 'Teq' in self['data'][p]:
+                    Teq = str(int(self['data'][p]['Teq']))
+                    pass
+                else: Teq = ''
                 spectrum = np.array(self['data'][p]['ES'])
                 specerr = np.array(self['data'][p]['ESerr'])
                 specwave = np.array(self['data'][p]['WB'])
                 specerr = abs(spectrum**2 - (spectrum + specerr)**2)
                 spectrum = spectrum**2
-                myfig = plt.figure(figsize=(8,6))
-                plt.title(p)
+                myfig, ax = plt.subplots(figsize=(8,6))
+                plt.title(p+' '+Teq)
                 plt.errorbar(specwave, 1e2*spectrum, fmt='.', yerr=1e2*specerr)
                 plt.xlabel(str('Wavelength [$\\mu m$]'))
                 plt.ylabel(str('$(R_p/R_*)^2$ [%]'))
+                if ('Hs' in self['data'][p]) and ('RSTAR' in self['data'][p]):
+                    rp0hs = np.sqrt(np.nanmedian(spectrum))
+                    Hs = self['data'][p]['Hs'][0]
+                    # Retro compatibility for Hs in [m]
+                    if Hs > 1: Hs = Hs/(self['data'][p]['RSTAR'][0])
+                    ax2 = ax.twinx()
+                    ax2.set_ylabel('$\\Delta$ [Hs]')
+                    axmin, axmax = ax.get_ylim()
+                    ax2.set_ylim((np.sqrt(1e-2*axmin) - rp0hs)/Hs,
+                                 (np.sqrt(1e-2*axmax) - rp0hs)/Hs)
+                    myfig.tight_layout()
+                    pass
                 buf = io.BytesIO()
                 myfig.savefig(buf, format='png')
                 visitor.add_image('...', ' ', buf.getvalue())
