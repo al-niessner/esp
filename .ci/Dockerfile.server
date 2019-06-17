@@ -11,4 +11,5 @@ ENTRYPOINT ["python3", "-m", "dawgie.pl.start", "-l", "ops.log", \
             "--context-db-name=ops", \
             "--context-db-port=5263", \
             "--context-fe-path=/proj/src/front-end", \
-            "--context-gpg-home=/proj/gnupg"]
+            "--context-gpg-home=/proj/gnupg", \
+            "--context-log-backup=10000"]
