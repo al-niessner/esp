@@ -1354,6 +1354,8 @@ G. ROUDIER: Exoplanet spectrum recovery
             lmout = lm.minimize(lmcenter, lmparams,
                                 args=(allz, g1, g2, g3, g4, valid, lmdata))
             prcenter = lmout.params['lmrprs'].value
+            # Force center of prior on whitelight
+            prcenter = whiterprs
             if not np.isfinite(prcenter): prcenter = whiterprs
             if abs(tdmemory - prcenter) > 10*Hs: prcenter = whiterprs
             # UPDATE GLOBALS -------------------------------------------------------------
