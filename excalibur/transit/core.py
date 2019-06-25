@@ -1340,7 +1340,9 @@ G. ROUDIER: Exoplanet spectrum recovery
             # Noise propagation forecast on transit depth
             propphn = np.nanmedian(dnoise)*(1e0 - tdmemory**2)*np.sqrt(1e0/nit + 1e0/noot)
             dirtypn = np.sqrt(propphn + tdmemory**2) - tdmemory
-            prwidth = np.sqrt(Hs*dirtypn)
+            # Hs VS PN
+            if dirtypn < Hs: prwidth = Hs
+            else: prwidth = np.sqrt(Hs*dirtypn)
             # PRIOR CENTER ---------------------------------------------------------------
             lmdata = data/allim
             lmparams = lm.Parameters()
