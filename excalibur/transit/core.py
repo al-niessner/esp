@@ -15,6 +15,7 @@ pymc3log = logging.getLogger('pymc3')
 pymc3log.setLevel(logging.ERROR)
 
 import scipy.constants as cst
+from scipy.interpolate import UnivariateSpline as unispl
 import matplotlib.pyplot as plt
 
 import theano.tensor as tt
@@ -1199,6 +1200,8 @@ G. ROUDIER: Exoplanet spectrum recovery
     ssc = syscore.ssconstants()
     planetloop = [p for p in nrm['data'].keys() if nrm['data'][p]['visits']]
     for p in planetloop:
+        priorspec, alpha = fastspec(fin, nrm, wht, ext, selftype,
+                                    chainlen=int(2e2), p=p, verbose=verbose)
         out['data'][p] = {'LD':[]}
         rpors = priors[p]['rp']/priors['R*']*ssc['Rjup/Rsun']
         smaors = priors[p]['sma']/priors['R*']/ssc['Rsun/AU']
@@ -1283,9 +1286,8 @@ G. ROUDIER: Exoplanet spectrum recovery
         out['data'][p]['RSTAR'] = []
         out['data'][p]['rp0hs'] = []
         out['data'][p]['Hs'] = []
-        tdmemory = whiterprs
         startflag = True
-        for wl, wh in zip(lwavec, hwavec):
+        for wl, wh, pc in zip(lwavec, hwavec, priorspec):
             select = [(w > wl) & (w < wh) for w in allwave]
             if 'STIS' in ext:
                 data = np.array([np.nanmean(d[s]) for d, s in zip(allspec, select)])
@@ -1338,28 +1340,16 @@ G. ROUDIER: Exoplanet spectrum recovery
             noot = np.sum(abs(allz) > (1e0 + whiterprs))
             nit = allz.size - noot
             # Noise propagation forecast on transit depth
-            propphn = np.nanmedian(dnoise)*(1e0 - tdmemory**2)*np.sqrt(1e0/nit + 1e0/noot)
-            dirtypn = np.sqrt(propphn + tdmemory**2) - tdmemory
+            propphn = np.nanmedian(dnoise)*(1e0 -
+                                            whiterprs**2)*np.sqrt(1e0/nit + 1e0/noot)
+            dirtypn = np.sqrt(propphn + whiterprs**2) - whiterprs
             # Hs VS PN
             if dirtypn < Hs: prwidth = Hs
-            else: prwidth = np.sqrt(Hs*dirtypn)
+            else: prwidth = alpha*np.sqrt(Hs*dirtypn)
             # PRIOR CENTER ---------------------------------------------------------------
-            lmdata = data/allim
-            lmparams = lm.Parameters()
-            lmparams.add('lmrprs', value=whiterprs,
-                         min=whiterprs - 5e0*Hs, max=whiterprs + 5e0*Hs)
-            def lmcenter(lmtd, allz=allz, g1=g1, g2=g2, g3=g3, g4=g4,
-                         valid=valid, lmdata=lmdata):
-                out = tldlc(allz, lmtd['lmrprs'].value,
-                            g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0])
-                return out[valid] - lmdata[valid]
-            lmout = lm.minimize(lmcenter, lmparams,
-                                args=(allz, g1, g2, g3, g4, valid, lmdata))
-            prcenter = lmout.params['lmrprs'].value
             # Force center of prior on whitelight
-            prcenter = whiterprs
+            prcenter = pc
             if not np.isfinite(prcenter): prcenter = whiterprs
-            if abs(tdmemory - prcenter) > 10*Hs: prcenter = whiterprs
             # UPDATE GLOBALS -------------------------------------------------------------
             shapevis = 2
             if shapevis < len(visits): shapevis = len(visits)
@@ -1368,9 +1358,9 @@ G. ROUDIER: Exoplanet spectrum recovery
             # PYMC3 ----------------------------------------------------------------------
             with pm.Model():
                 if startflag:
-                    lowstart = tdmemory - 5e0*Hs
+                    lowstart = whiterprs - 5e0*Hs
                     if lowstart < 0: lowstart = 0
-                    upstart = tdmemory + 5e0*Hs
+                    upstart = whiterprs + 5e0*Hs
                     rprs = pm.Uniform('rprs', lower=lowstart, upper=upstart)
                     pass
                 else: rprs = pm.Normal('rprs', mu=prcenter, tau=1e0/(prwidth**2))
@@ -1393,14 +1383,15 @@ G. ROUDIER: Exoplanet spectrum recovery
                 pass
             # Exclude first channel with Uniform prior
             if not startflag:
-                out['data'][p]['ES'].append(np.nanmedian(trace['rprs']))
+                clspvl = np.nanmedian(trace['rprs'])
+                if abs(clspvl - pc) > 3*Hs: clspvl = pc
+                out['data'][p]['ES'].append(clspvl)
                 out['data'][p]['ESerr'].append(np.nanstd(trace['rprs']))
                 out['data'][p]['MCPOST'].append(mcpost)
                 out['data'][p]['WBlow'].append(wl)
                 out['data'][p]['WBup'].append(wh)
                 out['data'][p]['WB'].append(np.mean([wl, wh]))
                 pass
-            tdmemory = np.nanmedian(trace['rprs'])
             startflag = False
             pass
         out['data'][p]['RSTAR'].append(priors['R*']*sscmks['Rsun'])
@@ -1500,3 +1491,187 @@ R. ESTRELA: Binning the wavelength template
     tmid = lower + 0.5*np.diff(tbin)
     return tmid, lower
 # ---------------------- ---------------------------------------------
+# -- FAST SPECTRUM -- ------------------------------------------------
+def fastspec(fin, nrm, wht, ext, selftype,
+             chainlen=int(1e4), p=None, verbose=False):
+    '''
+G. ROUDIER: Exoplanet spectrum fast recovery for prior setup
+    '''
+    priors = fin['priors'].copy()
+    ssc = syscore.ssconstants()
+    rpors = priors[p]['rp']/priors['R*']*ssc['Rjup/Rsun']
+    smaors = priors[p]['sma']/priors['R*']/ssc['Rsun/AU']
+    ttrdur = np.arcsin((1e0+rpors)/smaors)
+    trdura = priors[p]['period']*ttrdur/np.pi
+    vrange = nrm['data'][p]['vrange']
+    wave = nrm['data'][p]['wavet']
+    waves = nrm['data'][p]['wave']
+    nspec = nrm['data'][p]['nspec']
+    photnoise = nrm['data'][p]['photnoise']
+    if 'STIS' in ext:
+        wave, _trash = binnagem(wave, 100)
+        wave = np.resize(wave,(1,100))
+        pass
+    time = nrm['data'][p]['time']
+    visits = nrm['data'][p]['visits']
+    orbits = nrm['data'][p]['orbits']
+    disp = nrm['data'][p]['dispersion']
+    im = wht['data'][p]['postim']
+    allz = wht['data'][p]['postsep']
+    whiterprs = np.nanmedian(wht['data'][p]['mctrace']['rprs'])
+    allwave = []
+    allspec = []
+    allim = []
+    allpnoise = []
+    alldisp = []
+    for w, s, i, n, d in zip(waves, nspec, im, photnoise, disp):
+        allwave.extend(w)
+        allspec.extend(s)
+        allim.extend(i)
+        allpnoise.extend(n)
+        alldisp.extend(d)
+        pass
+    alldisp = np.array(alldisp)
+    allim = np.array(allim)
+    allz = np.array(allz)
+    if 'STIS' in ext:
+        disp = np.median([np.median(np.diff(w)) for w in wave])
+        nbin = np.min([len(w) for w in wave])
+        wavel = [np.min(w) for w in wave]
+        wavec = np.arange(nbin)*disp + np.mean([np.max(wavel), np.min(wavel)])
+        lwavec = wavec - disp/2e0
+        hwavec = wavec + disp/2e0
+        pass
+    # MULTI VISITS COMMON WAVELENGTH GRID ------------------------------------------------
+    if 'WFC3' in ext:
+        wavec, _t = tplbuild(allspec, allwave, vrange, alldisp*1e-4, medest=True)
+        wavec = np.array(wavec)
+        temp = [np.diff(wavec)[0]]
+        temp.extend(np.diff(wavec))
+        lwavec = wavec - np.array(temp)/2e0
+        temp = list(np.diff(wavec))
+        temp.append(np.diff(wavec)[-1])
+        hwavec = wavec + np.array(temp)/2e0
+        pass
+    # EXCLUDE PARTIAL LIGHT CURVES AT THE EDGES ------------------------------------------
+    wavec = wavec[1:-2]
+    lwavec = lwavec[1:-2]
+    hwavec = hwavec[1:-2]
+    # EXCLUDE ALL NAN CHANNELS -----------------------------------------------------------
+    allnanc = []
+    for wl, wh in zip(lwavec, hwavec):
+        select = [(w > wl) & (w < wh) for w in allwave]
+        if 'STIS' in ext:
+            data = np.array([np.nanmean(d[s]) for d, s in zip(allspec, select)])
+            pass
+        else: data = np.array([np.median(d[s]) for d, s in zip(allspec, select)])
+        if np.all(~np.isfinite(data)): allnanc.append(True)
+        else: allnanc.append(False)
+        pass
+    lwavec = [lwv for lwv, lln in zip(lwavec, allnanc) if not lln]
+    hwavec = [hwv for hwv, lln in zip(hwavec, allnanc) if not lln]
+    # LOOP OVER WAVELENGTH BINS ----------------------------------------------------------
+    ES = []
+    ESerr = []
+    WB = []
+    for wl, wh in zip(lwavec, hwavec):
+        select = [(w > wl) & (w < wh) for w in allwave]
+        if 'STIS' in ext:
+            data = np.array([np.nanmean(d[s]) for d, s in zip(allspec, select)])
+            dnoise = np.array([(1e0/np.sum(s))*np.sqrt(np.nansum((n[s])**2))
+                               for n, s in zip(allpnoise, select)])
+            pass
+        else:
+            data = np.array([np.nanmean(d[s])
+                             for d, s in zip(allspec, select)])
+            dnoise = np.array([np.nanmedian(n[s])/np.sqrt(np.nansum(s))
+                               for n, s in zip(allpnoise, select)])
+            pass
+        valid = np.isfinite(data)
+        if selftype in ['transit']:
+            bld = createldgrid([wl], [wh], priors, segmentation=int(10))
+            g1, g2, g3, g4 = bld['LD']
+            pass
+        else: g1, g2, g3, g4 = [[0], [0], [0], [0]]
+        # renorm = np.nanmean(data[abs(allz) > (1e0 + whiterprs)])
+        # data /= renorm
+        # dnoise /= renorm
+        # PRIORS -------------------------------------------------------------------------
+        sscmks = syscore.ssconstants(mks=True)
+        eqtemp = priors['T*']*np.sqrt(priors['R*']*sscmks['Rsun/AU']/
+                                      (2.*priors[p]['sma']))
+        pgrid = np.arange(np.log(10.)-15., np.log(10.)+15./100, 15./99)
+        pgrid = np.exp(pgrid)
+        pressure = pgrid[::-1]
+        mixratio, fH2, fHe = crbcore.crbce(pressure, eqtemp)
+        mmw, fH2, fHe = crbcore.getmmw(mixratio, protosolar=False, fH2=fH2, fHe=fHe)
+        mmw = mmw*cst.m_p  # [kg]
+        Hs = cst.Boltzmann*eqtemp/(mmw*1e-2*(10.**priors[p]['logg']))  # [m]
+        Hs = Hs/(priors['R*']*sscmks['Rsun'])
+        tauvs = 1e0/((1e-2/trdura)**2)
+        ootstd = np.nanstd(data[abs(allz) > (1e0 + whiterprs)])
+        tauvi = 1e0/(ootstd**2)
+        nodes = []
+        tauwbdata = 1e0/dnoise**2
+        # UPDATE GLOBALS -----------------------------------------------------------------
+        shapevis = 2
+        if shapevis < len(visits): shapevis = len(visits)
+        ctxtupdt(allz=allz, g1=g1, g2=g2, g3=g3, g4=g4,
+                 orbits=orbits, smaors=smaors, time=time, valid=valid, visits=visits)
+        # PYMC3 --------------------------------------------------------------------------
+        with pm.Model():
+            lowstart = whiterprs - 5e0*Hs
+            if lowstart < 0: lowstart = 0
+            upstart = whiterprs + 5e0*Hs
+            rprs = pm.Uniform('rprs', lower=lowstart, upper=upstart)
+            allvslope = pm.TruncatedNormal('vslope', mu=0e0, tau=tauvs,
+                                           lower=-3e-2/trdura,
+                                           upper=3e-2/trdura, shape=shapevis)
+            alloslope = pm.Normal('oslope', mu=0, tau=tauvs, shape=shapevis)
+            alloitcp = pm.Normal('oitcp', mu=1e0, tau=tauvi, shape=shapevis)
+            nodes.append(rprs)
+            nodes.append(allvslope)
+            nodes.append(alloslope)
+            nodes.append(alloitcp)
+            _wbdata = pm.Normal('wbdata', mu=lcmodel(*nodes),
+                                tau=np.nanmedian(tauwbdata[valid]),
+                                observed=data[valid])
+            trace = pm.sample(chainlen, cores=4, tune=int(chainlen/3),
+                              compute_convergence_checks=False, step=pm.Metropolis(),
+                              progressbar=verbose)
+            pass
+        ES.append(np.nanmedian(trace['rprs']))
+        ESerr.append(np.nanstd(trace['rprs']))
+        WB.append(np.mean([wl, wh]))
+        pass
+    ES = np.array(ES)
+    ESerr = np.array(ESerr)
+    WB = np.array(WB)
+    if verbose:
+        vspectrum = ES.copy()
+        specerr = ESerr.copy()
+        specwave = WB.copy()
+        specerr = abs(vspectrum**2 - (vspectrum + specerr)**2)
+        vspectrum = vspectrum**2
+        Rstar = priors['R*']*sscmks['Rsun']
+        Rp = priors[p]['rp']*7.14E7  # m
+        Hs = cst.Boltzmann*eqtemp/(mmw*1e-2*(10.**priors[p]['logg']))  # m
+        noatm = Rp**2/(Rstar)**2
+        rp0hs = np.sqrt(noatm*(Rstar)**2)
+        _fig, ax0 = plt.subplots(figsize=(10,6))
+        ax0.errorbar(specwave, 1e2*vspectrum, fmt='.', yerr=1e2*specerr)
+        ax0.set_xlabel(str('Wavelength [$\\mu m$]'))
+        ax0.set_ylabel(str('$(R_p/R_*)^2$ [%]'))
+        ax1 = ax0.twinx()
+        yaxmin, yaxmax = ax0.get_ylim()
+        ax2min = (np.sqrt(1e-2*yaxmin)*Rstar - rp0hs)/Hs
+        ax2max = (np.sqrt(1e-2*yaxmax)*Rstar - rp0hs)/Hs
+        ax1.set_ylabel('Transit Depth Modulation [Hs]')
+        ax1.set_ylim(ax2min, ax2max)
+        plt.show()
+        pass
+    priorspec = unispl(WB, ES)(WB)
+    # alpha > 1: Increase width, alpha < 1: Decrease width
+    alpha = np.nanmedian(np.diff(ES))/np.nanmedian(ESerr)
+    return priorspec, alpha
+# ------------------- ------------------------------------------------
