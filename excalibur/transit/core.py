@@ -1670,7 +1670,7 @@ G. ROUDIER: Exoplanet spectrum fast recovery for prior setup
         ax1.set_ylim(ax2min, ax2max)
         plt.show()
         pass
-    priorspec = unispl(WB, ES)(WB)
+    priorspec = unispl(WB, ES, s=int(WB.size / 1e1))(WB)
     # alpha > 1: Increase width, alpha < 1: Decrease width
     # decrease width by half if no modulation detected
     alphanum = np.nanmedian(np.diff(ES))
