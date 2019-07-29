@@ -34,10 +34,6 @@ get_state ()
 
 layer_versions ()
 {
-    for destination in `destinations`
-    do
-        [[ "$destination" == "dawgie" ]] && dawgieVersion="$(lookup_version $destination)"
-    done
     baseVersion=$(python3 <<EOF
 try:
     import pyblake2 as hashlib
