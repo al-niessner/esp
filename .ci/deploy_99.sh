@@ -10,11 +10,11 @@ post_state "$context" "$description" "$state"
 
 lv=$(layer_versions)
 cit_version="${lv:17:16}"
-py_version="${lv:0:16}"
+base_version="${lv:0:16}"
 version="$(lookup_version dawgie)"
 [ -z "$(docker images | grep "esp_cit *${cit_version}")" ] && ( echo -n 'failure' > .ci/status.txt ; msg="CIT not found" ) || msg="CIT found"
 [ -z "$(docker images | grep "esp_devel *${version}")" ] && ( echo -n 'failure' > .ci/status.txt  ; msg="${msg}\nDEV not found" ) || msg="${msg}\nDEV found"
-[ -z "$(docker images | grep "esp_py *${py_version}")" ] && ( echo -n 'failure' > .ci/status.txt  ; msg="${msg}\nPY not found" ) || msg="${msg}\nPY found"
+[ -z "$(docker images | grep "esp_base *${base_version}")" ] && ( echo -n 'failure' > .ci/status.txt  ; msg="${msg}\nPY not found" ) || msg="${msg}\nPY found"
 [ -z "$(docker images | grep "esp_server *${version}")" ] && ( echo -n 'failure' > .ci/status.txt  ; msg="${msg}\nSERVER not found" ) || msg="${msg}\nSERVER found"
 [ -z "$(docker images | grep "esp_tools *${version}")" ] && ( echo -n 'failure' > .ci/status.txt  ; msg="${msg}\nTOOLS not found" ) || msg="${msg}\nTOOLS found"
 [ -z "$(docker images | grep "esp_worker *latest")" ] && ( echo -n 'failure' > .ci/status.txt  ; msg="${msg}\nWORKER not found" ) || msg="${msg}\nWORKER found"
@@ -24,12 +24,12 @@ if current_state
 then
     tempfn=$(mktemp -p /proj/sdp/data/stg)
     # save the docker images to a tarball
-    docker save -o ${tempfn} esp_cit:${cit_version} esp_devel:${version} esp_py:${py_version} esp_server:${version} esp_tools:${version} esp_worker:latest
+    docker save -o ${tempfn} esp_cit:${cit_version} esp_devel:${version} esp_base:${base_version} esp_server:${version} esp_tools:${version} esp_worker:latest
     # delete unused copies of same tags
-    ssh mentor0 docker rmi --force esp_cit:${cit_version} esp_devel:${version} esp_py:${py_version} esp_tools:${version} esp_worker:latest
-    ssh mentor1 docker rmi --force esp_cit:${cit_version} esp_devel:${version} esp_py:${py_version} esp_tools:${version} esp_worker:latest
-    ssh mentor2 docker rmi --force esp_cit:${cit_version} esp_devel:${version} esp_py:${py_version} esp_tools:${version} esp_worker:latest
-    ssh mentor3 docker rmi --force esp_cit:${cit_version} esp_devel:${version} esp_py:${py_version} esp_tools:${version} esp_worker:latest
+    ssh mentor0 docker rmi --force esp_cit:${cit_version} esp_devel:${version} esp_base:${base_version} esp_tools:${version} esp_worker:latest
+    ssh mentor1 docker rmi --force esp_cit:${cit_version} esp_devel:${version} esp_base:${base_version} esp_tools:${version} esp_worker:latest
+    ssh mentor2 docker rmi --force esp_cit:${cit_version} esp_devel:${version} esp_base:${base_version} esp_tools:${version} esp_worker:latest
+    ssh mentor3 docker rmi --force esp_cit:${cit_version} esp_devel:${version} esp_base:${base_version} esp_tools:${version} esp_worker:latest
     # install all of the new images
     ssh mentor0 docker load -i ${tempfn}
     ssh mentor1 docker load -i ${tempfn}

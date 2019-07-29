@@ -1,4 +1,4 @@
-FROM esp_py:ghrVersion
+FROM esp_base:ghrVersion
 ENV GNUPGHOME /proj/gnupg
 ENV HOME /proj/src
 ENV PYTHONPATH /proj/src/ae

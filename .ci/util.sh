@@ -20,11 +20,6 @@ current_state ()
     test `cat ${basedir}/.ci/status.txt` == "success"
 }
 
-destinations ()
-{
-    grep -v '#' ${basedir}/app.dependency.manifest | awk -e '{print $1}'
-}
-
 download ()
 {
     curl -L \
@@ -43,11 +38,22 @@ layer_versions ()
     do
         [[ "$destination" == "dawgie" ]] && dawgieVersion="$(lookup_version $destination)"
     done
-    python3 <<EOF
-with open ('.ci/Dockerfile.py', 'rt') as f: text = f.read()
-with open ('.ci/Dockerfile.1', 'tw') as f: f.write (text.replace ("ghrVersion", "${dawgieVersion}"))
+    baseVersion=$(python3 <<EOF
+try:
+    import pyblake2 as hashlib
+except:
+    import hashlib
+
+with open ('.ci/Dockerfile.base', 'br') as f: data = f.read()
+k = hashlib.blake2b (data, digest_size=8)
+print (k.hexdigest())
 EOF
-    pyVersion=$(python3 <<EOF
+           )
+    python3 <<EOF
+with open ('.ci/Dockerfile.cit', 'rt') as f: text = f.read()
+with open ('.ci/Dockerfile.1', 'tw') as f: f.write (text.replace ("ghrVersion", "${baseVersion}"))
+EOF
+    citVersion=$(python3 <<EOF
 try:
     import pyblake2 as hashlib
 except:
@@ -58,39 +64,9 @@ k = hashlib.blake2b (data, digest_size=8)
 print (k.hexdigest())
 EOF
            )
-    python3 <<EOF
-with open ('.ci/Dockerfile.cit', 'rt') as f: text = f.read()
-with open ('.ci/Dockerfile.2', 'tw') as f: f.write (text.replace ("ghrVersion", "${pyVersion}"))
-EOF
-    citVersion=$(python3 <<EOF
-try:
-    import pyblake2 as hashlib
-except:
-    import hashlib
 
-with open ('.ci/Dockerfile.2', 'br') as f: data = f.read()
-k = hashlib.blake2b (data, digest_size=8)
-print (k.hexdigest())
-EOF
-           )
-
-    [[ $# -gt 0 ]] && rm .ci/Dockerfile.1 .ci/Dockerfile.2
-    echo $pyVersion $citVersion
-}
-
-lookup ()
-{
-    grep -v '#' ${basedir}/app.dependency.manifest | grep ${1}
-}
-
-lookup_source ()
-{
-    lookup $1 | awk -e '{print $2}'
-}
-
-lookup_version ()
-{
-    lookup $1 | awk -e '{print $3}'
+    [[ $# -gt 0 ]] && rm .ci/Dockerfile.1
+    echo $baseVersion $citVersion
 }
 
 post_state ()
