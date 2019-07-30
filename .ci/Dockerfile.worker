@@ -1,4 +1,4 @@
-FROM esp_py:ghrVersion
+FROM esp_base:ghrVersion
 ENV DOCKER_GIT_REVISION esp-git-rev
 ENV GNUPGHOME /proj/gnupg
 ENV HOME /tmp
