@@ -30,7 +30,7 @@ then
         docker build --network=host -t esp_cit:${citVersion} - < .ci/Dockerfile.1
     fi
 
-    rm .ci/Dockerfile.1 .ci/Dockerfile.1.dcp
+    rm .ci/Dockerfile.1
     state=`get_state`
 fi
 

@@ -34,8 +34,6 @@ get_state ()
 
 layer_versions ()
 {
-    set -ex
-    [ -f .ci/Dockerfile.1.dcp ] && echo "begin: it exists"
     baseVersion=$(python3 <<EOF
 try:
     import pyblake2 as hashlib
@@ -64,7 +62,6 @@ k = hashlib.blake2b (data, digest_size=8)
 print (k.hexdigest())
 EOF
               )
-    [ -f .ci/Dockerfile.1.dcp ] && echo "end: it exists"
     [[ $# -gt 0 ]] && rm .ci/Dockerfile.1
     echo $baseVersion $citVersion
 }
