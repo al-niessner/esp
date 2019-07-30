@@ -114,6 +114,9 @@ def server (filenames:[str]):
                 with open (fn, 'rt') as f: text = f.read()
                 with open (fn + '.dcp', 'tw') as f:\
                      f.write (text.replace ('DCP_PORT_NUMBER', str(port)))
+                print (fn)
+                print (text)
+                print (text.replace ('DCP_PORT_NUMBER', str(port)))
                 pass
             ss.serve_forever()
         except OSError: port = False

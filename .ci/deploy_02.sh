@@ -16,15 +16,17 @@ then
     fi
 
     lv=$(layer_versions)
-    version="${lv:0:16}"
+    baseVersion="${lv:0:16}"
     esp_git_rev="$(git rev-parse HEAD)"
-    rm .ci/Dockerfile.1 .ci/Dockerfile.2
+    echo "base version: ${baseVersion}"
+    echo "git rev HEAD: ${esp_git_rev}"
     python3 <<EOF
 with open ('.ci/Dockerfile.worker', 'rt') as f: text = f.read()
-with open ('.ci/Dockerfile.1', 'tw') as f: f.write (text.replace ("ghrVersion", "${version}").replace ('esp-git-rev', "${esp_git_rev}"))
+with open ('.ci/Dockerfile.1', 'tw') as f: f.write (text.replace ("ghrVersion", "${baseVersion}").replace ('esp-git-rev', "${esp_git_rev}"))
 with open ('setup.py', 'rt') as f: text = f.read()
 with open ('setup.py', 'tw') as f: f.write (text.replace ('esp-git-rev', "${esp_git_rev}"))
 EOF
+    rm -f .ci/Dockerfile.1.dcp
     .ci/dcp.py --server .ci/Dockerfile.1 &
     while [ ! -f .ci/Dockerfile.1.dcp ]
     do
@@ -32,7 +34,7 @@ EOF
     done
     docker build --network=host -t esp_worker:latest - < .ci/Dockerfile.1.dcp
     git checkout setup.py
-    rm .ci/Dockerfile.1 .ci/Dockerfile.1.dcp
+    # rm .ci/Dockerfile.1 .ci/Dockerfile.1.dcp
     state=`get_state`
 fi
 

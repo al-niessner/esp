@@ -3,6 +3,7 @@ RUN set -ex && \
     export DEBIAN_FRONTEND=noninteractive && \
     apt-get update && \
     apt-get install -y \
+            curl \
             git \
             graphviz \
             haveged \
@@ -27,4 +28,6 @@ RUN set -ex && \
                           scipy==1.1.0 && \
    rm -rf ${HOME}/.cache && \
    mkdir /.theano && chmod 777 /.theano && \
-   mkdir -p /proj/data/ldtk && chmod 777 /proj/data/ldtk
+   mkdir -p /proj/data/ldtk && chmod 777 /proj/data/ldtk && \
+   curl -o /bin/dcp.py https://raw.githubusercontent.com/al-niessner/DAWGIE/master/.ci/dcp.py && \
+   chmod 755 /bin/dcp.py
