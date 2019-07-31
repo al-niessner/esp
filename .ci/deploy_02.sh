@@ -34,7 +34,7 @@ EOF
     done
     docker build --network=host -t esp_worker:latest - < .ci/Dockerfile.1.dcp
     git checkout setup.py
-    # rm .ci/Dockerfile.1 .ci/Dockerfile.1.dcp
+    rm .ci/Dockerfile.1 .ci/Dockerfile.1.dcp
     state=`get_state`
 fi
 
