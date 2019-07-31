@@ -45,12 +45,10 @@ k = hashlib.blake2b (data, digest_size=8)
 print (k.hexdigest())
 EOF
            )
-    [ -f .ci/Dockerfile.1.dcp ] && echo "step 1: it exists"
-    cat > t.py <<EOF
+    python3 <<EOF
 with open ('.ci/Dockerfile.cit', 'rt') as f: text = f.read()
 with open ('.ci/Dockerfile.1', 'tw') as f: f.write (text.replace ("ghrVersion", "${baseVersion}"))
 EOF
-    [ -f .ci/Dockerfile.1.dcp ] && echo "step 2: it exists"
     citVersion=$(python3 <<EOF
 try:
     import pyblake2 as hashlib
