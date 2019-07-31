@@ -18,8 +18,7 @@ import excalibur.target.edit as trgedit
 # FILTERS
 fltrs = (trgedit.activefilters.__doc__).split('\n')
 fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
-# Only G141 makes it through
-fltrs = [f for f in fltrs if 'WFC3' in f]
+fltrs = [f for f in fltrs if ('WFC3' in f) or ('G750' in f)]
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class normalization(dawgie.Algorithm):
@@ -27,7 +26,7 @@ class normalization(dawgie.Algorithm):
 G. ROUDIER: Light curve normalization by Out Of Transit data
     '''
     def __init__(self):
-        self._version_ = dawgie.VERSION(1,1,1)
+        self._version_ = trncore.normversion()
         self._type = 'transit'
         self.__cal = datalg.calibration()
         self.__tme = datalg.timing()
@@ -85,7 +84,7 @@ class whitelight(dawgie.Algorithm):
 G. ROUDIER: See inheritance and CI5 thread with A NIESSNER for __init__() method and class attributes https://github-fn.jpl.nasa.gov/EXCALIBUR/esp/pull/86
     '''
     def __init__(self, nrm=normalization()):
-        self._version_ = dawgie.VERSION(1,1,0)
+        self._version_ = trncore.wlversion()
         self._type = 'transit'
         self._nrm = nrm
         self.__fin = sysalg.finalize()
@@ -113,7 +112,7 @@ G. ROUDIER: See inheritance and CI5 thread with A NIESSNER for __init__() method
             vnrm, snrm = trncore.checksv(nrm)
             if vnrm and vfin:
                 log.warning('--< %s WHITE LIGHT: %s >--', self._type.upper(), ext)
-                update = self._whitelight(nrm, fin, self.__out[index])
+                update = self._whitelight(nrm, fin, self.__out[index], ext)
                 pass
             else:
                 errstr = [m for m in [snrm, sfin] if m is not None]
@@ -125,9 +124,9 @@ G. ROUDIER: See inheritance and CI5 thread with A NIESSNER for __init__() method
         if self.__out: ds.update()
         return
 
-    def _whitelight(self, nrm, fin, out):
-        wl = trncore.whitelight(nrm, fin, out, self._type,
-                                chainlen=int(2e4), verbose=False)
+    def _whitelight(self, nrm, fin, out, ext):
+        wl = trncore.whitelight(nrm, fin, out, ext, self._type,
+                                chainlen=int(1e4), verbose=False)
         return wl
 
     def _failure(self, errstr):
@@ -140,7 +139,7 @@ class spectrum(dawgie.Algorithm):
 G. ROUDIER: See inheritance and CI5 thread with A NIESSNER for __init__() method and class attributes https://github-fn.jpl.nasa.gov/EXCALIBUR/esp/pull/86
     '''
     def __init__(self, nrm=normalization(), wht=whitelight()):
-        self._version_ = dawgie.VERSION(1,1,5)
+        self._version_ = trncore.spectrumversion()
         self._type = 'transit'
         self.__fin = sysalg.finalize()
         self._nrm = nrm

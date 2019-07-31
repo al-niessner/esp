@@ -15,7 +15,6 @@ pymc3log = logging.getLogger('pymc3')
 pymc3log.setLevel(logging.ERROR)
 
 import scipy.constants as cst
-from scipy.interpolate import UnivariateSpline as unispl
 import matplotlib.pyplot as plt
 
 import theano.tensor as tt
@@ -74,6 +73,10 @@ G. ROUDIER: Tests for empty SV shell
     return valid, errstring
 # ----------------- --------------------------------------------------
 # -- NORMALIZATION -- ------------------------------------------------
+def normversion():
+    import dawgie
+    return dawgie.VERSION(1,1,1)
+
 def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
     '''
 G. ROUDIER: Out of transit data normalization
@@ -648,7 +651,11 @@ per wavelength bins
     return wavet, template
 # ---------------------- ---------------------------------------------
 # -- WHITE LIGHT CURVE -- --------------------------------------------
-def whitelight(nrm, fin, out, selftype, chainlen=int(1e4), verbose=False):
+def wlversion():
+    import dawgie
+    return dawgie.VERSION(1,1,1)
+
+def whitelight(nrm, fin, out, ext, selftype, chainlen=int(1e4), verbose=False):
     '''
 G. ROUDIER: Orbital parameters recovery
     '''
@@ -797,6 +804,10 @@ G. ROUDIER: Orbital parameters recovery
         if shapettv < len(ttv): shapettv = len(ttv)
         shapevis = 2
         if shapevis < len(visits): shapevis = len(visits)
+        if priors[p]['inc'] != 9e1: fixedinc = False
+        else: fixedinc = True
+        if 'eclipse' in selftype: fixedinc = True
+        if 'STIS' in ext: fixedinc = True
         nodes = []
         ctxtupdt(orbp=priors[p], ecc=ecc, g1=g1, g2=g2, g3=g3, g4=g4,
                  orbits=orbits, period=period,
@@ -806,25 +817,34 @@ G. ROUDIER: Orbital parameters recovery
         with pm.Model():
             rprs = pm.TruncatedNormal('rprs', mu=rpors, tau=taurprs,
                                       lower=rpors/2e0, upper=2e0*rpors)
+            nodes.append(rprs)
             alltknot = pm.TruncatedNormal('dtk', mu=tmjd, tau=tautknot,
                                           lower=tknotmin, upper=tknotmax,
                                           shape=shapettv)
-            inc = pm.TruncatedNormal('inc', mu=priors[p]['inc'], tau=tauinc,
-                                     lower=lowinc, upper=upinc)
+            nodes.append(alltknot)
+            if fixedinc: inc = priors[p]['inc']
+            else:
+                inc = pm.TruncatedNormal('inc', mu=priors[p]['inc'], tau=tauinc,
+                                         lower=lowinc, upper=upinc)
+                nodes.append(inc)
+                pass
             allvslope = pm.TruncatedNormal('vslope',
                                            mu=0e0, tau=tauvs,
                                            lower=-3e-2/trdura,
                                            upper=3e-2/trdura, shape=shapevis)
             alloslope = pm.Normal('oslope', mu=0e0, tau=tauvs, shape=shapevis)
             alloitcp = pm.Normal('oitcp', mu=1e0, tau=tauvi, shape=shapevis)
-            nodes.append(rprs)
-            nodes.append(alltknot)
-            nodes.append(inc)
             nodes.append(allvslope)
             nodes.append(alloslope)
             nodes.append(alloitcp)
-            _whitedata = pm.Normal('whitedata', mu=orbital(*nodes),
-                                   tau=tauwhite, observed=flatwhite[selectfit])
+            if fixedinc:
+                _whitedata = pm.Normal('whitedata', mu=fiorbital(*nodes),
+                                       tau=tauwhite, observed=flatwhite[selectfit])
+                pass
+            else:
+                _whitedata = pm.Normal('whitedata', mu=orbital(*nodes),
+                                       tau=tauwhite, observed=flatwhite[selectfit])
+                pass
             log.warning('>-- MCMC nodes: %s', str([n.name for n in nodes]))
             trace = pm.sample(chainlen, cores=4, tune=int(chainlen/2),
                               compute_convergence_checks=False, step=pm.Metropolis(),
@@ -845,8 +865,8 @@ G. ROUDIER: Orbital parameters recovery
         postphase = []
         postflatphase = []
         ttvindex = 0
-        if priors[p]['inc'] != 9e1: inclination = np.nanmedian(mctrace['inc'])
-        else: inclination = 9e1
+        if fixedinc: inclination = priors[p]['inc']
+        else: inclination = np.nanmedian(mctrace['inc'])
         for i, v in enumerate(visits):
             if v in ttv:
                 posttk = np.nanmedian(mctrace['dtk__%i' % ttvindex])
@@ -1191,7 +1211,12 @@ G. ROUDIER: HST breathing model
     return out
 # ---------------- ---------------------------------------------------
 # -- SPECTRUM -- -----------------------------------------------------
-def spectrum(fin, nrm, wht, out, ext, selftype, chainlen=int(1e4), verbose=False):
+def spectrumversion():
+    import dawgie
+    return dawgie.VERSION(1,1,6)
+
+def spectrum(fin, nrm, wht, out, ext, selftype,
+             chainlen=int(1e4), verbose=False, lcplot=False):
     '''
 G. ROUDIER: Exoplanet spectrum recovery
     '''
@@ -1200,8 +1225,6 @@ G. ROUDIER: Exoplanet spectrum recovery
     ssc = syscore.ssconstants()
     planetloop = [p for p in nrm['data'].keys() if nrm['data'][p]['visits']]
     for p in planetloop:
-        priorspec, alpha = fastspec(fin, nrm, wht, ext, selftype,
-                                    chainlen=int(2e2), p=p, verbose=verbose)
         out['data'][p] = {'LD':[]}
         rpors = priors[p]['rp']/priors['R*']*ssc['Rjup/Rsun']
         smaors = priors[p]['sma']/priors['R*']/ssc['Rsun/AU']
@@ -1287,7 +1310,8 @@ G. ROUDIER: Exoplanet spectrum recovery
         out['data'][p]['rp0hs'] = []
         out['data'][p]['Hs'] = []
         startflag = True
-        for wl, wh, pc in zip(lwavec, hwavec, priorspec):
+        tdmemory = whiterprs
+        for wl, wh in zip(lwavec, hwavec):
             select = [(w > wl) & (w < wh) for w in allwave]
             if 'STIS' in ext:
                 data = np.array([np.nanmean(d[s]) for d, s in zip(allspec, select)])
@@ -1308,10 +1332,7 @@ G. ROUDIER: Exoplanet spectrum recovery
             else: g1, g2, g3, g4 = [[0], [0], [0], [0]]
             out['data'][p]['LD'].append([g1[0], g2[0], g3[0], g4[0]])
             model = tldlc(abs(allz), whiterprs, g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0])
-            # renorm = np.nanmean(data[abs(allz) > (1e0 + whiterprs)])
-            # data /= renorm
-            # dnoise /= renorm
-            if verbose:
+            if lcplot:
                 plt.figure()
                 plt.title(str(int(1e3*np.mean([wl, wh])))+' nm')
                 plt.plot(allphase[valid], data[valid]/allim[valid], 'o')
@@ -1343,13 +1364,9 @@ G. ROUDIER: Exoplanet spectrum recovery
             propphn = np.nanmedian(dnoise)*(1e0 -
                                             whiterprs**2)*np.sqrt(1e0/nit + 1e0/noot)
             dirtypn = np.sqrt(propphn + whiterprs**2) - whiterprs
-            # Hs VS PN
-            if dirtypn < Hs: prwidth = Hs
-            else: prwidth = alpha*np.sqrt(Hs*dirtypn)
+            prwidth = 2e0*Hs
             # PRIOR CENTER ---------------------------------------------------------------
-            # Force center of prior on whitelight
-            prcenter = pc
-            if not np.isfinite(prcenter): prcenter = whiterprs
+            prcenter = whiterprs
             # UPDATE GLOBALS -------------------------------------------------------------
             shapevis = 2
             if shapevis < len(visits): shapevis = len(visits)
@@ -1384,15 +1401,22 @@ G. ROUDIER: Exoplanet spectrum recovery
             # Exclude first channel with Uniform prior
             if not startflag:
                 clspvl = np.nanmedian(trace['rprs'])
-                if abs(clspvl - pc) > 3*Hs: clspvl = pc
+                # Spectrum outlier rejection + inpaint
+                if abs(clspvl - tdmemory) > 2e0*dirtypn:
+                    clspvl = np.random.normal(loc=tdmemory, scale=dirtypn)
+                    pass
                 out['data'][p]['ES'].append(clspvl)
                 out['data'][p]['ESerr'].append(np.nanstd(trace['rprs']))
                 out['data'][p]['MCPOST'].append(mcpost)
                 out['data'][p]['WBlow'].append(wl)
                 out['data'][p]['WBup'].append(wh)
                 out['data'][p]['WB'].append(np.mean([wl, wh]))
+                tdmemory = clspvl
                 pass
-            startflag = False
+            else:
+                tdmemory = np.nanmedian(trace['rprs'])
+                startflag = False
+                pass
             pass
         out['data'][p]['RSTAR'].append(priors['R*']*sscmks['Rsun'])
         out['data'][p]['Hs'].append(Hs)
@@ -1408,6 +1432,10 @@ G. ROUDIER: Exoplanet spectrum recovery
         pass
     if verbose:
         for p in out['data'].keys():
+            if 'Teq' in out['data'][p]:
+                Teq = str(int(out['data'][p]['Teq']))
+                pass
+            else: Teq = ''
             vspectrum = np.array(out['data'][p]['ES'])
             specerr = np.array(out['data'][p]['ESerr'])
             specwave = np.array(out['data'][p]['WB'])
@@ -1418,16 +1446,55 @@ G. ROUDIER: Exoplanet spectrum recovery
             Hs = cst.Boltzmann*eqtemp/(mmw*1e-2*(10.**priors[p]['logg']))  # m
             noatm = Rp**2/(Rstar)**2
             rp0hs = np.sqrt(noatm*(Rstar)**2)
-            _fig, ax0 = plt.subplots(figsize=(10,6))
-            ax0.errorbar(specwave, 1e2*vspectrum, fmt='.', yerr=1e2*specerr)
+            # Smooth spectrum
+            binsize = 4
+            nspec = int(specwave.size/binsize)
+            minspec = np.nanmin(specwave)
+            maxspec = np.nanmax(specwave)
+            scale = (maxspec - minspec)/(1e0*nspec)
+            wavebin = scale*np.arange(nspec) + minspec
+            deltabin = np.diff(wavebin)[0]
+            cbin = wavebin + deltabin/2e0
+            specbin = []
+            errbin = []
+            for eachbin in cbin:
+                select = specwave < (eachbin + deltabin/2e0)
+                select = select & (specwave >= (eachbin - deltabin/2e0))
+                select = select & np.isfinite(vspectrum)
+                if np.sum(np.isfinite(vspectrum[select])) > 0:
+                    specbin.append(np.nansum(vspectrum[select]/(specerr[select]**2))/
+                                   np.nansum(1./(specerr[select]**2)))
+                    errbin.append(np.nanmedian((specerr[select]))/
+                                  np.sqrt(np.sum(select)))
+                    pass
+                else:
+                    specbin.append(np.nan)
+                    errbin.append(np.nan)
+                    pass
+                pass
+            waveb = np.array(cbin)
+            specb = np.array(specbin)
+            errb = np.array(errbin)
+            myfig, ax0 = plt.subplots(figsize=(8,6))
+            plt.title(p+' '+Teq)
+            ax0.errorbar(specwave, 1e2*vspectrum,
+                         fmt='.', yerr=1e2*specerr, color='lightgray')
+            ax0.errorbar(waveb, 1e2*specb,
+                         fmt='^', yerr=1e2*errb, color='blue')
             ax0.set_xlabel(str('Wavelength [$\\mu m$]'))
             ax0.set_ylabel(str('$(R_p/R_*)^2$ [%]'))
-            ax1 = ax0.twinx()
-            yaxmin, yaxmax = ax0.get_ylim()
-            ax2min = (np.sqrt(1e-2*yaxmin)*Rstar - rp0hs)/Hs
-            ax2max = (np.sqrt(1e-2*yaxmax)*Rstar - rp0hs)/Hs
-            ax1.set_ylabel('Transit Depth Modulation [Hs]')
-            ax1.set_ylim(ax2min, ax2max)
+            if ('Hs' in out['data'][p]) and ('RSTAR' in out['data'][p]):
+                rp0hs = np.sqrt(np.nanmedian(vspectrum))
+                Hs = out['data'][p]['Hs'][0]
+                # Retro compatibility for Hs in [m]
+                if Hs > 1: Hs = Hs/(out['data'][p]['RSTAR'][0])
+                ax2 = ax0.twinx()
+                ax2.set_ylabel('$\\Delta$ [Hs]')
+                axmin, axmax = ax0.get_ylim()
+                ax2.set_ylim((np.sqrt(1e-2*axmin) - rp0hs)/Hs,
+                             (np.sqrt(1e-2*axmax) - rp0hs)/Hs)
+                myfig.tight_layout()
+                pass
             plt.show()
             pass
         pass
@@ -1443,6 +1510,30 @@ G. ROUDIER: Orbital model
     r, atk, icln, avs, aos, aoi = whiteparams
     if ctxt.orbp['inc'] == 9e1: inclination = 9e1
     else: inclination = float(icln)
+    out = []
+    for i, v in enumerate(ctxt.visits):
+        omt = ctxt.time[i]
+        if v in ctxt.ttv: omtk = float(atk[ctxt.ttv.index(v)])
+        else: omtk = ctxt.tmjd
+        omz, _pmph = datcore.time2z(omt, inclination, omtk,
+                                    ctxt.smaors, ctxt.period, ctxt.ecc)
+        lcout = tldlc(abs(omz), float(r),
+                      g1=ctxt.g1[0], g2=ctxt.g2[0], g3=ctxt.g3[0], g4=ctxt.g4[0])
+        imout = timlc(omt, ctxt.orbits[i],
+                      vslope=float(avs[i]), vitcp=1e0,
+                      oslope=float(aos[i]), oitcp=float(aoi[i]))
+        out.extend(lcout*imout)
+        pass
+    return np.array(out)[ctxt.selectfit]
+
+@tco.as_op(itypes=[tt.dscalar, tt.dvector,
+                   tt.dvector, tt.dvector, tt.dvector], otypes=[tt.dvector])
+def fiorbital(*whiteparams):
+    '''
+G. ROUDIER: Orbital model with fixed inclination
+    '''
+    r, atk, avs, aos, aoi = whiteparams
+    inclination = ctxt.orbp['inc']
     out = []
     for i, v in enumerate(ctxt.visits):
         omt = ctxt.time[i]
@@ -1670,7 +1761,7 @@ G. ROUDIER: Exoplanet spectrum fast recovery for prior setup
         ax1.set_ylim(ax2min, ax2max)
         plt.show()
         pass
-    priorspec = unispl(WB, ES, s=int(WB.size / 1e1))(WB)
+    priorspec = ES
     # alpha > 1: Increase width, alpha < 1: Decrease width
     # decrease width by half if no modulation detected
     alphanum = np.nanmedian(np.diff(ES))

@@ -116,18 +116,50 @@ class SpectrumSV(dawgie.StateVector):
                     Teq = str(int(self['data'][p]['Teq']))
                     pass
                 else: Teq = ''
-                spectrum = np.array(self['data'][p]['ES'])
+                vspectrum = np.array(self['data'][p]['ES'])
                 specerr = np.array(self['data'][p]['ESerr'])
                 specwave = np.array(self['data'][p]['WB'])
-                specerr = abs(spectrum**2 - (spectrum + specerr)**2)
-                spectrum = spectrum**2
+                specerr = abs(vspectrum**2 - (vspectrum + specerr)**2)
+                vspectrum = vspectrum**2
+                # Smooth spectrum
+                binsize = 4
+                nspec = int(specwave.size/binsize)
+                minspec = np.nanmin(specwave)
+                maxspec = np.nanmax(specwave)
+                scale = (maxspec - minspec)/(1e0*nspec)
+                wavebin = scale*np.arange(nspec) + minspec
+                deltabin = np.diff(wavebin)[0]
+                cbin = wavebin + deltabin/2e0
+                specbin = []
+                errbin = []
+                for eachbin in cbin:
+                    select = specwave < (eachbin + deltabin/2e0)
+                    select = select & (specwave >= (eachbin - deltabin/2e0))
+                    select = select & np.isfinite(vspectrum)
+                    if np.sum(np.isfinite(vspectrum[select])) > 0:
+                        specbin.append(np.nansum(vspectrum[select]/(specerr[select]**2))/
+                                       np.nansum(1./(specerr[select]**2)))
+                        errbin.append(np.nanmedian((specerr[select]))/
+                                      np.sqrt(np.sum(select)))
+                        pass
+                    else:
+                        specbin.append(np.nan)
+                        errbin.append(np.nan)
+                        pass
+                    pass
+                waveb = np.array(cbin)
+                specb = np.array(specbin)
+                errb = np.array(errbin)
                 myfig, ax = plt.subplots(figsize=(8,6))
                 plt.title(p+' '+Teq)
-                plt.errorbar(specwave, 1e2*spectrum, fmt='.', yerr=1e2*specerr)
+                ax.errorbar(specwave, 1e2*vspectrum,
+                            fmt='.', yerr=1e2*specerr, color='lightgray')
+                ax.errorbar(waveb, 1e2*specb,
+                            fmt='^', yerr=1e2*errb, color='blue')
                 plt.xlabel(str('Wavelength [$\\mu m$]'))
                 plt.ylabel(str('$(R_p/R_*)^2$ [%]'))
                 if ('Hs' in self['data'][p]) and ('RSTAR' in self['data'][p]):
-                    rp0hs = np.sqrt(np.nanmedian(spectrum))
+                    rp0hs = np.sqrt(np.nanmedian(vspectrum))
                     Hs = self['data'][p]['Hs'][0]
                     # Retro compatibility for Hs in [m]
                     if Hs > 1: Hs = Hs/(self['data'][p]['RSTAR'][0])
