@@ -1212,8 +1212,12 @@ G. ROUDIER: HST breathing model
 # ---------------- ---------------------------------------------------
 # -- SPECTRUM -- -----------------------------------------------------
 def spectrumversion():
+    '''
+G. ROUDIER: Neutral outlier rej/inpaint
+Whitelight +/- 5Hs instead of Previous +/- 1PN
+    '''
     import dawgie
-    return dawgie.VERSION(1,1,6)
+    return dawgie.VERSION(1,1,7)
 
 def spectrum(fin, nrm, wht, out, ext, selftype,
              chainlen=int(1e4), verbose=False, lcplot=False):
@@ -1402,16 +1406,16 @@ G. ROUDIER: Exoplanet spectrum recovery
             if not startflag:
                 clspvl = np.nanmedian(trace['rprs'])
                 # Spectrum outlier rejection + inpaint
-                if abs(clspvl - tdmemory) > 2e0*dirtypn:
+                if abs(clspvl - whiterprs) > 5e0*Hs:
                     clspvl = np.random.normal(loc=tdmemory, scale=dirtypn)
                     pass
+                else: tdmemory = clspvl
                 out['data'][p]['ES'].append(clspvl)
                 out['data'][p]['ESerr'].append(np.nanstd(trace['rprs']))
                 out['data'][p]['MCPOST'].append(mcpost)
                 out['data'][p]['WBlow'].append(wl)
                 out['data'][p]['WBup'].append(wh)
                 out['data'][p]['WB'].append(np.mean([wl, wh]))
-                tdmemory = clspvl
                 pass
             else:
                 tdmemory = np.nanmedian(trace['rprs'])
