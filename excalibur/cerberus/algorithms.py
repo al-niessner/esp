@@ -18,14 +18,13 @@ import excalibur.target.edit as trgedit
 # FILTERS
 fltrs = (trgedit.activefilters.__doc__).split('\n')
 fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
-# Disable Cerberus
-fltrs = []
-# fltrs = [f for f in fltrs if 'G141' in f]
+# Cerberus enabled for G141
+fltrs = [f for f in fltrs if 'G141' in f]
 # ----------------------- --------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class xslib(dawgie.Algorithm):
     def __init__(self):
-        self._version_ = dawgie.VERSION(1,1,0)
+        self._version_ = crbcore.myxsecsversion()
         self.__spc = trnalg.spectrum()
         self.__out = [crbstates.xslibSV(ext) for ext in fltrs]
         return
@@ -70,7 +69,7 @@ class xslib(dawgie.Algorithm):
 
 class atmos(dawgie.Algorithm):
     def __init__(self):
-        self._version_ = dawgie.VERSION(1,1,0)
+        self._version_ = crbcore.atmosversion()
         self.__spc = trnalg.spectrum()
         self.__fin = sysalg.finalize()
         self.__xsl = xslib()

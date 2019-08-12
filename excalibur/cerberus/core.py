@@ -48,6 +48,10 @@ G. ROUDIER: Tests for empty SV shell
     return valid, errstring
 # ----------------- --------------------------------------------------
 # -- X SECTIONS LIBRARY -- -------------------------------------------
+def myxsecsversion():
+    import dawgie
+    return dawgie.VERSION(1,1,0)
+
 def myxsecs(spc, out,
             hitemp=os.path.join(excalibur.context['data_dir'], 'CERBERUS/HITEMP'),
             tips=os.path.join(excalibur.context['data_dir'], 'CERBERUS/TIPS'),
@@ -311,6 +315,10 @@ G. ROUDIER: Wrapper around HITRAN partition functions (Gamache et al. 2011)
     return grid
 # ------------------------------ -------------------------------------
 # -- ATMOS -- --------------------------------------------------------
+def atmosversion():
+    import dawgie
+    return dawgie.VERSION(1,1,0)
+
 def atmos(fin, xsl, spc, out, mclen=int(1e4), verbose=False):
     '''
 G. ROUDIER: Cerberus retrievial
@@ -355,7 +363,7 @@ G. ROUDIER: Cerberus retrievial
                                     observed=tspectrum[cleanup])
                 log.warning('>-- MCMC nodes: %s', str([n.name for n in nodes]))
                 # ALL PRINTS ARE IN THE PM.SAMPLE CALL, CANNOT GET RID OF THEM
-                trace = pm.sample(mclen, cores=4, tune=int(mclen/2),
+                trace = pm.sample(mclen, cores=4, tune=int(mclen/4),
                                   compute_convergence_checks=False, step=pm.Metropolis(),
                                   progressbar=verbose)
                 mcpost = pm.summary(trace)
