@@ -1217,7 +1217,7 @@ G. ROUDIER: Neutral outlier rej/inpaint
 Whitelight +/- 5Hs instead of Previous +/- 1PN
     '''
     import dawgie
-    return dawgie.VERSION(1,1,7)
+    return dawgie.VERSION(1,1,8)
 
 def spectrum(fin, nrm, wht, out, ext, selftype,
              chainlen=int(1e4), verbose=False, lcplot=False):
@@ -1314,7 +1314,6 @@ G. ROUDIER: Exoplanet spectrum recovery
         out['data'][p]['rp0hs'] = []
         out['data'][p]['Hs'] = []
         startflag = True
-        tdmemory = whiterprs
         for wl, wh in zip(lwavec, hwavec):
             select = [(w > wl) & (w < wh) for w in allwave]
             if 'STIS' in ext:
@@ -1362,12 +1361,11 @@ G. ROUDIER: Exoplanet spectrum recovery
             nodes = []
             tauwbdata = 1e0/dnoise**2
             # PRIOR WIDTH ----------------------------------------------------------------
-            noot = np.sum(abs(allz) > (1e0 + whiterprs))
-            nit = allz.size - noot
+            # noot = np.sum(abs(allz) > (1e0 + whiterprs))
+            # nit = allz.size - noot
             # Noise propagation forecast on transit depth
-            propphn = np.nanmedian(dnoise)*(1e0 -
-                                            whiterprs**2)*np.sqrt(1e0/nit + 1e0/noot)
-            dirtypn = np.sqrt(propphn + whiterprs**2) - whiterprs
+            # propphn = np.nanmedian(dnoise)*(1e0 - whiterprs**2)*np.sqrt(1e0/nit + 1e0/noot)
+            # dirtypn = np.sqrt(propphn + whiterprs**2) - whiterprs
             prwidth = 2e0*Hs
             # PRIOR CENTER ---------------------------------------------------------------
             prcenter = whiterprs
@@ -1405,11 +1403,8 @@ G. ROUDIER: Exoplanet spectrum recovery
             # Exclude first channel with Uniform prior
             if not startflag:
                 clspvl = np.nanmedian(trace['rprs'])
-                # Spectrum outlier rejection + inpaint
-                if abs(clspvl - whiterprs) > 5e0*Hs:
-                    clspvl = np.random.normal(loc=tdmemory, scale=dirtypn)
-                    pass
-                else: tdmemory = clspvl
+                # Spectrum outlier rejection + inpaint with np.nan
+                if abs(clspvl - whiterprs) > 5e0*Hs: clspvl = np.nan
                 out['data'][p]['ES'].append(clspvl)
                 out['data'][p]['ESerr'].append(np.nanstd(trace['rprs']))
                 out['data'][p]['MCPOST'].append(mcpost)
@@ -1417,10 +1412,7 @@ G. ROUDIER: Exoplanet spectrum recovery
                 out['data'][p]['WBup'].append(wh)
                 out['data'][p]['WB'].append(np.mean([wl, wh]))
                 pass
-            else:
-                tdmemory = np.nanmedian(trace['rprs'])
-                startflag = False
-                pass
+            else: startflag = False
             pass
         out['data'][p]['RSTAR'].append(priors['R*']*sscmks['Rsun'])
         out['data'][p]['Hs'].append(Hs)

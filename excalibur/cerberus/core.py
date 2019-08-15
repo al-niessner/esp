@@ -317,7 +317,7 @@ G. ROUDIER: Wrapper around HITRAN partition functions (Gamache et al. 2011)
 # -- ATMOS -- --------------------------------------------------------
 def atmosversion():
     import dawgie
-    return dawgie.VERSION(1,1,0)
+    return dawgie.VERSION(1,1,1)
 
 def atmos(fin, xsl, spc, out, mclen=int(1e4), verbose=False):
     '''
@@ -326,10 +326,12 @@ G. ROUDIER: Cerberus retrievial
     am = False
     orbp = fin['priors'].copy()
     ssc = syscore.ssconstants(mks=True)
-    modfam = ['TEC', 'PHOTOCHEM', 'HESC']
+    # MODELS
+    modfam = ['TEC', 'PHOTOCHEM', 'HEQ']
     modparlbl = {'TEC':['XtoH', 'CtoO'],
-                 'PHOTOCHEM':['TIO', 'CH4', 'C2H2', 'NH3'],
-                 'HESC':['TIO', 'N2O', 'CO2']}
+                 'PHOTOCHEM':['HCN', 'CH4', 'C2H2', 'CO2', 'H2CO'],
+                 'HEQ':['TIO', 'H2CO', 'H2O', 'NH3', 'CO2']}
+    # PLANET LOOP
     for p in spc['data'].keys():
         out['data'][p] = {}
         out['data'][p]['MODELPARNAMES'] = modparlbl
@@ -362,7 +364,6 @@ G. ROUDIER: Cerberus retrievial
                                     tau=1e0/(np.nanmedian(tspecerr[cleanup])**2),
                                     observed=tspectrum[cleanup])
                 log.warning('>-- MCMC nodes: %s', str([n.name for n in nodes]))
-                # ALL PRINTS ARE IN THE PM.SAMPLE CALL, CANNOT GET RID OF THEM
                 trace = pm.sample(mclen, cores=4, tune=int(mclen/4),
                                   compute_convergence_checks=False, step=pm.Metropolis(),
                                   progressbar=verbose)
