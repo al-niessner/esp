@@ -29,12 +29,16 @@ then
     ssh mentor1 docker rmi --force esp_cit:${cit_version} esp_devel:${base_version} esp_base:${base_version} esp_tools:${base_version} esp_worker:latest
     ssh mentor2 docker rmi --force esp_cit:${cit_version} esp_devel:${base_version} esp_base:${base_version} esp_tools:${base_version} esp_worker:latest
     ssh mentor3 docker rmi --force esp_cit:${cit_version} esp_devel:${base_version} esp_base:${base_version} esp_tools:${base_version} esp_worker:latest
+    ssh mentor4 docker rmi --force esp_cit:${cit_version} esp_devel:${base_version} esp_base:${base_version} esp_tools:${base_version} esp_worker:latest
+    ssh mentor5 docker rmi --force esp_cit:${cit_version} esp_devel:${base_version} esp_base:${base_version} esp_tools:${base_version} esp_worker:latest
 
     # install all of the new images
     ssh mentor0 docker load -i ${tempfn}
     ssh mentor1 docker load -i ${tempfn}
     ssh mentor2 docker load -i ${tempfn}
     ssh mentor3 docker load -i ${tempfn}
+    ssh mentor4 docker load -i ${tempfn}
+    ssh mentor5 docker load -i ${tempfn}
     # notify the pipeline that it is ready
     curl -XPOST http://mentor.jpl.nasa.gov:8080/app/submit?changeset=$(git rev-parse HEAD)\&submission=now > /dev/null 2>&1
     # cleanup
@@ -44,6 +48,8 @@ then
     ssh mentor1 ${PWD}/.ci/docker_scrub.sh
     ssh mentor2 ${PWD}/.ci/docker_scrub.sh
     ssh mentor3 ${PWD}/.ci/docker_scrub.sh
+    ssh mentor4 ${PWD}/.ci/docker_scrub.sh
+    ssh mentor5 ${PWD}/.ci/docker_scrub.sh
     state=`get_state`
 else
     sendmail -f no-reply@esp.jpl.nasa.gov sdp@jpl.nasa.gov<<EOF
