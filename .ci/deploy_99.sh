@@ -44,12 +44,24 @@ then
     # cleanup
     rm ${tempfn}
     sleep 10
-    ssh mentor0 ${PWD}/.ci/docker_scrub.sh
-    ssh mentor1 ${PWD}/.ci/docker_scrub.sh
-    ssh mentor2 ${PWD}/.ci/docker_scrub.sh
-    ssh mentor3 ${PWD}/.ci/docker_scrub.sh
-    ssh mentor4 ${PWD}/.ci/docker_scrub.sh
-    ssh mentor5 ${PWD}/.ci/docker_scrub.sh
+
+    if [[ $USER == dawgie-bot ]]
+    then
+        ssh mentor0 ${HOME}/docker_scrub.sh
+        ssh mentor1 ${HOME}/docker_scrub.sh
+        ssh mentor2 ${HOME}/docker_scrub.sh
+        ssh mentor3 ${HOME}/docker_scrub.sh
+        ssh mentor4 ${HOME}/docker_scrub.sh
+        ssh mentor5 ${HOME}/docker_scrub.sh
+    else
+        ssh mentor0 ${PWD}/.ci/docker_scrub.sh
+        ssh mentor1 ${PWD}/.ci/docker_scrub.sh
+        ssh mentor2 ${PWD}/.ci/docker_scrub.sh
+        ssh mentor3 ${PWD}/.ci/docker_scrub.sh
+        ssh mentor4 ${PWD}/.ci/docker_scrub.sh
+        ssh mentor5 ${PWD}/.ci/docker_scrub.sh
+    fi
+
     state=`get_state`
 else
     sendmail -f no-reply@esp.jpl.nasa.gov sdp@jpl.nasa.gov<<EOF
