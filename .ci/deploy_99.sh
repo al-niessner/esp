@@ -1,5 +1,5 @@
 #! /usr/bin/env bash
-ba
+
 . .ci/util.sh
 
 state="pending" # "success" "pending" "failure" "error"
