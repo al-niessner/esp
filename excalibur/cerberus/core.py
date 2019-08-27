@@ -22,18 +22,18 @@ from scipy.interpolate import interp1d as itp
 # -- GLOBAL CONTEXT FOR PYMC3 DETERMINISTICS ---------------------------------------------
 from collections import namedtuple
 CONTEXT = namedtuple('CONTEXT', ['cleanup', 'model', 'p', 'solidr', 'orbp', 'tspectrum',
-                                 'xsl', 'spc', 'modparlbl'])
+                                 'xsl', 'spc', 'modparlbl', 'hzlib'])
 ctxt = CONTEXT(cleanup=None, model=None, p=None, solidr=None, orbp=None, tspectrum=None,
-               xsl=None, spc=None, modparlbl=None)
+               xsl=None, spc=None, modparlbl=None, hzlib=None)
 def ctxtupdt(cleanup=None, model=None, p=None, solidr=None, orbp=None, tspectrum=None,
-             xsl=None, spc=None, modparlbl=None):
+             xsl=None, spc=None, modparlbl=None, hzlib=None):
     '''
 G. ROUDIER: Update context
     '''
     excalibur.cerberus.core.ctxt = CONTEXT(cleanup=cleanup, model=model, p=p,
                                            solidr=solidr, orbp=orbp,
                                            tspectrum=tspectrum, xsl=xsl, spc=spc,
-                                           modparlbl=modparlbl)
+                                           modparlbl=modparlbl, hzlib=hzlib)
     return
 # ------------- ------------------------------------------------------
 # -- SV VALIDITY -- --------------------------------------------------
@@ -317,20 +317,27 @@ G. ROUDIER: Wrapper around HITRAN partition functions (Gamache et al. 2011)
 # -- ATMOS -- --------------------------------------------------------
 def atmosversion():
     import dawgie
-    return dawgie.VERSION(1,1,1)
+    return dawgie.VERSION(1,1,2)
 
-def atmos(fin, xsl, spc, out, mclen=int(1e4), verbose=False):
+def atmos(fin, xsl, spc, out,
+          hazedir=os.path.join(excalibur.context['data_dir'], 'CERBERUS/HAZE'),
+          singlemod=None, mclen=int(1e4), sphshell=False, verbose=False):
     '''
 G. ROUDIER: Cerberus retrievial
     '''
     am = False
     orbp = fin['priors'].copy()
     ssc = syscore.ssconstants(mks=True)
+    crbhzlib = {'PROFILE':[]}
+    hazelib(crbhzlib, hazedir=hazedir, verbose=verbose)
     # MODELS
     modfam = ['TEC', 'PHOTOCHEM', 'HEQ']
     modparlbl = {'TEC':['XtoH', 'CtoO'],
                  'PHOTOCHEM':['HCN', 'CH4', 'C2H2', 'CO2', 'H2CO'],
                  'HEQ':['TIO', 'H2CO', 'H2O', 'NH3', 'CO2']}
+    if (singlemod is not None) and (singlemod in modfam):
+        modfam = [modfam[modfam.index(singlemod)]]
+        pass
     # PLANET LOOP
     for p in spc['data'].keys():
         out['data'][p] = {}
@@ -344,25 +351,46 @@ G. ROUDIER: Cerberus retrievial
         solidr = orbp[p]['rp']*ssc['Rjup']  # MKS
         for model in modfam:
             ctxtupdt(cleanup=cleanup, model=model, p=p, solidr=solidr, orbp=orbp,
-                     tspectrum=tspectrum, xsl=xsl, spc=spc, modparlbl=modparlbl)
+                     tspectrum=tspectrum, xsl=xsl, spc=spc, modparlbl=modparlbl,
+                     hzlib=crbhzlib)
             out['data'][p][model] = {}
             nodes = []
             with pm.Model():
+                # CLOUD TOP PRESSURE
                 ctp = pm.Uniform('CTP', -6., 1.)
+                nodes.append(ctp)
+                # HAZE SCAT. CROSS SECTION SCALE FACTOR
                 hza = pm.Uniform('HScale', -6e0, 6e0)
-                hzi = pm.Uniform('HIndex', -4e0, 0e0)
-                tpr = pm.Uniform('T', eqtemp/2e0, 2e0*eqtemp)
+                nodes.append(hza)
+                # KILL HAZE POWER INDEX FOR SPHERICAL SHELL
+                if sphshell:
+                    hzloc = pm.Uniform('HLoc', -6., 1.)
+                    nodes.append(hzloc)
+                    hzthick = pm.Uniform('HThick', 1., 20.)
+                    nodes.append(hzthick)
+                    pass
+                else:
+                    hzi = pm.Uniform('HIndex', -4e0, 0e0)
+                    nodes.append(hzi)
+                    pass
+                # BOOST TEMPERATURE PRIOR TO [50%, 400%] Teq
+                tpr = pm.Uniform('T', eqtemp/2e0, 4e0*eqtemp)
+                nodes.append(tpr)
+                # MODEL SPECIFIC ABSORBERS
                 modelpar = pm.Uniform(model, lower=-6e0, upper=6e0,
                                       shape=len(modparlbl[model]))
-                nodes.append(ctp)
-                nodes.append(hza)
-                nodes.append(hzi)
-                nodes.append(tpr)
                 nodes.append(modelpar)
                 # CERBERUS MCMC
-                _mcdata = pm.Normal('mcdata', mu=fmcerberus(*nodes),
-                                    tau=1e0/(np.nanmedian(tspecerr[cleanup])**2),
-                                    observed=tspectrum[cleanup])
+                if sphshell:
+                    _mcdata = pm.Normal('mcdata', mu=spshfmcerberus(*nodes),
+                                        tau=1e0/(np.nanmedian(tspecerr[cleanup])**2),
+                                        observed=tspectrum[cleanup])
+                    pass
+                else:
+                    _mcdata = pm.Normal('mcdata', mu=fmcerberus(*nodes),
+                                        tau=1e0/(np.nanmedian(tspecerr[cleanup])**2),
+                                        observed=tspectrum[cleanup])
+                    pass
                 log.warning('>-- MCMC nodes: %s', str([n.name for n in nodes]))
                 trace = pm.sample(mclen, cores=4, tune=int(mclen/4),
                                   compute_convergence_checks=False, step=pm.Metropolis(),
@@ -393,8 +421,8 @@ def crbmodel(mixratio, rayleigh, cloudtp, rp0, orbp, xsecs, qtgrid,
              cialist=['H2-H', 'H2-H2', 'H2-He', 'He-H'].copy(),
              xmollist=['TIO', 'CH4', 'H2O', 'H2CO', 'HCN', 'CO', 'CO2', 'NH3'].copy(),
              nlevels=100, Hsmax=15., solrad=10.,
-             hzlib=None, hzp=None, hzslope=-4., hztop=None,
-             cheq=None, h2rs=True, logx=False, pnet='b',
+             hzlib=None, hzp=None, hzslope=-4., hztop=None, hzwscale=1e0,
+             cheq=None, h2rs=True, logx=False, pnet='b', sphshell=False,
              verbose=False, debug=False):
     '''
 G. ROUDIER: Cerberus forward model probing up to 'Hsmax' scale heights from solid radius solrad evenly log divided amongst nlevels steps
@@ -424,12 +452,12 @@ G. ROUDIER: Cerberus forward model probing up to 'Hsmax' scale heights from soli
         pass
     dz.append(addz[-1])
     rho = p*1e5/(cst.Boltzmann*temp)
-    tau, wtau = gettau(xsecs, qtgrid, temp, mixratio,
-                       z, dz, rho, rp0, p, wgrid,
-                       lbroadening, lshifting, cialist, fH2, fHe,
-                       xmollist, rayleigh,
+    tau, wtau = gettau(xsecs, qtgrid, temp, mixratio, z, dz, rho, rp0, p, wgrid,
+                       lbroadening, lshifting, cialist, fH2, fHe, xmollist, rayleigh,
                        hzlib, hzp, hzslope, hztop,
-                       h2rs=h2rs, debug=debug)
+                       h2rs=h2rs, sphshell=sphshell, hzwscale=hzwscale,
+                       verbose=verbose, debug=debug)
+    # SEMI FINITE CLOUD ------------------------------------------------------------------
     reversep = np.array(p[::-1])
     selectcloud = p > 10.**cloudtp
     blocked = False
@@ -511,125 +539,325 @@ G. ROUDIER: Mean molecular weight estimate assuming proton mass dominated nucleo
 # -- TAU -- ----------------------------------------------------------
 def gettau(xsecs, qtgrid, temp, mixratio,
            z, dz, rho, rp0, p, wgrid, lbroadening, lshifting,
-           cialist, fH2, fHe,
-           xmollist, rayleigh, hzlib, hzp, hzslope, hztop,
-           h2rs=True,
-           debug=False):
+           cialist, fH2, fHe, xmollist, rayleigh, hzlib, hzp, hzslope, hztop,
+           h2rs=True, sphshell=False, isothermal=True, hzwscale=1e0,
+           verbose=False, debug=False):
     '''
 G. ROUDIER: Builds optical depth matrix
     '''
-    firstelem = True
-    vectauelem = []
-    for myz in list(z):
-        tauelem = 0e0
-        index = list(z).index(myz)
-        for myzp, dzp, myrho in zip(z[index:], dz[index:], rho[index:]):
-            dl = (np.sqrt((rp0+myzp+dzp)**2. - (rp0+myz)**2.) -
-                  np.sqrt((rp0+myzp)**2. - (rp0+myz)**2.))
-            tauelem += myrho*dl
+    # SPHERICAL SHELL --------------------------------------------------------------------
+    if sphshell:
+        # MATRICES INIT ------------------------------------------------------------------
+        tau = np.zeros((len(z), wgrid.size))
+        # DL ARRAY, Z VERSUS ZPRIME ------------------------------------------------------
+        dlarray = []
+        zprime = np.array(z)
+        dzprime = np.array(dz)
+        for iz, thisz in enumerate(z):
+            dl = np.sqrt((rp0 + zprime + dzprime)**2 - (rp0 + thisz)**2)
+            dl[:iz] = 0e0
+            dl[iz:] = dl[iz:] - np.sqrt((rp0 + zprime[iz:])**2 - (rp0 + thisz)**2)
+            dlarray.append(dl)
             pass
-        vectauelem.append(tauelem)
-        pass
-    vectauelem = np.array([vectauelem]).T
-    for elem in mixratio:
-        mmr = 10.**(mixratio[elem]-6.)
-        if elem not in xmollist:
-            # Rothman et .al 2010
-            sigma, lsig = absorb(xsecs[elem], qtgrid[elem], temp,
-                                 p, mmr, lbroadening, lshifting, wgrid,
-                                 debug=debug)  # cm^2/mol
-            sigma = np.array(sigma)
-            if np.sum(sigma < 0) > 0: sigma[sigma < 0] = 0
-            if np.sum(~np.isfinite(sigma)) > 0: sigma[~np.isfinite(sigma)] = 0
-            sigma = np.array(sigma)*1e-4  # m^2/mol
-            if sigma.shape[0] < 2: sigma = sigma*np.array([np.ones(len(z))]).T
+        dlarray = np.array(dlarray)
+        # GAS ARRAY, ZPRIME VERSUS WAVELENGTH  -------------------------------------------
+        for elem in mixratio:
+            mmr = 10.**(mixratio[elem]-6.)
+            if elem not in xmollist:
+                # HITEMP/HITRAN ROTHMAN ET AL. 2010 --------------------------------------
+                sigma, lsig = absorb(xsecs[elem], qtgrid[elem], temp, p, mmr,
+                                     lbroadening, lshifting, wgrid, debug=False)
+                sigma = np.array(sigma)  # cm^2/mol
+                if True in sigma < 0: sigma[sigma < 0] = 0e0
+                if True in ~np.isfinite(sigma): sigma[~np.isfinite(sigma)] = 0e0
+                sigma = sigma*1e-4  # m^2/mol
+                pass
+            else:
+                # EXOMOL HILL ET AL. 2013 ------------------------------------------------
+                sigma, lsig = getxmolxs(temp, xsecs[elem])
+                sigma = np.array(sigma)   # cm^2/mol
+                if True in sigma < 0: sigma[sigma < 0] = 0e0
+                if True in ~np.isfinite(sigma): sigma[~np.isfinite(sigma)] = 0e0
+                sigma = np.array(sigma)*1e-4  # m^2/mol
+                pass
+            if isothermal: tau = tau + mmr*sigma*np.array([rho]).T
             pass
-        else:
-            # Hill et al. 2013
-            sigma, lsig = getxmolxs(temp, xsecs[elem])  # cm^2/mol
-            sigma = np.array(sigma)
-            if np.sum(sigma < 0) > 0: sigma[sigma < 0] = 0
-            if np.sum(~np.isfinite(sigma)) > 0: sigma[~np.isfinite(sigma)] = 0
-            sigma = np.array(sigma)*1e-4  # m^2/mol
-            sigma = sigma*np.array([np.ones(len(z))]).T
+        # CIA ARRAY, ZPRIME VERSUS WAVELENGTH  -------------------------------------------
+        for cia in cialist:
+            if cia == 'H2-H2':
+                f1 = fH2
+                f2 = fH2
+                pass
+            if cia == 'H2-He':
+                f1 = fH2
+                f2 = fHe
+                pass
+            if cia == 'H2-H':
+                f1 = fH2
+                f2 = fH2*2.
+                pass
+            if cia == 'He-H':
+                f1 = fHe
+                f2 = fH2*2.
+                pass
+            # HITRAN RICHARD ET AL. 2012
+            sigma, lsig = getciaxs(temp, xsecs[cia])  # cm^5/mol^2
+            sigma = np.array(sigma)*1e-10  # m^5/mol^2
+            if True in sigma < 0: sigma[sigma < 0] = 0e0
+            if True in ~np.isfinite(sigma): sigma[~np.isfinite(sigma)] = 0e0
+            tau = tau + f1*f2*sigma*np.array([rho**2]).T
             pass
-        # Tinetti et .al 2011
-        tauz = vectauelem*sigma
-        if firstelem:
-            tau = np.array(tauz)*mmr
-            firstelem = False
-            pass
-        else: tau = tau+np.array(tauz)*mmr
-        pass
-    veccia = []
-    for myz in list(z):
-        tauelem = 0.
-        index = list(z).index(myz)
-        for myzp, dzp, myrho in zip(z[index:], dz[index:], rho[index:]):
-            dl = (np.sqrt((rp0+myzp+dzp)**2. - (rp0+myz)**2.) -
-                  np.sqrt((rp0+myzp)**2. - (rp0+myz)**2.))
-            tauelem += (myrho**2)*dl
-            pass
-        veccia.append(tauelem)
-        pass
-    veccia = np.array([veccia]).T
-    for cia in cialist:
-        tauz = []
-        if cia == 'H2-H2':
-            f1 = fH2
-            f2 = fH2
-            pass
-        if cia == 'H2-He':
-            f1 = fH2
-            f2 = fHe
-            pass
-        if cia == 'H2-H':
-            f1 = fH2
-            f2 = fH2*2.
-            pass
-        if cia == 'He-H':
-            f1 = fHe
-            f2 = fH2*2.
-            pass
-        # Richard et al. 2012
-        sigma, lsig = getciaxs(temp, xsecs[cia])  # cm^5/mol^2
-        sigma = np.array(sigma)*1e-10  # m^5/mol^2
-        if np.sum(sigma < 0) > 0: sigma[sigma < 0] = 0
-        if np.sum(~np.isfinite(sigma)) > 0: sigma[~np.isfinite(sigma)] = 0
-        tauz = veccia*sigma
-        if firstelem:
-            tau = np.array(tauz)*f1*f2
-            firstelem = False
-            pass
-        else: tau = tau+np.array(tauz)*f1*f2
-        pass
-    if h2rs:
-        # Naus & Ubachs 2000
+        # RAYLEIGH ARRAY, ZPRIME VERSUS WAVELENGTH  --------------------------------------
+        # NAUS & UBACHS 2000
         slambda0 = 750.*1e-3  # microns
         sray0 = 2.52*1e-28*1e-4  # m^2/mol
-        sray = sray0*(wgrid[::-1]/slambda0)**(-4)
-        tauz = vectauelem*sray
-        if firstelem:
-            tau = np.array(tauz)*fH2
-            firstelem = False
+        sigma = sray0*(wgrid[::-1]/slambda0)**(-4)
+        tau = tau + fH2*sigma*np.array([rho]).T
+        # HAZE ARRAY, ZPRIME VERSUS WAVELENGTH  ------------------------------------------
+        if hzlib is None:
+            slambda0 = 750.*1e-3  # microns
+            sray0 = 2.52*1e-28*1e-4  # m^2/mol
+            sigma = sray0*(wgrid[::-1]/slambda0)**(hzslope)
+            hazedensity = np.ones(len(z))
+            tau = tau + (10.**rayleigh)*sigma*np.array([hazedensity]).T
             pass
-        else: tau = tau+np.array(tauz)*fH2
+        if hzlib is not None:
+            # WEST ET AL. 2004
+            sigma = 0.0083*(wgrid[::-1])**(hzslope)*(1e0 +
+                                                     0.014*(wgrid[::-1])**(hzslope/2e0) +
+                                                     0.00027*(wgrid[::-1])**(hzslope))
+            if hzp in ['MAX', 'MEDIAN', 'AVERAGE']:
+                frh = hzlib['PROFILE'][0][hzp][0]
+                rh = frh(p)
+                rh[rh < 0] = 0.
+                refhzp = float(p[rh == np.max(rh)])
+                if hztop is None: hzshift = 0e0
+                else: hzshift = hztop - np.log10(refhzp)
+                splp = np.log10(p[::-1])
+                splrh = rh[::-1]
+                thisfrh = itp(splp, splrh,
+                              kind='linear', bounds_error=False, fill_value=0e0)
+                hzwdist = hztop - np.log10(p)
+                if hzwscale > 0:
+                    preval = hztop - hzwdist/hzwscale - hzshift
+                    rh = thisfrh(preval)
+                    rh[rh < 0] = 0e0
+                    pass
+                else: rh = thisfrh(np.log10(p))*0
+                if debug:
+                    jptprofile = 'J'+hzp
+                    jdata = np.array(hzlib['PROFILE'][0][jptprofile])
+                    jpres = np.array(hzlib['PROFILE'][0]['PRESSURE'])
+                    myfig = plt.figure(figsize=(12, 6))
+                    plt.plot(1e6*jdata, jpres, color='blue',
+                             label='Zhang, West et al. 2014')
+                    plt.axhline(refhzp, linestyle='--', color='blue')
+                    plt.plot(1e6*rh, p, 'r', label='Parametrized density profile')
+                    plt.plot(1e6*thisfrh(np.log10(p) - hzshift), p, 'g^')
+                    if hztop is not None:
+                        plt.axhline(10**hztop, linestyle='--', color='red')
+                        pass
+                    plt.semilogy()
+                    plt.semilogx()
+                    plt.gca().invert_yaxis()
+                    plt.xlim([1e-4, 1e4])
+                    plt.tick_params(axis='both', labelsize=20)
+                    plt.xlabel('Aerosol Density [$n.{cm}^{-3}$]', fontsize=24)
+                    plt.ylabel('Pressure [bar]', fontsize=24)
+                    plt.title('Aerosol density profile', fontsize=24)
+                    plt.legend(loc='center left', frameon=False, fontsize=24,
+                               bbox_to_anchor=(1, 1))
+                    myfig.tight_layout()
+                    plt.show()
+                    pass
+                pass
+            else:
+                rh = np.array([np.nanmean(hzlib['PROFILE'][0]['CONSTANT'])]*len(z))
+                negrh = rh < 0e0
+                if True in negrh: rh[negrh] = 0e0
+                pass
+            tau = tau + (10.**rayleigh)*sigma*np.array([rh]).T
+            pass
+        tau = 2e0*np.array(np.mat(dlarray)*np.mat(tau))
         pass
-    if (hzlib is None) or (hzp is None) or (hztop is None):
-        slambda0 = 750.*1e-3  # microns
-        sray0 = 2.52*1e-28*1e-4  # m^2/mol
-        sray = (10**rayleigh)*sray0*(wgrid[::-1]/slambda0)**(hzslope)
-        tauz = vectauelem*sray
-        if firstelem:
-            tau = np.array(tauz)
-            firstelem = False
+    else:
+        # PLANE PARALLEL APPROXIMATION ---------------------------------------------------
+        firstelem = True
+        vectauelem = []
+        for myz in list(z):
+            tauelem = 0e0
+            index = list(z).index(myz)
+            for myzp, dzp, myrho in zip(z[index:], dz[index:], rho[index:]):
+                dl = (np.sqrt((rp0+myzp+dzp)**2. - (rp0+myz)**2.) -
+                      np.sqrt((rp0+myzp)**2. - (rp0+myz)**2.))
+                tauelem += myrho*dl
+                pass
+            vectauelem.append(tauelem)
             pass
-        else: tau = tau+np.array(tauz)
+        vectauelem = np.array([vectauelem]).T
+        for elem in mixratio:
+            mmr = 10.**(mixratio[elem]-6.)
+            if elem not in xmollist:
+                # Rothman et .al 2010
+                sigma, lsig = absorb(xsecs[elem], qtgrid[elem], temp,
+                                     p, mmr, lbroadening, lshifting, wgrid,
+                                     debug=False)  # cm^2/mol
+                sigma = np.array(sigma)
+                if np.sum(sigma < 0) > 0: sigma[sigma < 0] = 0
+                if np.sum(~np.isfinite(sigma)) > 0: sigma[~np.isfinite(sigma)] = 0
+                sigma = np.array(sigma)*1e-4  # m^2/mol
+                if sigma.shape[0] < 2: sigma = sigma*np.array([np.ones(len(z))]).T
+                pass
+            else:
+                # Hill et al. 2013
+                sigma, lsig = getxmolxs(temp, xsecs[elem])  # cm^2/mol
+                sigma = np.array(sigma)
+                if np.sum(sigma < 0) > 0: sigma[sigma < 0] = 0
+                if np.sum(~np.isfinite(sigma)) > 0: sigma[~np.isfinite(sigma)] = 0
+                sigma = np.array(sigma)*1e-4  # m^2/mol
+                sigma = sigma*np.array([np.ones(len(z))]).T
+                pass
+            # Tinetti et .al 2011
+            tauz = vectauelem*sigma
+            if firstelem:
+                tau = np.array(tauz)*mmr
+                firstelem = False
+                pass
+            else: tau = tau+np.array(tauz)*mmr
+            pass
+        veccia = []
+        for myz in list(z):
+            tauelem = 0.
+            index = list(z).index(myz)
+            for myzp, dzp, myrho in zip(z[index:], dz[index:], rho[index:]):
+                dl = (np.sqrt((rp0+myzp+dzp)**2. - (rp0+myz)**2.) -
+                      np.sqrt((rp0+myzp)**2. - (rp0+myz)**2.))
+                tauelem += (myrho**2)*dl
+                pass
+            veccia.append(tauelem)
+            pass
+        veccia = np.array([veccia]).T
+        for cia in cialist:
+            tauz = []
+            if cia == 'H2-H2':
+                f1 = fH2
+                f2 = fH2
+                pass
+            if cia == 'H2-He':
+                f1 = fH2
+                f2 = fHe
+                pass
+            if cia == 'H2-H':
+                f1 = fH2
+                f2 = fH2*2.
+                pass
+            if cia == 'He-H':
+                f1 = fHe
+                f2 = fH2*2.
+                pass
+            # Richard et al. 2012
+            sigma, lsig = getciaxs(temp, xsecs[cia])  # cm^5/mol^2
+            sigma = np.array(sigma)*1e-10  # m^5/mol^2
+            if np.sum(sigma < 0) > 0: sigma[sigma < 0] = 0
+            if np.sum(~np.isfinite(sigma)) > 0: sigma[~np.isfinite(sigma)] = 0
+            tauz = veccia*sigma
+            if firstelem:
+                tau = np.array(tauz)*f1*f2
+                firstelem = False
+                pass
+            else: tau = tau+np.array(tauz)*f1*f2
+            pass
+        if h2rs:
+            # Naus & Ubachs 2000
+            slambda0 = 750.*1e-3  # microns
+            sray0 = 2.52*1e-28*1e-4  # m^2/mol
+            sray = sray0*(wgrid[::-1]/slambda0)**(-4)
+            tauz = vectauelem*sray
+            if firstelem:
+                tau = np.array(tauz)*fH2
+                firstelem = False
+                pass
+            else: tau = tau+np.array(tauz)*fH2
+            pass
+        if hzlib is None:
+            slambda0 = 750.*1e-3  # microns
+            sray0 = 2.52*1e-28*1e-4  # m^2/mol
+            sray = (10**rayleigh)*sray0*(wgrid[::-1]/slambda0)**(hzslope)
+            tauz = vectauelem*sray
+            if firstelem:
+                tau = np.array(tauz)
+                firstelem = False
+                pass
+            else: tau = tau+np.array(tauz)
+            pass
+        if hzlib is not None:
+            # West et al. 2004
+            tauaero = (10**rayleigh)*(0.0083*(wgrid[::-1])**(hzslope)*
+                                      (1+0.014*(wgrid[::-1])**(hzslope/2e0)+
+                                       0.00027*(wgrid[::-1])**(hzslope)))
+            vectauhaze = []
+            if hzp in ['MAX', 'MEDIAN', 'AVERAGE']:
+                frh = hzlib['PROFILE'][0][hzp][0]
+                rh = frh(p)
+                rh[rh < 0] = 0e0
+                refhzp = float(p[rh == np.max(rh)])
+                if hztop is None: hzshift = 0e0
+                else: hzshift = hztop - np.log10(refhzp)
+                splp = np.log10(p[::-1]) + hzshift
+                splrh = rh[::-1]
+                thisfrh = itp(splp, splrh,
+                              kind='linear', bounds_error=False, fill_value=0e0)
+                rh = thisfrh(np.log10(p))
+                rh[rh < 0] = 0e0
+                if verbose:
+                    jptprofile = 'J'+hzp
+                    jdata = np.array(hzlib['PROFILE'][0][jptprofile])
+                    jpres = np.array(hzlib['PROFILE'][0]['PRESSURE'])
+                    plt.figure(figsize=(12, 6))
+                    plt.plot(1e6*jdata, jpres, color='blue',
+                             label='Zhang, West et al. 2014')
+                    plt.axhline(refhzp, linestyle='--', color='blue')
+                    plt.plot(1e6*rh, p, color='red', label='Parametrized density profile')
+                    plt.plot(1e6*rh, p, 'r*')
+                    if hztop is not None:
+                        plt.axhline(10**hztop, linestyle='--', color='red')
+                        pass
+                    plt.semilogy()
+                    plt.semilogx()
+                    plt.gca().invert_yaxis()
+                    plt.xlim([1e-10, 1e4])
+                    plt.tick_params(axis='both', labelsize=20)
+                    plt.xlabel('Aerosol Density [$n.{cm}^{-3}$]', fontsize=24)
+                    plt.ylabel('Pressure [bar]', fontsize=24)
+                    plt.title('Aerosol density profile', fontsize=24)
+                    plt.legend(loc=3, frameon=False, fontsize=24)
+                    plt.show()
+                    pass
+                pass
+            else:
+                rh = np.array(hzlib['PROFILE'][0]['CONSTANT'])
+                negrh = rh < 0e0
+                if True in negrh: rh[negrh] = 0e0
+                pass
+            for myz in list(z):
+                tauelem = 0.
+                index = list(z).index(myz)
+                for myzp, dzp, rhohaze, in zip(z[index:], dz[index:], rh[index:]):
+                    dl = (np.sqrt((rp0+myzp+dzp)**2. - (rp0+myz)**2.) -
+                          np.sqrt((rp0+myzp)**2. - (rp0+myz)**2.))
+                    tauelem += rhohaze*dl
+                    pass
+                vectauhaze.append(tauelem)
+                pass
+            tauz = (np.array([vectauhaze]).T*np.array([p]).T)*tauaero
+            tau = tau + np.array(tauz)
+            pass
+        tau *= 2
         pass
     if debug:
-        plt.figure()
+        plt.figure(figsize=(12, 6))
         plt.imshow(np.log10(tau), aspect='auto')
-        plt.title('Total Optical Depth / Pressure Layer')
+        plt.title('Total Optical Depth')
         plt.colorbar()
         plt.show()
         pass
@@ -839,4 +1067,125 @@ G. ROUDIER: Wrapper around Cerberus forward model
     fmc = fmc[ctxt.cleanup] - np.nanmean(fmc[ctxt.cleanup])
     fmc = fmc + np.nanmean(ctxt.tspectrum[ctxt.cleanup])
     return fmc
+
+@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
+                   tt.dvector],
+           otypes=[tt.dvector])
+def spshfmcerberus(*crbinputs):
+    '''
+G. ROUDIER: Wrapper around Cerberus forward model, spherical shell symmetry
+    '''
+    ctp, hza, hzloc, hzthick, tpr, mdp = crbinputs
+    fmc = np.zeros(ctxt.tspectrum.size)
+    if ctxt.model == 'TEC':
+        tceqdict = {}
+        tceqdict['XtoH'] = float(mdp[0])
+        tceqdict['CtoO'] = float(mdp[1])
+        fmc = crbmodel(None, float(hza), float(ctp), ctxt.solidr, ctxt.orbp,
+                       ctxt.xsl['data'][ctxt.p]['XSECS'],
+                       ctxt.xsl['data'][ctxt.p]['QTGRID'],
+                       float(tpr), np.array(ctxt.spc['data'][ctxt.p]['WB']),
+                       hzlib=ctxt.hzlib,  hzp='AVERAGE', hztop=float(hzloc),
+                       hzwscale=float(hzthick), cheq=tceqdict, pnet=ctxt.p,
+                       sphshell=True, verbose=False, debug=False)
+        pass
+    else:
+        mixratio = {}
+        for index, key in enumerate(ctxt.modparlbl[ctxt.model]):
+            mixratio[key] = float(mdp[index])
+            pass
+        fmc = crbmodel(mixratio, float(hza), float(ctp), ctxt.solidr, ctxt.orbp,
+                       ctxt.xsl['data'][ctxt.p]['XSECS'],
+                       ctxt.xsl['data'][ctxt.p]['QTGRID'],
+                       float(tpr), np.array(ctxt.spc['data'][ctxt.p]['WB']),
+                       hzlib=ctxt.hzlib,  hzp='AVERAGE', hztop=float(hzloc),
+                       hzwscale=float(hzthick), cheq=None, pnet=ctxt.p,
+                       sphshell=True, verbose=False, debug=False)
+        pass
+    fmc = fmc[ctxt.cleanup] - np.nanmean(fmc[ctxt.cleanup])
+    fmc = fmc + np.nanmean(ctxt.tspectrum[ctxt.cleanup])
+    return fmc
 # ----------------------------------- --------------------------------
+# -- HAZE DENSITY PROFILE LIBRARY -- ---------------------------------
+def hazelib(sv,
+            hazedir=os.path.join(excalibur.context['data_dir'], 'CERBERUS/HAZE'),
+            datafile='Jup-ISS-aerosol.dat', verbose=False):
+    vdensity = {'PRESSURE':[], 'CONSTANT':[], 'JMAX':[], 'MAX':[],
+                'JMEDIAN':[], 'MEDIAN':[], 'JAVERAGE':[], 'AVERAGE':[]}
+    with open(os.path.join(hazedir, datafile), 'r') as fp: data = fp.readlines()
+    # LATITUDE GRID
+    latitude = data[0]
+    latitude = np.array(latitude.split(' '))
+    latitude = latitude[latitude != '']
+    latitude = latitude.astype(float)  # [DEGREES]
+    # DENSITY MATRIX
+    pressure = []  # [mbar]
+    density = []
+    for line in data[1:]:
+        line = np.array(line.split(' '))
+        line = line[line != '']
+        line = line.astype(float)
+        pressure.append(line[0])
+        density.append(line[1:])
+        pass
+    pressure = 1e-3*np.array(pressure)  # [bar]
+    density = 1e-6*np.array(density)  # [n/m^3]
+    jmax = np.nanmax(density, 1)
+    jmed = np.median(density, 1)
+    jav = np.mean(density, 1)
+    isobar = pressure*0. + np.mean(jav)
+    sortme = np.argsort(pressure)
+    jmaxspl = itp(pressure[sortme], jmax[sortme],
+                  kind='linear', bounds_error=False, fill_value=0e0)
+    jmedspl = itp(pressure[sortme], jmed[sortme],
+                  kind='linear', bounds_error=False, fill_value=0e0)
+    javspl = itp(pressure[sortme], jav[sortme],
+                 kind='linear', bounds_error=False, fill_value=0e0)
+    if verbose:
+        myfig = plt.figure(figsize=(12, 6))
+        for vmr in density.T:
+            plt.plot(1e6*vmr, pressure, 'k+')
+            plt.plot(1e6*vmr, pressure)
+            pass
+        plt.xlabel('Aerosol Density [$n.{cm}^{-3}$]', fontsize=24)
+        plt.ylabel('Pressure [bar]', fontsize=24)
+        plt.semilogy()
+        plt.semilogx()
+        plt.gca().invert_yaxis()
+        plt.tick_params(axis='both', labelsize=20)
+        plt.xlim([1e-10, 1e4])
+        plt.title('Latitudinal Variations', fontsize=24)
+        myfig.tight_layout()
+
+        myfig = plt.figure(figsize=(12, 6))
+        plt.plot(1e6*jmax, pressure, label='Max', color='blue')
+        plt.plot(1e6*jmed, pressure, label='Median', color='red')
+        plt.plot(1e6*jav, pressure, label='Average', color='green')
+        plt.plot(1e6*isobar, pressure, label='Constant', color='black')
+        plt.legend(loc=3, frameon=False, fontsize=24)
+        plt.plot(1e6*jmaxspl(pressure), pressure, 'bo')
+        plt.plot(1e6*jmedspl(pressure), pressure, 'ro')
+        plt.plot(1e6*javspl(pressure), pressure, 'go')
+        plt.xlabel('Aerosol Density [$n.{cm}^{-3}$]', fontsize=24)
+        plt.ylabel('Pressure [bar]', fontsize=24)
+        plt.semilogy()
+        plt.semilogx()
+        plt.gca().invert_yaxis()
+        plt.xlim([1e-4, 1e4])
+        plt.tick_params(axis='both', labelsize=20)
+        plt.title('Profile Library', fontsize=24)
+        myfig.tight_layout()
+
+        plt.show()
+        pass
+    vdensity['PRESSURE'] = list(pressure)
+    vdensity['CONSTANT'] = list(isobar)
+    vdensity['JMAX'] = list(jmax)
+    vdensity['MAX'].append(jmaxspl)
+    vdensity['JMEDIAN'] = list(jmed)
+    vdensity['MEDIAN'].append(jmedspl)
+    vdensity['JAVERAGE'] = list(jav)
+    vdensity['AVERAGE'].append(javspl)
+    sv['PROFILE'].append(vdensity)
+    return
+# ---------------------------------- ---------------------------------
