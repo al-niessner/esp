@@ -75,7 +75,7 @@ class timing(dawgie.Algorithm):
 G. ROUDIER: Categorize data into 3 science purposes: TRANSIT, ECLIPSE, PHASE CURVE
     '''
     def __init__(self):
-        self._version_ = dawgie.VERSION(1,1,0)
+        self._version_ = datcore.timingversion()
         self.__fin = sysalg.finalize()
         self.__col = collect()
         self.__out = [datstates.TimingSV(ext) for ext in fltrs]

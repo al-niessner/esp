@@ -856,9 +856,15 @@ G. ROUDIER: Builds optical depth matrix
         pass
     if debug:
         plt.figure(figsize=(12, 6))
-        plt.imshow(np.log10(tau), aspect='auto')
-        plt.title('Total Optical Depth')
-        plt.colorbar()
+        plt.imshow(np.log10(tau), aspect='auto', origin='lower',
+                   extent=[max(wgrid), min(wgrid), np.log10(max(p)), np.log10(min(p))])
+        plt.ylabel('log10(Pressure)', fontsize=24)
+        plt.xlabel('Wavelength [$\\mu m$]', fontsize=24)
+        plt.gca().invert_xaxis()
+        plt.title('log10(Optical Depth)', fontsize=24)
+        plt.tick_params(axis='both', labelsize=20)
+        cbar = plt.colorbar()
+        cbar.ax.tick_params(labelsize=20)
         plt.show()
         pass
     return tau, 1e4/lsig

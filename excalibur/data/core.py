@@ -62,6 +62,9 @@ G. ROUDIER: Filters data from target.scrape.databases according to active filter
     return collected
 # ------------------ -------------------------------------------------
 # -- TIMING -- -------------------------------------------------------
+def timingversion():
+    return dawgie.VERSION(1,1,2)
+
 def timing(force, ext, clc, out, verbose=False):
     '''
 G. ROUDIER: Uses system orbital parameters to guide the dataset towards transit, eclipse or phasecurve tasks
@@ -197,27 +200,32 @@ G. ROUDIER: Uses system orbital parameters to guide the dataset towards transit,
                     pass
                 pass
             # TRANSIT VISIT PHASECURVE -----------------------------------
+            out['data'][p]['svntransit'] = []
+            out['data'][p]['svneclipse'] = []
+            out['data'][p]['svnphasecurve'] = []
             for v in set(visto):
                 selv = (visto == v)
                 trlim = 1e0
                 posphsto = phsto.copy()
                 posphsto[posphsto < 0] = posphsto[posphsto < 0] + 1e0
-                pcconde = False
                 tecrit = abs(np.arcsin(trlim/smaors))/(2e0*np.pi)
-                if (np.max(posphsto[selv]) - np.min(posphsto[selv])) > (1e0 - 2e0*tecrit):
+                select = (abs(zto[selv]) < trlim)
+                pcconde = False
+                if np.any(select) and (np.min(abs(posphsto[selv][select] - 0.5)) <
+                                       tecrit):
+                    out['eclipse'].append(int(v))
+                    out['data'][p]['svneclipse'].append(int(v))
                     pcconde = True
                     pass
                 pccondt = False
-                if (np.max(phsto[selv]) - np.min(phsto[selv])) > (1e0 - 2e0*tecrit):
+                if np.any(select) and (np.min(abs(phsto[selv][select])) < tecrit):
+                    out['transit'].append(int(v))
+                    out['data'][p]['svntransit'].append(int(v))
                     pccondt = True
                     pass
-                if pcconde and pccondt: out['phasecurve'].append(int(v))
-                select = (abs(zto[selv]) < trlim)
-                if np.any(select)and(np.min(abs(posphsto[selv][select] - 0.5)) < tecrit):
-                    out['eclipse'].append(int(v))
-                    pass
-                if np.any(select)and(np.min(abs(posphsto[selv][select])) < tecrit):
-                    out['transit'].append(int(v))
+                if pcconde and pccondt:
+                    out['phasecurve'].append(int(v))
+                    out['data'][p]['svnphasecurve'].append(int(v))
                     pass
                 pass
             out['data'][p]['transit'] = []
@@ -228,32 +236,28 @@ G. ROUDIER: Uses system orbital parameters to guide the dataset towards transit,
                 trlim = 1e0
                 posphsto = phsto.copy()
                 posphsto[posphsto < 0] = posphsto[posphsto < 0] + 1e0
-                pcconde = False
                 tecrit = abs(np.arcsin(trlim/smaors))/(2e0*np.pi)
-                if (np.max(posphsto[selv]) - np.min(posphsto[selv])) > (1e0 - 2e0*tecrit):
+                select = (abs(zto[selv]) < trlim)
+                pcconde = False
+                if np.any(select)and(np.min(abs(posphsto[selv][select] - 0.5)) < tecrit):
+                    out['data'][p]['eclipse'].append(int(v))
                     pcconde = True
                     pass
                 pccondt = False
-                if (np.max(phsto[selv]) - np.min(phsto[selv])) > (1e0 - 2e0*tecrit):
+                if np.any(select) and (np.min(abs(phsto[selv][select])) < tecrit):
+                    out['data'][p]['transit'].append(int(v))
                     pccondt = True
                     pass
                 if pcconde and pccondt: out['data'][p]['phasecurve'].append(int(v))
-                select = (abs(zto[selv]) < trlim)
-                if np.any(select)and(np.min(abs(posphsto[selv][select] - 0.5)) < tecrit):
-                    out['data'][p]['eclipse'].append(int(v))
-                    pass
-                if np.any(select) and (np.min(abs(posphsto[selv][select])) < tecrit):
-                    out['data'][p]['transit'].append(int(v))
-                    pass
                 pass
             vis[ordt] = visto.astype(int)
             orb[ordt] = orbto.astype(int)
             dvis[ordt] = dvisto.astype(int)
             ignore[ordt] = ignto
             log.warning('>-- Planet: %s', p)
-            log.warning('>-- Transit: %s', str(out['data'][p]['transit']))
-            log.warning('>-- Eclipse: %s', str(out['data'][p]['eclipse']))
-            log.warning('>-- Phase Curve: %s', str(out['data'][p]['phasecurve']))
+            log.warning('--< Transit: %s', str(out['data'][p]['transit']))
+            log.warning('--< Eclipse: %s', str(out['data'][p]['eclipse']))
+            log.warning('--< Phase Curve: %s', str(out['data'][p]['phasecurve']))
             # PLOTS ------------------------------------------------------
             if verbose:
                 plt.figure()

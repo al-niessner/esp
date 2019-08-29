@@ -75,7 +75,7 @@ G. ROUDIER: Tests for empty SV shell
 # -- NORMALIZATION -- ------------------------------------------------
 def normversion():
     import dawgie
-    return dawgie.VERSION(1,1,1)
+    return dawgie.VERSION(1,1,2)
 
 def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
     '''
@@ -123,11 +123,12 @@ G. ROUDIER: Out of transit data normalization
         out['data'][p]['vignore'] = []
         out['data'][p]['stdns'] = []
         singlevisit = False
-        if tme[selftype].__len__() == 1:
+        svnkey = 'svn'+selftype
+        if tme['data'][p][svnkey].__len__() == 1:
             singlevisit = True
             log.warning('--< Single Visit Observation')
             pass
-        for v in tme[selftype]:  # DOUBLE SCAN NUMBERING
+        for v in tme['data'][p][svnkey]:  # SINGLE SCAN NUMBERING
             selv = (visits == v) & ~ignore
             if selftype in ['transit', 'phasecurve']:
                 select = (phase[selv] > 0.25) | (phase[selv] < -0.25)
@@ -443,10 +444,12 @@ G. ROUDIER: Out of transit data normalization
                     pass
                 nscale = np.round(np.percentile(wanted, 50))
                 log.warning('--< Visit %s: Noise scale %s', str(int(v)), str(nscale))
-                if nscale <= 5e0: nscale = 5e0
-                elif (nscale > 5e0) and (not singlevisit):
+                noisescalethr = 9e0
+                if nscale <= noisescalethr: nscale = noisescalethr
+                elif (nscale > noisescalethr) and (not singlevisit):
                     nscale = 2e0
-                    log.warning('--< Visit %s: Noise scale above threshold', str(int(v)))
+                    log.warning('--< Visit %s: Noise scale above %s',
+                                str(int(v)), str(int(noisescalethr)))
                     pass
                 check = []
                 for w, s, pn in zip(visw, viss, photnoise):

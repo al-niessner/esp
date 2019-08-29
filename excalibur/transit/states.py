@@ -24,9 +24,10 @@ class NormSV(dawgie.StateVector):
     def view(self, visitor:dawgie.Visitor)->None:
         if self['STATUS'][-1]:
             for p in self['data'].keys():
+                visitor.add_declaration('PLANET: ' + p)
                 for v, m in zip(self['data'][p]['vignore'], self['data'][p]['trial']):
                     strignore = str(int(v)) + ' ' + m
-                    visitor.add_declaration('VISIT IGNORED: ' + strignore)
+                    visitor.add_declaration('VISIT: ' + strignore)
                     pass
                 vrange = self['data'][p]['vrange']
                 for index, v in enumerate(self['data'][p]['visits']):
