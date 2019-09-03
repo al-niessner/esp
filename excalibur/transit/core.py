@@ -75,7 +75,7 @@ G. ROUDIER: Tests for empty SV shell
 # -- NORMALIZATION -- ------------------------------------------------
 def normversion():
     import dawgie
-    return dawgie.VERSION(1,1,2)
+    return dawgie.VERSION(1,1,3)
 
 def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
     '''
@@ -444,7 +444,7 @@ G. ROUDIER: Out of transit data normalization
                     pass
                 nscale = np.round(np.percentile(wanted, 50))
                 log.warning('--< Visit %s: Noise scale %s', str(int(v)), str(nscale))
-                noisescalethr = 9e0
+                noisescalethr = 7e0
                 if nscale <= noisescalethr: nscale = noisescalethr
                 elif (nscale > noisescalethr) and (not singlevisit):
                     nscale = 2e0
