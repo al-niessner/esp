@@ -8,6 +8,8 @@ import excalibur.data as dat
 import excalibur.data.core as datcore
 import excalibur.data.states as datstates
 
+import excalibur.transit.core as trncore
+
 import excalibur.target as trg
 import excalibur.target.edit as trgedit
 import excalibur.target.states as trgstates
@@ -138,6 +140,7 @@ G. ROUDIER: Data re-calibration and reduction
     '''
     def __init__(self):
         self._version_ = dawgie.VERSION(1,3,0)
+        self.__fin = sysalg.finalize()
         self.__col = collect()
         self.__tim = timing()
         self.__out = [datstates.CalibrateSV(ext) for ext in fltrs]
@@ -147,7 +150,8 @@ G. ROUDIER: Data re-calibration and reduction
         return 'calibration'
 
     def previous(self):
-        return [dawgie.ALG_REF(dat.task, self.__col),
+        return [dawgie.ALG_REF(sys.task, self.__fin),
+                dawgie.ALG_REF(dat.task, self.__col),
                 dawgie.ALG_REF(dat.task, self.__tim)]
 
     def state_vectors(self):
@@ -157,6 +161,8 @@ G. ROUDIER: Data re-calibration and reduction
         update = False
         cll = self.__col.sv_as_dict()['frames']
         vcll, ecll = datcore.checksv(cll)
+        fin = self.__fin.sv_as_dict()['parameters']
+        vfin, sfin = trncore.checksv(fin)
         validtype = []
         for test in cll['activefilters'].keys():
             if ('SCAN' in test) or ('STARE' in test):
@@ -167,14 +173,14 @@ G. ROUDIER: Data re-calibration and reduction
         for datatype in validtype:
             tim = self.__tim.sv_as_dict()[datatype]
             vtim, etim = datcore.checksv(tim)
-            if vcll and vtim:
+            if vfin and vcll and vtim:
                 # pylint: disable=protected-access
-                update = self._calib(cll['activefilters'][datatype], tim, ds._tn(),
+                update = self._calib(fin,cll['activefilters'][datatype], tim, ds._tn(),
                                      datatype, self.__out[fltrs.index(datatype)])
                 if update: svupdate.append(self.__out[fltrs.index(datatype)])
                 pass
             else:
-                message = [m for m in [ecll, etim] if m is not None]
+                message = [m for m in [sfin, ecll, etim] if m is not None]
                 self._failure(message[0])
                 pass
             pass
@@ -184,14 +190,17 @@ G. ROUDIER: Data re-calibration and reduction
         return
 
     @staticmethod
-    def _calib(cll, tim, tid, flttype, out):
+    def _calib(fin, cll, tim, tid, flttype, out):
         log.warning('--< DATA CALIBRATION: %s >--', flttype)
         caled = False
         if 'SCAN' in flttype:
             caled = datcore.scancal(cll, tim, tid, flttype, out, verbose=False)
             pass
-        if 'STIS' in flttype:
-            caled = datcore.stiscal(cll, tim, tid, flttype, out, verbose=False)
+        if 'G750' in flttype:
+            caled = datcore.stiscal(fin, cll, tim, tid, flttype, out, verbose=False)
+            pass
+        if 'G430' in flttype:
+            caled = datcore.stiscal_G430L(fin, cll, tim, tid, flttype, out, verbose=False)
             pass
         return caled
 

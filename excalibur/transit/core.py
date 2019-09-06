@@ -390,7 +390,8 @@ G. ROUDIER: Out of transit data normalization
                         eachfos = np.array(eachfos)
                         finval = np.isfinite(eachfos)
                         key = cwave.index(cw)
-                        polyorder = 3
+                        if 'G430' in ext: polyorder = 1
+                        else: polyorder = 3
                         if np.sum(finval) > (polyorder + 1):
                             poly = np.poly1d(np.polyfit(eachwfos[finval], eachfos[finval],
                                                         polyorder))
@@ -444,7 +445,7 @@ G. ROUDIER: Out of transit data normalization
                     pass
                 nscale = np.round(np.percentile(wanted, 50))
                 log.warning('--< Visit %s: Noise scale %s', str(int(v)), str(nscale))
-                noisescalethr = 7e0
+                noisescalethr = 5e0
                 if nscale <= noisescalethr: nscale = noisescalethr
                 elif (nscale > noisescalethr) and (not singlevisit):
                     nscale = 2e0
@@ -461,6 +462,7 @@ G. ROUDIER: Out of transit data normalization
                     else: check.append(False)
                     pass
                 check = np.array(check)
+                # if 'G430' in ext: check = np.array([True]*check.size)
                 rejrate = check.size - np.sum(check)
                 log.warning('--< Visit %s: Rejected %s/%s',
                             str(int(v)), str(rejrate), str(check.size))
@@ -818,42 +820,65 @@ G. ROUDIER: Orbital parameters recovery
                  time=time, tmjd=tmjd, ttv=ttv, visits=visits)
         # PYMC3 --------------------------------------------------------------------------
         with pm.Model():
-            rprs = pm.TruncatedNormal('rprs', mu=rpors, tau=taurprs,
-                                      lower=rpors/2e0, upper=2e0*rpors)
-            nodes.append(rprs)
-            alltknot = pm.TruncatedNormal('dtk', mu=tmjd, tau=tautknot,
-                                          lower=tknotmin, upper=tknotmax,
-                                          shape=shapettv)
-            nodes.append(alltknot)
-            if fixedinc: inc = priors[p]['inc']
+            if 'WFC3' in ext:
+                rprs = pm.TruncatedNormal('rprs', mu=rpors, tau=taurprs,
+                                          lower=rpors/2e0, upper=2e0*rpors)
+                nodes.append(rprs)
+                alltknot = pm.TruncatedNormal('dtk', mu=tmjd, tau=tautknot,
+                                              lower=tknotmin, upper=tknotmax,
+                                              shape=shapettv)
+                nodes.append(alltknot)
+                if fixedinc: inc = priors[p]['inc']
+                else:
+                    inc = pm.TruncatedNormal('inc', mu=priors[p]['inc'], tau=tauinc,
+                                             lower=lowinc, upper=upinc)
+                    nodes.append(inc)
+                    pass
+                allvslope = pm.TruncatedNormal('vslope',
+                                               mu=0e0, tau=tauvs,
+                                               lower=-3e-2/trdura,
+                                               upper=3e-2/trdura, shape=shapevis)
+                alloslope = pm.Normal('oslope', mu=0e0, tau=tauvs, shape=shapevis)
+                alloitcp = pm.Normal('oitcp', mu=1e0, tau=tauvi, shape=shapevis)
+                nodes.append(allvslope)
+                nodes.append(alloslope)
+                nodes.append(alloitcp)
+                if fixedinc:
+                    _whitedata = pm.Normal('whitedata', mu=orbital2(*nodes),
+                                           tau=tauwhite, observed=flatwhite[selectfit])
+                    pass
+                else:
+                    _whitedata = pm.Normal('whitedata', mu=orbital(*nodes),
+                                           tau=tauwhite, observed=flatwhite[selectfit])
+                    pass
+                log.warning('>-- MCMC nodes: %s', str([n.name for n in nodes]))
+                trace = pm.sample(chainlen, cores=4, tune=int(chainlen/2),
+                                  compute_convergence_checks=False, step=pm.Metropolis(),
+                                  progressbar=verbose)
+                mcpost = pm.summary(trace)
+                pass
             else:
-                inc = pm.TruncatedNormal('inc', mu=priors[p]['inc'], tau=tauinc,
-                                         lower=lowinc, upper=upinc)
-                nodes.append(inc)
-                pass
-            allvslope = pm.TruncatedNormal('vslope',
-                                           mu=0e0, tau=tauvs,
-                                           lower=-3e-2/trdura,
-                                           upper=3e-2/trdura, shape=shapevis)
-            alloslope = pm.Normal('oslope', mu=0e0, tau=tauvs, shape=shapevis)
-            alloitcp = pm.Normal('oitcp', mu=1e0, tau=tauvi, shape=shapevis)
-            nodes.append(allvslope)
-            nodes.append(alloslope)
-            nodes.append(alloitcp)
-            if fixedinc:
-                _whitedata = pm.Normal('whitedata', mu=fiorbital(*nodes),
+                rprs = pm.TruncatedNormal('rprs', mu=rpors, tau=taurprs,
+                                          lower=rpors/2e0, upper=2e0*rpors)
+                allvslope = pm.TruncatedNormal('vslope',
+                                               mu=0e0, tau=tauvs,
+                                               lower=-3e-2/trdura,
+                                               upper=3e-2/trdura, shape=shapevis)
+                alloslope = pm.Normal('oslope', mu=0e0, tau=tauvs, shape=shapevis)
+                alloitcp = pm.Normal('oitcp', mu=1e0, tau=tauvi, shape=shapevis)
+                nodes.append(rprs)
+                nodes.append(allvslope)
+                nodes.append(alloslope)
+                nodes.append(alloitcp)
+                _whitedata = pm.Normal('whitedata', mu=orbital2(*nodes),
                                        tau=tauwhite, observed=flatwhite[selectfit])
+                log.warning('>-- MCMC nodes: %s', str([n.name for n in nodes]))
+                trace = pm.sample(chainlen, cores=4, tune=int(chainlen/2),
+                                  compute_convergence_checks=False, step=pm.Metropolis(),
+                                  progressbar=verbose)
+                mcpost = pm.summary(trace)
                 pass
-            else:
-                _whitedata = pm.Normal('whitedata', mu=orbital(*nodes),
-                                       tau=tauwhite, observed=flatwhite[selectfit])
-                pass
-            log.warning('>-- MCMC nodes: %s', str([n.name for n in nodes]))
-            trace = pm.sample(chainlen, cores=4, tune=int(chainlen/2),
-                              compute_convergence_checks=False, step=pm.Metropolis(),
-                              progressbar=verbose)
-            mcpost = pm.summary(trace)
-            pass
+
         mctrace = {}
         for key in mcpost['mean'].keys():
             tracekeys = key.split('__')
@@ -868,28 +893,49 @@ G. ROUDIER: Orbital parameters recovery
         postphase = []
         postflatphase = []
         ttvindex = 0
-        if fixedinc: inclination = priors[p]['inc']
-        else: inclination = np.nanmedian(mctrace['inc'])
-        for i, v in enumerate(visits):
-            if v in ttv:
-                posttk = np.nanmedian(mctrace['dtk__%i' % ttvindex])
-                ttvindex += 1
+        if 'WFC3' in ext:
+            if fixedinc: inclination = priors[p]['inc']
+            else: inclination = np.nanmedian(mctrace['inc'])
+            for i, v in enumerate(visits):
+                if v in ttv:
+                    posttk = np.nanmedian(mctrace['dtk__%i' % ttvindex])
+                    ttvindex += 1
+                    pass
+                else: posttk = tmjd
+                postz, postph = datcore.time2z(time[i], inclination,
+                                               posttk, smaors, period, ecc)
+                if selftype in ['eclipse']: postph[postph < 0] = postph[postph < 0] + 1e0
+                postsep.extend(postz)
+                postphase.append(postph)
+                postflatphase.extend(postph)
+                postlc.extend(tldlc(abs(postz), np.nanmedian(mctrace['rprs']),
+                                    g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0]))
+                postim.append(timlc(time[i], orbits[i],
+                                    vslope=np.nanmedian(mctrace['vslope__%i' % i]),
+                                    vitcp=1e0,
+                                    oslope=np.nanmedian(mctrace['oslope__%i' % i]),
+                                    oitcp=np.nanmedian(mctrace['oitcp__%i' % i])))
+
                 pass
-            else: posttk = tmjd
-            postz, postph = datcore.time2z(time[i], inclination,
-                                           posttk, smaors, period, ecc)
-            if selftype in ['eclipse']: postph[postph < 0] = postph[postph < 0] + 1e0
-            postsep.extend(postz)
-            postphase.append(postph)
-            postflatphase.extend(postph)
-            postlc.extend(tldlc(abs(postz), np.nanmedian(mctrace['rprs']),
-                                g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0]))
-            postim.append(timlc(time[i], orbits[i],
-                                vslope=np.nanmedian(mctrace['vslope__%i' % i]),
-                                vitcp=1e0,
-                                oslope=np.nanmedian(mctrace['oslope__%i' % i]),
-                                oitcp=np.nanmedian(mctrace['oitcp__%i' % i])))
             pass
+        else:
+            omtk = ctxt.tmjd
+            inclination = ctxt.orbp['inc']
+            for i, v in enumerate(visits):
+                postz, postph = datcore.time2z(time[i], inclination,
+                                               omtk, smaors, period, ecc)
+                if selftype in ['eclipse']: postph[postph < 0] = postph[postph < 0] + 1e0
+                postsep.extend(postz)
+                postphase.append(postph)
+                postflatphase.extend(postph)
+                postlc.extend(tldlc(abs(postz), np.nanmedian(mctrace['rprs']),
+                                    g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0]))
+                postim.append(timlc(time[i], orbits[i],
+                                    vslope=np.nanmedian(mctrace['vslope__%i' % i]),
+                                    vitcp=1e0,
+                                    oslope=np.nanmedian(mctrace['oslope__%i' % i]),
+                                    oitcp=np.nanmedian(mctrace['oitcp__%i' % i])))
+                pass
         out['data'][p]['postlc'] = postlc
         out['data'][p]['postim'] = postim
         out['data'][p]['postsep'] = postsep
@@ -1018,6 +1064,12 @@ LDTK: Parviainen et al. https://github.com/hpparvi/ldtk
     '''
     tstar = orbp['T*']
     terr = np.sqrt(abs(orbp['T*_uperr']*orbp['T*_lowerr']))
+    # This is very dangerous it will change the behaviour of G141
+    if terr < 300:
+        terr = np.sqrt(abs(orbp['T*_uperr']*orbp['T*_lowerr']))+700
+        feherr = np.sqrt(abs(orbp['FEH*_uperr']*orbp['FEH*_lowerr']))+1.0
+        loggerr = np.sqrt(abs(orbp['LOGG*_uperr']*orbp['LOGG*_lowerr']))+1.0
+        pass
     fehstar = orbp['FEH*']
     feherr = np.sqrt(abs(orbp['FEH*_uperr']*orbp['FEH*_lowerr']))
     loggstar = orbp['LOGG*']
@@ -1332,12 +1384,20 @@ G. ROUDIER: Exoplanet spectrum recovery
                 pass
             valid = np.isfinite(data)
             if selftype in ['transit']:
-                bld = createldgrid([wl], [wh], priors, segmentation=int(10))
+                try:
+                    bld = createldgrid([wl], [wh], priors, segmentation=int(10))
+                    pass
+                except TypeError:
+                    log.warning('>-- INCREASED BIN SIZE')
+                    increment = 5e1*abs(wh - wl)
+                    bld = createldgrid([wl - increment], [wh + increment], priors, segmentation=int(10))
+                    pass
                 g1, g2, g3, g4 = bld['LD']
                 pass
             else: g1, g2, g3, g4 = [[0], [0], [0], [0]]
             out['data'][p]['LD'].append([g1[0], g2[0], g3[0], g4[0]])
             model = tldlc(abs(allz), whiterprs, g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0])
+
             if lcplot:
                 plt.figure()
                 plt.title(str(int(1e3*np.mean([wl, wh])))+' nm')
@@ -1521,6 +1581,33 @@ G. ROUDIER: Orbital model
         imout = timlc(omt, ctxt.orbits[i],
                       vslope=float(avs[i]), vitcp=1e0,
                       oslope=float(aos[i]), oitcp=float(aoi[i]))
+        out.extend(lcout*imout)
+        pass
+    return np.array(out)[ctxt.selectfit]
+
+@tco.as_op(itypes=[tt.dscalar,
+                   tt.dvector, tt.dvector, tt.dvector], otypes=[tt.dvector])
+def orbital2(*whiteparams):
+    '''
+G. ROUDIER: Orbital model
+    '''
+    r, avs, aos, aoi = whiteparams
+    icln = ctxt.orbp['inc']
+    # atk = ctxt.orbp['t0']
+    if ctxt.orbp['inc'] == 9e1: inclination = 9e1
+    else: inclination = float(icln)
+    out = []
+    for i in enumerate(ctxt.visits):
+        omt = ctxt.time[i[0]]
+        # if v in ctxt.ttv: omtk = float(atk[ctxt.ttv.index(v)])
+        omtk = ctxt.tmjd
+        omz, _pmph = datcore.time2z(omt, inclination, omtk,
+                                    ctxt.smaors, ctxt.period, ctxt.ecc)
+        lcout = tldlc(abs(omz), float(r),
+                      g1=ctxt.g1[0], g2=ctxt.g2[0], g3=ctxt.g3[0], g4=ctxt.g4[0])
+        imout = timlc(omt, ctxt.orbits[i[0]],
+                      vslope=float(avs[i[0]]), vitcp=1e0,
+                      oslope=float(aos[i[0]]), oitcp=float(aoi[i[0]]))
         out.extend(lcout*imout)
         pass
     return np.array(out)[ctxt.selectfit]

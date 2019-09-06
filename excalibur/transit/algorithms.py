@@ -18,7 +18,10 @@ import excalibur.target.edit as trgedit
 # FILTERS
 fltrs = (trgedit.activefilters.__doc__).split('\n')
 fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
-fltrs = [f for f in fltrs if ('WFC3' in f) or ('G750' in f)]
+
+# Only G141 makes it through
+# fltrs = [f for f in fltrs if ('WFC3' in f) or ('G750' in f)]
+
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class normalization(dawgie.Algorithm):

@@ -182,9 +182,10 @@ XO-2 : XO2
 # HST-STIS-FUV.MAMA-G140M-STARE
 def activefilters():
     '''
-HST-WFC3-IR-G102-SCAN
+HST-WFC3-IR-G141-SCAN
 HST-WFC3-IR-G141-SCAN
 HST-STIS-CCD-G750L-STARE
+HST-STIS-CCD-G430L-STARE
     '''
     return
 # -------------------- -----------------------------------------------
