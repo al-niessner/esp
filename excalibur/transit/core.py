@@ -462,7 +462,6 @@ G. ROUDIER: Out of transit data normalization
                     else: check.append(False)
                     pass
                 check = np.array(check)
-                # if 'G430' in ext: check = np.array([True]*check.size)
                 rejrate = check.size - np.sum(check)
                 log.warning('--< Visit %s: Rejected %s/%s',
                             str(int(v)), str(rejrate), str(check.size))
@@ -1390,7 +1389,8 @@ G. ROUDIER: Exoplanet spectrum recovery
                 except TypeError:
                     log.warning('>-- INCREASED BIN SIZE')
                     increment = 5e1*abs(wh - wl)
-                    bld = createldgrid([wl - increment], [wh + increment], priors, segmentation=int(10))
+                    bld = createldgrid([wl - increment], [wh + increment], priors,
+                                       segmentation=int(10))
                     pass
                 g1, g2, g3, g4 = bld['LD']
                 pass
