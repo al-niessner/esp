@@ -450,38 +450,44 @@ def dbscp(locations, dbs, out):
         filedict['md5'] = md5
         filedict['sha'] = sha
         filedict['loc'] = fitsfile
-        with pyfits.open(fitsfile) as pf:
-            mainheader = pf[0].header
-            if 'SCI' in mainheader['FILETYPE']:
-                keys = [k for k in mainheader.keys() if k != '']
-                keys = [k for k in set(keys)]
-                if 'TELESCOP' in keys: filedict['observatory'] = mainheader['TELESCOP']
-                if 'INSTRUME' in keys: filedict['instrument'] = mainheader['INSTRUME']
-                if 'DETECTOR' in keys:
-                    filedict['detector'] = mainheader['DETECTOR'].replace('-', '.')
-                if 'FILTER' in keys: filedict['filter'] = mainheader['FILTER']
-                if ('SCAN_RAT' in keys) and (mainheader['SCAN_RAT'] > 0):
-                    filedict['mode'] = 'SCAN'
-                    pass
-                else: filedict['mode'] = 'STARE'
-                if 'FOCUS' in keys and filedict['detector'] is None:
-                    filedict['detector'] = mainheader['FOCUS']
-                    filedict['mode'] = 'IMAGE'
-                    pass
-                if filedict['instrument'] in ['STIS']:
-                    filedict['filter'] = mainheader['OPT_ELEM']
+        if 'shaID' in fitsfile:
+            # SPITZER FILE
+            pass
+        else:
+            with pyfits.open(fitsfile) as pf:
+                mainheader = pf[0].header
+                if 'SCI' in mainheader['FILETYPE']:
+                    keys = [k for k in mainheader.keys() if k != '']
+                    keys = [k for k in set(keys)]
+                    if 'TELESCOP' in keys: filedict['observatory'] = mainheader['TELESCOP']
+                    if 'INSTRUME' in keys: filedict['instrument'] = mainheader['INSTRUME']
+                    if 'DETECTOR' in keys:
+                        filedict['detector'] = mainheader['DETECTOR'].replace('-', '.')
+                        pass
+                    if 'FILTER' in keys: filedict['filter'] = mainheader['FILTER']
+                    if ('SCAN_RAT' in keys) and (mainheader['SCAN_RAT'] > 0):
+                        filedict['mode'] = 'SCAN'
+                        pass
+                    else: filedict['mode'] = 'STARE'
+                    if 'FOCUS' in keys and filedict['detector'] is None:
+                        filedict['detector'] = mainheader['FOCUS']
+                        filedict['mode'] = 'IMAGE'
+                        pass
+                    if filedict['instrument'] in ['STIS']:
+                        filedict['filter'] = mainheader['OPT_ELEM']
+                        pass
                     pass
                 pass
+            out['name'][mainheader['ROOTNAME']] = filedict
+            mastout = os.path.join(dbs, md5+'_'+sha)
+            onmast = os.path.isfile(mastout)
+            if not onmast:
+                shutil.copyfile(fitsfile, mastout)
+                os.chmod(mastout, int('0664', 8))
+                pass
+            copied = True
+            out['STATUS'].append(True)
             pass
-        out['name'][mainheader['ROOTNAME']] = filedict
-        mastout = os.path.join(dbs, md5+'_'+sha)
-        onmast = os.path.isfile(mastout)
-        if not onmast:
-            shutil.copyfile(fitsfile, mastout)
-            os.chmod(mastout, int('0664', 8))
-            pass
-        copied = True
-        out['STATUS'].append(True)
         pass
     return copied
 # -------------- -----------------------------------------------------

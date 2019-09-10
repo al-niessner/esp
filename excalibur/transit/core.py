@@ -1,4 +1,6 @@
 # -- IMPORTS -- ------------------------------------------------------
+import dawgie
+
 import excalibur.data.core as datcore
 import excalibur.system.core as syscore
 import excalibur.cerberus.core as crbcore
@@ -74,7 +76,6 @@ G. ROUDIER: Tests for empty SV shell
 # ----------------- --------------------------------------------------
 # -- NORMALIZATION -- ------------------------------------------------
 def normversion():
-    import dawgie
     return dawgie.VERSION(1,1,3)
 
 def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
@@ -656,7 +657,6 @@ per wavelength bins
 # ---------------------- ---------------------------------------------
 # -- WHITE LIGHT CURVE -- --------------------------------------------
 def wlversion():
-    import dawgie
     return dawgie.VERSION(1,1,1)
 
 def whitelight(nrm, fin, out, ext, selftype, chainlen=int(1e4), verbose=False):
@@ -1270,7 +1270,6 @@ def spectrumversion():
 G. ROUDIER: Neutral outlier rej/inpaint
 Whitelight +/- 5Hs instead of Previous +/- 1PN
     '''
-    import dawgie
     return dawgie.VERSION(1,1,8)
 
 def spectrum(fin, nrm, wht, out, ext, selftype,

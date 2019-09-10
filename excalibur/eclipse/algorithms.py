@@ -14,8 +14,7 @@ import excalibur.target.edit as trgedit
 # -- ALGO RUN OPTIONS -- ---------------------------------------------
 # FILTERS
 fltrs = (trgedit.activefilters.__doc__).split('\n')
-fltrs = [t.strip() for t in fltrs if t.replace(' ', '').__len__() > 0]
-fltrs = [f for f in fltrs if ('WFC3' in f) or ('G750' in f)]
+fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 # ECLIPSE CLASSES INHERIT FROM TRANSIT CLASSES

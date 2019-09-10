@@ -1179,6 +1179,8 @@ def loadcalf(name, muref, calloc=excalibur.context['data_cal']):
     '''
 G. ROUDIER: Loads optical element .fits calibration file
     '''
+    # NOTEBOOK RUN
+    # calloc = '/proj/sdp/data/cal'
     fitsfile = os.path.join(calloc, name)
     data = pyfits.getdata(fitsfile)
     muin = np.array(data.WAVELENGTH)
@@ -2381,7 +2383,7 @@ R. ESTRELA: STIS .flt data extraction and wavelength calibration
                 cd = np.nanmedian(temp_spec2) + 2e0*std1
                 plt.axhline(y=cd, xmin=0, xmax=1,color='red')
                 plt.show()
-            # WAVELENGTH CALIBRATION --------------------------------------------------------------
+            # WAVELENGTH CALIBRATION -----------------------------------------------------
             # chisq_all=[]
             def chisqfunc(args):
                 avar, bvar = args
@@ -2391,12 +2393,13 @@ R. ESTRELA: STIS .flt data extraction and wavelength calibration
             # PHOENIX MODELS
             filters = [BoxcarFilter('a', 300, 550)]  # Define your passbands
             feherr=np.sqrt(abs(fin['priors']['FEH*_uperr']*fin['priors']['FEH*_lowerr']))
-            loggerr = np.sqrt(abs(fin['priors']['LOGG*_uperr']*fin['priors']['LOGG*_lowerr']))
+            loggerr = np.sqrt(abs(fin['priors']['LOGG*_uperr']*
+                                  fin['priors']['LOGG*_lowerr']))
             terr = np.sqrt(abs(fin['priors']['T*_uperr']*fin['priors']['T*_lowerr']))
-            sc = LDPSetCreator(teff=(fin['priors']['T*'], terr),    # Define your star, and the code
-                               logg=(fin['priors']['b']['logg'], loggerr),    # downloads the uncached stellar
-                               z=(fin['priors']['FEH*'], feherr),    # spectra from the Husser et al.
-                               filters=filters)    # FTP server automatically.
+            sc = LDPSetCreator(teff=(fin['priors']['T*'], terr),
+                               logg=(fin['priors']['b']['logg'], loggerr),
+                               z=(fin['priors']['FEH*'], feherr),
+                               filters=filters)
             list_diff = []
             for i in range(0,len(sc.files)):
                 hdul = pyfits.open(sc.files[i])
