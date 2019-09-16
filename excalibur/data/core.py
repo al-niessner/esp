@@ -1181,6 +1181,7 @@ G. ROUDIER: Loads optical element .fits calibration file
     '''
     # NOTEBOOK RUN
     # calloc = '/proj/sdp/data/cal'
+    # ------------
     fitsfile = os.path.join(calloc, name)
     data = pyfits.getdata(fitsfile)
     muin = np.array(data.WAVELENGTH)

@@ -819,10 +819,10 @@ G. ROUDIER: Orbital parameters recovery
                  time=time, tmjd=tmjd, ttv=ttv, visits=visits)
         # PYMC3 --------------------------------------------------------------------------
         with pm.Model():
+            rprs = pm.TruncatedNormal('rprs', mu=rpors, tau=taurprs,
+                                      lower=rpors/2e0, upper=2e0*rpors)
+            nodes.append(rprs)
             if 'WFC3' in ext:
-                rprs = pm.TruncatedNormal('rprs', mu=rpors, tau=taurprs,
-                                          lower=rpors/2e0, upper=2e0*rpors)
-                nodes.append(rprs)
                 alltknot = pm.TruncatedNormal('dtk', mu=tmjd, tau=tautknot,
                                               lower=tknotmin, upper=tknotmax,
                                               shape=shapettv)
@@ -833,51 +833,38 @@ G. ROUDIER: Orbital parameters recovery
                                              lower=lowinc, upper=upinc)
                     nodes.append(inc)
                     pass
-                allvslope = pm.TruncatedNormal('vslope',
-                                               mu=0e0, tau=tauvs,
-                                               lower=-3e-2/trdura,
-                                               upper=3e-2/trdura, shape=shapevis)
-                alloslope = pm.Normal('oslope', mu=0e0, tau=tauvs, shape=shapevis)
-                alloitcp = pm.Normal('oitcp', mu=1e0, tau=tauvi, shape=shapevis)
-                nodes.append(allvslope)
-                nodes.append(alloslope)
-                nodes.append(alloitcp)
+                pass
+            allvslope = pm.TruncatedNormal('vslope',
+                                           mu=0e0, tau=tauvs,
+                                           lower=-3e-2/trdura,
+                                           upper=3e-2/trdura, shape=shapevis)
+            alloslope = pm.Normal('oslope', mu=0e0, tau=tauvs, shape=shapevis)
+            alloitcp = pm.Normal('oitcp', mu=1e0, tau=tauvi, shape=shapevis)
+            nodes.append(allvslope)
+            nodes.append(alloslope)
+            nodes.append(alloitcp)
+            if 'WFC3' in ext:
+                # TTV + FIXED OR VARIABLE INC
                 if fixedinc:
-                    _whitedata = pm.Normal('whitedata', mu=orbital2(*nodes),
+                    _whitedata = pm.Normal('whitedata', mu=fiorbital(*nodes),
                                            tau=tauwhite, observed=flatwhite[selectfit])
                     pass
                 else:
                     _whitedata = pm.Normal('whitedata', mu=orbital(*nodes),
                                            tau=tauwhite, observed=flatwhite[selectfit])
                     pass
-                log.warning('>-- MCMC nodes: %s', str([n.name for n in nodes]))
-                trace = pm.sample(chainlen, cores=4, tune=int(chainlen/2),
-                                  compute_convergence_checks=False, step=pm.Metropolis(),
-                                  progressbar=verbose)
-                mcpost = pm.summary(trace)
                 pass
-            else:
-                rprs = pm.TruncatedNormal('rprs', mu=rpors, tau=taurprs,
-                                          lower=rpors/2e0, upper=2e0*rpors)
-                allvslope = pm.TruncatedNormal('vslope',
-                                               mu=0e0, tau=tauvs,
-                                               lower=-3e-2/trdura,
-                                               upper=3e-2/trdura, shape=shapevis)
-                alloslope = pm.Normal('oslope', mu=0e0, tau=tauvs, shape=shapevis)
-                alloitcp = pm.Normal('oitcp', mu=1e0, tau=tauvi, shape=shapevis)
-                nodes.append(rprs)
-                nodes.append(allvslope)
-                nodes.append(alloslope)
-                nodes.append(alloitcp)
-                _whitedata = pm.Normal('whitedata', mu=orbital2(*nodes),
+            if 'STIS' in ext:
+                # NO TTV, FIXED INC
+                _whitedata = pm.Normal('whitedata', mu=nottvfiorbital(*nodes),
                                        tau=tauwhite, observed=flatwhite[selectfit])
-                log.warning('>-- MCMC nodes: %s', str([n.name for n in nodes]))
-                trace = pm.sample(chainlen, cores=4, tune=int(chainlen/2),
-                                  compute_convergence_checks=False, step=pm.Metropolis(),
-                                  progressbar=verbose)
-                mcpost = pm.summary(trace)
                 pass
-
+            log.warning('>-- MCMC nodes: %s', str([n.name for n in nodes]))
+            trace = pm.sample(chainlen, cores=4, tune=int(chainlen/2),
+                              compute_convergence_checks=False, step=pm.Metropolis(),
+                              progressbar=verbose)
+            mcpost = pm.summary(trace)
+            pass
         mctrace = {}
         for key in mcpost['mean'].keys():
             tracekeys = key.split('__')
@@ -1063,12 +1050,6 @@ LDTK: Parviainen et al. https://github.com/hpparvi/ldtk
     '''
     tstar = orbp['T*']
     terr = np.sqrt(abs(orbp['T*_uperr']*orbp['T*_lowerr']))
-    # This is very dangerous it will change the behaviour of G141
-    if terr < 300:
-        terr = np.sqrt(abs(orbp['T*_uperr']*orbp['T*_lowerr']))+700
-        feherr = np.sqrt(abs(orbp['FEH*_uperr']*orbp['FEH*_lowerr']))+1.0
-        loggerr = np.sqrt(abs(orbp['LOGG*_uperr']*orbp['LOGG*_lowerr']))+1.0
-        pass
     fehstar = orbp['FEH*']
     feherr = np.sqrt(abs(orbp['FEH*_uperr']*orbp['FEH*_lowerr']))
     loggstar = orbp['LOGG*']
@@ -1586,9 +1567,9 @@ G. ROUDIER: Orbital model
 
 @tco.as_op(itypes=[tt.dscalar,
                    tt.dvector, tt.dvector, tt.dvector], otypes=[tt.dvector])
-def orbital2(*whiteparams):
+def nottvfiorbital(*whiteparams):
     '''
-G. ROUDIER: Orbital model
+R. ESTRELA: Orbital model for STIS, no TTV, fixed inclination
     '''
     r, avs, aos, aoi = whiteparams
     icln = ctxt.orbp['inc']
@@ -1598,7 +1579,6 @@ G. ROUDIER: Orbital model
     out = []
     for i in enumerate(ctxt.visits):
         omt = ctxt.time[i[0]]
-        # if v in ctxt.ttv: omtk = float(atk[ctxt.ttv.index(v)])
         omtk = ctxt.tmjd
         omz, _pmph = datcore.time2z(omt, inclination, omtk,
                                     ctxt.smaors, ctxt.period, ctxt.ecc)
