@@ -834,8 +834,7 @@ G. ROUDIER: Orbital parameters recovery
                     nodes.append(inc)
                     pass
                 pass
-            allvslope = pm.TruncatedNormal('vslope',
-                                           mu=0e0, tau=tauvs,
+            allvslope = pm.TruncatedNormal('vslope', mu=0e0, tau=tauvs,
                                            lower=-3e-2/trdura,
                                            upper=3e-2/trdura, shape=shapevis)
             alloslope = pm.Normal('oslope', mu=0e0, tau=tauvs, shape=shapevis)
@@ -901,7 +900,6 @@ G. ROUDIER: Orbital parameters recovery
                                     vitcp=1e0,
                                     oslope=np.nanmedian(mctrace['oslope__%i' % i]),
                                     oitcp=np.nanmedian(mctrace['oitcp__%i' % i])))
-
                 pass
             pass
         else:
@@ -1368,7 +1366,7 @@ G. ROUDIER: Exoplanet spectrum recovery
                     pass
                 except TypeError:
                     log.warning('>-- INCREASED BIN SIZE')
-                    increment = 5e1*abs(wh - wl)
+                    increment = 1e2*abs(wh - wl)
                     bld = createldgrid([wl - increment], [wh + increment], priors,
                                        segmentation=int(10))
                     pass
