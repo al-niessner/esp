@@ -1128,6 +1128,8 @@ OPTIONAL mumin set up on HAT-P-41 stellar class
     params.add('gamma4', expr='1 - gamma1 - gamma2 - gamma3')
     if debug: plt.figure()
     for iwave in np.arange(nwave):
+        select = fitsprfs[iwave] == 0e0
+        if True in select: fitsprfs[iwave][select] = 1e-10
         if model == 'linear':
             params['gamma1'].value = 0
             params['gamma1'].vary = False
@@ -1151,8 +1153,8 @@ OPTIONAL mumin set up on HAT-P-41 stellar class
             el.append([out.params['gamma1'].stderr, out.params['gamma2'].stderr])
             pass
         if model == 'nonlinear':
-            out=lm.minimize(nlldx, params,
-                            args=(fitmup, fitprfs[iwave], fitsprfs[iwave]))
+            out = lm.minimize(nlldx, params,
+                              args=(fitmup, fitprfs[iwave], fitsprfs[iwave]))
             cl.append([out.params['gamma1'].value, out.params['gamma2'].value,
                        out.params['gamma3'].value, out.params['gamma4'].value])
             el.append([out.params['gamma1'].stderr, out.params['gamma2'].stderr,
@@ -1248,8 +1250,9 @@ def spectrumversion():
     '''
 G. ROUDIER: Neutral outlier rej/inpaint
 Whitelight +/- 5Hs instead of Previous +/- 1PN
+LDX robust to infinitely small errors + spectral binning boost
     '''
-    return dawgie.VERSION(1,1,8)
+    return dawgie.VERSION(1,1,9)
 
 def spectrum(fin, nrm, wht, out, ext, selftype,
              chainlen=int(1e4), verbose=False, lcplot=False):
