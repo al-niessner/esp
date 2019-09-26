@@ -47,9 +47,6 @@ ECLIPSE
 - spectrum (exoplanet emission spectrum recovery)
 
 PHASECURVE
-- normalization (scaling of stellar spectrum to Out Of Transit relative quantities)
-- whitelight (orbital solution and instrumental behavior recovery)
-- spectrum (exoplanet phase curve recovery)
 
 CERBERUS
 - xslib (cross section library from EXOMOL and HITEMP/HITRAN)
