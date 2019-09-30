@@ -46,6 +46,7 @@ ECLIPSE
 - whitelight (orbital solution and instrumental behavior recovery)
 - spectrum (exoplanet emission spectrum recovery)
 
+
 PHASECURVE
 
 CERBERUS
