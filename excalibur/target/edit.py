@@ -283,8 +283,8 @@ overwrite[starID] =
              'logg_uperr':0.15, 'logg_lowerr':-0.15,
              'logg_ref':'Prieto-Arranz et al. 2018', 'logg_units':'log10[cm.s-2]'}}
     overwrite['HAT-P-1'] = {
-        'b':{'t0':2453979.92802,
-             't0_uperr':0.00004, 't0_lowerr':-0.00004,
+        'b':{'t0':2346020.573629,
+             't0_uperr':0.002804, 't0_lowerr':-0.002804,
              't0_ref':'GMR'}}
     overwrite['HAT-P-11'] = {
         'R*':0.683, 'R*_uperr':0.009, 'R*_lowerr':-0.009,
@@ -307,6 +307,10 @@ overwrite[starID] =
              'period':4.887802443,
              'period_uperr':0.0000071, 'period_lowerr':-0.0000071,
              'period_ref':'Yee et al. 2018'}}
+    overwrite['HAT-P-12'] = {
+        'b':{'t0':2345581.805525,
+             't0_uperr':0.000021, 't0_lowerr':-0.000021,
+             't0_ref':'GMR'}}
     overwrite['HAT-P-17'] = {
         'R*':0.838, 'R*_uperr':0.021, 'R*_lowerr':-0.021,
         'R*_ref':'Howard et al. 2012',
@@ -321,6 +325,14 @@ overwrite[starID] =
              'sma_ref':'Howard et al. 2012 + high ecc',
              'period':10.338523,
              'period_ref':'Howard et al. 2012'}}
+    overwrite['HAT-P-18'] = {
+        'b':{'t0':2345285.974163,
+             't0_uperr':0.000054, 't0_lowerr':-0.000046,
+             't0_ref':'GMR'}}
+    overwrite['HAT-P-26'] = {
+        'b':{'t0':2344696.357636,
+             't0_uperr':0.000086, 't0_lowerr':-0.000086,
+             't0_ref':'GMR'}}
     overwrite['HAT-P-3'] = {
         'b':{'inc':87.24,
              'inc_uperr':0.69, 'inc_lowerr':-0.69,
@@ -334,6 +346,10 @@ overwrite[starID] =
              'logg':3.310,
              'logg_uperr':0.066, 'logg_lowerr':-0.066,
              'logg_ref':'Torres et al. 2017', 'logg_units':'log10[cm.s-2]'}}
+    overwrite['HAT-P-32'] = {
+        'b':{'t0':2344695.857628,
+             't0_uperr':0.000086, 't0_lowerr':-0.000086,
+             't0_ref':'GMR'}}
     overwrite['HAT-P-38'] = {
         'FEH*':0.06, 'FEH*_uperr':0.1, 'FEH*_lowerr':-0.1,
         'FEH*_units':'[Fe/H]', 'FEH*_ref':'Sato et al. 2012'}
@@ -396,6 +412,14 @@ overwrite[starID] =
              'logg':2.98,
              'logg_uperr':0.3, 'logg_lowerr':-0.3,
              'logg_ref':'Crossfield et al. 2017', 'logg_units':'log10[cm.s-2]'}}
+    overwrite['HD 209458'] = {
+        'b':{'t0':2347173.88183,
+             't0_uperr':0.000030, 't0_lowerr':-0.000030,
+             't0_ref':'GMR'}}
+    overwrite['HD 189733'] = {
+        'b':{'t0':2346044.97613,
+             't0_uperr':0.000016, 't0_lowerr':-0.000016,
+             't0_ref':'GMR'}}
     overwrite['HD 97658'] = {
         'b':{'inc':89.85,
              'inc_uperr':0.15, 'inc_lowerr':-0.48,
@@ -524,6 +548,10 @@ overwrite[starID] =
              'ecc':0, 'ecc_ref':'Siverd et al. 2012',
              'period':1.217513,
              'period_ref':'Siverd et al. 2012'}}
+    overwrite['KELT-7'] = {
+        'b':{'t0':2343645.270689,
+             't0_uperr':0.002293, 't0_lowerr':-0.002293,
+             't0_ref':'GMR'}}
     overwrite['Kepler-16'] = {
         'R*':0.665924608009903, 'R*_uperr':0.0013, 'R*_lowerr':-0.0013,
         'R*_ref':'Oroz + GMR',
@@ -547,12 +575,66 @@ overwrite[starID] =
              'sma_uperr':0.1,
              'sma_lowerr':-0.1,
              'sma_ref':'Morton et al. 2016'}}
+    overwrite['WASP-101'] = {
+        'b':{'t0':2343836.314939,
+             't0_uperr':0.000036, 't0_lowerr':-0.000036,
+             't0_ref':'GMR'}}
+    overwrite['WASP-12'] = {
+        'R*':1.59, 'R*_uperr':0.18, 'R*_lowerr':-0.18,
+        'R*_ref':'Stassun et al. 2017',
+        'T*':6300, 'T*_uperr':150, 'T*_lowerr':-150,
+        'T*_ref':'Stassun et al. 2017',
+        'FEH*':0.3, 'FEH*_uperr':0.14, 'FEH*_lowerr':-0.17,
+        'FEH*_ref':'Stassun et al. 2017',
+        'LOGG*':4.38, 'LOGG*_uperr':0.1, 'LOGG*_lowerr':-0.1,
+        'LOGG*_ref':'Stassun et al. 2017',
+        'b':{'inc':82.5,
+             'inc_uperr':0.75, 'inc_lowerr':-0.75,
+             'inc_ref':'Stassun et al. 2017',
+             't0':2456176.6683,
+             't0_uperr':0.000078, 't0_lowerr':-0.000078,
+             't0_ref':'Collins et al. 2017',
+             'sma':0.0234,
+             'sma_uperr':0.00056, 'sma_lowerr':-0.0005,
+             'sma_ref':'Collins et al. 2017',
+             'period':1.09142245,
+             'period_ref':'Stassun et al. 2017'}}
+    overwrite['WASP-121'] = {
+        'b':{'t0':2343364.795768,
+             't0_uperr':0.000039, 't0_lowerr':-0.000039,
+             't0_ref':'GMR'}}
+    overwrite['WASP-17'] = {
+        'b':{'t0':2345407.689849,
+             't0_uperr':0.007553, 't0_lowerr':-0.007553,
+             't0_ref':'GMR'}}
+    overwrite['WASP-19'] = {
+        'b':{'t0':2344292.464232,
+             't0_uperr':0.000065, 't0_lowerr':-0.000065,
+             't0_ref':'GMR'}}
+    overwrite['WASP-29'] = {
+        'b':{'t0':2344170.315584,
+             't0_uperr':0.000030, 't0_lowerr':-0.000030,
+             't0_ref':'GMR'}}
+    overwrite['WASP-31'] = {
+        'b':{'t0':2344807.818824,
+             't0_uperr':0.000349, 't0_lowerr':-0.000349,
+             't0_ref':'GMR'}}
     overwrite['WASP-39'] = {
         'FEH*':-0.10, 'FEH*_uperr':0.1, 'FEH*_lowerr':-0.1,
-        'FEH*_units':'[Fe/H]', 'FEH*_ref':'Faedi et al. 2011'}
+        'FEH*_units':'[Fe/H]', 'FEH*_ref':'Faedi et al. 2011',
+        'b':{'t0':2344657.517244,
+             't0_uperr':0.000002, 't0_lowerr':-0.000002,
+             't0_ref':'GMR'}}
     overwrite['WASP-43'] = {
         'FEH*':-0.05, 'FEH*_uperr':0.17, 'FEH*_lowerr':-0.17,
-        'FEH*_units':'[Fe/H]', 'FEH*_ref':'Hellier et al. 2011'}
+        'FEH*_units':'[Fe/H]', 'FEH*_ref':'Hellier et al. 2011',
+        'b':{'t0':2344471.630448,
+             't0_uperr':0.000021, 't0_lowerr':-0.000021,
+             't0_ref':'GMR'}}
+    overwrite['WASP-52'] = {
+        'b':{'t0':2344206.818727,
+             't0_uperr':0.006086, 't0_lowerr':-0.006086,
+             't0_ref':'GMR'}}
     overwrite['WASP-6'] = {
         'b':{'inc':88.38,
              'inc_uperr':0.31, 'inc_lowerr':-0.31,
@@ -566,6 +648,30 @@ overwrite[starID] =
              'sma_ref':'Tregloan-Reed et al. 2015',
              'period':3.361,
              'period_ref':'Tregloan-Reed et al. 2015'}}
+    overwrite['WASP-62'] = {
+        'b':{'t0':2344145.107396,
+             't0_uperr':0.006497, 't0_lowerr':-0.006497,
+             't0_ref':'GMR'}}
+    overwrite['WASP-69'] = {
+        'b':{'t0':2344207.318529,
+             't0_uperr':0.006138, 't0_lowerr':-0.006138,
+             't0_ref':'GMR'}}
+    overwrite['WASP-74'] = {
+        'b':{'t0':2343494.107846,
+             't0_uperr':0.000534, 't0_lowerr':-0.000534,
+             't0_ref':'GMR'}}
+    overwrite['WASP-76'] = {
+        'b':{'t0':2343892.645063,
+             't0_uperr':0.004859, 't0_lowerr':-0.004859,
+             't0_ref':'GMR'}}
+    overwrite['WASP-79'] = {
+        'b':{'t0':2344455.764693,
+             't0_uperr':0.006547, 't0_lowerr':-0.006547,
+             't0_ref':'GMR'}}
+    overwrite['WASP-80'] = {
+        'b':{'t0':2343513.076657,
+             't0_uperr':0.000046, 't0_lowerr':-0.000046,
+             't0_ref':'GMR'}}
     overwrite['XO-2'] = {
         'b':{'t0':2455565.54048,
              't0_uperr':0.005, 't0_lowerr':-0.005,

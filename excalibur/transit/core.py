@@ -447,7 +447,7 @@ G. ROUDIER: Out of transit data normalization
                 nscale = np.round(np.percentile(wanted, 50))
                 log.warning('--< Visit %s: Noise scale %s', str(int(v)), str(nscale))
                 # FLAGGING THRESHOLD
-                noisescalethr = 7e0
+                noisescalethr = 9e0
                 if nscale <= noisescalethr: nscale = noisescalethr
                 elif (nscale > noisescalethr) and (not singlevisit):
                     nscale = 2e0
