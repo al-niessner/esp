@@ -2449,7 +2449,7 @@ R. ESTRELA: STIS .flt data extraction and wavelength calibration
                 select = np.where((wl_sel > w_low) & (wl_sel < w_hi))
                 # inte = scipy.integrate.quad(lambda x: func_spec(x), w_low, w_hi)
                 inte = np.sum(new_spec_sel[select]*(wl_sel[select[0]+1]-wl_sel[select[0]]))
-                databin=inte[0]/binsz[0]  # inte[0] if scipy.integrate
+                databin=inte/binsz[0]  # inte[0] if scipy.integrate
                 bin_spec.append(databin)
             bin_spec=np.array(bin_spec)
             bin_spec = scipy.signal.medfilt(bin_spec, 5)
@@ -2476,7 +2476,6 @@ R. ESTRELA: STIS .flt data extraction and wavelength calibration
                 result = opt.minimize(chisqfunc,x0,method='Nelder-Mead')
                 d_frc = result.x[0]
                 d = 1./result.x[0]
-                print(d)
                 dispersion_list.append(d)
                 s = result.x[1]
                 calib_spec=f(s+(d_frc)*mid_ang)
