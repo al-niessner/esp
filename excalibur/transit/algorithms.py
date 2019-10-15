@@ -89,6 +89,8 @@ G. ROUDIER: See inheritance and CI5 thread with A NIESSNER for __init__() method
         self._nrm = nrm
         self.__fin = sysalg.finalize()
         self.__out = [trnstates.WhiteLightSV(ext) for ext in fltrs]
+        # MERGE PROTOTYPE
+        self.__out.append(trnstates.WhiteLightSV('HST'))
         return
 
     def name(self):
@@ -105,6 +107,29 @@ G. ROUDIER: See inheritance and CI5 thread with A NIESSNER for __init__() method
         svupdate = []
         fin = self.__fin.sv_as_dict()['parameters']
         vfin, sfin = trncore.checksv(fin)
+        # MERGE PROTOTYPE
+        allnormdata = []
+        allext = []
+        for ext in fltrs:
+            update = False
+            nrm = self._nrm.sv_as_dict()[ext]
+            vnrm, snrm = trncore.checksv(nrm)
+            if vnrm and vfin:
+                log.warning('--< %s MERGING: %s >--', self._type.upper(), ext)
+                allnormdata.append(nrm)
+                allext.append(ext)
+                update = True
+                pass
+            else:
+                errstr = [m for m in [snrm, sfin] if m is not None]
+                self._failure(errstr[0])
+                pass
+            pass
+        if allnormdata:
+            update = self._hstwhitelight(allnormdata, fin, self.__out[-1], allext)
+            if update: svupdate.append(self.__out[-1])
+            pass
+        # FILTER LOOP
         for ext in fltrs:
             update = False
             index = fltrs.index(ext)
@@ -124,8 +149,14 @@ G. ROUDIER: See inheritance and CI5 thread with A NIESSNER for __init__() method
         if self.__out: ds.update()
         return
 
+    def _hstwhitelight(self, nrm, fin, out, ext):
+        wl = trncore.hstwhitelight(nrm, fin, out, ext, self._type,
+                                   chainlen=int(1e4), verbose=False)
+        return wl
+
     def _whitelight(self, nrm, fin, out, ext):
-        wl = trncore.whitelight(nrm, fin, out, ext, self._type,
+        # IF YOU UNDERSTAND THIS ALGO: DO WHAT I SAY, NOT WHAT IS BEING DONE HERE...
+        wl = trncore.whitelight(nrm, fin, out, ext, self._type, self.__out[-1],
                                 chainlen=int(1e4), verbose=False)
         return wl
 

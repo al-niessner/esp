@@ -26,15 +26,18 @@ from collections import namedtuple
 CONTEXT = namedtuple('CONTEXT', ['alt', 'ald', 'allz', 'orbp', 'commonoim', 'ecc',
                                  'g1', 'g2', 'g3', 'g4', 'ootoindex', 'ootorbits',
                                  'orbits', 'period', 'selectfit', 'smaors', 'time',
-                                 'tmjd', 'ttv', 'valid', 'visits', 'aos', 'avi'])
+                                 'tmjd', 'ttv', 'valid', 'visits', 'aos', 'avi',
+                                 'ginc', 'gttv'])
 ctxt = CONTEXT(alt=None, ald=None, allz=None, orbp=None, commonoim=None, ecc=None,
                g1=None, g2=None, g3=None, g4=None, ootoindex=None, ootorbits=None,
                orbits=None, period=None, selectfit=None, smaors=None, time=None,
-               tmjd=None, ttv=None, valid=None, visits=None, aos=None, avi=None)
+               tmjd=None, ttv=None, valid=None, visits=None, aos=None, avi=None,
+               ginc=None, gttv=None)
 def ctxtupdt(alt=None, ald=None, allz=None, orbp=None, commonoim=None, ecc=None,
              g1=None, g2=None, g3=None, g4=None, ootoindex=None, ootorbits=None,
              orbits=None, period=None, selectfit=None, smaors=None, time=None,
-             tmjd=None, ttv=None, valid=None, visits=None, aos=None, avi=None):
+             tmjd=None, ttv=None, valid=None, visits=None, aos=None, avi=None,
+             ginc=None, gttv=None):
     '''
 G. ROUDIER: Update global context for pymc3 deterministics
     '''
@@ -44,7 +47,8 @@ G. ROUDIER: Update global context for pymc3 deterministics
                                           ootorbits=ootorbits, orbits=orbits,
                                           period=period, selectfit=selectfit,
                                           smaors=smaors, time=time, tmjd=tmjd, ttv=ttv,
-                                          valid=valid, visits=visits, aos=aos, avi=avi)
+                                          valid=valid, visits=visits, aos=aos, avi=avi,
+                                          ginc=ginc, gttv=gttv)
     return
 
 import ldtk
@@ -658,9 +662,341 @@ per wavelength bins
 # ---------------------- ---------------------------------------------
 # -- WHITE LIGHT CURVE -- --------------------------------------------
 def wlversion():
-    return dawgie.VERSION(1,1,1)
+    '''
+G. ROUDIER: 1.2.0 includes a multi instrument orbital solution
+    '''
+    return dawgie.VERSION(1,2,0)
 
-def whitelight(nrm, fin, out, ext, selftype, chainlen=int(1e4), verbose=False):
+def hstwhitelight(allnrm, fin, out, allext, selftype, chainlen=int(1e4), verbose=False):
+    '''
+G. ROUDIER: Combined orbital parameters recovery
+    '''
+    priors = fin['priors'].copy()
+    ssc = syscore.ssconstants()
+    planetloop = []
+    for nrm in allnrm:
+        planetloop.extend([p for p in nrm['data'].keys() if
+                           (nrm['data'][p]['visits']) and (p not in planetloop)])
+        pass
+    for p in planetloop:
+        rpors = priors[p]['rp']/priors['R*']*ssc['Rjup/Rsun']
+        maxvis = 0
+        visits = []
+        orbits = []
+        time = []
+        wave = []
+        nspec = []
+        sep = []
+        phase = []
+        photnoise = []
+        allfltrs = []
+        allvisits = []
+        pnrmlist = [nrm for nrm in allnrm if p in nrm['data']]
+        pextlist = [thisext for nrm, thisext in zip(allnrm, allext) if p in nrm['data']]
+        ext = ''
+        for thisext in pextlist:
+            if ext: ext = ext + '+' + thisext
+            else: ext = thisext
+            pass
+        for nrm, fltr in zip(pnrmlist, pextlist):
+            visits.extend(np.array(nrm['data'][p]['visits']) + maxvis)
+            orbits.extend(np.array(nrm['data'][p]['orbits']))
+            time.extend(np.array(nrm['data'][p]['time']))
+            wave.extend(np.array(nrm['data'][p]['wave']))
+            nspec.extend(np.array(nrm['data'][p]['nspec']))
+            sep.extend(np.array(nrm['data'][p]['z']))
+            phase.extend(np.array(nrm['data'][p]['phase']))
+            photnoise.extend(np.array(nrm['data'][p]['photnoise']))
+            maxvis = maxvis + np.max(visits)
+            allfltrs.extend([fltr]*len(nrm['data'][p]['visits']))
+            allvisits.extend(nrm['data'][p]['visits'])
+            pass
+        nspec = np.array(nspec)
+        wave = np.array(wave)
+        out['data'][p] = {}
+        out['data'][p]['nspec'] = nspec
+        out['data'][p]['wave'] = wave
+        out['data'][p]['visits'] = visits
+        out['data'][p]['orbits'] = orbits
+        allwhite = []
+        allerrwhite = []
+        flatminww = []
+        flatmaxww = []
+        for index, _v in enumerate(visits):
+            white = []
+            errwhite = []
+            for w, s, e in zip(wave[index], nspec[index], photnoise[index]):
+                select = np.isfinite(s)
+                if True in select:
+                    white.append(np.nanmean(s[select]))
+                    errwhite.append(np.nanmedian(e[select])/np.sqrt(np.nansum(select)))
+                    pass
+                else:
+                    white.append(np.nan)
+                    errwhite.append(np.nan)
+                    pass
+                flatminww.append(min(w[select]))
+                flatmaxww.append(max(w[select]))
+                pass
+            allwhite.append(white)
+            allerrwhite.append(errwhite)
+            pass
+        flaterrwhite = []
+        for r in allerrwhite: flaterrwhite.extend(r)
+        flaterrwhite = np.array(flaterrwhite)
+        flatwhite = []
+        for w in allwhite: flatwhite.extend(w)
+        flatwhite = np.array(flatwhite)
+        flatz = []
+        for z in sep: flatz.extend(z)
+        flatz = np.array(flatz)
+        flatphase = []
+        for ph in phase: flatphase.extend(ph)
+        flatphase = np.array(flatphase)
+        allwwmin = min(flatminww)
+        allwwmax = max(flatmaxww)
+        renorm = np.nanmean(flatwhite[abs(flatz) > 1e0 + rpors])
+        flatwhite /= renorm
+        flaterrwhite /= renorm
+        allwhite = [np.array(aw)/renorm for aw in allwhite]
+        allerrwhite = [np.array(aew)/renorm for aew in allerrwhite]
+        out['data'][p]['allwhite'] = allwhite
+        out['data'][p]['phase'] = phase
+        out['data'][p]['flatphase'] = flatphase
+        # LIMB DARKENING ---------------------------------------------
+        if selftype in ['transit']:
+            whiteld = createldgrid([allwwmin], [allwwmax], priors,
+                                   segmentation=int(10), verbose=verbose)
+            g1, g2, g3, g4 = whiteld['LD']
+            pass
+        else: g1, g2, g3, g4 = [[0], [0], [0], [0]]
+        wlmod = tldlc(abs(flatz), rpors, g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0])
+        out['data'][p]['whiteld'] = [g1[0], g2[0], g3[0], g4[0]]
+        # PLOT -------------------------------------------------------
+        if verbose:
+            plt.figure(figsize=(10, 6))
+            for v in visits:
+                index = visits.index(v)
+                plt.plot(phase[index], allwhite[index], 'o', label=allfltrs[index])
+                pass
+            if visits.__len__() > 14: ncol = 2
+            else: ncol = 1
+            plt.plot(flatphase, wlmod, '^', label='M')
+            plt.xlabel('Orbital Phase')
+            plt.ylabel('Normalized Raw White Light Curve')
+            plt.legend(loc='best', ncol=ncol, mode='expand', numpoints=1,
+                       borderaxespad=0., frameon=False)
+            plt.tight_layout()
+            plt.show()
+            pass
+        # TTV --------------------------------------------------------
+        ttv = []
+        for index, v in enumerate(visits):
+            select = (abs(sep[index]) < (1e0+rpors)) & (abs(sep[index]) > (1e0-rpors))
+            if True in select: ttv.append(v)
+            pass
+        allttvs = []
+        allttvfltrs = []
+        for index, v in enumerate(allvisits):
+            select = (abs(sep[index]) < (1e0+rpors)) & (abs(sep[index]) > (1e0-rpors))
+            if True in select:
+                allttvs.append(v)
+                allttvfltrs.append(allfltrs[index])
+                pass
+            pass
+        # PRIORS -----------------------------------------------------
+        tmjd = priors[p]['t0']
+        if tmjd > 2400000.5: tmjd -= 2400000.5
+        period = priors[p]['period']
+        ecc = priors[p]['ecc']
+        inc = priors[p]['inc']
+        smaors = priors[p]['sma']/priors['R*']/ssc['Rsun/AU']
+        ootstd = np.nanstd(flatwhite[abs(flatz) > 1e0 + rpors])
+        taurprs = 1e0/(rpors*1e-2)**2
+        ttrdur = np.arcsin((1e0+rpors)/smaors)
+        trdura = priors[p]['period']*ttrdur/np.pi
+        mintscale = []
+        maxtscale = []
+        for i, tvs in enumerate(time):
+            mintscale.append(np.nanmin(abs(np.diff(np.sort(tvs)))))
+            for o in set(orbits[i]):
+                maxtscale.append(np.nanmax(tvs[orbits[i] == o]) -
+                                 np.nanmin(tvs[orbits[i] == o]))
+                pass
+            pass
+        tautknot = 1e0/(3e0*np.nanmin(mintscale))**2
+        tknotmin = tmjd - np.nanmax(maxtscale)/2e0
+        tknotmax = tmjd + np.nanmax(maxtscale)/2e0
+        if priors[p]['inc'] != 9e1:
+            if priors[p]['inc'] > 9e1:
+                lowinc = 9e1
+                upinc = 9e1 + 18e1*np.arcsin(1e0/smaors)/np.pi
+                pass
+            if priors[p]['inc'] < 9e1:
+                lowinc = 9e1 - 18e1*np.arcsin(1e0/smaors)/np.pi
+                upinc = 9e1
+                pass
+            pass
+        else:
+            lowinc = 0e0
+            upinc = 9e1
+            pass
+        tauinc = 1e0/(priors[p]['inc']*1e-2)**2
+        # INSTRUMENT MODEL PRIORS --------------------------------------------------------
+        tauvs = 1e0/((1e-2/trdura)**2)
+        tauvi = 1e0/(ootstd**2)
+        selectfit = np.isfinite(flatwhite)
+        tauwhite = 1e0/((np.nanmedian(flaterrwhite))**2)
+        if tauwhite == 0: tauwhite = 1e0/(ootstd**2)
+        shapettv = 2
+        if shapettv < len(ttv): shapettv = len(ttv)
+        shapevis = 2
+        if shapevis < len(visits): shapevis = len(visits)
+        if priors[p]['inc'] != 9e1: fixedinc = False
+        else: fixedinc = True
+        if 'eclipse' in selftype: fixedinc = True
+        if 'WFC3' not in ext: fixedinc = True
+        nodes = []
+        ctxtupdt(orbp=priors[p], ecc=ecc, g1=g1, g2=g2, g3=g3, g4=g4,
+                 orbits=orbits, period=period,
+                 selectfit=selectfit, smaors=smaors,
+                 time=time, tmjd=tmjd, ttv=ttv, visits=visits)
+        # PYMC3 --------------------------------------------------------------------------
+        with pm.Model():
+            rprs = pm.TruncatedNormal('rprs', mu=rpors, tau=taurprs,
+                                      lower=rpors/2e0, upper=2e0*rpors)
+            nodes.append(rprs)
+            if 'WFC3' in ext:
+                alltknot = pm.TruncatedNormal('dtk', mu=tmjd, tau=tautknot,
+                                              lower=tknotmin, upper=tknotmax,
+                                              shape=shapettv)
+                nodes.append(alltknot)
+                if fixedinc: inc = priors[p]['inc']
+                else:
+                    inc = pm.TruncatedNormal('inc', mu=priors[p]['inc'], tau=tauinc,
+                                             lower=lowinc, upper=upinc)
+                    nodes.append(inc)
+                    pass
+                pass
+            allvslope = pm.TruncatedNormal('vslope', mu=0e0, tau=tauvs,
+                                           lower=-3e-2/trdura,
+                                           upper=3e-2/trdura, shape=shapevis)
+            alloslope = pm.Normal('oslope', mu=0e0, tau=tauvs, shape=shapevis)
+            alloitcp = pm.Normal('oitcp', mu=1e0, tau=tauvi, shape=shapevis)
+            nodes.append(allvslope)
+            nodes.append(alloslope)
+            nodes.append(alloitcp)
+            if 'WFC3' in ext:
+                # TTV + FIXED OR VARIABLE INC
+                if fixedinc:
+                    _whitedata = pm.Normal('whitedata', mu=fiorbital(*nodes),
+                                           tau=tauwhite, observed=flatwhite[selectfit])
+                    pass
+                else:
+                    _whitedata = pm.Normal('whitedata', mu=orbital(*nodes),
+                                           tau=tauwhite, observed=flatwhite[selectfit])
+                    pass
+                pass
+            else:
+                # NO TTV, FIXED INC
+                _whitedata = pm.Normal('whitedata', mu=nottvfiorbital(*nodes),
+                                       tau=tauwhite, observed=flatwhite[selectfit])
+                pass
+            log.warning('>-- MCMC nodes: %s', str([n.name for n in nodes]))
+            trace = pm.sample(chainlen, cores=4, tune=int(chainlen/2),
+                              compute_convergence_checks=False, step=pm.Metropolis(),
+                              progressbar=verbose)
+            mcpost = pm.summary(trace)
+            pass
+        mctrace = {}
+        for key in mcpost['mean'].keys():
+            tracekeys = key.split('__')
+            if tracekeys.__len__() > 1:
+                mctrace[key] = trace[tracekeys[0]][:, int(tracekeys[1])]
+                pass
+            else: mctrace[key] = trace[tracekeys[0]]
+            pass
+        postlc = []
+        postim = []
+        postsep = []
+        postphase = []
+        postflatphase = []
+        ttvindex = 0
+        if 'WFC3' in ext:
+            if fixedinc: inclination = priors[p]['inc']
+            else: inclination = np.nanmedian(mctrace['inc'])
+            for i, v in enumerate(visits):
+                if v in ttv:
+                    posttk = np.nanmedian(mctrace['dtk__%i' % ttvindex])
+                    ttvindex += 1
+                    pass
+                else: posttk = tmjd
+                postz, postph = datcore.time2z(time[i], inclination,
+                                               posttk, smaors, period, ecc)
+                if selftype in ['eclipse']: postph[postph < 0] = postph[postph < 0] + 1e0
+                postsep.extend(postz)
+                postphase.append(postph)
+                postflatphase.extend(postph)
+                postlc.extend(tldlc(abs(postz), np.nanmedian(mctrace['rprs']),
+                                    g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0]))
+                postim.append(timlc(time[i], orbits[i],
+                                    vslope=np.nanmedian(mctrace['vslope__%i' % i]),
+                                    vitcp=1e0,
+                                    oslope=np.nanmedian(mctrace['oslope__%i' % i]),
+                                    oitcp=np.nanmedian(mctrace['oitcp__%i' % i])))
+                pass
+            pass
+        else:
+            omtk = ctxt.tmjd
+            inclination = ctxt.orbp['inc']
+            for i, v in enumerate(visits):
+                postz, postph = datcore.time2z(time[i], inclination,
+                                               omtk, smaors, period, ecc)
+                if selftype in ['eclipse']: postph[postph < 0] = postph[postph < 0] + 1e0
+                postsep.extend(postz)
+                postphase.append(postph)
+                postflatphase.extend(postph)
+                postlc.extend(tldlc(abs(postz), np.nanmedian(mctrace['rprs']),
+                                    g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0]))
+                postim.append(timlc(time[i], orbits[i],
+                                    vslope=np.nanmedian(mctrace['vslope__%i' % i]),
+                                    vitcp=1e0,
+                                    oslope=np.nanmedian(mctrace['oslope__%i' % i]),
+                                    oitcp=np.nanmedian(mctrace['oitcp__%i' % i])))
+                pass
+            pass
+        out['data'][p]['postlc'] = postlc
+        out['data'][p]['postim'] = postim
+        out['data'][p]['postsep'] = postsep
+        out['data'][p]['postphase'] = postphase
+        out['data'][p]['postflatphase'] = postflatphase
+        out['data'][p]['mcpost'] = mcpost
+        out['data'][p]['mctrace'] = mctrace
+        out['data'][p]['allttvfltrs'] = allttvfltrs
+        out['data'][p]['allfltrs'] = allfltrs
+        out['data'][p]['allttvs'] = allttvs
+        out['STATUS'].append(True)
+        if verbose:
+            plt.figure(figsize=(10, 6))
+            for iv, v in enumerate(visits):
+                vlabel = allfltrs[iv]
+                plt.plot(phase[iv], allwhite[iv], 'k+')
+                plt.plot(postphase[iv], allwhite[iv]/postim[iv], 'o', label=vlabel)
+                pass
+            if visits.__len__() > 14: ncol = 2
+            else: ncol = 1
+            plt.plot(postflatphase, postlc, '^', label='M')
+            plt.xlabel('Orbital Phase')
+            plt.ylabel('Normalized Post White Light Curve')
+            plt.legend(loc='best', ncol=ncol,
+                       mode='expand', numpoints=1, borderaxespad=0., frameon=False)
+            plt.tight_layout()
+            plt.show()
+            pass
+        pass
+    return True
+
+def whitelight(nrm, fin, out, ext, selftype, multiwl, chainlen=int(1e4), verbose=False):
     '''
 G. ROUDIER: Orbital parameters recovery
     '''
@@ -764,6 +1100,10 @@ G. ROUDIER: Orbital parameters recovery
         # PRIORS -----------------------------------------------------
         tmjd = priors[p]['t0']
         if tmjd > 2400000.5: tmjd -= 2400000.5
+        allttvfltrs = np.array(multiwl['data'][p]['allttvfltrs'])
+        ttvmask = allttvfltrs == ext
+        alltknot = [np.median(multiwl['data'][p]['mctrace']['dtk__'+str(i)])
+                    for i, cond in enumerate(ttvmask) if cond]
         period = priors[p]['period']
         ecc = priors[p]['ecc']
         inc = priors[p]['inc']
@@ -781,24 +1121,6 @@ G. ROUDIER: Orbital parameters recovery
                                  np.nanmin(tvs[orbits[i] == o]))
                 pass
             pass
-        tautknot = 1e0/(3e0*np.nanmin(mintscale))**2
-        tknotmin = tmjd - np.nanmax(maxtscale)/2e0
-        tknotmax = tmjd + np.nanmax(maxtscale)/2e0
-        if priors[p]['inc'] != 9e1:
-            if priors[p]['inc'] > 9e1:
-                lowinc = 9e1
-                upinc = 9e1 + 18e1*np.arcsin(1e0/smaors)/np.pi
-                pass
-            if priors[p]['inc'] < 9e1:
-                lowinc = 9e1 - 18e1*np.arcsin(1e0/smaors)/np.pi
-                upinc = 9e1
-                pass
-            pass
-        else:
-            lowinc = 0e0
-            upinc = 9e1
-            pass
-        tauinc = 1e0/(priors[p]['inc']*1e-2)**2
         # INSTRUMENT MODEL PRIORS --------------------------------------------------------
         tauvs = 1e0/((1e-2/trdura)**2)
         tauvi = 1e0/(ootstd**2)
@@ -809,32 +1131,20 @@ G. ROUDIER: Orbital parameters recovery
         if shapettv < len(ttv): shapettv = len(ttv)
         shapevis = 2
         if shapevis < len(visits): shapevis = len(visits)
-        if priors[p]['inc'] != 9e1: fixedinc = False
-        else: fixedinc = True
-        if 'eclipse' in selftype: fixedinc = True
-        if 'STIS' in ext: fixedinc = True
+        if 'inc' in multiwl['data'][p]['mctrace']:
+            inc = np.median(multiwl['data'][p]['mctrace']['inc'])
+            pass
+        else: inc = priors[p]['inc']
         nodes = []
         ctxtupdt(orbp=priors[p], ecc=ecc, g1=g1, g2=g2, g3=g3, g4=g4,
                  orbits=orbits, period=period,
                  selectfit=selectfit, smaors=smaors,
-                 time=time, tmjd=tmjd, ttv=ttv, visits=visits)
+                 time=time, tmjd=tmjd, ttv=ttv, visits=visits, ginc=inc, gttv=alltknot)
         # PYMC3 --------------------------------------------------------------------------
         with pm.Model():
             rprs = pm.TruncatedNormal('rprs', mu=rpors, tau=taurprs,
                                       lower=rpors/2e0, upper=2e0*rpors)
             nodes.append(rprs)
-            if 'WFC3' in ext:
-                alltknot = pm.TruncatedNormal('dtk', mu=tmjd, tau=tautknot,
-                                              lower=tknotmin, upper=tknotmax,
-                                              shape=shapettv)
-                nodes.append(alltknot)
-                if fixedinc: inc = priors[p]['inc']
-                else:
-                    inc = pm.TruncatedNormal('inc', mu=priors[p]['inc'], tau=tauinc,
-                                             lower=lowinc, upper=upinc)
-                    nodes.append(inc)
-                    pass
-                pass
             allvslope = pm.TruncatedNormal('vslope', mu=0e0, tau=tauvs,
                                            lower=-3e-2/trdura,
                                            upper=3e-2/trdura, shape=shapevis)
@@ -843,22 +1153,9 @@ G. ROUDIER: Orbital parameters recovery
             nodes.append(allvslope)
             nodes.append(alloslope)
             nodes.append(alloitcp)
-            if 'WFC3' in ext:
-                # TTV + FIXED OR VARIABLE INC
-                if fixedinc:
-                    _whitedata = pm.Normal('whitedata', mu=fiorbital(*nodes),
-                                           tau=tauwhite, observed=flatwhite[selectfit])
-                    pass
-                else:
-                    _whitedata = pm.Normal('whitedata', mu=orbital(*nodes),
-                                           tau=tauwhite, observed=flatwhite[selectfit])
-                    pass
-                pass
-            if 'STIS' in ext:
-                # NO TTV, FIXED INC
-                _whitedata = pm.Normal('whitedata', mu=nottvfiorbital(*nodes),
-                                       tau=tauwhite, observed=flatwhite[selectfit])
-                pass
+            # FIXED ORBITAL SOLUTION
+            _whitedata = pm.Normal('whitedata', mu=nottvfiorbital(*nodes),
+                                   tau=tauwhite, observed=flatwhite[selectfit])
             log.warning('>-- MCMC nodes: %s', str([n.name for n in nodes]))
             trace = pm.sample(chainlen, cores=4, tune=int(chainlen/2),
                               compute_convergence_checks=False, step=pm.Metropolis(),
@@ -878,49 +1175,25 @@ G. ROUDIER: Orbital parameters recovery
         postsep = []
         postphase = []
         postflatphase = []
-        ttvindex = 0
-        if 'WFC3' in ext:
-            if fixedinc: inclination = priors[p]['inc']
-            else: inclination = np.nanmedian(mctrace['inc'])
-            for i, v in enumerate(visits):
-                if v in ttv:
-                    posttk = np.nanmedian(mctrace['dtk__%i' % ttvindex])
-                    ttvindex += 1
-                    pass
-                else: posttk = tmjd
-                postz, postph = datcore.time2z(time[i], inclination,
-                                               posttk, smaors, period, ecc)
-                if selftype in ['eclipse']: postph[postph < 0] = postph[postph < 0] + 1e0
-                postsep.extend(postz)
-                postphase.append(postph)
-                postflatphase.extend(postph)
-                postlc.extend(tldlc(abs(postz), np.nanmedian(mctrace['rprs']),
-                                    g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0]))
-                postim.append(timlc(time[i], orbits[i],
-                                    vslope=np.nanmedian(mctrace['vslope__%i' % i]),
-                                    vitcp=1e0,
-                                    oslope=np.nanmedian(mctrace['oslope__%i' % i]),
-                                    oitcp=np.nanmedian(mctrace['oitcp__%i' % i])))
-                pass
+        omtk = ctxt.tmjd
+        inclination = ctxt.ginc
+        for i, v in enumerate(visits):
+            if v in ttv: omtk = float(alltknot[ttv.index(v)])
+            else: omtk = tmjd
+            postz, postph = datcore.time2z(time[i], inclination,
+                                           omtk, smaors, period, ecc)
+            if selftype in ['eclipse']: postph[postph < 0] = postph[postph < 0] + 1e0
+            postsep.extend(postz)
+            postphase.append(postph)
+            postflatphase.extend(postph)
+            postlc.extend(tldlc(abs(postz), np.nanmedian(mctrace['rprs']),
+                                g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0]))
+            postim.append(timlc(time[i], orbits[i],
+                                vslope=np.nanmedian(mctrace['vslope__%i' % i]),
+                                vitcp=1e0,
+                                oslope=np.nanmedian(mctrace['oslope__%i' % i]),
+                                oitcp=np.nanmedian(mctrace['oitcp__%i' % i])))
             pass
-        else:
-            omtk = ctxt.tmjd
-            inclination = ctxt.orbp['inc']
-            for i, v in enumerate(visits):
-                postz, postph = datcore.time2z(time[i], inclination,
-                                               omtk, smaors, period, ecc)
-                if selftype in ['eclipse']: postph[postph < 0] = postph[postph < 0] + 1e0
-                postsep.extend(postz)
-                postphase.append(postph)
-                postflatphase.extend(postph)
-                postlc.extend(tldlc(abs(postz), np.nanmedian(mctrace['rprs']),
-                                    g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0]))
-                postim.append(timlc(time[i], orbits[i],
-                                    vslope=np.nanmedian(mctrace['vslope__%i' % i]),
-                                    vitcp=1e0,
-                                    oslope=np.nanmedian(mctrace['oslope__%i' % i]),
-                                    oitcp=np.nanmedian(mctrace['oitcp__%i' % i])))
-                pass
         out['data'][p]['postlc'] = postlc
         out['data'][p]['postim'] = postim
         out['data'][p]['postsep'] = postsep
@@ -1571,24 +1844,22 @@ G. ROUDIER: Orbital model
                    tt.dvector, tt.dvector, tt.dvector], otypes=[tt.dvector])
 def nottvfiorbital(*whiteparams):
     '''
-R. ESTRELA: Orbital model for STIS, no TTV, fixed inclination
+R. ESTRELA: Fixed orbital solution
     '''
     r, avs, aos, aoi = whiteparams
-    icln = ctxt.orbp['inc']
-    # atk = ctxt.orbp['t0']
-    if ctxt.orbp['inc'] == 9e1: inclination = 9e1
-    else: inclination = float(icln)
+    inclination = ctxt.ginc
     out = []
-    for i in enumerate(ctxt.visits):
-        omt = ctxt.time[i[0]]
-        omtk = ctxt.tmjd
+    for i, v in enumerate(ctxt.visits):
+        omt = ctxt.time[i]
+        if v in ctxt.ttv: omtk = float(ctxt.gttv[ctxt.ttv.index(v)])
+        else: omtk = ctxt.tmjd
         omz, _pmph = datcore.time2z(omt, inclination, omtk,
                                     ctxt.smaors, ctxt.period, ctxt.ecc)
         lcout = tldlc(abs(omz), float(r),
                       g1=ctxt.g1[0], g2=ctxt.g2[0], g3=ctxt.g3[0], g4=ctxt.g4[0])
-        imout = timlc(omt, ctxt.orbits[i[0]],
-                      vslope=float(avs[i[0]]), vitcp=1e0,
-                      oslope=float(aos[i[0]]), oitcp=float(aoi[i[0]]))
+        imout = timlc(omt, ctxt.orbits[i],
+                      vslope=float(avs[i]), vitcp=1e0,
+                      oslope=float(aos[i]), oitcp=float(aoi[i]))
         out.extend(lcout*imout)
         pass
     return np.array(out)[ctxt.selectfit]
