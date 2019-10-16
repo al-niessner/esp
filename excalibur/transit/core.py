@@ -1102,7 +1102,7 @@ G. ROUDIER: Orbital parameters recovery
         if tmjd > 2400000.5: tmjd -= 2400000.5
         allttvfltrs = np.array(multiwl['data'][p]['allttvfltrs'])
         ttvmask = allttvfltrs == ext
-        if allttvfltrs:
+        if list(ttvmask):
             alltknot = [np.median(multiwl['data'][p]['mctrace']['dtk__'+str(i)])
                         for i, cond in enumerate(ttvmask) if cond]
             pass
