@@ -7,6 +7,7 @@ import excalibur.target.algorithms as trgalg
 class Actor(dawgie.Analysis):
     def list(self)->[dawgie.Analyzer]:
         return [
+            trgalg.alert(),
             trgalg.create()
         ]
     pass
@@ -17,5 +18,12 @@ class Agent(dawgie.Task):
             trgalg.autofill(),
             trgalg.scrape()
         ]
+    pass
+
+class Regress(dawgie.Regress):
+    def list(self)->[dawgie.Regression]:
+        return [
+            trgalg.regress()
+            ]
     pass
 # --------- ----------------------------------------------------------

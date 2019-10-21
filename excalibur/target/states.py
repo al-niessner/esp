@@ -184,3 +184,19 @@ class DatabaseSV(dawgie.StateVector):
         return
     pass
 # -------------- -----------------------------------------------------
+# -- MONITOR -- -------------------------------------------------------
+class MonitorSV(dawgie.StateVector):
+    def __init__(self):
+        self._version_ = dawgie.VERSION(1,1,1)
+        self['last'] = excalibur.ValuesDict()
+        self['planet'] = excalibur.ValuesDict()
+        self['runid'] = excalibur.ValuesList()
+        return
+
+    def name(self):
+        return 'parameters'
+
+    def view(self, visitor:dawgie.Visitor)->None:
+        return
+    pass
+# ------------ -------------------------------------------------------

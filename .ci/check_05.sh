@@ -10,7 +10,7 @@ post_state "$context" "$description" "$state"
 
 if current_state
 then
-    docker run --rm -v $PWD:$PWD -u $UID -w $PWD -e USERNAME=$USERNAME esp_cit:$(cit_version) python3 -m dawgie.tools.compliant --ae-dir $PWD/excalibur --ae-pkg excalibur | tee $PWD/compliant.rpt.txt
+    docker run --rm -v $PWD:$PWD -u $UID -w $PWD -e USERNAME=$USERNAME esp_cit:$(cit_version) python3 -m dawgie.tools.compliant -v --ae-dir $PWD/excalibur --ae-pkg excalibur | tee $PWD/compliant.rpt.txt
     
     errs=`grep False $PWD/compliant.rpt.txt | wc -l`
     [[ $errs -ne 0 ]] && echo -n "failure" > $PWD/.ci/status.txt

@@ -25,7 +25,8 @@ RUN set -ex && \
                           lmfit==0.9.11 \
                           matplotlib==2.2.3 \
                           pymc3==3.6 \
-                          scipy==1.1.0 && \
+                          scipy==1.1.0 \
+                          service_identity && \
    rm -rf ${HOME}/.cache && \
    mkdir /.theano && chmod 777 /.theano && \
    mkdir -p /proj/data/ldtk && chmod 777 /proj/data/ldtk && \

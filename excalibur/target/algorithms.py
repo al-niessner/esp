@@ -8,6 +8,7 @@ import dawgie.context
 import excalibur
 import excalibur.target as trg
 import excalibur.target.core as trgcore
+import excalibur.target.monitor as trgmonitor
 import excalibur.target.states as trgstates
 # ------------- ------------------------------------------------------
 # -- ALGO RUN OPTIONS -- ---------------------------------------------
@@ -23,6 +24,26 @@ mirror1 = 'http://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/data/pub/HSTCA/'
 mirror2 = 'http://archives.esac.esa.int/ehst-sl-server/servlet/data-action?ARTIFACT_ID='
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
+
+class alert(dawgie.Analyzer):
+    def __init__(self):
+        self._version_ = dawgie.VERSION(1,0,0)
+        self.__out = trgstates.MonitorSV()
+        return
+
+    def name(self):
+        return 'alert_from_variations_of'
+
+    def traits(self)->[dawgie.SV_REF, dawgie.V_REF]:
+        return [dawgie.SV_REF(trg.regress, regress(), regress().state_vectors()[0])]
+
+    def state_vectors(self):
+        return [self.__out]
+
+    def run(self, aspects:dawgie.Aspect):
+        return
+    pass
+
 class create(dawgie.Analyzer):
     def __init__(self):
         self._version_ = dawgie.VERSION(1,1,0)
@@ -121,5 +142,33 @@ class scrape(dawgie.Algorithm):
     def _failure(errstr):
         log.warning('--< TARGET SCRAPE: '+errstr+' >--')
         return
+    pass
+
+class regress(dawgie.Regression):
+    def __init__(self):
+        self._version_ = dawgie.VERSION(1,0,0)
+        self.__out = trgstates.MonitorSV()
+        return
+
+    def feedback(self):
+        return [dawgie.V_REF(trg.regress, self, self.__out, 'runid')]
+
+    def name(self):
+        return 'variations_of'
+
+    def run(self, ps:int, timeline:dawgie.Timeline):
+        last = trgmonitor.regress (self.__out['planet'],
+                                   self.__out['runid'],
+                                   timeline)
+        self.__out['last'].clear()
+        self.__out['last'].update (last)
+        timeline.ds().update()
+        return
+
+    def state_vectors(self):
+        return [self.__out]
+
+    def variables(self)->[dawgie.SV_REF, dawgie.V_REF]:
+        return [dawgie.SV_REF(trg.task,autofill(),autofill().state_vectors()[0])]
     pass
 # ---------------- ---------------------------------------------------
