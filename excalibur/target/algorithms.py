@@ -7,6 +7,7 @@ import dawgie.context
 
 import excalibur
 import excalibur.target as trg
+import excalibur.target.edit as trgedit
 import excalibur.target.core as trgcore
 import excalibur.target.monitor as trgmonitor
 import excalibur.target.states as trgstates
@@ -46,7 +47,7 @@ class alert(dawgie.Analyzer):
 
 class create(dawgie.Analyzer):
     def __init__(self):
-        self._version_ = dawgie.VERSION(1,1,0)
+        self._version_ = trgedit.createversion()
         self.__out = [trgstates.TargetSV('starIDs'), trgstates.FilterSV('filters')]
         return
 

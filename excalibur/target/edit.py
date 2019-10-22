@@ -1,3 +1,11 @@
+# -- CREATE -- -------------------------------------------------------
+def createversion():
+    '''
+    1.2.0: Added Spitzer targets
+    '''
+    import dawgie
+    return dawgie.VERSION(1,2,0)
+# ------------ -------------------------------------------------------
 # -- TARGET LIST -- --------------------------------------------------
 # FIRST COL HAS TO BE SOLVABLE BY
 # https://archive.stsci.edu/hst/

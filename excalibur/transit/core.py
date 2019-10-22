@@ -1105,8 +1105,8 @@ def whitelight(nrm, fin, out, ext, selftype, multiwl, chainlen=int(1e4), verbose
         tmjd = priors[p]['t0']
         if tmjd > 2400000.5: tmjd -= 2400000.5
         allttvfltrs = np.array(multiwl['data'][p]['allttvfltrs'])
-        ttvmask = allttvfltrs == ext
-        if list(ttvmask):
+        if ext in allttvfltrs:
+            ttvmask = allttvfltrs == ext
             alltknot = [np.median(multiwl['data'][p]['mctrace']['dtk__'+str(i)])
                         for i, cond in enumerate(ttvmask) if cond]
             pass
