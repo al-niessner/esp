@@ -7,6 +7,9 @@ import excalibur.cerberus.core as crbcore
 # pylint: disable=import-self
 import excalibur.transit.core
 
+import re
+import copy
+import requests
 import logging
 import numpy as np
 import lmfit as lm
@@ -16,8 +19,10 @@ log = logging.getLogger(__name__)
 pymc3log = logging.getLogger('pymc3')
 pymc3log.setLevel(logging.ERROR)
 
-import scipy.constants as cst
 import matplotlib.pyplot as plt
+import scipy.constants as cst
+from scipy import spatial
+from scipy.ndimage import median_filter
 
 import theano.tensor as tt
 import theano.compile.ops as tco
@@ -56,7 +61,7 @@ from ldtk import LDPSetCreator, BoxcarFilter
 from ldtk.ldmodel import LinearModel, QuadraticModel, NonlinearModel
 class LDPSet(ldtk.LDPSet):
     '''
-A. NIESSNER: INLINE HACK TO ldtk.LDPSet
+    A. NIESSNER: INLINE HACK TO ldtk.LDPSet
     '''
     @staticmethod
     def is_mime(): return True
@@ -70,7 +75,7 @@ setattr(ldtk.ldtk, 'LDPSet', LDPSet)
 # -- SV VALIDITY -- --------------------------------------------------
 def checksv(sv):
     '''
-G. ROUDIER: Tests for empty SV shell
+    G. ROUDIER: Tests for empty SV shell
     '''
     valid = False
     errstring = None
@@ -81,10 +86,9 @@ G. ROUDIER: Tests for empty SV shell
 # -- NORMALIZATION -- ------------------------------------------------
 def normversion():
     return dawgie.VERSION(1,1,3)
-
 def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
     '''
-G. ROUDIER: Out of transit data normalization
+    G. ROUDIER: Out of transit data normalization
     '''
     normed = False
     priors = fin['priors'].copy()
@@ -593,8 +597,8 @@ G. ROUDIER: Out of transit data normalization
 # -- TEMPLATE BUILDER -- ---------------------------------------------
 def tplbuild(spectra, wave, vrange, disp, superres=False, medest=False):
     '''
-G. ROUDIER: Builds a spectrum template according to the peak in population density
-per wavelength bins
+    G. ROUDIER: Builds a spectrum template according to the peak in population density
+    per wavelength bins
     '''
     allspec = []
     for s in spectra.copy(): allspec.extend(s)
@@ -663,13 +667,13 @@ per wavelength bins
 # -- WHITE LIGHT CURVE -- --------------------------------------------
 def wlversion():
     '''
-G. ROUDIER: 1.2.0 includes a multi instrument orbital solution
+    G. ROUDIER: 1.2.0 includes a multi instrument orbital solution
     '''
     return dawgie.VERSION(1,2,0)
 
 def hstwhitelight(allnrm, fin, out, allext, selftype, chainlen=int(1e4), verbose=False):
     '''
-G. ROUDIER: Combined orbital parameters recovery
+    G. ROUDIER: Combined orbital parameters recovery
     '''
     priors = fin['priors'].copy()
     ssc = syscore.ssconstants()
@@ -998,7 +1002,7 @@ G. ROUDIER: Combined orbital parameters recovery
 
 def whitelight(nrm, fin, out, ext, selftype, multiwl, chainlen=int(1e4), verbose=False):
     '''
-G. ROUDIER: Orbital parameters recovery
+    G. ROUDIER: Orbital parameters recovery
     '''
     wl = False
     priors = fin['priors'].copy()
@@ -1228,7 +1232,7 @@ G. ROUDIER: Orbital parameters recovery
 # -- TRANSIT LIMB DARKENED LIGHT CURVE -- ----------------------------
 def tldlc(z, rprs, g1=0, g2=0, g3=0, g4=0, nint=int(8**2)):
     '''
-G. ROUDIER: Light curve model
+    G. ROUDIER: Light curve model
     '''
     ldlc = np.zeros(z.size)
     xin = z.copy() - rprs
@@ -1260,7 +1264,7 @@ G. ROUDIER: Light curve model
 # -- STELLAR EXTINCTION LAW -- ---------------------------------------
 def vecistar(xrs, g1, g2, g3, g4):
     '''
-G. ROUDIER: Stellar surface extinction model
+    G. ROUDIER: Stellar surface extinction model
     '''
     ldnorm = (-g1/10e0 - g2/6e0 - 3e0*g3/14e0 - g4/4e0 + 5e-1)*2e0*np.pi
     select = xrs < 1e0
@@ -1276,7 +1280,7 @@ G. ROUDIER: Stellar surface extinction model
 # -- STELLAR SURFACE OCCULTATION -- ----------------------------------
 def vecoccs(z, xrs, rprs):
     '''
-G. ROUDIER: Stellar surface occulation model
+    G. ROUDIER: Stellar surface occulation model
     '''
     out = np.zeros(xrs.shape)
     vecxrs = xrs.copy()
@@ -1320,8 +1324,8 @@ def createldgrid(minmu, maxmu, orbp,
                  ldmodel='nonlinear', phoenixmin=1e-1,
                  segmentation=int(10), verbose=False):
     '''
-G. ROUDIER: Wrapper around LDTK downloading tools
-LDTK: Parviainen et al. https://github.com/hpparvi/ldtk
+    G. ROUDIER: Wrapper around LDTK downloading tools
+    LDTK: Parviainen et al. https://github.com/hpparvi/ldtk
     '''
     tstar = orbp['T*']
     terr = np.sqrt(abs(orbp['T*_uperr']*orbp['T*_lowerr']))
@@ -1385,8 +1389,8 @@ LDTK: Parviainen et al. https://github.com/hpparvi/ldtk
 # -- LDX -- ----------------------------------------------------------
 def ldx(psmu, psmean, psstd, mumin=1e-1, debug=False, model='nonlinear'):
     '''
-G. ROUDIER: Limb darkening coefficient retrievial on PHOENIX GRID models,
-OPTIONAL mumin set up on HAT-P-41 stellar class
+    G. ROUDIER: Limb darkening coefficient retrievial on PHOENIX GRID models,
+    OPTIONAL mumin set up on HAT-P-41 stellar class
     '''
     mup=np.array(psmu).copy()
     prfs=np.array(psmean).copy()
@@ -1456,7 +1460,7 @@ OPTIONAL mumin set up on HAT-P-41 stellar class
 # -- LNLDX -- --------------------------------------------------------
 def lnldx(params, x, data=None, weights=None):
     '''
-G. ROUDIER: Linear law
+    G. ROUDIER: Linear law
     '''
     gamma1=params['gamma1'].value
     model=LinearModel.evaluate(x, [gamma1])
@@ -1467,7 +1471,7 @@ G. ROUDIER: Linear law
 # -- QDLDX -- --------------------------------------------------------
 def qdldx(params, x, data=None, weights=None):
     '''
-G. ROUDIER: Quadratic law
+    G. ROUDIER: Quadratic law
     '''
     gamma1 = params['gamma1'].value
     gamma2 = params['gamma2'].value
@@ -1479,7 +1483,7 @@ G. ROUDIER: Quadratic law
 # -- NLLDX -- --------------------------------------------------------
 def nlldx(params, x, data=None, weights=None):
     '''
-G. ROUDIER: Non Linear law
+    G. ROUDIER: Non Linear law
     '''
     gamma1 = params['gamma1'].value
     gamma2 = params['gamma2'].value
@@ -1493,7 +1497,7 @@ G. ROUDIER: Non Linear law
 # -- INSTRUMENT MODEL -- ---------------------------------------------
 def timlc(vtime, orbits, vslope=0, vitcp=1e0, oslope=0, oitcp=1e0):
     '''
-G. ROUDIER: WFC3 intrument model
+    G. ROUDIER: WFC3 intrument model
     '''
     xout = np.array(vtime) - np.mean(vtime)
     vout = vslope*xout + vitcp
@@ -1508,7 +1512,7 @@ G. ROUDIER: WFC3 intrument model
 # -- RAMP MODEL -- ---------------------------------------------------
 def hstramp(params, rtime, data=None):
     '''
-G. ROUDIER: HST breathing model
+    G. ROUDIER: HST breathing model
     '''
     louttime = np.array(rtime) - np.mean(rtime)
     ramptime = (louttime - np.min(louttime))*(36e2)*(24e0)  # SECONDS
@@ -1525,16 +1529,16 @@ G. ROUDIER: HST breathing model
 # -- SPECTRUM -- -----------------------------------------------------
 def spectrumversion():
     '''
-G. ROUDIER: Neutral outlier rej/inpaint
-Whitelight +/- 5Hs instead of Previous +/- 1PN
-LDX robust to infinitely small errors + spectral binning boost
+    G. ROUDIER: Neutral outlier rej/inpaint
+    Whitelight +/- 5Hs instead of Previous +/- 1PN
+    LDX robust to infinitely small errors + spectral binning boost
     '''
     return dawgie.VERSION(1,1,9)
 
 def spectrum(fin, nrm, wht, out, ext, selftype,
              chainlen=int(1e4), verbose=False, lcplot=False):
     '''
-G. ROUDIER: Exoplanet spectrum recovery
+    G. ROUDIER: Exoplanet spectrum recovery
     '''
     exospec = False
     priors = fin['priors'].copy()
@@ -1822,7 +1826,7 @@ G. ROUDIER: Exoplanet spectrum recovery
                    tt.dvector, tt.dvector, tt.dvector], otypes=[tt.dvector])
 def orbital(*whiteparams):
     '''
-G. ROUDIER: Orbital model
+    G. ROUDIER: Orbital model
     '''
     r, atk, icln, avs, aos, aoi = whiteparams
     if ctxt.orbp['inc'] == 9e1: inclination = 9e1
@@ -1847,7 +1851,7 @@ G. ROUDIER: Orbital model
                    tt.dvector, tt.dvector, tt.dvector], otypes=[tt.dvector])
 def nottvfiorbital(*whiteparams):
     '''
-R. ESTRELA: Fixed orbital solution
+    R. ESTRELA: Fixed orbital solution
     '''
     r, avs, aos, aoi = whiteparams
     inclination = ctxt.ginc
@@ -1871,7 +1875,7 @@ R. ESTRELA: Fixed orbital solution
                    tt.dvector, tt.dvector, tt.dvector], otypes=[tt.dvector])
 def fiorbital(*whiteparams):
     '''
-G. ROUDIER: Orbital model with fixed inclination
+    G. ROUDIER: Orbital model with fixed inclination
     '''
     r, atk, avs, aos, aoi = whiteparams
     inclination = ctxt.orbp['inc']
@@ -1895,7 +1899,7 @@ G. ROUDIER: Orbital model with fixed inclination
            otypes=[tt.dvector])
 def lcmodel(*specparams):
     '''
-G. ROUDIER: Spectral light curve model
+    G. ROUDIER: Spectral light curve model
     '''
     r, avs, aos, aoi = specparams
     allimout = []
@@ -1913,7 +1917,7 @@ G. ROUDIER: Spectral light curve model
 # -- BINNING FUNCTION -- ---------------------------------------------
 def binnagem(t, nbins):
     '''
-R. ESTRELA: Binning the wavelength template
+    R. ESTRELA: Binning the wavelength template
     '''
     tmax = t[0][-1]
     tmin = t[0][0]
@@ -1927,7 +1931,7 @@ R. ESTRELA: Binning the wavelength template
 def fastspec(fin, nrm, wht, ext, selftype,
              chainlen=int(1e4), p=None, verbose=False):
     '''
-G. ROUDIER: Exoplanet spectrum fast recovery for prior setup
+    G. ROUDIER: Exoplanet spectrum fast recovery for prior setup
     '''
     priors = fin['priors'].copy()
     ssc = syscore.ssconstants()
@@ -2110,3 +2114,407 @@ G. ROUDIER: Exoplanet spectrum fast recovery for prior setup
     alpha = alphanum/np.nanmedian(ESerr)
     return priorspec, alpha
 # ------------------- ------------------------------------------------
+# ----------------- --------------------------------------------------
+# -- NORMALIZATION -- ------------------------------------------------
+def norm_spitzer(cal, tme, fin, out, selftype, debug=False):
+    '''
+    K. PEARSON: prep data for light curve fitting
+        remove nans, remove zeros, 3 sigma clip time series
+    '''
+    normed = False
+    priors = fin['priors'].copy()
+
+    planetloop = [pnet for pnet in tme['data'].keys() if (pnet in priors.keys()) and tme['data'][pnet][selftype]]
+
+    for p in planetloop:
+        out['data'][p] = {}
+
+        # determine optimal aperture size
+        phot = np.array(cal['data']['PHOT']).reshape(-1,5)
+        sphot = np.copy(phot)
+        for j in range(phot.shape[1]):
+            dt = int(2.5/(24*60*np.percentile(np.diff(cal['data']['TIME']),25)))
+            dt = 2*dt + 1  # force it to be odd
+            sphot[:,j] = sigma_clip(sphot[:,j], dt)
+            sphot[:,j] = sigma_clip(sphot[:,j], dt)
+        std = np.nanstd(sphot,0)
+        bi = np.argmin(std)
+
+        # reformat some data
+        flux = np.array(cal['data']['PHOT']).reshape(-1,5)[:,bi]
+        noisep = np.array(cal['data']['NOISEPIXEL']).reshape(-1,5)[:,bi]
+        pflux = np.array(cal['data']['G_PSF'])
+        visits = tme['data'][p]['visits']  # really more like planetary orbits
+
+        # remove nans and zeros
+        mask = np.isnan(flux) | np.isnan(pflux) | (flux == 0)
+        keys = [
+            'TIME','WX','WY',
+            'G_PSF_ERR', 'G_PSF', 'G_XCENT', 'G_YCENT',
+            'G_SIGMAX', 'G_SIGMAY', 'G_ROT', 'G_MODEL',
+        ]
+        for k in keys:
+            out['data'][p][k] = np.array(cal['data'][k])[~mask]
+        out['data'][p]['visits'] = visits[~mask]
+        out['data'][p]['NOISEPIXEL'] = noisep[~mask]
+        out['data'][p]['PHOT'] = flux[~mask]
+
+        # time order things
+        ordt = np.argsort(out['data'][p]['TIME'])
+        for k in out['data'][p].keys():
+            out['data'][p][k] = out['data'][p][k][ordt]
+
+        # 3 sigma clip flux time series
+        badmask = np.zeros(out['data'][p]['TIME'].shape).astype(bool)
+        for i in np.unique(out['data'][p]['visits']):
+            omask = out['data'][p]['visits'] == i
+
+            dt = np.nanmean(np.diff(out['data'][p]['TIME'][omask]))*24*60
+            medf = median_filter(out['data'][p]['PHOT'][omask], int(15/dt)*2+1)
+            res = out['data'][p]['PHOT'][omask] - medf
+            photmask = np.abs(res) > 3*np.std(res)
+
+            # medf = median_filter(out['data'][p]['G_PSF'][omask], int(15/dt)*2+1 )
+            # res = out['data'][p]['G_PSF'][omask] - medf
+            # psfmask = np.abs(res) > 3*np.std(res)
+
+            badmask[omask] = photmask  # | psfmask
+
+        for k in out['data'][p].keys():
+            out['data'][p][k] = out['data'][p][k][~badmask]
+
+        # pass information along
+        out['data'][p]['transit'] = tme['data'][p]['transit']
+        out['data'][p]['eclipse'] = tme['data'][p]['eclipse']
+        out['data'][p]['phasecurve'] = tme['data'][p]['phasecurve']
+
+        if debug:
+            plt.plot(out['data'][p]['TIME'][~badmask], out['data'][p]['PHOT'][~badmask], 'k.')
+            plt.plot(out['data'][p]['TIME'][badmask], out['data'][p]['PHOT'][badmask], 'r.')
+            plt.show()
+
+            plt.plot(out['data'][p]['TIME'], out['data'][p]['G_PSF'],'g.')
+            plt.plot(out['data'][p]['TIME'], out['data'][p]['PHOT'],'k.')
+            plt.xlabel('Time')
+            plt.ylabel('Flux')
+            plt.show()
+
+        if out['data'][p][selftype]:
+            normed = True
+            out['STATUS'].append(True)
+
+    return normed
+
+def get_ld(priors, band='Spit36'):
+    '''
+    Query the web for limb darkening coefficients in the Spitzer bandpass
+    Problem with LDTK + Spitzer: https://github.com/hpparvi/ldtk/issues/11
+    '''
+    url = 'http://astroutils.astronomy.ohio-state.edu/exofast/quadld.php'
+
+    form = {
+        'action':url,
+        'pname':'Select Planet',
+        'bname':band,
+        'teff':priors['T*'],
+        'feh':priors['FEH*'],
+        'logg':priors['LOGG*']
+    }
+    session = requests.Session()
+    res = session.post(url,data=form)
+    lin,quad = re.findall(r"\d+\.\d+",res.text)
+    return float(lin), float(quad)
+
+def time_bin(time, flux, dt=1./(60*24)):
+    '''
+    K. PEARSON: bin data in time
+    '''
+    bins = int(np.floor((max(time) - min(time))/dt))
+    bflux = np.zeros(bins)
+    btime = np.zeros(bins)
+    for i in range(bins):
+        mask = (time >= (min(time)+i*dt)) & (time < (min(time)+(i+1)*dt))
+        bflux[i] = np.mean(flux[mask])
+        btime[i] = np.mean(time[mask])
+    return btime, bflux
+
+def weightedflux(flux,gw,nearest):
+    '''
+    K. PEARSON: weighted sum
+    '''
+    return np.sum(flux[nearest]*gw,axis=-1)
+
+def gaussian_weights(X, w=None, neighbors=100, feature_scale=1000):
+    '''
+        K. Pearson: Gaussian weights of nearest neighbors
+    '''
+    if isinstance(w, type(None)): w = np.ones(X.shape[1])
+    Xm = (X - np.median(X,0))/w
+    kdtree = spatial.cKDTree(Xm*feature_scale)
+    nearest = np.zeros((X.shape[0],neighbors))
+    gw = np.zeros((X.shape[0],neighbors),dtype=float)
+    for point in range(X.shape[0]):
+        ind = kdtree.query(kdtree.data[point],neighbors+1)[1][1:]
+        dX = Xm[ind] - Xm[point]
+        Xstd = np.std(dX,0)
+        gX = np.exp(-dX**2/(2*Xstd**2))
+        gwX = np.product(gX,1)
+        gw[point,:] = gwX/gwX.sum()
+        nearest[point,:] = ind
+    return gw, nearest.astype(int)
+
+def sigma_clip(data,dt):
+    '''
+    K. PEARSON: 3 sigma clip outliers from running median filter
+    '''
+    mdata = median_filter(data, dt)
+    res = data - mdata
+    mask = np.abs(res) > 3*np.nanstd(res)
+    data[mask] = np.nan
+    return data
+
+def transit(time, values):
+    # wrapper for gael's lc code
+    z,phase = datcore.time2z(time, values['inc'], values['tm'], values['ar'], values['per'], values['ecc'])
+    phase += 0  # this is to shut pylint up
+    return tldlc(abs(z), values['rp'], g1=0, g2=values['u1'], g3=0, g4=values['u2'])
+
+def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
+    '''
+    K. PEARSON: modeling of transits and eclipses from Spitzer
+    '''
+    wl= False
+    priors = fin['priors'].copy()
+    ssc = syscore.ssconstants()
+    planetloop = [pnet for pnet in nrm['data'].keys()]
+
+    for p in planetloop:
+
+        time = nrm['data'][p]['TIME']
+        visits = nrm['data'][p]['visits']
+        out['data'][p] = []
+
+        # loop through epochs
+        ec = 0  # event counter
+        for event in nrm['data'][p][selftype]:
+            print('processing event:',event)
+            emask = visits == event
+            out['data'][p].append({})
+
+            # get data
+            time = nrm['data'][p]['TIME'][emask]
+            tmask = time < 2400000.5
+            time[tmask] += 2400000.5
+
+            # compute phase + priors
+            smaors = priors[p]['sma']/priors['R*']/ssc['Rsun/AU']
+            z, phase = datcore.time2z(time, priors[p]['inc'], priors[p]['t0'], smaors, priors[p]['period'], priors[p]['ecc'])
+            z += 0  # fuck you pylint
+            # to do: update duration for eccentric orbits
+            # https://arxiv.org/pdf/1001.2010.pdf eq 16
+            tdur = priors[p]['period']/(2*np.pi)/smaors
+            rprs = (priors[p]['rp']*7.1492e7) / (priors['R*']*6.955e8)
+            # inc_lim = 90 - np.rad2deg(np.arctan((priors[p]['rp'] * ssc['Rjup/Rsun'] + priors['R*']) / (priors[p]['sma']/ssc['Rsun/AU'])))
+            w = priors[p].get('omega',0)
+
+            # mask out data by event type
+            if selftype == 'transit':
+                pmask = (phase > -2*tdur/priors[p]['period']) & (phase < 2*tdur/priors[p]['period'])
+            elif selftype == 'eclipse':
+                # https://arxiv.org/pdf/1001.2010.pdf eq 33
+                t0e = priors[p]['t0']+ priors[p]['period']*0.5 * (1 + priors[p]['ecc']*(4./np.pi)*np.cos(np.deg2rad(w)))
+                z, phase = datcore.time2z(time, priors[p]['inc'], t0e, smaors, priors[p]['period'], priors[p]['ecc'])
+                pmask = (phase > -2*tdur/priors[p]['period']) & (phase < 2*tdur/priors[p]['period'])
+            elif selftype == 'phasecurve':
+                print('implement phasecurve mask')
+
+            # extract aperture photometry data
+            subt = time[pmask]
+            aper = nrm['data'][p]['PHOT'][emask][pmask]
+            aper_err = np.sqrt(aper)
+            # gpsf = nrm['data'][p]['G_PSF'][emask][pmask]
+            # gpsf_err = np.sqrt(gpsf)
+
+            if '36' in fltr:
+                lin,quad = get_ld(priors,'Spit36')
+            elif '45' in fltr:
+                lin,quad = get_ld(priors,'Spit45')
+
+            # can't solve for wavelengths greater than below
+            # whiteld = createldgrid([2.5],[2.6], priors, segmentation=int(10), verbose=verbose)
+            # whiteld = createldgrid([wmin],[wmax], priors, segmentation=int(1), verbose=verbose)
+
+            # LDTK breaks for Spitzer https://github.com/hpparvi/ldtk/issues/11
+            # filters = [BoxcarFilter('a', 3150, 3950)]
+            # tstar = priors['T*']
+            # terr = np.sqrt(abs(priors['T*_uperr']*priors['T*_lowerr']))
+            # fehstar = priors['FEH*']
+            # feherr = np.sqrt(abs(priors['FEH*_uperr']*priors['FEH*_lowerr']))
+            # loggstar = priors['LOGG*']
+            # loggerr = np.sqrt(abs(priors['LOGG*_uperr']*priors['LOGG*_lowerr']))
+            # sc = LDPSetCreator(teff=(tstar, terr), logg=(loggstar, loggerr), z=(fehstar, feherr), filters=filters)
+            # ps = sc.create_profiles(nsamples=int(1e4))
+            # cq,eq = ps.coeffs_qd(do_mc=True
+
+            tpars = {
+                'rp': rprs,
+                'tm':np.median(subt),
+
+                'ar':smaors,
+                'per':priors[p]['period'],
+                'u1':lin, 'u2': quad,
+                'ecc':priors[p]['ecc'],
+                'ome': priors[p].get('omega',0),
+                'a0':1,
+            }
+
+            try:
+                tpars['inc'] = hstwhitelight_sv['data'][p]['mcpost']['mean']['inc']
+            except KeyError:
+                tpars['inc'] = priors[p]['inc']
+
+            # perform a quick sigma clip
+            dt = np.nanmean(np.diff(subt))*24*60  # minutes
+            medf = median_filter(aper, int(15/dt)*2+1)  # needs to be odd
+            res = aper - medf
+            photmask = np.abs(res) < 3*np.std(res)
+
+            # resize aperture data
+            ta = subt[photmask]
+            aper = aper[photmask]
+            aper_err = aper_err[photmask]
+            wxa = nrm['data'][p]['WX'][emask][pmask][photmask]
+            wya = nrm['data'][p]['WY'][emask][pmask][photmask]
+            npp = nrm['data'][p]['NOISEPIXEL'][emask][pmask][photmask]
+
+            def fit_data(time,flux,fluxerr, syspars, tpars, tdur):
+                rprs=0
+
+                gw, nearest = gaussian_weights(
+                    np.array(syspars).T,
+                    # w=np.array([1,1])
+                )
+
+                gw[np.isnan(gw)] = 0.01
+
+                @tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar],otypes=[tt.dvector])
+                def transit2min(*pars):
+                    rprs, tmid, nor = pars
+                    tpars['rp'] = float(rprs)
+                    tpars['tm'] = float(tmid)
+                    # tpars['inc']= float(inc)
+
+                    lcmode = transit(time=time, values=tpars)
+                    detrended = flux/lcmode
+                    # gw, nearest = gaussian_weights( np.array([wx,wy]).T, w=np.array([w1,w2]) )
+                    wf = weightedflux(detrended, gw, nearest)
+                    return lcmode*wf*float(nor)
+
+                @tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar],otypes=[tt.dvector])
+                def eclipse2min(*pars):
+                    tmid, fpfs, nor = pars
+                    # tpars['rp'] = float(rprs)
+                    tpars['tm'] = float(tmid)
+                    fpfs = float(fpfs)
+
+                    lcmode = transit(time=time, values=tpars)
+                    f1 = lcmode - 1
+                    model = fpfs*(2*f1 + rprs**2)+1
+                    detrended = flux/model
+                    # gw, nearest = gaussian_weights( np.array([wx,wy]).T, w=np.array([w1,w2]) )
+                    wf = weightedflux(detrended, gw, nearest)
+                    return model*wf*float(nor)
+
+                fcn2min = {
+                    'transit':transit2min,
+                    'eclipse':eclipse2min,
+                }
+
+                with pm.Model():
+                    if selftype == "transit":
+                        priors = [
+                            pm.Uniform('rprs', lower=0.5*rprs,  upper=1.5*rprs),
+                            pm.Uniform('tmid', lower=max(np.min(time), np.median(time)-tdur*0.5), upper=min(np.max(time), np.median(time)+tdur*0.5)),
+                            # pm.Uniform('inc', lower=inc_lim, upper=90),
+                            pm.Uniform('norm', lower=0.9,  upper=1.1)
+                            # pm.Uniform('w1',   lower=0, upper=1), # weights for instrument model
+                            # pm.Uniform('w2',   lower=0, upper=1)
+                        ]
+                        pass
+                    elif selftype == "eclipse":
+                        priors = [
+                            # pm.Uniform('rprs', lower=0.99*rprs,  upper=1.01*rprs),
+                            pm.Uniform('tmid', lower=max(np.min(time), np.median(time)-tdur*0.5), upper=min(np.max(time), np.median(time)+tdur*0.5)),
+                            pm.Uniform('fpfs', lower=0, upper=0.3),
+                            pm.Uniform('norm', lower=0.9,  upper=1.1)
+                            # pm.Uniform('w1',   lower=0, upper=1), # weights for instrument model
+                            # pm.Uniform('w2',   lower=0, upper=1)
+                        ]
+
+                    pm.Normal('likelihood',
+                              mu=fcn2min[selftype](*priors),
+                              tau=(1./fluxerr)**2,
+                              observed=flux)
+
+                    trace = pm.sample(5000,
+                                      pm.Metropolis(),
+                                      chains=4,
+                                      tune=500,
+                                      progressbar=False)
+                return trace
+
+            pymc3log.propagate = False
+            trace_aper2d = fit_data(ta,aper,aper_err, [wxa,wya], tpars, tdur)
+            trace_aper3d= fit_data(ta,aper,aper_err, [wxa,wya, npp], tpars, tdur)
+
+            tpars['tm'] = np.median(trace_aper2d['tmid'])
+            tpars['a0'] = np.median(trace_aper2d['norm'])
+            if selftype == 'transit':
+                tpars['rp'] = np.median(trace_aper2d['rprs'])
+                # tpars['inc']= np.median(trace_aper2d['inc'])
+            lcmodel1 = transit(time=ta, values=tpars)
+            if selftype == 'eclipse':
+                fpfs = np.median(trace_aper2d['fpfs'])
+                f1 = lcmodel1 - 1
+                lcmodel1 = fpfs*(2*f1 + tpars['rp']**2)+1
+
+            detrended = aper/lcmodel1
+            gw, nearest = gaussian_weights(np.array([wxa,wya]).T)
+            wf = weightedflux(detrended, gw, nearest)
+
+            out['data'][p][ec]['aper_time'] = ta
+            out['data'][p][ec]['aper_flux'] = aper
+            out['data'][p][ec]['aper_err'] = aper_err
+            out['data'][p][ec]['aper_xcent'] = wxa
+            out['data'][p][ec]['aper_ycent'] = wya
+            out['data'][p][ec]['aper_trace'] = pm.trace_to_dataframe(trace_aper2d)
+            out['data'][p][ec]['aper_wf'] = wf
+            out['data'][p][ec]['aper_model'] = lcmodel1
+            out['data'][p][ec]['aper_pars'] = copy.deepcopy(tpars)
+            out['data'][p][ec]['noise_pixel'] = npp
+
+            tpars['tm'] = np.median(trace_aper3d['tmid'])
+            tpars['a0'] = np.median(trace_aper3d['norm'])
+            if selftype == 'transit':
+                tpars['rp'] = np.median(trace_aper3d['rprs'])
+                # tpars['inc']= np.median(trace_aper3d['inc'])
+            lcmodel1 = transit(time=ta, values=tpars)
+            if selftype == 'eclipse':
+                fpfs = np.median(trace_aper3d['fpfs'])
+                f1 = lcmodel1 - 1
+                lcmodel1 = fpfs*(2*f1 + tpars['rp']**2)+1
+            detrended = aper/lcmodel1
+            gw, nearest = gaussian_weights(np.array([wxa,wya, npp]).T)
+            wf = weightedflux(detrended, gw, nearest)
+            out['data'][p][ec]['aper_wf_3d'] = wf
+            out['data'][p][ec]['aper_model_3d'] = lcmodel1
+            out['data'][p][ec]['aper_pars_3d'] = copy.deepcopy(tpars)
+            out['data'][p][ec]['aper_trace_3d'] = pm.trace_to_dataframe(trace_aper3d)
+
+            ec += 1
+            out['STATUS'].append(True)
+            wl = True
+
+            pass
+        pass
+    return wl

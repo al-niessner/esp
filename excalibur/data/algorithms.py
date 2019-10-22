@@ -102,7 +102,7 @@ G. ROUDIER: Categorize data into 3 science purposes: TRANSIT, ECLIPSE, PHASE CUR
         vcol, ecol = datcore.checksv(col)
         validtype = []
         for test in col['activefilters'].keys():
-            if ('SCAN' in test) or ('STIS' in test):
+            if ('SCAN' in test) or ('STIS' in test) or ('Spitzer' in test):
                 if test in fltrs: validtype.append(test)
                 pass
             pass
@@ -166,7 +166,7 @@ G. ROUDIER: Data re-calibration and reduction
         vfin, sfin = trncore.checksv(fin)
         validtype = []
         for test in cll['activefilters'].keys():
-            if ('SCAN' in test) or ('STARE' in test):
+            if ('SCAN' in test) or ('STARE' in test) or ('Spitzer' in test):
                 if test in fltrs: validtype.append(test)
                 pass
             pass
@@ -174,6 +174,7 @@ G. ROUDIER: Data re-calibration and reduction
         for datatype in validtype:
             tim = self.__tim.sv_as_dict()[datatype]
             vtim, etim = datcore.checksv(tim)
+
             if vfin and vcll and vtim:
                 # pylint: disable=protected-access
                 update = self._calib(fin,cll['activefilters'][datatype], tim, ds._tn(),
@@ -202,6 +203,9 @@ G. ROUDIER: Data re-calibration and reduction
             pass
         if 'G430' in flttype:
             caled = datcore.stiscal_G430L(fin, cll, tim, tid, flttype, out, verbose=False)
+            pass
+        if 'Spitzer' in flttype:
+            caled = datcore.spitzercal(cll, out)
             pass
         return caled
 

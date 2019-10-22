@@ -23,7 +23,7 @@ fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
 # -- ALGORITHMS -- ---------------------------------------------------
 class normalization(dawgie.Algorithm):
     '''
-G. ROUDIER: Light curve normalization by Out Of Transit data
+    G. ROUDIER: Light curve normalization by Out Of Transit data
     '''
     def __init__(self):
         self._version_ = trncore.normversion()
@@ -70,8 +70,10 @@ G. ROUDIER: Light curve normalization by Out Of Transit data
         return
 
     def _norm(self, cal, tme, fin, index):
-        normed = trncore.norm(cal, tme, fin, fltrs[index], self.__out[index], self._type,
-                              verbose=False)
+        if 'Spitzer' in fltrs[index]:
+            normed = trncore.norm_spitzer(cal, tme, fin, self.__out[index], self._type)
+        else:
+            normed = trncore.norm(cal, tme, fin, fltrs[index], self.__out[index], self._type, verbose=False)
         return normed
 
     def _failure(self, errstr):
@@ -81,7 +83,7 @@ G. ROUDIER: Light curve normalization by Out Of Transit data
 
 class whitelight(dawgie.Algorithm):
     '''
-G. ROUDIER: See inheritance and CI5 thread with A NIESSNER for __init__() method and class attributes https://github-fn.jpl.nasa.gov/EXCALIBUR/esp/pull/86
+    G. ROUDIER: See inheritance and CI5 thread with A NIESSNER for __init__() method and class attributes https://github-fn.jpl.nasa.gov/EXCALIBUR/esp/pull/86
     '''
     def __init__(self, nrm=normalization()):
         self._version_ = trncore.wlversion()
@@ -110,7 +112,8 @@ G. ROUDIER: See inheritance and CI5 thread with A NIESSNER for __init__() method
         # MERGE PROTOTYPE
         allnormdata = []
         allext = []
-        for ext in fltrs:
+        hstfltrs = ['HST-WFC3-IR-G141-SCAN','HST-WFC3-IR-G102-SCAN','HST-STIS-CCD-G750L-STARE','HST-STIS-CCD-G430L-STARE']
+        for ext in hstfltrs:
             update = False
             nrm = self._nrm.sv_as_dict()[ext]
             vnrm, snrm = trncore.checksv(nrm)
@@ -126,8 +129,12 @@ G. ROUDIER: See inheritance and CI5 thread with A NIESSNER for __init__() method
                 pass
             pass
         if allnormdata:
-            update = self._hstwhitelight(allnormdata, fin, self.__out[-1], allext)
-            if update: svupdate.append(self.__out[-1])
+            try:
+                update = self._hstwhitelight(allnormdata, fin, self.__out[-1], allext)
+                if update: svupdate.append(self.__out[-1])
+            except TypeError:
+                log.warning('>-- HST orbit solution failed %s', self._type.upper())
+                pass
             pass
         # FILTER LOOP
         for ext in fltrs:
@@ -156,8 +163,11 @@ G. ROUDIER: See inheritance and CI5 thread with A NIESSNER for __init__() method
 
     def _whitelight(self, nrm, fin, out, ext):
         # IF YOU UNDERSTAND THIS ALGO: DO WHAT I SAY, NOT WHAT IS BEING DONE HERE...
-        wl = trncore.whitelight(nrm, fin, out, ext, self._type, self.__out[-1],
-                                chainlen=int(1e4), verbose=False)
+        # I dont understand anything
+        if 'Spitzer' in ext:
+            wl = trncore.lightcurve_spitzer(nrm, fin, out, self._type, ext, self.__out[-1])
+        else:
+            wl = trncore.whitelight(nrm, fin, out, ext, self._type, self.__out[-1], chainlen=int(1e4), verbose=False)
         return wl
 
     def _failure(self, errstr):
@@ -167,7 +177,7 @@ G. ROUDIER: See inheritance and CI5 thread with A NIESSNER for __init__() method
 
 class spectrum(dawgie.Algorithm):
     '''
-G. ROUDIER: See inheritance and CI5 thread with A NIESSNER for __init__() method and class attributes https://github-fn.jpl.nasa.gov/EXCALIBUR/esp/pull/86
+    G. ROUDIER: See inheritance and CI5 thread with A NIESSNER for __init__() method and class attributes https://github-fn.jpl.nasa.gov/EXCALIBUR/esp/pull/86
     '''
     def __init__(self, nrm=normalization(), wht=whitelight()):
         self._version_ = trncore.spectrumversion()
@@ -214,8 +224,10 @@ G. ROUDIER: See inheritance and CI5 thread with A NIESSNER for __init__() method
         return
 
     def _spectrum(self, fin, nrm, wht, out, ext):
-        s = trncore.spectrum(fin, nrm, wht, out, ext, self._type,
-                             chainlen=int(1e4), verbose=False)
+        if "Spitzer" in ext:
+            return True
+
+        s = trncore.spectrum(fin, nrm, wht, out, ext, self._type, chainlen=int(1e4), verbose=False)
         return s
 
     def _failure(self, errstr):

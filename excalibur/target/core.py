@@ -426,6 +426,7 @@ def disk(selfstart, out, diskloc, dbs):
 # ---------- ---------------------------------------------------------
 # -- DBS COPY -- -----------------------------------------------------
 def dbscp(locations, dbs, out):
+
     copied = False
     imalist = None
     for loc in locations:
@@ -438,6 +439,7 @@ def dbscp(locations, dbs, out):
                             if '.fits' in imafits])
             pass
         pass
+
     for fitsfile in imalist:
         filedict = {'md5':None, 'sha':None, 'loc':None, 'observatory':None,
                     'instrument':None, 'detector':None, 'filter':None, 'mode':None}
@@ -450,44 +452,60 @@ def dbscp(locations, dbs, out):
         filedict['md5'] = md5
         filedict['sha'] = sha
         filedict['loc'] = fitsfile
-        if 'shaID' in fitsfile:
-            # SPITZER FILE
-            pass
-        else:
-            with pyfits.open(fitsfile) as pf:
-                mainheader = pf[0].header
-                if 'SCI' in mainheader['FILETYPE']:
-                    keys = [k for k in mainheader.keys() if k != '']
-                    keys = [k for k in set(keys)]
-                    if 'TELESCOP' in keys: filedict['observatory'] = mainheader['TELESCOP']
-                    if 'INSTRUME' in keys: filedict['instrument'] = mainheader['INSTRUME']
-                    if 'DETECTOR' in keys:
-                        filedict['detector'] = mainheader['DETECTOR'].replace('-', '.')
-                        pass
-                    if 'FILTER' in keys: filedict['filter'] = mainheader['FILTER']
-                    if ('SCAN_RAT' in keys) and (mainheader['SCAN_RAT'] > 0):
-                        filedict['mode'] = 'SCAN'
-                        pass
-                    else: filedict['mode'] = 'STARE'
-                    if 'FOCUS' in keys and filedict['detector'] is None:
-                        filedict['detector'] = mainheader['FOCUS']
-                        filedict['mode'] = 'IMAGE'
-                        pass
-                    if filedict['instrument'] in ['STIS']:
-                        filedict['filter'] = mainheader['OPT_ELEM']
-                        pass
+        with pyfits.open(fitsfile) as pf:
+            mainheader = pf[0].header
+
+            # HST
+            if 'SCI' in mainheader.get('FILETYPE',''):
+                keys = [k for k in mainheader.keys() if k != '']
+                keys = [k for k in set(keys)]
+
+                if 'TELESCOP' in keys: filedict['observatory'] = mainheader['TELESCOP']
+                if 'INSTRUME' in keys: filedict['instrument'] = mainheader['INSTRUME']
+                if 'DETECTOR' in keys:
+                    filedict['detector'] = mainheader['DETECTOR'].replace('-', '.')
+                if 'FILTER' in keys: filedict['filter'] = mainheader['FILTER']
+                if ('SCAN_RAT' in keys) and (mainheader['SCAN_RAT'] > 0):
+                    filedict['mode'] = 'SCAN'
                     pass
+                else: filedict['mode'] = 'STARE'
+                if 'FOCUS' in keys and filedict['detector'] is None:
+                    filedict['detector'] = mainheader['FOCUS']
+                    filedict['mode'] = 'IMAGE'
+                    pass
+                if filedict['instrument'] in ['STIS']:
+                    filedict['filter'] = mainheader['OPT_ELEM']
+                    pass
+
+                out['name'][mainheader['ROOTNAME']] = filedict
+
+            # Spitzer
+            elif 'spitzer' in mainheader.get('TELESCOP').lower() and 'sci' in mainheader.get('EXPTYPE').lower():
+                filedict['observatory'] = mainheader.get('TELESCOP')
+                filedict['instrument'] = mainheader.get('INSTRUME')
+                filedict['mode'] = mainheader.get('READMODE')
+                filedict['detector'] = 'IR'
+                if mainheader.get('CHNLNUM') == 1:
+                    filedict['filter'] = "3.6"
+                elif mainheader.get('CHNLNUM') == 2:
+                    filedict['filter'] = "4.5"
+                else:
+                    filedict['filter'] = mainheader.get('CHNLNUM')
+
+                out['name'][mainheader.get('DPID')] = filedict
+
                 pass
-            out['name'][mainheader['ROOTNAME']] = filedict
-            mastout = os.path.join(dbs, md5+'_'+sha)
-            onmast = os.path.isfile(mastout)
-            if not onmast:
-                shutil.copyfile(fitsfile, mastout)
-                os.chmod(mastout, int('0664', 8))
-                pass
-            copied = True
-            out['STATUS'].append(True)
             pass
+
+        mastout = os.path.join(dbs, md5+'_'+sha)
+        onmast = os.path.isfile(mastout)
+        if not onmast:
+            shutil.copyfile(fitsfile, mastout)
+            os.chmod(mastout, int('0664', 8))
+            pass
+        copied = True
+        out['STATUS'].append(True)
         pass
+
     return copied
 # -------------- -----------------------------------------------------
