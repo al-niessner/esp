@@ -69,7 +69,7 @@ class create(dawgie.Analyzer):
 
 class autofill(dawgie.Algorithm):
     def __init__(self):
-        self._version_ = dawgie.VERSION(1,1,0)
+        self._version_ = trgcore.autofillversion()
         self.__create = create()
         self.__out = trgstates.TargetSV('parameters')
         return

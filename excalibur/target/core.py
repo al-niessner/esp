@@ -79,6 +79,11 @@ def createfltrs(out):
     return created
 # -------------------- -----------------------------------------------
 # -- AUTOFILL -- -----------------------------------------------------
+def autofillversion():
+    '''
+    1.1.1: manual trigger to autofill
+    '''
+    return dawgie.VERSION(1,1,1)
 def autofill(ident, thistarget, out,
              queryurl="https://archive.stsci.edu/hst/search.php?target=",
              action="&action=Search&resolver=SIMBAD&radius=3.0",
