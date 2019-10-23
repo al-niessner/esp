@@ -486,9 +486,9 @@ def dbscp(locations, dbs, out):
                 filedict['mode'] = mainheader.get('READMODE')
                 filedict['detector'] = 'IR'
                 if mainheader.get('CHNLNUM') == 1:
-                    filedict['filter'] = "3.6"
+                    filedict['filter'] = "36"
                 elif mainheader.get('CHNLNUM') == 2:
-                    filedict['filter'] = "4.5"
+                    filedict['filter'] = "45"
                 else:
                     filedict['filter'] = mainheader.get('CHNLNUM')
 
