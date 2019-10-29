@@ -86,6 +86,7 @@ def checksv(sv):
 # -- NORMALIZATION -- ------------------------------------------------
 def normversion():
     return dawgie.VERSION(1,1,3)
+
 def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
     '''
     G. ROUDIER: Out of transit data normalization
@@ -455,7 +456,7 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
                 nscale = np.round(np.percentile(wanted, 50))
                 log.warning('--< Visit %s: Noise scale %s', str(int(v)), str(nscale))
                 # FLAGGING THRESHOLD
-                noisescalethr = 9e0
+                noisescalethr = 5e0
                 if nscale <= noisescalethr: nscale = noisescalethr
                 elif (nscale > noisescalethr) and (not singlevisit):
                     nscale = 2e0
@@ -1668,7 +1669,7 @@ def spectrum(fin, nrm, wht, out, ext, selftype,
                 plt.xlabel('Orbital phase')
                 plt.show()
                 pass
-            # PRIORS -----------------------------------------------------------------
+            # PRIORS ---------------------------------------------------------------------
             sscmks = syscore.ssconstants(mks=True)
             eqtemp = priors['T*']*np.sqrt(priors['R*']*sscmks['Rsun/AU']/
                                           (2.*priors[p]['sma']))
@@ -1689,7 +1690,8 @@ def spectrum(fin, nrm, wht, out, ext, selftype,
             # noot = np.sum(abs(allz) > (1e0 + whiterprs))
             # nit = allz.size - noot
             # Noise propagation forecast on transit depth
-            # propphn = np.nanmedian(dnoise)*(1e0 - whiterprs**2)*np.sqrt(1e0/nit + 1e0/noot)
+            # propphn = np.nanmedian(dnoise)*(1e0 - whiterprs**2)
+            # *np.sqrt(1e0/nit + 1e0/noot)
             # dirtypn = np.sqrt(propphn + whiterprs**2) - whiterprs
             prwidth = 2e0*Hs
             # PRIOR CENTER ---------------------------------------------------------------
@@ -2124,7 +2126,8 @@ def norm_spitzer(cal, tme, fin, out, selftype, debug=False):
     normed = False
     priors = fin['priors'].copy()
 
-    planetloop = [pnet for pnet in tme['data'].keys() if (pnet in priors.keys()) and tme['data'][pnet][selftype]]
+    planetloop = [pnet for pnet in tme['data'].keys() if
+                  (pnet in priors.keys()) and tme['data'][pnet][selftype]]
 
     for p in planetloop:
         out['data'][p] = {}
@@ -2308,7 +2311,8 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
 
             # compute phase + priors
             smaors = priors[p]['sma']/priors['R*']/ssc['Rsun/AU']
-            z, phase = datcore.time2z(time, priors[p]['inc'], priors[p]['t0'], smaors, priors[p]['period'], priors[p]['ecc'])
+            z, phase = datcore.time2z(time, priors[p]['inc'], priors[p]['t0'], smaors,
+                                      priors[p]['period'], priors[p]['ecc'])
             z += 0  # fuck you pylint
             # to do: update duration for eccentric orbits
             # https://arxiv.org/pdf/1001.2010.pdf eq 16
