@@ -28,20 +28,33 @@ mirror2 = 'http://archives.esac.esa.int/ehst-sl-server/servlet/data-action?ARTIF
 
 class alert(dawgie.Analyzer):
     def __init__(self):
-        self._version_ = dawgie.VERSION(1,0,0)
-        self.__out = trgstates.MonitorSV()
+        self._version_ = dawgie.VERSION(1,0,1)
+        self.__out = trgstates.AlertSV()
         return
+
+    def feedback(self):
+        return [dawgie.V_REF(trg.analysis, self, self.__out, 'known'),
+                dawgie.V_REF(trg.analysis, self, self.__out, 'table')]
 
     def name(self):
         return 'alert_from_variations_of'
 
     def traits(self)->[dawgie.SV_REF, dawgie.V_REF]:
-        return [dawgie.SV_REF(trg.regress, regress(), regress().state_vectors()[0])]
+        return [dawgie.V_REF(trg.regress, regress(),
+                             regress().state_vectors()[0], 'last')]
 
     def state_vectors(self):
         return [self.__out]
 
     def run(self, aspects:dawgie.Aspect):
+        c,k,t = trgmonitor.alert (aspects,self.__out['known'],self.__out['table'])
+        self.__out['changes'].clear()
+        self.__out['known'].clear()
+        self.__out['table'].clear()
+        self.__out['changes'].extend (c)
+        self.__out['known'].extend (k)
+        self.__out['table'].extend (t)
+        aspects.ds().update()
         return
     pass
 
@@ -147,12 +160,13 @@ class scrape(dawgie.Algorithm):
 
 class regress(dawgie.Regression):
     def __init__(self):
-        self._version_ = dawgie.VERSION(1,0,0)
+        self._version_ = dawgie.VERSION(1,0,1)
         self.__out = trgstates.MonitorSV()
         return
 
     def feedback(self):
-        return [dawgie.V_REF(trg.regress, self, self.__out, 'runid')]
+        return [dawgie.V_REF(trg.regress, self, self.__out, 'planet'),
+                dawgie.V_REF(trg.regress, self, self.__out, 'runid')]
 
     def name(self):
         return 'variations_of'

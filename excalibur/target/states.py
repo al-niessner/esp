@@ -1,5 +1,8 @@
 # -- IMPORTS -- ------------------------------------------------------
+import bokeh.embed
+import bokeh.plotting  # the awesome plotting engine
 import dawgie
+import numpy
 
 import excalibur
 # ------------- ------------------------------------------------------
@@ -197,6 +200,73 @@ class MonitorSV(dawgie.StateVector):
         return 'parameters'
 
     def view(self, visitor:dawgie.Visitor)->None:
+        for k in sorted(self['last']):
+            ks = k.split ('_')
+            p = ks[0]
+            value = self['last'][k]
+            visitor.add_primitive ('Planet ' + p + ' parameter ' +
+                                   '_'.join (ks[1:]) + ' last change: ' +
+                                   str(value))
+
+            if not numpy.isnan (value):
+                values = []
+                for v in self['planet'][k]:
+                    try: values.append (float(v))
+                    except ValueError: values.append (numpy.nan)
+                    pass
+                fig = bokeh.plotting.figure (title=('Change of ' +
+                                                    '_'.join (ks[1:]) +
+                                                    ' over RunIDs'),
+                                             x_axis_label='Run ID',
+                                             y_axis_label='Value')
+                fig.circle (self['runid'], values)
+                js,div = bokeh.embed.components (fig)
+                visitor.add_declaration (None, div=div, js=js)
+                pass
+            pass
+        return
+    pass
+# -------------- -----------------------------------------------------
+# -- ALERT --- -------------------------------------------------------
+class AlertSV(dawgie.StateVector):
+    def __init__(self):
+        self._version_ = dawgie.VERSION(1,1,1)
+        self['changes'] = excalibur.ValuesList()
+        self['known'] = excalibur.ValuesList()
+        self['table'] = excalibur.ValuesList()
+        return
+
+    def name(self):
+        return 'parameters'
+
+    def view(self, visitor:dawgie.Visitor)->None:
+        visitor.add_declaration ('Last deltas', tag='h4')
+
+        if self['changes']:
+            visitor.add_declaration ('', list=True)
+            for c in self['changes']: visitor.add_declaration (c, tag='li')
+            visitor.add_declaration ('', list=False)
+        else: visitor.add_primitive ('No change since last run')
+
+        params = set()
+        for te in self['table']: set.update (['_'.join(k.split ('_')[1:])
+                                              for k in te.keys()])
+        params = [p for p in sorted (params)]
+        row = -1
+        table = visitor.add_table(clabels=['target', 'planet'] + params, rows=1)
+        for trg,pp in zip (self['known'], self['table']):
+            planets = [p for p in sorted (set([k.split('_') for k in pp.keys]))]
+            for planet in planets:
+                row += 1
+                table.get_cell (row, 0).add_primitive (trg)
+                table.get_cell (row, 1).add_primitive (planet)
+                for i,param in enumerate (params):
+                    k = '_'.join ([planet, param])
+                    table.get_cell (row, i+2).add_primitive (str(pp[k])
+                                                             if k in pp else '-')
+                    pass
+                pass
+            pass
         return
     pass
 # ------------ -------------------------------------------------------
