@@ -249,8 +249,8 @@ class AlertSV(dawgie.StateVector):
         else: visitor.add_primitive ('No change since last run')
 
         params = set()
-        for te in self['table']: set.update (['_'.join(k.split ('_')[1:])
-                                              for k in te.keys()])
+        for te in self['table']: set.update (set (['_'.join(k.split ('_')[1:])
+                                                   for k in te.keys()]))
         params = [p for p in sorted (params)]
         row = -1
         table = visitor.add_table(clabels=['target', 'planet'] + params, rows=1)
