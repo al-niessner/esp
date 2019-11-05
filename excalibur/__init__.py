@@ -54,3 +54,28 @@ class ValueScalar(dawgie.Value):
     def features (self): return []
     def value(self): return self.__content
     pass
+
+class Visitor(dawgie.Visitor):
+    def add_declaration (self, text:str, **kwds)->None:
+        print ('declaration', text, kwds)
+        return
+
+    def add_image (self, alternate:str, label:str, img:bytes)->None:
+        print ('image', label, alternate, len(img))
+        return
+
+    def add_primitive (self, value, label:str=None)->None:
+        print ('primitive', label, value)
+        return
+
+    def add_table (self, clabels:[str], rows:int=0, title:str=None)->dawgie.TableVisitor:
+        print ('table', clabels, rows, title)
+        return VisitorTable()
+    pass
+
+class VisitorTable(dawgie.TableVisitor):
+    # pylint: disable=too-few-public-methods
+    def get_cell (self, r:int, c:int)->Visitor:
+        print ('table element', r, c)
+        return Visitor()
+    pass
