@@ -255,7 +255,7 @@ class AlertSV(dawgie.StateVector):
         row = -1
         table = visitor.add_table(clabels=['target', 'planet'] + params, rows=1)
         for trg,pp in zip (self['known'], self['table']):
-            planets = [p for p in sorted (set([k.split('_') for k in pp.keys]))]
+            planets = [p for p in sorted (set([k.split('_') for k in pp.keys()]))]
             for planet in planets:
                 row += 1
                 table.get_cell (row, 0).add_primitive (trg)
