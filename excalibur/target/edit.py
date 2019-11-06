@@ -112,14 +112,11 @@ Kepler-16 :
 Kepler-1625 :
 Kepler-51 :
 Kepler-9 :
-LHS 1140 :
 LHS 3844 :
 OGLE-TR-056 :
 OGLE-TR-10 :
 Qatar-1 :
 Qatar-2 :
-SWEEPS-11 :
-SWEEPS-4 :
 TrES-1 :
 TrES-2 :
 TrES-3 :
@@ -249,7 +246,6 @@ HD 189733 : HD189733
 HD 209458 : HD209458
 HD 219134 : HD219134
 HD 97658 : HD97658
-HR 8799 : HR8799
 K2-124 : K2124
 K2-132 : K2132
 K2-136 : K2136
@@ -298,14 +294,11 @@ Kepler-16 : KEPLER16
 Kepler-1625 : KEPLER1625
 Kepler-51 : KEPLER51
 Kepler-9 : KEPLER9
-LHS 1140 : LHS1140
 LHS 3844 : LHS3844
 OGLE-TR-056 : OGLETR056
 OGLE-TR-10 : OGLETR10
 Qatar-1 : QATAR1
 Qatar-2 : QATAR2
-SWEEPS-11 : SWEEPS11
-SWEEPS-4 : SWEEPS4
 TRAPPIST-1 : TRAPPIST1
 TrES-1 : TRES1
 TrES-2 : TRES2
@@ -809,11 +802,48 @@ overwrite[starID] =
             'inc_lowerr':-0.54,
             'inc_ref':'Bonomo et al. 2017',
             'omega':347,
-            'omega_lower':3,
+            'omega_lower':-3,
             'omega_upper':3,
             'ecc':0.29,
-            'ecc_lower':0.01,
+            'ecc_lower':-0.01,
             'ecc_upper':0.01,
+        }
+    }
+    overwrite['K2-136'] = {
+        'b':{
+            'mass':0.0105,
+            'mass_upper':0.0045,
+            'mass_lower':-0.0032,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass'
+        },
+        'c':{
+            'mass':0.0272,
+            'mass_upper':0.0116,
+            'mass_lower':-0.0081,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass'
+        },
+        'd':{
+            'mass':0.0130,
+            'mass_upper':0.0056,
+            'mass_lower':-0.0039,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass'
+        }
+    }
+    overwrite['LHS 3844'] = {
+        'FEH*':0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+        'FEH*_units':'[Fe/H]', 'FEH*_ref':"Kyle's best guess",
+        'b':{
+            'mass':0.0118,
+            'mass_upper':0.0051,
+            'mass_lower':-0.0036,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass',
+            'logg':3.323,
+            'logg_lowerr':-0.15, 'logg_uperr':0.16,
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
         }
     }
     return overwrite
