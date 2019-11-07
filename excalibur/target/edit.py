@@ -846,5 +846,42 @@ overwrite[starID] =
             'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
         }
     }
+    overwrite['K2-136'] = {
+        'b':{
+            'mass':0.0105,
+            'mass_upper':0.0045,
+            'mass_lower':-0.0032,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass'
+        },
+        'c':{
+            'mass':0.0272,
+            'mass_upper':0.0116,
+            'mass_lower':-0.0081,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass'
+        },
+        'd':{
+            'mass':0.0130,
+            'mass_upper':0.0056,
+            'mass_lower':-0.0039,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass'
+        }
+    }
+    overwrite['LHS 3844'] = {
+        'FEH*':0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+        'FEH*_units':'[Fe/H]', 'FEH*_ref':"Kyle's best guess",
+        'b':{
+            'mass':0.0118,
+            'mass_upper':0.0051,
+            'mass_lower':-0.0036,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass',
+            'logg':3.323,
+            'logg_lowerr':-0.15, 'logg_uperr':0.16,
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+        }
+    }
     return overwrite
 # ---------------------------- ---------------------------------------

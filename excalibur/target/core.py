@@ -116,6 +116,7 @@ def autofill(ident, thistarget, out,
         solved = True
         out['STATUS'].append(True)
         pass
+    solved = True  # target list autofill KP
     # AUTOFILL WITH NEXSCI EXOPLANET TABLE ---------------------------
     merged = False
     targetID.extend(ident['starID'][thistarget]['aliases'])
