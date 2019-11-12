@@ -63,7 +63,6 @@ HD 189733 :
 HD 209458 :
 HD 219134 :
 HD 97658 :
-HR 8799 :
 K2-124 :
 K2-132 :
 K2-136 :
@@ -745,9 +744,9 @@ overwrite[starID] =
              'period':228.776,
              'period_ref':'Doyle et al. 2011'}}
     overwrite['Kepler-1625'] = {
-        'b':{'logg':4.00,
-             'logg_uperr':0.4, 'logg_lowerr':-0.4,
-             'logg_ref':'Teachey et al. 2018', 'logg_units':'log10[cm.s-2]',
+        'b':{'logg':3.0132,
+             'logg_uperr':0.15, 'logg_lowerr':-0.15,
+             'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]',
              'sma':0.898,
              'sma_uperr':0.1,
              'sma_lowerr':-0.1,
@@ -802,34 +801,11 @@ overwrite[starID] =
             'inc_lowerr':-0.54,
             'inc_ref':'Bonomo et al. 2017',
             'omega':347,
-            'omega_lower':-3,
-            'omega_upper':3,
+            'omega_lowerr':-3,
+            'omega_upperr':3,
             'ecc':0.29,
-            'ecc_lower':-0.01,
-            'ecc_upper':0.01,
-        }
-    }
-    overwrite['K2-136'] = {
-        'b':{
-            'mass':0.0105,
-            'mass_upper':0.0045,
-            'mass_lower':-0.0032,
-            'mass_ref':'Pearson 2019',
-            'mass_units':'Jupiter mass'
-        },
-        'c':{
-            'mass':0.0272,
-            'mass_upper':0.0116,
-            'mass_lower':-0.0081,
-            'mass_ref':'Pearson 2019',
-            'mass_units':'Jupiter mass'
-        },
-        'd':{
-            'mass':0.0130,
-            'mass_upper':0.0056,
-            'mass_lower':-0.0039,
-            'mass_ref':'Pearson 2019',
-            'mass_units':'Jupiter mass'
+            'ecc_lowerr':-0.01,
+            'ecc_upperr':0.01,
         }
     }
     overwrite['LHS 3844'] = {
@@ -837,8 +813,8 @@ overwrite[starID] =
         'FEH*_units':'[Fe/H]', 'FEH*_ref':"Kyle's best guess",
         'b':{
             'mass':0.0118,
-            'mass_upper':0.0051,
-            'mass_lower':-0.0036,
+            'mass_upperr':0.0051,
+            'mass_lowerr':-0.0036,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
             'logg':3.323,
@@ -849,24 +825,45 @@ overwrite[starID] =
     overwrite['K2-136'] = {
         'b':{
             'mass':0.0105,
-            'mass_upper':0.0045,
-            'mass_lower':-0.0032,
+            'mass_upperr':0.0045,
+            'mass_lowerr':-0.0032,
             'mass_ref':'Pearson 2019',
-            'mass_units':'Jupiter mass'
+            'mass_units':'Jupiter mass',
+            'logg':3.513,
+            'logg_lowerr':-0.15, 'logg_uperr':0.15,
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
         },
         'c':{
             'mass':0.0272,
-            'mass_upper':0.0116,
-            'mass_lower':-0.0081,
+            'mass_upperr':0.0116,
+            'mass_lowerr':-0.0081,
             'mass_ref':'Pearson 2019',
-            'mass_units':'Jupiter mass'
+            'mass_units':'Jupiter mass',
+            'logg':2.9791,
+            'logg_lowerr':-0.15, 'logg_uperr':0.15,
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
         },
         'd':{
             'mass':0.0130,
-            'mass_upper':0.0056,
-            'mass_lower':-0.0039,
+            'mass_upperr':0.0056,
+            'mass_lowerr':-0.0039,
             'mass_ref':'Pearson 2019',
-            'mass_units':'Jupiter mass'
+            'mass_units':'Jupiter mass',
+            'logg':3.2749,
+            'logg_lowerr':-0.15, 'logg_uperr':0.15,
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+        }
+    }
+    overwrite['K2-25'] = {
+        'b':{
+            'mass':0.0335,
+            'mass_upperr':0.0143,
+            'mass_lowerr':-0.0100,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass',
+            'logg':2.948,
+            'logg_lowerr':-0.15, 'logg_uperr':0.15,
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
         }
     }
     overwrite['LHS 3844'] = {
@@ -874,13 +871,453 @@ overwrite[starID] =
         'FEH*_units':'[Fe/H]', 'FEH*_ref':"Kyle's best guess",
         'b':{
             'mass':0.0118,
-            'mass_upper':0.0051,
-            'mass_lower':-0.0036,
+            'mass_upperr':0.0051,
+            'mass_lowerr':-0.0036,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
             'logg':3.323,
             'logg_lowerr':-0.15, 'logg_uperr':0.16,
             'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+        }
+    }
+    overwrite['K2-124'] = {
+        'b':{
+            'mass':0.0259,
+            'mass_upperr':0.0110,
+            'mass_lowerr':-0.0077,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass',
+            'logg':2.9791,
+            'logg_lowerr':-0.15, 'logg_uperr':0.15,
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+        }
+    }
+    overwrite['K2-138'] = {
+        'b':{
+            'mass':0.0135,
+            'mass_upperr':0.0058,
+            'mass_lowerr':-0.0040,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass',
+            'logg':3.2305,
+            'logg_lowerr':-0.15, 'logg_uperr':0.15,
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+        },
+        'c':{
+            'mass':0.0213,
+            'mass_upperr':0.0091,
+            'mass_lowerr':-0.0064,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass',
+            'logg':3.0195,
+            'logg_lowerr':-0.15, 'logg_uperr':0.15,
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+        },
+        'd':{
+            'mass':0.0229,
+            'mass_upperr':0.0097,
+            'mass_lowerr':-0.0068,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass',
+            'logg':3.0025,
+            'logg_lowerr':-0.15, 'logg_uperr':0.15,
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+        },
+        'e':{
+            'mass':0.0313,
+            'mass_upperr':0.0133,
+            'mass_lowerr':-0.0093,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass',
+            'logg':2.9538,
+            'logg_lowerr':-0.15, 'logg_uperr':0.15,
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+        },
+        'f':{
+            'mass':0.0246,
+            'mass_upperr':0.0105,
+            'mass_lowerr':-0.0074,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass',
+            'logg':2.9871,
+            'logg_lowerr':-0.15, 'logg_uperr':0.15,
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+        }
+    }
+    overwrite['K2-167'] = {
+        'b':{
+            'mass':0.0246,
+            'mass_upperr':0.0105,
+            'mass_lowerr':-0.0074,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass',
+            'logg':2.9871,
+            'logg_lowerr':-0.15, 'logg_uperr':0.15,
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+        }
+    }
+    overwrite['K2-19'] = {
+        'b':{
+            'mass':0.2554,
+            'mass_upperr':0.109,
+            'mass_lowerr':-0.0764,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass',
+            'logg':3.1228,
+            'logg_lowerr':-0.15, 'logg_uperr':0.15,
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+        },
+        'c':{
+            'mass':0.0683,
+            'mass_upperr':0.0292,
+            'mass_lowerr':-0.0204,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass',
+            'logg':2.9542,
+            'logg_lowerr':-0.15, 'logg_uperr':0.15,
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+        },
+        'd':{
+            'mass':0.011,
+            'mass_upperr':0.0047,
+            'mass_lowerr':-0.0033,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass',
+            'logg':3.4207,
+            'logg_lowerr':-0.15, 'logg_uperr':0.15,
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+        }
+    }
+    overwrite['K2-21'] = {
+        'b':{
+            'mass':0.0153,
+            'mass_upperr':0.0065,
+            'mass_lowerr':-0.0046,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass',
+            'logg':3.1488,
+            'logg_lowerr':-0.15, 'logg_uperr':0.15,
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+        },
+        'c':{
+            'mass':0.0210,
+            'mass_upperr':0.0089,
+            'mass_lowerr':-0.0063,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass',
+            'logg':3.0235,
+            'logg_lowerr':-0.15, 'logg_uperr':0.15,
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+        }
+    }
+    overwrite['K2-212'] = {
+        'b':{
+            'mass':0.0213,
+            'mass_upperr':0.0091,
+            'mass_lowerr':-0.0064,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass',
+            'logg':3.0195,
+            'logg_lowerr':-0.15, 'logg_uperr':0.15,
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+        }
+    }
+    overwrite['K2-26'] = {
+        'b':{
+            'mass':0.0230,
+            'mass_upperr':0.0098,
+            'mass_lowerr':-0.0069,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass',
+            'logg':3.0014,
+            'logg_lowerr':-0.15, 'logg_uperr':0.15,
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+        }
+    }
+    overwrite['K2-28'] = {
+        'b':{
+            'mass':0.0193,
+            'mass_upperr':0.0082,
+            'mass_lowerr':-0.0058,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass',
+            'logg':3.0487,
+            'logg_lowerr':-0.15, 'logg_uperr':0.15,
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+        }
+    }
+    overwrite['K2-289'] = {
+        'b':{
+            'mass':0.4283,
+            'mass_upperr':0.1824,
+            'mass_lowerr':-0.1279,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass',
+            'logg':3.2067,
+            'logg_lowerr':-0.15, 'logg_uperr':0.15,
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+        }
+    }
+    overwrite['K2-3'] = {
+        'b':{
+            'mass':0.0181,
+            'mass_upperr':0.0077,
+            'mass_lowerr':-0.0054,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass',
+            'logg':3.0730,
+            'logg_lowerr':-0.15, 'logg_uperr':0.15,
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+        },
+        'c':{
+            'mass':0.0154,
+            'mass_upperr':0.0066,
+            'mass_lowerr':-0.0046,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass',
+            'logg':3.1462,
+            'logg_lowerr':-0.15, 'logg_uperr':0.15,
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+        },
+        'd':{
+            'mass':0.0154,
+            'mass_upperr':0.0066,
+            'mass_lowerr':-0.0046,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass',
+            'logg':3.1462,
+            'logg_lowerr':-0.15, 'logg_uperr':0.15,
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+        },
+    }
+    overwrite['K2-32'] = {
+        'b':{
+            'mass':0.0717,
+            'mass_upperr':0.0306,
+            'mass_lowerr':-0.0215,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass',
+            'logg':2.9578,
+            'logg_lowerr':-0.15, 'logg_uperr':0.15,
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+        },
+        'c':{
+            'mass':0.0238,
+            'mass_upperr':0.0101,
+            'mass_lowerr':-0.0071,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass',
+            'logg':2.9940,
+            'logg_lowerr':-0.15, 'logg_uperr':0.15,
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+        },
+        'd':{
+            'mass':0.0310,
+            'mass_upperr':0.0132,
+            'mass_lowerr':-0.0092,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass',
+            'logg':2.9548,
+            'logg_lowerr':-0.15, 'logg_uperr':0.15,
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+        },
+    }
+    overwrite['K2-33'] = {
+        'FEH*':0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+        'FEH*_units':'[Fe/H]', 'FEH*_ref':"Kyle's best guess"}
+    overwrite['K2-52'] = {
+        'b':{
+            'mass':1.0821,
+            'mass_upperr':0.4619,
+            'mass_lowerr':-0.3237,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass',
+            'logg':3.0168,
+            'logg_lowerr':-0.15, 'logg_uperr':0.15,
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+        }
+    }
+    overwrite['K2-52'] = {
+        'b':{
+            'mass':0.0222,
+            'mass_upperr':0.0094,
+            'mass_lowerr':-0.0066,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass',
+            'logg':3.0095,
+            'logg_lowerr':-0.15, 'logg_uperr':0.15,
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+        }
+    }
+    overwrite['K2-55'] = {
+        'FEH*':0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+        'FEH*_units':'[Fe/H]', 'FEH*_ref':"Kyle's best guess",
+        'b':{
+            'mass':0.0539,
+            'mass_upperr':0.0230,
+            'mass_lowerr':-0.0161,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass',
+            'logg':2.9414,
+            'logg_lowerr':-0.15, 'logg_uperr':0.15,
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+        }
+    }
+    overwrite['K2-58'] = {
+        'b':{
+            'mass':0.0221,
+            'mass_upperr':0.0094,
+            'mass_lowerr':-0.0066,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass',
+            'logg':3.0107,
+            'logg_lowerr':-0.15, 'logg_uperr':0.15,
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+        },
+        'c':{
+            'mass':0.0138,
+            'mass_upperr':0.0059,
+            'mass_lowerr':-0.0041,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass',
+            'logg':3.2137,
+            'logg_lowerr':-0.15, 'logg_uperr':0.15,
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+        },
+        'd':{
+            'mass':0.0144,
+            'mass_upperr':0.0061,
+            'mass_lowerr':-0.0043,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass',
+            'logg':3.1854,
+            'logg_lowerr':-0.1540, 'logg_uperr':0.15,
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+        }
+    }
+    overwrite['K2-79'] = {
+        'b':{
+            'mass':0.0382,
+            'mass_upperr':0.0163,
+            'mass_lowerr':-0.0114,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass',
+            'logg':2.9409,
+            'logg_lowerr':-0.1541, 'logg_uperr':0.1541,
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+        }
+    }
+    overwrite['K2-87'] = {
+        'b':{
+            'mass':0.2410,
+            'mass_upperr':0.1029,
+            'mass_lowerr':-0.0721,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass',
+            'logg':3.1135,
+            'logg_lowerr':-0.1544, 'logg_uperr':0.1544,
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+        }
+    }
+    overwrite['K2-9'] = {
+        'b':{
+            'mass':0.0187,
+            'mass_upperr':0.008,
+            'mass_lowerr':-0.0056,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass',
+            'logg':3.0604,
+            'logg_lowerr':-0.1540, 'logg_uperr':0.1540,
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+        }
+    }
+    overwrite['K2-90'] = {
+        'b':{
+            'mass':0.0222,
+            'mass_upperr':0.0094,
+            'mass_lowerr':-0.0066,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass',
+            'logg':3.0095,
+            'logg_lowerr':-0.1539, 'logg_uperr':0.1539,
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+        },
+        'c':{
+            'mass':0.0119,
+            'mass_upperr':0.0051,
+            'mass_lowerr':-0.0036,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass',
+            'logg':3.3391,
+            'logg_lowerr':-0.1548, 'logg_uperr':0.1548,
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+        }
+    }
+    overwrite['K2-93'] = {
+        'b':{
+            'mass':0.0258,
+            'mass_upperr':0.0110,
+            'mass_lowerr':-0.0077,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass',
+            'logg':2.9791,
+            'logg_lowerr':-0.1539, 'logg_uperr':0.1539,
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+        }
+    }
+    overwrite['K2-95'] = {
+        'b':{
+            'mass':0.0420,
+            'mass_upperr':0.0179,
+            'mass_lowerr':-0.0125,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass',
+            'logg':2.9385,
+            'logg_lowerr':-0.1541, 'logg_uperr':0.1541,
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+        }
+    }
+    overwrite['K2-96'] = {
+        'b':{
+            'mass':0.0143,
+            'mass_upperr':0.0061,
+            'mass_lowerr':-0.0043,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass',
+            'logg':3.1884,
+            'logg_lowerr':-0.1543, 'logg_uperr':0.1543,
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+        },
+        'c':{
+            'mass':0.0252,
+            'mass_upperr':0.0107,
+            'mass_lowerr':-0.0075,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass',
+            'logg':2.9825,
+            'logg_lowerr':-0.1539, 'logg_uperr':0.1539,
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+        }
+    }
+    overwrite['K2-97'] = {
+        'b':{
+            'mass':0.6808,
+            'mass_upperr':0.2892,
+            'mass_lowerr':-0.2030,
+            'mass_ref':'Pearson 2019',
+            'mass_units':'Jupiter mass',
+            'logg':3.2746,
+            'logg_lowerr':-0.1538, 'logg_uperr':0.1538,
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+        }
+    }
+    overwrite['Kepler-9'] = {
+        'b':{
+            'mass':0.137,
+            'mass_upperr':0.008,
+            'mass_lowerr':-0.01,
+            'mass_ref':'Hadden & Lithwick et al. 2017',
+            'mass_units':'Jupiter mass',
         }
     }
     return overwrite
