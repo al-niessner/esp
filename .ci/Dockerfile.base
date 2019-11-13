@@ -31,5 +31,5 @@ RUN set -ex && \
    rm -rf ${HOME}/.cache && \
    mkdir /.theano && chmod 777 /.theano && \
    mkdir -p /proj/data/ldtk && chmod 777 /proj/data/ldtk && \
-   curl -o /bin/dcp.py https://raw.githubusercontent.com/al-niessner/DCP/master/dcp.py &&
+   curl -o /bin/dcp.py https://raw.githubusercontent.com/al-niessner/DCP/master/dcp.py && \
    chmod 755 /bin/dcp.py
