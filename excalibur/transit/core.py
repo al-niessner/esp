@@ -2146,15 +2146,12 @@ def norm_spitzer(cal, tme, fin, out, selftype, debug=False):
         # reformat some data
         flux = np.array(cal['data']['PHOT']).reshape(-1,5)[:,bi]
         noisep = np.array(cal['data']['NOISEPIXEL']).reshape(-1,5)[:,bi]
-        pflux = np.array(cal['data']['G_PSF'])
         visits = tme['data'][p]['visits']  # really more like planetary orbits
 
         # remove nans and zeros
-        mask = np.isnan(flux) | np.isnan(pflux) | (flux == 0)
+        mask = np.isnan(flux) | (flux <= 0)
         keys = [
             'TIME','WX','WY',
-            'G_PSF_ERR', 'G_PSF', 'G_XCENT', 'G_YCENT',
-            'G_SIGMAX', 'G_SIGMAY', 'G_ROT', 'G_MODEL',
         ]
         for k in keys:
             out['data'][p][k] = np.array(cal['data'][k])[~mask]
@@ -2177,11 +2174,20 @@ def norm_spitzer(cal, tme, fin, out, selftype, debug=False):
             res = out['data'][p]['PHOT'][omask] - medf
             photmask = np.abs(res) > 3*np.std(res)
 
-            # medf = median_filter(out['data'][p]['G_PSF'][omask], int(15/dt)*2+1 )
-            # res = out['data'][p]['G_PSF'][omask] - medf
-            # psfmask = np.abs(res) > 3*np.std(res)
+            # 3 sigma clip centroid and noise pixel values
+            medf = median_filter(out['data'][p]['WX'][omask], int(15/dt)*2+1)
+            res = out['data'][p]['WX'][omask] - medf
+            xmask = np.abs(res) > 3*np.std(res)
 
-            badmask[omask] = photmask  # | psfmask
+            medf = median_filter(out['data'][p]['WY'][omask], int(15/dt)*2+1)
+            res = out['data'][p]['WY'][omask] - medf
+            ymask = np.abs(res) > 3*np.std(res)
+
+            medf = median_filter(out['data'][p]['NOISEPIXEL'][omask], int(15/dt)*2+1)
+            res = out['data'][p]['NOISEPIXEL'][omask] - medf
+            nmask = np.abs(res) > 3*np.std(res)
+
+            badmask[omask] = photmask | xmask | ymask | nmask
 
         for k in out['data'][p].keys():
             out['data'][p][k] = out['data'][p][k][~badmask]
@@ -2336,8 +2342,6 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
             subt = time[pmask]
             aper = nrm['data'][p]['PHOT'][emask][pmask]
             aper_err = np.sqrt(aper)
-            # gpsf = nrm['data'][p]['G_PSF'][emask][pmask]
-            # gpsf_err = np.sqrt(gpsf)
 
             if '36' in fltr:
                 lin,quad = get_ld(priors,'Spit36')

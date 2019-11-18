@@ -2715,7 +2715,6 @@ def spitzercal(clc, out):
         fullloc = os.path.join(dbs, loc)
         with pyfits.open(fullloc) as hdulist:
             alltime = []
-            allexp = []
             allexplen = []
             allloc = []
             allframes = []
@@ -2725,12 +2724,6 @@ def spitzercal(clc, out):
             allwx = []; allwy = []  # flux weighted centroids
             allphot = []            # aperture flux
             allnp = []              # noise pixel
-            # Gaussian PSF
-            allpsf_g = []; allpsferr_g = []     # psf flux
-            allxc_g = []; allyc_g = []          # psf centroids
-            allsigmax_g = []; allsigmay_g = []  # psf stdevs
-            allrot_g = []; allbg_g = []
-            allmodel_g = []                    # flux of model at data resolution
 
             for fits in hdulist:
                 if (fits.size != 0) and (fits.header.get('exptype')=='sci'):
@@ -2772,7 +2765,6 @@ def spitzercal(clc, out):
                         # save template ??
 
                         alltime.append(start+dt*i)
-                        allexp.append(dcube[i].copy())
                         allexplen.append(dt*24*60)  # exposure time [s]
                         allloc.append(loc)
                         allframes.append(i)
@@ -2789,7 +2781,7 @@ def spitzercal(clc, out):
                     # replace bad pixels
                     for i in range(nimgs):
                         labels, nlabel = label(mask[i])
-                        for j in range(1,nlabel):
+                        for j in range(1,nlabel+1):
                             mmask = labels==j  # mini mask
                             smask = binary_dilation(mmask)  # dilated mask
                             bmask = np.logical_xor(smask,mmask)  # bounding pixels
@@ -2797,17 +2789,17 @@ def spitzercal(clc, out):
                             pass
                         fail = False
                         try:
+                            # quickly estimate brightest pixel on detector
+                            # lets hope there are no cosmic rays
+                            yc, xc = np.unravel_index(np.argmax(dcube[i],axis=None), dcube[i].shape)
 
                             # estimate priors
-                            xv,yv = mesh_box([15,15],5)
+                            xv,yv = mesh_box([xc,yc],5)
                             wx = np.sum(np.unique(xv)*dcube[i][yv,xv].sum(0))/np.sum(dcube[i][yv,xv].sum(0))
                             wy = np.sum(np.unique(yv)*dcube[i][yv,xv].sum(1))/np.sum(dcube[i][yv,xv].sum(1))
 
-                            # psf phot was removed... clean up code
-                            pars_g = [0,0, 0,0,0,0,0]  # doing this to speed up extractions
-                        except ValueError:  # todo find the correct exception
+                        except (ValueError, IndexError):  # todo find the correct exception
                             fail = True
-                            pars_g = [0,0, 0,0,0,0,0]  # x, y, amp, sigx, sigy, rot, bg
 
                         try:
                             area2, bg2, np2 = phot(dcube[i], wx, wy, r=2, dr=8)
@@ -2815,10 +2807,11 @@ def spitzercal(clc, out):
                             area3, bg3, np3 = phot(dcube[i], wx, wy, r=3, dr=8)
                             area35, bg35, np35 = phot(dcube[i], wx, wy, r=3.5, dr=8)
                             area4, bg4, np4 = phot(dcube[i], wx, wy, r=4, dr=8)
-                        except ValueError:
+                        except (ValueError, IndexError):
                             fail = True
                             area2, area25, area3, area35, area4 = 0,0,0,0,0
                             bg2, bg25, bg3, bg35, bg4 = 0,0,0,0,0
+                            np2, np25, np3, np35, np4 = 0,0,0,0,0
 
                         # aperture photometry
                         allwx.append(wx)
@@ -2827,27 +2820,11 @@ def spitzercal(clc, out):
                         allphot.append([area2, area25, area3, area35, area4])
                         allnp.append([np2, np25, np3, np35, np4])
 
-                        # Gaussian PSF photometry
-                        allpsf_g.append(2*np.pi*pars_g[2]*pars_g[3]*pars_g[4])
-                        allsigmax_g.append(pars_g[3])
-                        allsigmay_g.append(pars_g[4])
-                        allxc_g.append(pars_g[0])
-                        allyc_g.append(pars_g[1])
-                        allrot_g.append(pars_g[5])
-                        allbg_g.append(pars_g[6])
-                        # error on gaussian psf fit
-                        model = psf(pars_g, gaussian_psf).eval(xv,yv)
-                        residual = dcube[i][yv,xv] - model
-                        error = np.sum(np.abs(residual))
-                        allpsferr_g.append(error)
-                        allmodel_g.append(np.sum(model-pars_g[6]))
-
                         allfail.append(fail)
                         pass
 
             data['TIME'].extend(alltime)       # MJD of observation
             data['EXPLEN'].extend(allexplen)   # exposure time
-            data['EXP'].extend(allexp)         # raw flux
             data['LOC'].extend(allloc)        # file path on disk
             data['FRAME'].extend(allframes)   # frame number in data cube
 
@@ -2856,16 +2833,6 @@ def spitzercal(clc, out):
             data['BG'].extend(allbg)          # background value
             data['WX'].extend(allwx)          # flux weighted centroid
             data['WY'].extend(allwy)          #
-
-            # in future remove below
-            data['G_XCENT'].extend(allxc_g)        # centroid position-x
-            data['G_YCENT'].extend(allyc_g)        # centroid position-y
-            data['G_SIGMAX'].extend(allsigmax_g)   # standard dev of centroid
-            data['G_SIGMAY'].extend(allsigmay_g)   # standard dev of centroid
-            data['G_PSF'].extend(allpsf_g)         # PSF photometry
-            data['G_ROT'].extend(allrot_g)         # PSF rotation
-            data['G_PSF_ERR'].extend(allpsferr_g)  # sum( |residuals| )
-            data['G_MODEL'].extend(allmodel_g)     # Sum of Gaussian model at data resolution
 
             data['FAIL'].extend(allfail)      # fail flag - usually can't fit centroid or do aperture phot
             c+=1
