@@ -2425,7 +2425,7 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
 
                     lcmode = transit(time=time, values=tpars)
                     f1 = lcmode - 1
-                    model = fpfs*(2*f1 + tpars['rprs']**2)+1
+                    model = fpfs*(2*f1 + tpars['rp']**2)+1
                     detrended = flux/model
                     # gw, nearest = gaussian_weights( np.array([wx,wy]).T, w=np.array([w1,w2]) )
                     wf = weightedflux(detrended, gw, nearest)
@@ -2439,7 +2439,7 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                 with pm.Model():
                     if selftype == "transit":
                         priors = [
-                            pm.Uniform('rprs', lower=0.5*tpars['rprs'],  upper=1.5*tpars['rprs']),
+                            pm.Uniform('rprs', lower=0.5*tpars['rp'],  upper=1.5*tpars['rp']),
                             pm.Uniform('tmid', lower=max(np.min(time), np.median(time)-tdur*0.5), upper=min(np.max(time), np.median(time)+tdur*0.5)),
                             # pm.Uniform('inc', lower=inc_lim, upper=90),
                             pm.Uniform('norm', lower=0.9,  upper=1.1)
