@@ -196,8 +196,6 @@ def timing(force, ext, clc, out, verbose=False):
                 visto = np.floor(sphase)
 
                 for e in epochs:
-                    # print('in epoch timing, check times are sequential')
-                    # import pdb; pdb.set_trace()
 
                     vmask = visto == e
                     tmask = ((sphase[vmask]-e) > (0.25-2*pdur)) & ((sphase[vmask]-e) < (0.25+2*pdur))
