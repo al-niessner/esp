@@ -2308,7 +2308,6 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
         for event in nrm['data'][p][selftype]:
             print('processing event:',event)
             emask = visits == event
-            out['data'][p].append({})
 
             # get data
             time = nrm['data'][p]['TIME'][emask]
@@ -2382,10 +2381,10 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                 tpars['inc'] = priors[p]['inc']
 
             # perform a quick sigma clip
-            dt = np.nanmean(np.diff(subt))*24*60  # minutes
-            medf = median_filter(aper, int(15/dt)*2+1)  # needs to be odd
-            res = aper - medf
-            photmask = np.abs(res) < 3*np.std(res)
+            # dt = np.nanmean(np.diff(subt))*24*60  # minutes
+            # medf = median_filter(aper, int(15/dt)*2+1)  # needs to be odd
+            # res = aper - medf
+            photmask = np.ones(subt.shape).astype(bool)  # np.abs(res) < 3*np.std(res)
 
             # resize aperture data
             ta = subt[photmask]
@@ -2488,6 +2487,7 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
             gw, nearest = gaussian_weights(np.array([wxa,wya]).T)
             wf = weightedflux(detrended, gw, nearest)
 
+            out['data'][p].append({})
             out['data'][p][ec]['aper_time'] = ta
             out['data'][p][ec]['aper_flux'] = aper
             out['data'][p][ec]['aper_err'] = aper_err

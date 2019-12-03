@@ -210,8 +210,7 @@ def timing(force, ext, clc, out, verbose=False):
                         out['data'][p]['phasecurve'].append(e)
 
                 out['STATUS'].append(True)
-                vis[ordt] = visto.astype(int)
-                out['data'][p]['visits'] = vis  # better named orbits
+                out['data'][p]['visits'] = visto.astype(int)  # should maintain same order as time
                 pass
             else:  # HST
                 smaors = priors[p]['sma']/priors['R*']/ssc['Rsun/AU']
@@ -2695,7 +2694,6 @@ def spitzercal(clc, out):
     '''
     K. PEARSON: SPITZER data extraction
     '''
-
     calibrated = False
     dbs = os.path.join(dawgie.context.data_dbs, 'mast')
 
@@ -2703,9 +2701,6 @@ def spitzercal(clc, out):
         'LOC':[], 'EXPLEN':[], 'EXP':[], 'EXPC':[], 'TIME':[],
         'FRAME':[], 'NOISEPIXEL': [], 'FAIL':[],
         'PHOT':[], 'WX':[], 'WY':[], 'BG': [],  # Aperture photometry
-
-        'G_PSF_ERR':[], 'G_PSF':[], 'G_XCENT':[], 'G_YCENT':[],
-        'G_SIGMAX':[], 'G_SIGMAY':[], 'G_ROT':[], 'G_MODEL':[],  # Gaussian PSF
     }
     c = 0
     # LOAD DATA --------------------------------------------------------------------------

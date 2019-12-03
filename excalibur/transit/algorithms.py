@@ -110,32 +110,33 @@ class whitelight(dawgie.Algorithm):
         fin = self.__fin.sv_as_dict()['parameters']
         vfin, sfin = trncore.checksv(fin)
         # MERGE PROTOTYPE
-        allnormdata = []
-        allext = []
-        hstfltrs = ['HST-WFC3-IR-G141-SCAN','HST-WFC3-IR-G102-SCAN','HST-STIS-CCD-G750L-STARE','HST-STIS-CCD-G430L-STARE']
-        for ext in hstfltrs:
-            update = False
-            nrm = self._nrm.sv_as_dict()[ext]
-            vnrm, snrm = trncore.checksv(nrm)
-            if vnrm and vfin:
-                log.warning('--< %s MERGING: %s >--', self._type.upper(), ext)
-                allnormdata.append(nrm)
-                allext.append(ext)
-                update = True
+        if self._type == "transit":
+            allnormdata = []
+            allext = []
+            hstfltrs = ['HST-WFC3-IR-G141-SCAN','HST-WFC3-IR-G102-SCAN','HST-STIS-CCD-G750L-STARE','HST-STIS-CCD-G430L-STARE']
+            for ext in hstfltrs:
+                update = False
+                nrm = self._nrm.sv_as_dict()[ext]
+                vnrm, snrm = trncore.checksv(nrm)
+                if vnrm and vfin:
+                    log.warning('--< %s MERGING: %s >--', self._type.upper(), ext)
+                    allnormdata.append(nrm)
+                    allext.append(ext)
+                    update = True
+                    pass
+                else:
+                    errstr = [m for m in [snrm, sfin] if m is not None]
+                    self._failure(errstr[0])
+                    pass
                 pass
-            else:
-                errstr = [m for m in [snrm, sfin] if m is not None]
-                self._failure(errstr[0])
+            if allnormdata:
+                try:
+                    update = self._hstwhitelight(allnormdata, fin, self.__out[-1], allext)
+                    if update: svupdate.append(self.__out[-1])
+                except TypeError:
+                    log.warning('>-- HST orbit solution failed %s', self._type.upper())
+                    pass
                 pass
-            pass
-        if allnormdata:
-            try:
-                update = self._hstwhitelight(allnormdata, fin, self.__out[-1], allext)
-                if update: svupdate.append(self.__out[-1])
-            except TypeError:
-                log.warning('>-- HST orbit solution failed %s', self._type.upper())
-                pass
-            pass
         # FILTER LOOP
         for ext in fltrs:
             update = False
