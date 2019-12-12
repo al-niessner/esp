@@ -2243,8 +2243,8 @@ def time_bin(time, flux, dt=1./(60*24)):
     btime = np.zeros(bins)
     for i in range(bins):
         mask = (time >= (min(time)+i*dt)) & (time < (min(time)+(i+1)*dt))
-        bflux[i] = np.mean(flux[mask])
-        btime[i] = np.mean(time[mask])
+        bflux[i] = np.nanmean(flux[mask])
+        btime[i] = np.nanmean(time[mask])
     return btime, bflux
 
 def weightedflux(flux,gw,nearest):
@@ -2258,7 +2258,7 @@ def gaussian_weights(X, w=None, neighbors=100, feature_scale=1000):
         K. Pearson: Gaussian weights of nearest neighbors
     '''
     if isinstance(w, type(None)): w = np.ones(X.shape[1])
-    Xm = (X - np.median(X,0))/w
+    Xm = (X - np.median(X,0))*w  # multiply or divide?
     kdtree = spatial.cKDTree(Xm*feature_scale)
     nearest = np.zeros((X.shape[0],neighbors))
     gw = np.zeros((X.shape[0],neighbors),dtype=float)
@@ -2323,7 +2323,7 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
             # https://arxiv.org/pdf/1001.2010.pdf eq 16
             tdur = priors[p]['period']/(2*np.pi)/smaors
             rprs = (priors[p]['rp']*7.1492e7) / (priors['R*']*6.955e8)
-            # inc_lim = 90 - np.rad2deg(np.arctan((priors[p]['rp'] * ssc['Rjup/Rsun'] + priors['R*']) / (priors[p]['sma']/ssc['Rsun/AU'])))
+            inc_lim = 90 - np.rad2deg(np.arctan((priors[p]['rp'] * ssc['Rjup/Rsun'] + priors['R*']) / (priors[p]['sma']/ssc['Rsun/AU'])))
             w = priors[p].get('omega',0)
 
             # mask out data by event type
@@ -2342,10 +2342,13 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
             aper = nrm['data'][p]['PHOT'][emask][pmask]
             aper_err = np.sqrt(aper)
 
-            if '36' in fltr:
-                lin,quad = get_ld(priors,'Spit36')
-            elif '45' in fltr:
-                lin,quad = get_ld(priors,'Spit45')
+            try:
+                if '36' in fltr:
+                    lin,quad = get_ld(priors,'Spit36')
+                elif '45' in fltr:
+                    lin,quad = get_ld(priors,'Spit45')
+            except ValueError:
+                lin,quad = 0,0
 
             # can't solve for wavelengths greater than below
             # whiteld = createldgrid([2.5],[2.6], priors, segmentation=int(10), verbose=verbose)
@@ -2366,7 +2369,7 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
             tpars = {
                 'rp': rprs,
                 'tm':np.median(subt),
-
+                'inc':priors[p]['inc'],
                 'ar':smaors,
                 'per':priors[p]['period'],
                 'u1':lin, 'u2': quad,
@@ -2380,13 +2383,8 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
             except KeyError:
                 tpars['inc'] = priors[p]['inc']
 
-            # perform a quick sigma clip
-            # dt = np.nanmean(np.diff(subt))*24*60  # minutes
-            # medf = median_filter(aper, int(15/dt)*2+1)  # needs to be odd
-            # res = aper - medf
-            photmask = np.ones(subt.shape).astype(bool)  # np.abs(res) < 3*np.std(res)
-
             # resize aperture data
+            photmask = np.ones(subt.shape).astype(bool)  # np.abs(res) < 3*np.std(res)
             ta = subt[photmask]
             aper = aper[photmask]
             aper_err = aper_err[photmask]
@@ -2394,41 +2392,40 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
             wya = nrm['data'][p]['WY'][emask][pmask][photmask]
             npp = nrm['data'][p]['NOISEPIXEL'][emask][pmask][photmask]
 
-            def fit_data(time,flux,fluxerr, syspars, tpars, tdur):
-
-                gw, nearest = gaussian_weights(
-                    np.array(syspars).T,
-                    # w=np.array([1,1])
-                )
-
+            def fit_data(time,flux,fluxerr, syspars, tpars, inc_lim):
+                gw, nearest = gaussian_weights(np.array(syspars).T)
                 gw[np.isnan(gw)] = 0.01
 
-                @tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar],otypes=[tt.dvector])
+                @tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar],otypes=[tt.dvector])
                 def transit2min(*pars):
-                    rprs, tmid, nor = pars
+                    # rprs, tmid, m, b, w1, w2, w3, nn = pars
+                    rprs, tmid, inc, m, b = pars
                     tpars['rp'] = float(rprs)
                     tpars['tm'] = float(tmid)
-                    # tpars['inc']= float(inc)
+                    tpars['inc'] = float(inc)
                     lcmode = transit(time=time, values=tpars)
                     detrended = flux/lcmode
-                    # gw, nearest = gaussian_weights( np.array([wx,wy]).T, w=np.array([w1,w2]) )
+                    # gw, nearest = gaussian_weights(np.array(syspars).T, w=np.array([w1,w2,w3]), neighbors=int(nn))
+                    # gw[np.isnan(gw)] = 1./nn
                     wf = weightedflux(detrended, gw, nearest)
-                    return lcmode*wf*float(nor)
+                    stime = time - int(min(time))
+                    return lcmode*wf*(m*stime + b)
 
-                @tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar],otypes=[tt.dvector])
+                @tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar],otypes=[tt.dvector])
                 def eclipse2min(*pars):
-                    tmid, fpfs, nor = pars
-                    # tpars['rp'] = float(rprs)
+                    # rprs, tmid, m, b, w1, w2, w3, nn = pars
+                    fpfs, tmid, m, b = pars
                     tpars['tm'] = float(tmid)
                     fpfs = float(fpfs)
-
                     lcmode = transit(time=time, values=tpars)
                     f1 = lcmode - 1
                     model = fpfs*(2*f1 + tpars['rp']**2)+1
                     detrended = flux/model
-                    # gw, nearest = gaussian_weights( np.array([wx,wy]).T, w=np.array([w1,w2]) )
+                    # gw, nearest = gaussian_weights(np.array(syspars).T, w=np.array([w1,w2,w3]), neighbors=int(nn))
+                    # gw[np.isnan(gw)] = 1./nn
                     wf = weightedflux(detrended, gw, nearest)
-                    return model*wf*float(nor)
+                    stime = time - int(min(time))
+                    return model*wf*(m*stime + b)
 
                 fcn2min = {
                     'transit':transit2min,
@@ -2438,22 +2435,26 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                 with pm.Model():
                     if selftype == "transit":
                         priors = [
-                            pm.Uniform('rprs', lower=0.5*tpars['rp'],  upper=1.5*tpars['rp']),
-                            pm.Uniform('tmid', lower=max(np.min(time), np.median(time)-tdur*0.5), upper=min(np.max(time), np.median(time)+tdur*0.5)),
-                            # pm.Uniform('inc', lower=inc_lim, upper=90),
-                            pm.Uniform('norm', lower=0.9,  upper=1.1)
-                            # pm.Uniform('w1',   lower=0, upper=1), # weights for instrument model
-                            # pm.Uniform('w2',   lower=0, upper=1)
+                            pm.Uniform('rprs', lower=0,  upper=0.5),
+                            pm.Uniform('tmid', lower=np.min(time), upper=np.max(time)),
+                            pm.Uniform('inc', lower=inc_lim, upper=90),
+                            pm.Uniform('m',  lower=-2,  upper=2),
+                            pm.Uniform('b',  lower=-2,  upper=2),
+                            # pm.Uniform('w1', lower=0.01, upper=1),
+                            # pm.Uniform('w2', lower=0.01, upper=1),
+                            # pm.Uniform('w3', lower=0.01, upper=1),
+                            # pm.Uniform('NN', lower=10, upper=150)
                         ]
-                        pass
                     elif selftype == "eclipse":
                         priors = [
-                            # pm.Uniform('rprs', lower=0.99*rprs,  upper=1.01*rprs),
-                            pm.Uniform('tmid', lower=max(np.min(time), np.median(time)-tdur*0.5), upper=min(np.max(time), np.median(time)+tdur*0.5)),
-                            pm.Uniform('fpfs', lower=0, upper=0.3),
-                            pm.Uniform('norm', lower=0.9,  upper=1.1)
-                            # pm.Uniform('w1',   lower=0, upper=1), # weights for instrument model
-                            # pm.Uniform('w2',   lower=0, upper=1)
+                            pm.Uniform('fpfs', lower=0, upper=0.25),
+                            pm.Uniform('tmid', lower=np.min(time), upper=np.max(time)),
+                            pm.Uniform('m',  lower=-2,  upper=2),
+                            pm.Uniform('b',  lower=-2,  upper=2),
+                            # pm.Uniform('w1', lower=0.01, upper=1),
+                            # pm.Uniform('w2', lower=0.01, upper=1),
+                            # pm.Uniform('w3', lower=0.01, upper=1),
+                            # pm.Uniform('NN', lower=10, upper=150)
                         ]
 
                     pm.Normal('likelihood',
@@ -2463,29 +2464,34 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
 
                     trace = pm.sample(5000,
                                       pm.Metropolis(),
-                                      chains=4,
-                                      tune=500,
+                                      chains=5,
+                                      tune=1000,
                                       progressbar=False)
                 return trace
 
             pymc3log.propagate = False
-            trace_aper2d = fit_data(ta,aper,aper_err, [wxa,wya], tpars, tdur)
-            trace_aper3d= fit_data(ta,aper,aper_err, [wxa,wya, npp], tpars, tdur)
 
-            tpars['tm'] = np.median(trace_aper2d['tmid'])
-            tpars['a0'] = np.median(trace_aper2d['norm'])
+            trace_aper = fit_data(ta, aper, aper_err, [wxa, wya, npp], tpars, inc_lim)
+
+            tpars['tm'] = np.median(trace_aper['tmid'])
+            tpars['inc'] = np.median(trace_aper['inc'])
+            tpars['a0'] = np.median(trace_aper['b'])
+            tpars['a1'] = np.median(trace_aper['m'])
+
             if selftype == 'transit':
-                tpars['rp'] = np.median(trace_aper2d['rprs'])
-                # tpars['inc']= np.median(trace_aper2d['inc'])
+                tpars['rp'] = np.median(trace_aper['rprs'])
             lcmodel1 = transit(time=ta, values=tpars)
             if selftype == 'eclipse':
-                fpfs = np.median(trace_aper2d['fpfs'])
+                fpfs = np.median(trace_aper['fpfs'])
                 f1 = lcmodel1 - 1
                 lcmodel1 = fpfs*(2*f1 + tpars['rp']**2)+1
-
             detrended = aper/lcmodel1
-            gw, nearest = gaussian_weights(np.array([wxa,wya]).T)
+
+            gw, nearest = gaussian_weights(np.array([wxa,wya, npp]).T)
+            gw[np.isnan(gw)] = 0.01
             wf = weightedflux(detrended, gw, nearest)
+            stime = ta - int(min(ta))
+            linear = tpars['a1']*stime + tpars['a0']
 
             out['data'][p].append({})
             out['data'][p][ec]['aper_time'] = ta
@@ -2493,29 +2499,12 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
             out['data'][p][ec]['aper_err'] = aper_err
             out['data'][p][ec]['aper_xcent'] = wxa
             out['data'][p][ec]['aper_ycent'] = wya
-            out['data'][p][ec]['aper_trace'] = pm.trace_to_dataframe(trace_aper2d)
-            out['data'][p][ec]['aper_wf'] = wf
+            out['data'][p][ec]['aper_npp'] = npp
+            out['data'][p][ec]['aper_trace'] = pm.trace_to_dataframe(trace_aper)
+            out['data'][p][ec]['aper_wf'] = wf  # instrument model
             out['data'][p][ec]['aper_model'] = lcmodel1
             out['data'][p][ec]['aper_pars'] = copy.deepcopy(tpars)
-            out['data'][p][ec]['noise_pixel'] = npp
-
-            tpars['tm'] = np.median(trace_aper3d['tmid'])
-            tpars['a0'] = np.median(trace_aper3d['norm'])
-            if selftype == 'transit':
-                tpars['rp'] = np.median(trace_aper3d['rprs'])
-                # tpars['inc']= np.median(trace_aper3d['inc'])
-            lcmodel1 = transit(time=ta, values=tpars)
-            if selftype == 'eclipse':
-                fpfs = np.median(trace_aper3d['fpfs'])
-                f1 = lcmodel1 - 1
-                lcmodel1 = fpfs*(2*f1 + tpars['rp']**2)+1
-            detrended = aper/lcmodel1
-            gw, nearest = gaussian_weights(np.array([wxa,wya, npp]).T)
-            wf = weightedflux(detrended, gw, nearest)
-            out['data'][p][ec]['aper_wf_3d'] = wf
-            out['data'][p][ec]['aper_model_3d'] = lcmodel1
-            out['data'][p][ec]['aper_pars_3d'] = copy.deepcopy(tpars)
-            out['data'][p][ec]['aper_trace_3d'] = pm.trace_to_dataframe(trace_aper3d)
+            out['data'][p][ec]['aper_linear'] = linear
 
             ec += 1
             out['STATUS'].append(True)
@@ -2524,3 +2513,159 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
             pass
         pass
     return wl
+
+def spitzer_spectrum(wht, out, ext):
+    '''
+    K. PEARSON put data in same format as HST spectrum
+    '''
+
+    update = False
+    for p in wht['data'].keys():
+        out['data'][p] = {}
+        out['data'][p]['WB'] = []
+        out['data'][p]['ES'] = []
+        out['data'][p]['ESerr'] = []
+
+        for i in range(len(wht['data'][p])):
+            if '36' in ext:
+                out['data'][p]['WB'].append(3.6)
+            elif '45' in ext:
+                out['data'][p]['WB'].append(4.5)
+
+            out['data'][p]['ES'].append(np.median(wht['data'][p][i]['aper_trace']['rprs']))
+            out['data'][p]['ESerr'].append(np.std(wht['data'][p][i]['aper_trace']['rprs']))
+            update = True
+
+    return update
+
+def spitzer_pixel_map(sv, title, savedir):
+    '''
+    K. PEARSON plot of intrapixel sensitivity
+    '''
+    f,ax = plt.subplots(1,figsize=(8.5,7))
+    im = ax.scatter(
+        sv['aper_xcent'],
+        sv['aper_ycent'],
+        c=sv['aper_wf']/np.median(sv['aper_wf']),
+        marker='.',
+        vmin=0.99,
+        vmax=1.01,
+        alpha=0.5,
+        cmap='jet',
+    )
+    ax.set_xlim([
+        np.median(sv['aper_xcent'])-3*np.std(sv['aper_xcent']),
+        np.median(sv['aper_xcent'])+3*np.std(sv['aper_xcent'])
+    ])
+    ax.set_ylim([
+        np.median(sv['aper_ycent'])-3*np.std(sv['aper_ycent']),
+        np.median(sv['aper_ycent'])+3*np.std(sv['aper_ycent'])
+    ])
+
+    ax.set_title(title,fontsize=14)
+    ax.set_xlabel('X-Centroid [px]',fontsize=14)
+    ax.set_ylabel('Y-Centroid [px]',fontsize=14)
+    cbar = f.colorbar(im)
+    cbar.set_label('Relative Pixel Response',fontsize=14,rotation=270,labelpad=15)
+
+    plt.tight_layout()
+    if savedir:
+        plt.savefig(savedir+title+".png")
+        plt.close()
+    else:
+        return f
+
+
+def spitzer_lightcurve(sv, savedir=None, suptitle=''):
+    '''
+    K. PEARSON plot of light curve fit
+    '''
+    f,ax = plt.subplots(3,2,figsize=(12,12))
+    f.suptitle(suptitle,y=0.99)
+
+    # #################### FLUX ################
+    res = sv['aper_flux']/sv['aper_wf']-sv['aper_model']
+
+    ax[0,0].errorbar(
+        sv['aper_time'], sv['aper_flux']/np.median(sv['aper_flux']),
+        yerr=0,
+        marker='.', ls='none', color='black',alpha=0.5)
+    ax[0,0].set_xlim([min(sv['aper_time']), max(sv['aper_time'])])
+    ax[0,0].set_xlabel('Time [JD]')
+    ax[0,0].set_ylabel('Raw Relative Flux')
+    ax[0,0].set_ylim([
+        np.mean(sv['aper_flux']/np.median(sv['aper_flux']))-3*np.std(sv['aper_flux']/np.median(sv['aper_flux'])),
+        np.mean(sv['aper_flux']/np.median(sv['aper_flux']))+3*np.std(sv['aper_flux']/np.median(sv['aper_flux']))])
+
+    # ################# DETRENDED FLUX ##################
+    flux = sv['aper_flux']/sv['aper_wf']
+    ax[1,0].errorbar(
+        sv['aper_time'], sv['aper_flux']/sv['aper_wf'],
+        yerr=0,
+        marker='.', ls='none', color='black',alpha=0.15,
+    )
+    ax[1,0].plot(sv['aper_time'], sv['aper_model'],'r-',zorder=4)
+    bta,bfa = time_bin(sv['aper_time'], sv['aper_flux']/sv['aper_wf'])
+    ax[1,0].plot(bta, bfa, 'c.', zorder=3, alpha=0.75)
+    ax[1,0].set_xlim([min(sv['aper_time']), max(sv['aper_time'])])
+    ax[1,0].set_xlabel('Time [JD]')
+    ax[1,0].set_ylabel('Relative Flux')
+    ax[1,0].set_ylim([
+        np.mean(flux)-3*np.std(flux),
+        np.mean(flux)+3*np.std(flux)])
+
+    # ################ RESIDUALS ###############
+    ax[2,0].errorbar(
+        sv['aper_time'], res*1e6,
+        yerr=0,
+        marker='.', ls='none', color='black',alpha=0.15,
+    )
+    bta,bfa = time_bin(sv['aper_time'], res)
+    ax[2,0].plot(bta, bfa*1e6, 'co', zorder=3, alpha=0.75)
+    ax[2,0].set_xlim([min(sv['aper_time']), max(sv['aper_time'])])
+    ax[2,0].set_xlabel('Time [JD]')
+    ax[2,0].set_ylabel('Residuals [ppm]')
+    ax[2,0].set_ylim([
+        np.mean(res*1e6)-3*np.std(res*1e6),
+        np.mean(res*1e6)+3*np.std(res*1e6)])
+
+    # ######## # # # # CENTROID X # # # ########
+    ax[0,1].plot(
+        sv['aper_time'], sv['aper_xcent'],
+        marker='.', ls='none', color='black',alpha=0.5,
+    )
+    ax[0,1].set_xlim([min(sv['aper_time']), max(sv['aper_time'])])
+    ax[0,1].set_xlabel('Time [JD]')
+    ax[0,1].set_ylabel('X-Centroid [px]')
+    ax[0,1].set_ylim([
+        np.mean(sv['aper_xcent'])-3*np.std(sv['aper_xcent']),
+        np.mean(sv['aper_xcent'])+3*np.std(sv['aper_xcent'])])
+
+    ax[1,1].plot(
+        sv['aper_time'], sv['aper_ycent'],
+        marker='.', ls='none', color='black',alpha=0.5,
+    )
+    ax[1,1].set_xlim([min(sv['aper_time']), max(sv['aper_time'])])
+    ax[1,1].set_xlabel('Time [JD]')
+    ax[1,1].set_ylabel('Y-Centroid [px]')
+    ax[1,1].set_ylim([
+        np.mean(sv['aper_ycent'])-3*np.std(sv['aper_ycent']),
+        np.mean(sv['aper_ycent'])+3*np.std(sv['aper_ycent'])])
+
+    ax[2,1].plot(
+        sv['aper_time'], sv['aper_npp'],
+        marker='.', ls='none', color='black',alpha=0.5,
+    )
+    ax[2,1].set_xlim([min(sv['aper_time']), max(sv['aper_time'])])
+    ax[2,1].set_xlabel('Time [JD]')
+    ax[2,1].set_ylabel('Noise Pixel')
+    ax[2,1].set_ylim([
+        np.mean(sv['aper_npp'])-3*np.std(sv['aper_npp']),
+        np.mean(sv['aper_npp'])+3*np.std(sv['aper_npp'])])
+
+    plt.tight_layout(rect=[0, 0.03, 1, 0.98])
+    if savedir:
+        plt.savefig(savedir+suptitle+".png")
+        plt.close()
+    else:
+        return f

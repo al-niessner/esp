@@ -4,6 +4,7 @@ import io
 import dawgie
 
 import excalibur
+from excalibur.transit.core import spitzer_lightcurve
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -66,54 +67,61 @@ class WhiteLightSV(dawgie.StateVector):
 
     def view(self, visitor:dawgie.Visitor)->None:
         if self['STATUS'][-1]:
-            mergesv = bool(self.__name == 'HST')
-            for p in self['data'].keys():
-                visits = self['data'][p]['visits']
-                phase = self['data'][p]['phase']
-                allwhite = self['data'][p]['allwhite']
-                postim = self['data'][p]['postim']
-                postphase = self['data'][p]['postphase']
-                postlc = self['data'][p]['postlc']
-                postflatphase = self['data'][p]['postflatphase']
-                if mergesv: allfltrs = self['data'][p]['allfltrs']
-                myfig = plt.figure(figsize=(10, 6))
-                plt.title(p)
-                for index, v in enumerate(visits):
-                    plt.plot(phase[index], allwhite[index], 'k+')
+            if 'HST' in self.__name:
+                mergesv = bool(self.__name == 'HST')
+                for p in self['data'].keys():
+                    visits = self['data'][p]['visits']
+                    phase = self['data'][p]['phase']
+                    allwhite = self['data'][p]['allwhite']
+                    postim = self['data'][p]['postim']
+                    postphase = self['data'][p]['postphase']
+                    postlc = self['data'][p]['postlc']
+                    postflatphase = self['data'][p]['postflatphase']
+                    if mergesv: allfltrs = self['data'][p]['allfltrs']
+                    myfig = plt.figure(figsize=(10, 6))
+                    plt.title(p)
+                    for index, v in enumerate(visits):
+                        plt.plot(phase[index], allwhite[index], 'k+')
+                        if mergesv:
+                            vlabel = allfltrs[index]
+                            plt.plot(postphase[index], allwhite[index]/postim[index], 'o',
+                                     label=vlabel)
+                            pass
+                        else:
+                            plt.plot(postphase[index], allwhite[index]/postim[index], 'o',
+                                     label=str(v))
+                            pass
+                        pass
+                    if len(visits) > 14: ncol = 2
+                    else: ncol = 1
+                    plt.plot(postflatphase, postlc, '^', label='M')
+                    plt.xlabel('Orbital Phase')
+                    plt.ylabel('Normalized Post White Light Curve')
                     if mergesv:
-                        vlabel = allfltrs[index]
-                        plt.plot(postphase[index], allwhite[index]/postim[index], 'o',
-                                 label=vlabel)
+                        plt.legend(loc='best', ncol=ncol, mode='expand', numpoints=1,
+                                   borderaxespad=0., frameon=False)
+                        plt.tight_layout()
                         pass
                     else:
-                        plt.plot(postphase[index], allwhite[index]/postim[index], 'o',
-                                 label=str(v))
+                        plt.legend(bbox_to_anchor=(1 + 0.1*(ncol - 0.5), 0.5),
+                                   loc=5, ncol=ncol, mode='expand', numpoints=1,
+                                   borderaxespad=0., frameon=False)
+                        plt.tight_layout(rect=[0,0,(1 - 0.1*ncol),1])
                         pass
-                    pass
-                if len(visits) > 14: ncol = 2
-                else: ncol = 1
-                plt.plot(postflatphase, postlc, '^', label='M')
-                plt.xlabel('Orbital Phase')
-                plt.ylabel('Normalized Post White Light Curve')
-                if mergesv:
-                    plt.legend(loc='best', ncol=ncol, mode='expand', numpoints=1,
-                               borderaxespad=0., frameon=False)
-                    plt.tight_layout()
-                    pass
-                else:
-                    plt.legend(bbox_to_anchor=(1 + 0.1*(ncol - 0.5), 0.5),
-                               loc=5, ncol=ncol, mode='expand', numpoints=1,
-                               borderaxespad=0., frameon=False)
-                    plt.tight_layout(rect=[0,0,(1 - 0.1*ncol),1])
-                    pass
-                buf = io.BytesIO()
-                myfig.savefig(buf, format='png')
-                visitor.add_image('...', ' ', buf.getvalue())
-                plt.close(myfig)
-                pass
-            pass
-        pass
-    pass
+                    buf = io.BytesIO()
+                    myfig.savefig(buf, format='png')
+                    visitor.add_image('...', ' ', buf.getvalue())
+                    plt.close(myfig)
+            elif 'Spitzer' in self.__name:
+                # for each planet
+                for p in self['data'].keys():
+                    # for each event
+                    for i in range(len(self['data'][p])):
+                        fig = spitzer_lightcurve(self['data'][p][i])
+                        buf = io.BytesIO()
+                        fig.savefig(buf, format='png')
+                        visitor.add_image('...', ' ', buf.getvalue())
+                        plt.close(fig)
 
 class SpectrumSV(dawgie.StateVector):
     def __init__(self, name):

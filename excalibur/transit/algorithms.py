@@ -218,17 +218,19 @@ class spectrum(dawgie.Algorithm):
                 errstr = [m for m in [sfin, snrm, swht] if m is not None]
                 self._failure(errstr[0])
                 pass
+
             if update: svupdate.append(self.__out[index])
             pass
+
         self.__out = svupdate
         if self.__out: ds.update()
         return
 
     def _spectrum(self, fin, nrm, wht, out, ext):
         if "Spitzer" in ext:
-            return True
-
-        s = trncore.spectrum(fin, nrm, wht, out, ext, self._type, chainlen=int(1e4), verbose=False)
+            s = trncore.spitzer_spectrum(wht, out, ext)
+        else:
+            s = trncore.spectrum(fin, nrm, wht, out, ext, self._type, chainlen=int(1e4), verbose=False)
         return s
 
     def _failure(self, errstr):
