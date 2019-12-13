@@ -4,7 +4,7 @@ import io
 import dawgie
 
 import excalibur
-from excalibur.transit.core import spitzer_lightcurve
+from excalibur.transit.core import spitzer_lightcurve, composite_spectrum
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -137,70 +137,83 @@ class SpectrumSV(dawgie.StateVector):
 
     def view(self, visitor:dawgie.Visitor)->None:
         if self['STATUS'][-1]:
-            for p in self['data'].keys():
-                if 'Teq' in self['data'][p]:
-                    Teq = str(int(self['data'][p]['Teq']))
-                    pass
-                else: Teq = ''
-                vspectrum = np.array(self['data'][p]['ES'])
-                specerr = np.array(self['data'][p]['ESerr'])
-                specwave = np.array(self['data'][p]['WB'])
-                specerr = abs(vspectrum**2 - (vspectrum + specerr)**2)
-                vspectrum = vspectrum**2
-                # Smooth spectrum
-                binsize = 4
-                nspec = int(specwave.size/binsize)
-                minspec = np.nanmin(specwave)
-                maxspec = np.nanmax(specwave)
-                scale = (maxspec - minspec)/(1e0*nspec)
-                wavebin = scale*np.arange(nspec) + minspec
-                deltabin = np.diff(wavebin)[0]
-                cbin = wavebin + deltabin/2e0
-                specbin = []
-                errbin = []
-                for eachbin in cbin:
-                    select = specwave < (eachbin + deltabin/2e0)
-                    select = select & (specwave >= (eachbin - deltabin/2e0))
-                    select = select & np.isfinite(vspectrum)
-                    if np.sum(np.isfinite(vspectrum[select])) > 0:
-                        specbin.append(np.nansum(vspectrum[select]/(specerr[select]**2))/
-                                       np.nansum(1./(specerr[select]**2)))
-                        errbin.append(np.nanmedian((specerr[select]))/
-                                      np.sqrt(np.sum(select)))
+            if self.__name == "Composite":
+                plist = []
+                for f in self['data'].keys():
+                    if self['data'][f]['data'].keys():
+                        plist.extend(list(self['data'][f]['data'].keys()))
+                for p in plist:
+                    try:
+                        fig = composite_spectrum(self['data'], 'Composite Spectrum', p)
+                        buf = io.BytesIO()
+                        fig.savefig(buf, format='png')
+                        visitor.add_image('...', ' ', buf.getvalue())
+                        plt.close(fig)
+                    except KeyError:
                         pass
-                    else:
-                        specbin.append(np.nan)
-                        errbin.append(np.nan)
+            else:
+                for p in self['data'].keys():
+                    if 'Teq' in self['data'][p]:
+                        Teq = str(int(self['data'][p]['Teq']))
                         pass
+                    else: Teq = ''
+                    vspectrum = np.array(self['data'][p]['ES'])
+                    specerr = np.array(self['data'][p]['ESerr'])
+                    specwave = np.array(self['data'][p]['WB'])
+                    specerr = abs(vspectrum**2 - (vspectrum + specerr)**2)
+                    vspectrum = vspectrum**2
+                    # Smooth spectrum
+                    binsize = 4
+                    nspec = int(specwave.size/binsize)
+                    minspec = np.nanmin(specwave)
+                    maxspec = np.nanmax(specwave)
+                    scale = (maxspec - minspec)/(1e0*nspec)
+                    wavebin = scale*np.arange(nspec) + minspec
+                    deltabin = np.diff(wavebin)[0]
+                    cbin = wavebin + deltabin/2e0
+                    specbin = []
+                    errbin = []
+                    for eachbin in cbin:
+                        select = specwave < (eachbin + deltabin/2e0)
+                        select = select & (specwave >= (eachbin - deltabin/2e0))
+                        select = select & np.isfinite(vspectrum)
+                        if np.sum(np.isfinite(vspectrum[select])) > 0:
+                            specbin.append(np.nansum(vspectrum[select]/(specerr[select]**2))/np.nansum(1./(specerr[select]**2)))
+                            errbin.append(np.nanmedian((specerr[select]))/np.sqrt(np.sum(select)))
+                            pass
+                        else:
+                            specbin.append(np.nan)
+                            errbin.append(np.nan)
+                            pass
+                        pass
+                    waveb = np.array(cbin)
+                    specb = np.array(specbin)
+                    errb = np.array(errbin)
+                    myfig, ax = plt.subplots(figsize=(8,6))
+                    plt.title(p+' '+Teq)
+                    ax.errorbar(specwave, 1e2*vspectrum,
+                                fmt='.', yerr=1e2*specerr, color='lightgray')
+                    ax.errorbar(waveb, 1e2*specb,
+                                fmt='^', yerr=1e2*errb, color='blue')
+                    plt.xlabel(str('Wavelength [$\\mu m$]'))
+                    plt.ylabel(str('$(R_p/R_*)^2$ [%]'))
+                    if ('Hs' in self['data'][p]) and ('RSTAR' in self['data'][p]):
+                        rp0hs = np.sqrt(np.nanmedian(vspectrum))
+                        Hs = self['data'][p]['Hs'][0]
+                        # Retro compatibility for Hs in [m]
+                        if Hs > 1: Hs = Hs/(self['data'][p]['RSTAR'][0])
+                        ax2 = ax.twinx()
+                        ax2.set_ylabel('$\\Delta$ [Hs]')
+                        axmin, axmax = ax.get_ylim()
+                        ax2.set_ylim((np.sqrt(1e-2*axmin) - rp0hs)/Hs,
+                                     (np.sqrt(1e-2*axmax) - rp0hs)/Hs)
+                        myfig.tight_layout()
+                        pass
+                    buf = io.BytesIO()
+                    myfig.savefig(buf, format='png')
+                    visitor.add_image('...', ' ', buf.getvalue())
+                    plt.close(myfig)
                     pass
-                waveb = np.array(cbin)
-                specb = np.array(specbin)
-                errb = np.array(errbin)
-                myfig, ax = plt.subplots(figsize=(8,6))
-                plt.title(p+' '+Teq)
-                ax.errorbar(specwave, 1e2*vspectrum,
-                            fmt='.', yerr=1e2*specerr, color='lightgray')
-                ax.errorbar(waveb, 1e2*specb,
-                            fmt='^', yerr=1e2*errb, color='blue')
-                plt.xlabel(str('Wavelength [$\\mu m$]'))
-                plt.ylabel(str('$(R_p/R_*)^2$ [%]'))
-                if ('Hs' in self['data'][p]) and ('RSTAR' in self['data'][p]):
-                    rp0hs = np.sqrt(np.nanmedian(vspectrum))
-                    Hs = self['data'][p]['Hs'][0]
-                    # Retro compatibility for Hs in [m]
-                    if Hs > 1: Hs = Hs/(self['data'][p]['RSTAR'][0])
-                    ax2 = ax.twinx()
-                    ax2.set_ylabel('$\\Delta$ [Hs]')
-                    axmin, axmax = ax.get_ylim()
-                    ax2.set_ylim((np.sqrt(1e-2*axmin) - rp0hs)/Hs,
-                                 (np.sqrt(1e-2*axmax) - rp0hs)/Hs)
-                    myfig.tight_layout()
-                    pass
-                buf = io.BytesIO()
-                myfig.savefig(buf, format='png')
-                visitor.add_image('...', ' ', buf.getvalue())
-                plt.close(myfig)
-                pass
             pass
         pass
     pass

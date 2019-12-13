@@ -2403,13 +2403,14 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                     tpars['rp'] = float(rprs)
                     tpars['tm'] = float(tmid)
                     tpars['inc'] = float(inc)
+                    stime = time - int(min(time))
+                    linear = (m*stime + b)
                     lcmode = transit(time=time, values=tpars)
-                    detrended = flux/lcmode
+                    detrended = flux/(lcmode*linear)
                     # gw, nearest = gaussian_weights(np.array(syspars).T, w=np.array([w1,w2,w3]), neighbors=int(nn))
                     # gw[np.isnan(gw)] = 1./nn
                     wf = weightedflux(detrended, gw, nearest)
-                    stime = time - int(min(time))
-                    return lcmode*wf*(m*stime + b)
+                    return lcmode*wf*linear
 
                 @tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar],otypes=[tt.dvector])
                 def eclipse2min(*pars):
@@ -2417,15 +2418,16 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                     fpfs, tmid, m, b = pars
                     tpars['tm'] = float(tmid)
                     fpfs = float(fpfs)
+                    stime = time - int(min(time))
+                    linear = (m*stime + b)
                     lcmode = transit(time=time, values=tpars)
                     f1 = lcmode - 1
                     model = fpfs*(2*f1 + tpars['rp']**2)+1
-                    detrended = flux/model
+                    detrended = flux/(model*linear)
                     # gw, nearest = gaussian_weights(np.array(syspars).T, w=np.array([w1,w2,w3]), neighbors=int(nn))
                     # gw[np.isnan(gw)] = 1./nn
                     wf = weightedflux(detrended, gw, nearest)
-                    stime = time - int(min(time))
-                    return model*wf*(m*stime + b)
+                    return model*wf*linear
 
                 fcn2min = {
                     'transit':transit2min,
@@ -2435,7 +2437,7 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                 with pm.Model():
                     if selftype == "transit":
                         priors = [
-                            pm.Uniform('rprs', lower=0,  upper=0.5),
+                            pm.Uniform('rprs', lower=0,  upper=1.5*tpars['rp']),
                             pm.Uniform('tmid', lower=np.min(time), upper=np.max(time)),
                             pm.Uniform('inc', lower=inc_lim, upper=90),
                             pm.Uniform('m',  lower=-2,  upper=2),
@@ -2465,7 +2467,7 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                     trace = pm.sample(5000,
                                       pm.Metropolis(),
                                       chains=5,
-                                      tune=1000,
+                                      tune=500,
                                       progressbar=False)
                 return trace
 
@@ -2478,6 +2480,8 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
             tpars['a0'] = np.median(trace_aper['b'])
             tpars['a1'] = np.median(trace_aper['m'])
 
+            stime = ta - int(min(ta))
+            linear = tpars['a1']*stime + tpars['a0']
             if selftype == 'transit':
                 tpars['rp'] = np.median(trace_aper['rprs'])
             lcmodel1 = transit(time=ta, values=tpars)
@@ -2485,13 +2489,11 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                 fpfs = np.median(trace_aper['fpfs'])
                 f1 = lcmodel1 - 1
                 lcmodel1 = fpfs*(2*f1 + tpars['rp']**2)+1
-            detrended = aper/lcmodel1
+            detrended = aper/(lcmodel1*linear)
 
             gw, nearest = gaussian_weights(np.array([wxa,wya, npp]).T)
             gw[np.isnan(gw)] = 0.01
             wf = weightedflux(detrended, gw, nearest)
-            stime = ta - int(min(ta))
-            linear = tpars['a1']*stime + tpars['a0']
 
             out['data'][p].append({})
             out['data'][p][ec]['aper_time'] = ta
@@ -2501,7 +2503,7 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
             out['data'][p][ec]['aper_ycent'] = wya
             out['data'][p][ec]['aper_npp'] = npp
             out['data'][p][ec]['aper_trace'] = pm.trace_to_dataframe(trace_aper)
-            out['data'][p][ec]['aper_wf'] = wf  # instrument model
+            out['data'][p][ec]['aper_wf'] = wf
             out['data'][p][ec]['aper_model'] = lcmodel1
             out['data'][p][ec]['aper_pars'] = copy.deepcopy(tpars)
             out['data'][p][ec]['aper_linear'] = linear
@@ -2574,7 +2576,6 @@ def spitzer_pixel_map(sv, title, savedir):
         plt.close()
     else:
         return f
-
 
 def spitzer_lightcurve(sv, savedir=None, suptitle=''):
     '''
@@ -2669,3 +2670,83 @@ def spitzer_lightcurve(sv, savedir=None, suptitle=''):
         plt.close()
     else:
         return f
+
+def composite_spectrum(SV, target, p='b'):
+    '''
+    K. PEARSON combine the filters into one plot
+    '''
+    f,ax = plt.subplots(figsize=(15,7))
+    colors = ['pink','red','green','cyan','blue','purple']
+    ci = 0
+    # keys need to be the same as active filters
+    for name in SV.keys():
+        if name == 'data' or name == 'STATUS':
+            continue
+        SV1 = SV[name]
+        if SV1['data'].keys():
+            fname = name.split('-')[1] + ' ' + name.split('-')[3]
+            vspectrum=np.array(SV1['data'][p]['ES'])
+            specwave=np.array(SV1['data'][p]['WB'])
+            specerr=np.array(SV1['data'][p]['ESerr'])
+            specerr = abs(vspectrum**2 - (vspectrum + specerr)**2)
+            vspectrum = vspectrum**2
+            ax.errorbar(specwave, 1e2*vspectrum, fmt='.', yerr=1e2*specerr, alpha=0.2, color=colors[ci])
+            if 'Spitzer' in name:
+                if specwave.shape[0] > 0:
+                    waveb = np.mean(specwave)
+                    specb = np.nansum(vspectrum/(specerr**2))/np.nansum(1./(specerr**2))
+                    errb = np.nanmedian((specerr))/np.sqrt(specwave.shape[0])
+                    ax.errorbar(waveb, 1e2*specb, fmt='^', yerr=1e2*errb, color=colors[ci], label=fname)
+            else:
+                # Smooth spectrum
+                binsize = 4
+                nspec = int(specwave.size/binsize)
+                minspec = np.nanmin(specwave)
+                maxspec = np.nanmax(specwave)
+                scale = (maxspec - minspec)/(1e0*nspec)
+                wavebin = scale*np.arange(nspec) + minspec
+                deltabin = np.diff(wavebin)[0]
+                cbin = wavebin + deltabin/2e0
+                specbin = []
+                errbin = []
+                for eachbin in cbin:
+                    select = specwave < (eachbin + deltabin/2e0)
+                    select = select & (specwave >= (eachbin - deltabin/2e0))
+                    select = select & np.isfinite(vspectrum)
+                    if np.sum(np.isfinite(vspectrum[select])) > 0:
+                        specbin.append(np.nansum(vspectrum[select]/(specerr[select]**2))/np.nansum(1./(specerr[select]**2)))
+                        errbin.append(np.nanmedian((specerr[select]))/np.sqrt(np.sum(select)))
+                        pass
+                    else:
+                        specbin.append(np.nan)
+                        errbin.append(np.nan)
+                        pass
+                    pass
+                waveb = np.array(cbin)
+                specb = np.array(specbin)
+                errb = np.array(errbin)
+                ax.errorbar(waveb, 1e2*specb, fmt='^', yerr=1e2*errb, color=colors[ci], label=fname)
+
+        try:
+            if ('Hs' in SV1['data'][p]) and ('RSTAR' in SV1['data'][p]):
+                rp0hs = np.sqrt(np.nanmedian(vspectrum))
+                Hs = SV1['data'][p]['Hs'][0]
+                # Retro compatibility for Hs in [m]
+                if Hs > 1: Hs = Hs/(SV1['data'][p]['RSTAR'][0])
+                ax2 = ax.twinx()
+                ax2.set_ylabel('$\\Delta$ [Hs]', fontsize=14)
+                axmin, axmax = ax.get_ylim()
+                ax2.set_ylim((np.sqrt(1e-2*axmin) - rp0hs)/Hs,(np.sqrt(1e-2*axmax) - rp0hs)/Hs)
+                f.tight_layout()
+                pass
+        except KeyError:
+            pass
+
+        ci += 1
+
+    ax.set_title(target +" "+ p, fontsize=14)
+    ax.set_xlabel(str('Wavelength [$\\mu m$]'), fontsize=14)
+    ax.set_ylabel(str('$(R_p/R_*)^2$ [%]'), fontsize=14)
+    ax.set_xscale('log')
+    ax.legend(loc='best', shadow=False, frameon=False, fontsize='20', scatterpoints=1)
+    return f

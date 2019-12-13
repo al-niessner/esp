@@ -167,8 +167,10 @@ class whitelight(dawgie.Algorithm):
         # I dont understand anything
         if 'Spitzer' in ext:
             wl = trncore.lightcurve_spitzer(nrm, fin, out, self._type, ext, self.__out[-1])
-        else:
+        elif self._type == 'transit':
             wl = trncore.whitelight(nrm, fin, out, ext, self._type, self.__out[-1], chainlen=int(1e4), verbose=False)
+        else:  # hst + eclipse = no no
+            wl = False
         return wl
 
     def _failure(self, errstr):
@@ -187,6 +189,8 @@ class spectrum(dawgie.Algorithm):
         self._nrm = nrm
         self._wht = wht
         self.__out = [trnstates.SpectrumSV(ext) for ext in fltrs]
+        # MERGE PROTOTYPE
+        self.__out.append(trnstates.SpectrumSV('Composite'))
         return
 
     def name(self):
@@ -222,6 +226,11 @@ class spectrum(dawgie.Algorithm):
             if update: svupdate.append(self.__out[index])
             pass
 
+        for index, ext in enumerate(fltrs):
+            self.__out[-1]['data'][ext] = self.__out[index]
+            if self.__out[index]['STATUS']:
+                self.__out[-1]['STATUS'] = True
+
         self.__out = svupdate
         if self.__out: ds.update()
         return
@@ -237,4 +246,4 @@ class spectrum(dawgie.Algorithm):
         log.warning('--< %s SPECTRUM: %s >--', self._type.upper(), errstr)
         return
     pass
-# ---------------- ---------------------------------------------------
+# -------------------------------------------------------------------
