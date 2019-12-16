@@ -21,7 +21,7 @@ RUN set -ex && \
     ln -fs /usr/share/zoneinfo/America/Los_Angeles /etc/localtime && \
     dpkg-reconfigure --frontend noninteractive tzdata && \
     /usr/bin/pip3 install astropy==3.0.4 \
-                          dawgie==1.2.8rc1 \
+                          dawgie==1.2.8rc2 \
                           ldtk==1.0 \
                           lmfit==0.9.11 \
                           matplotlib==2.2.3 \
