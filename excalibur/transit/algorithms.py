@@ -166,7 +166,7 @@ class whitelight(dawgie.Algorithm):
         # IF YOU UNDERSTAND THIS ALGO: DO WHAT I SAY, NOT WHAT IS BEING DONE HERE...
         # I dont understand anything
         if 'Spitzer' in ext:
-            wl = trncore.lightcurve_spitzer(nrm, fin, out, self._type, ext, self.__out[-1])
+            wl = trncore.lightcurve_spitzer(nrm, fin, out, self._type, ext, self.__out[-1], chainlen=int(5e3))
         elif self._type == 'transit':
             wl = trncore.whitelight(nrm, fin, out, ext, self._type, self.__out[-1], chainlen=int(1e4), verbose=False)
         else:  # hst + eclipse = no no

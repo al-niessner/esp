@@ -23,6 +23,7 @@ import matplotlib.pyplot as plt
 import scipy.constants as cst
 from scipy import spatial
 from scipy.ndimage import median_filter
+from scipy.optimize import leastsq
 
 import theano.tensor as tt
 import theano.compile.ops as tco
@@ -2288,7 +2289,35 @@ def transit(time, values):
     phase += 0  # this is to shut pylint up
     return tldlc(abs(z), values['rp'], g1=0, g2=values['u1'], g3=0, g4=values['u2'])
 
-def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
+def fit_gaussian(data):
+    '''
+    K. PEARSON fit a gaussian to histogram of data
+    '''
+    def fitfunc(p,x):
+        return p[0]*np.exp(-0.5*((x-p[1])/p[2])**2)+p[3]
+
+    def errfunc(p,x,y):
+        return y - fitfunc(p,x)
+
+    counts,edges = np.histogram(data,bins=25)
+    xdata = 0.5*(edges[:-1] + edges[1:])
+    ydata = counts
+
+    init = [max(ydata)-min(ydata),
+            np.median(xdata),
+            np.std(data),
+            np.min(ydata)]
+
+    # could improve with least_squares and finer jacobian
+    out = leastsq(errfunc, init, args=(xdata, ydata))
+
+    # plt.plot(xdata,ydata,'ko')
+    # plt.plot(xdata, fitfunc(out[0],xdata),'r-')
+    # plt.show()
+    # [amplitude, median, stdev, y-offset]
+    return out[0]
+
+def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv, chainlen=int(1e4)):
     '''
     K. PEARSON: modeling of transits and eclipses from Spitzer
     '''
@@ -2396,21 +2425,23 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                 gw, nearest = gaussian_weights(np.array(syspars).T)
                 gw[np.isnan(gw)] = 0.01
 
-                @tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar],otypes=[tt.dvector])
+                @tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar],otypes=[tt.dvector])
                 def transit2min(*pars):
                     # rprs, tmid, m, b, w1, w2, w3, nn = pars
-                    rprs, tmid, inc, m, b = pars
+                    # rprs, tmid, inc, ar, m, b = pars
+                    rprs, tmid, inc, ar, m, b = pars
                     tpars['rp'] = float(rprs)
                     tpars['tm'] = float(tmid)
                     tpars['inc'] = float(inc)
-                    stime = time - int(min(time))
+                    tpars['ar'] = float(ar)
+                    stime = (time - min(time))/max(time - min(time))
                     linear = (m*stime + b)
                     lcmode = transit(time=time, values=tpars)
-                    detrended = flux/(lcmode*linear)
+                    detrended = flux/lcmode
                     # gw, nearest = gaussian_weights(np.array(syspars).T, w=np.array([w1,w2,w3]), neighbors=int(nn))
                     # gw[np.isnan(gw)] = 1./nn
                     wf = weightedflux(detrended, gw, nearest)
-                    return lcmode*wf*linear
+                    return lcmode*linear*wf
 
                 @tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar],otypes=[tt.dvector])
                 def eclipse2min(*pars):
@@ -2418,16 +2449,16 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                     fpfs, tmid, m, b = pars
                     tpars['tm'] = float(tmid)
                     fpfs = float(fpfs)
-                    stime = time - int(min(time))
+                    stime = (time - min(time))/max(time - min(time))
                     linear = (m*stime + b)
                     lcmode = transit(time=time, values=tpars)
                     f1 = lcmode - 1
                     model = fpfs*(2*f1 + tpars['rp']**2)+1
-                    detrended = flux/(model*linear)
+                    detrended = flux/model
                     # gw, nearest = gaussian_weights(np.array(syspars).T, w=np.array([w1,w2,w3]), neighbors=int(nn))
                     # gw[np.isnan(gw)] = 1./nn
                     wf = weightedflux(detrended, gw, nearest)
-                    return model*wf*linear
+                    return model*linear*wf
 
                 fcn2min = {
                     'transit':transit2min,
@@ -2440,8 +2471,9 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                             pm.Uniform('rprs', lower=0,  upper=1.5*tpars['rp']),
                             pm.Uniform('tmid', lower=np.min(time), upper=np.max(time)),
                             pm.Uniform('inc', lower=inc_lim, upper=90),
-                            pm.Uniform('m',  lower=-2,  upper=2),
-                            pm.Uniform('b',  lower=-2,  upper=2),
+                            pm.Normal('ar', mu=tpars['ar'], sd=tpars['ar']*0.05),
+                            pm.Uniform('m',  lower=-0.05,  upper=0.05),
+                            pm.Uniform('b',  lower=0.95,  upper=1.05)
                             # pm.Uniform('w1', lower=0.01, upper=1),
                             # pm.Uniform('w2', lower=0.01, upper=1),
                             # pm.Uniform('w3', lower=0.01, upper=1),
@@ -2451,8 +2483,8 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                         priors = [
                             pm.Uniform('fpfs', lower=0, upper=0.25),
                             pm.Uniform('tmid', lower=np.min(time), upper=np.max(time)),
-                            pm.Uniform('m',  lower=-2,  upper=2),
-                            pm.Uniform('b',  lower=-2,  upper=2),
+                            pm.Uniform('m',  lower=-0.05,  upper=0.05),
+                            pm.Uniform('b',  lower=0.95,  upper=1.05)
                             # pm.Uniform('w1', lower=0.01, upper=1),
                             # pm.Uniform('w2', lower=0.01, upper=1),
                             # pm.Uniform('w3', lower=0.01, upper=1),
@@ -2464,33 +2496,41 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                               tau=(1./fluxerr)**2,
                               observed=flux)
 
-                    trace = pm.sample(5000,
+                    trace = pm.sample(chainlen,
                                       pm.Metropolis(),
                                       chains=5,
                                       tune=500,
-                                      progressbar=False)
+                                      progressbar=True)
                 return trace
 
             pymc3log.propagate = False
 
             trace_aper = fit_data(ta, aper, aper_err, [wxa, wya, npp], tpars, inc_lim)
+            # trace_aper = fit_data(ta[::5], aper[::5], aper_err[::5], [wxa[::5], wya[::5], npp[::5]], tpars, inc_lim)
 
-            tpars['tm'] = np.median(trace_aper['tmid'])
-            tpars['inc'] = np.median(trace_aper['inc'])
-            tpars['a0'] = np.median(trace_aper['b'])
-            tpars['a1'] = np.median(trace_aper['m'])
+            # lets hope Tmid posterior is gaussian...
+            gpars = fit_gaussian(trace_aper['tmid'])
+            mask = np.abs(trace_aper['tmid'] - gpars[1]) < 0.75*gpars[2]
 
-            stime = ta - int(min(ta))
+            tpars['tm'] = np.median(trace_aper['tmid'][mask])
+            tpars['a0'] = np.median(trace_aper['b'][mask])
+            tpars['a1'] = np.median(trace_aper['m'][mask])
+
+            stime = (ta - min(ta))/max(ta - min(ta))
             linear = tpars['a1']*stime + tpars['a0']
             if selftype == 'transit':
-                tpars['rp'] = np.median(trace_aper['rprs'])
+                tpars['inc'] = np.median(trace_aper['inc'][mask])
+                tpars['ar'] = np.median(trace_aper['ar'][mask])
+                tpars['rp'] = np.median(trace_aper['rprs'][mask])
+
             lcmodel1 = transit(time=ta, values=tpars)
+
             if selftype == 'eclipse':
-                fpfs = np.median(trace_aper['fpfs'])
+                fpfs = np.median(trace_aper['fpfs'][mask])
                 f1 = lcmodel1 - 1
                 lcmodel1 = fpfs*(2*f1 + tpars['rp']**2)+1
-            detrended = aper/(lcmodel1*linear)
 
+            detrended = aper/lcmodel1
             gw, nearest = gaussian_weights(np.array([wxa,wya, npp]).T)
             gw[np.isnan(gw)] = 0.01
             wf = weightedflux(detrended, gw, nearest)
@@ -2584,8 +2624,10 @@ def spitzer_lightcurve(sv, savedir=None, suptitle=''):
     f,ax = plt.subplots(3,2,figsize=(12,12))
     f.suptitle(suptitle,y=0.99)
 
-    # #################### FLUX ################
-    res = sv['aper_flux']/sv['aper_wf']-sv['aper_model']
+    model = sv['aper_model']*sv['aper_wf']*sv['aper_linear']
+    res = (sv['aper_flux'] - model)/np.median(sv['aper_flux'])
+
+    # #################### RAW FLUX ################
 
     ax[0,0].errorbar(
         sv['aper_time'], sv['aper_flux']/np.median(sv['aper_flux']),
@@ -2599,15 +2641,15 @@ def spitzer_lightcurve(sv, savedir=None, suptitle=''):
         np.mean(sv['aper_flux']/np.median(sv['aper_flux']))+3*np.std(sv['aper_flux']/np.median(sv['aper_flux']))])
 
     # ################# DETRENDED FLUX ##################
-    flux = sv['aper_flux']/sv['aper_wf']
+    flux = sv['aper_flux']/(sv['aper_wf']*sv['aper_linear'])
     ax[1,0].errorbar(
-        sv['aper_time'], sv['aper_flux']/sv['aper_wf'],
+        sv['aper_time'], flux,
         yerr=0,
         marker='.', ls='none', color='black',alpha=0.15,
     )
     ax[1,0].plot(sv['aper_time'], sv['aper_model'],'r-',zorder=4)
-    bta,bfa = time_bin(sv['aper_time'], sv['aper_flux']/sv['aper_wf'])
-    ax[1,0].plot(bta, bfa, 'c.', zorder=3, alpha=0.75)
+    bta,bfa = time_bin(sv['aper_time'], flux)
+    ax[1,0].plot(bta, bfa, 'co', zorder=3, alpha=0.75)
     ax[1,0].set_xlim([min(sv['aper_time']), max(sv['aper_time'])])
     ax[1,0].set_xlabel('Time [JD]')
     ax[1,0].set_ylabel('Relative Flux')
@@ -2630,7 +2672,7 @@ def spitzer_lightcurve(sv, savedir=None, suptitle=''):
         np.mean(res*1e6)-3*np.std(res*1e6),
         np.mean(res*1e6)+3*np.std(res*1e6)])
 
-    # ######## # # # # CENTROID X # # # ########
+    # ######## # # # # CENTROID X # # # #########
     ax[0,1].plot(
         sv['aper_time'], sv['aper_xcent'],
         marker='.', ls='none', color='black',alpha=0.5,
@@ -2670,6 +2712,7 @@ def spitzer_lightcurve(sv, savedir=None, suptitle=''):
         plt.close()
     else:
         return f
+
 
 def composite_spectrum(SV, target, p='b'):
     '''
