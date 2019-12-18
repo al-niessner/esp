@@ -237,7 +237,7 @@ class spectrum(dawgie.Algorithm):
 
     def _spectrum(self, fin, nrm, wht, out, ext):
         if "Spitzer" in ext:
-            s = trncore.spitzer_spectrum(wht, out, ext)
+            s = trncore.spitzer_spectrum(wht, out, ext, self._type)
         else:
             s = trncore.spectrum(fin, nrm, wht, out, ext, self._type, chainlen=int(1e4), verbose=False)
         return s

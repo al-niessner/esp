@@ -2500,7 +2500,7 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv, chainlen
                                       pm.Metropolis(),
                                       chains=5,
                                       tune=500,
-                                      progressbar=True)
+                                      progressbar=False)
                 return trace
 
             pymc3log.propagate = False
@@ -2556,7 +2556,7 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv, chainlen
         pass
     return wl
 
-def spitzer_spectrum(wht, out, ext):
+def spitzer_spectrum(wht, out, ext, selftype):
     '''
     K. PEARSON put data in same format as HST spectrum
     '''
@@ -2574,8 +2574,20 @@ def spitzer_spectrum(wht, out, ext):
             elif '45' in ext:
                 out['data'][p]['WB'].append(4.5)
 
-            out['data'][p]['ES'].append(np.median(wht['data'][p][i]['aper_trace']['rprs']))
-            out['data'][p]['ESerr'].append(np.std(wht['data'][p][i]['aper_trace']['rprs']))
+            # isolate the mode of rprs/fpfs using a gaussian filter on mid-transit
+            trace_aper = wht['data'][p][i]['aper_trace']
+            gpars = fit_gaussian(trace_aper['tmid'])
+            mask = np.abs(trace_aper['tmid'] - gpars[1]) < gpars[2]
+
+            if selftype == "transit":
+                out['data'][p]['ES'].append(np.median(trace_aper['rprs'][mask]))
+                out['data'][p]['ESerr'].append(np.std(trace_aper['rprs'][mask]))
+            elif selftype == "eclipse":
+                # convert to eclipse depth
+                out['data'][p]['ES'].append(np.median(trace_aper['fpfs'][mask])*wht['data'][p][i]['aper_pars']['rp']**2)
+                out['data'][p]['ESerr'].append(np.std(trace_aper['fpfs'][mask])*wht['data'][p][i]['aper_pars']['rp']**2)
+            else:
+                pass
             update = True
 
     return update
@@ -2782,7 +2794,8 @@ def composite_spectrum(SV, target, p='b'):
                 ax2.set_ylim((np.sqrt(1e-2*axmin) - rp0hs)/Hs,(np.sqrt(1e-2*axmax) - rp0hs)/Hs)
                 f.tight_layout()
                 pass
-        except KeyError:
+        except (KeyError,ValueError):
+            # print("couldn't plot scale height")
             pass
 
         ci += 1
