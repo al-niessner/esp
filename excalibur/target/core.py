@@ -91,8 +91,9 @@ def autofill(ident, thistarget, out,
              opt="&sci_aec=S"):
     out['starID'][thistarget] = ident['starID'][thistarget]
     targetID = [thistarget]
+
     # AUTOFILL WITH MAST QUERY ---------------------------------------
-    solved = False
+    solved = True
     querytarget = thistarget.replace(' ', '+')
     queryform = queryurl+querytarget+action+outfmt+opt
     failure = ['target not resolved, continue\n\n', 'no rows found\n\n']
@@ -427,6 +428,7 @@ def disk(selfstart, out, diskloc, dbs):
             locations = [os.path.join(diskloc, fold) for fold in folders]
             pass
         pass
+
     if locations is not None: merge = dbscp(locations, dbs, out)
     return merge
 # ---------- ---------------------------------------------------------
@@ -445,7 +447,6 @@ def dbscp(locations, dbs, out):
                             if '.fits' in imafits])
             pass
         pass
-
     for fitsfile in imalist:
         filedict = {'md5':None, 'sha':None, 'loc':None, 'observatory':None,
                     'instrument':None, 'detector':None, 'filter':None, 'mode':None}

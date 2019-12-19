@@ -26,7 +26,7 @@ fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
 # -- ALGORITHMS -- ---------------------------------------------------
 class collect(dawgie.Algorithm):
     '''
-G. ROUDIER: Data collection by filters
+    G. ROUDIER: Data collection by filters
     '''
     def __init__(self):
         self._version_ = dawgie.VERSION(1,1,0)
@@ -52,9 +52,11 @@ G. ROUDIER: Data collection by filters
         valid, errstring = datcore.checksv(scrape)
         if valid:
             for key in create.keys(): self.__out[key] = create[key]
+
             for name in create['activefilters']['NAMES']:
                 ok = self._collect(name, scrape, self.__out)
                 update = update or ok
+
                 pass
             if update: ds.update()
             pass
@@ -75,7 +77,7 @@ G. ROUDIER: Data collection by filters
 
 class timing(dawgie.Algorithm):
     '''
-G. ROUDIER: Categorize data into 3 science purposes: TRANSIT, ECLIPSE, PHASE CURVE
+    G. ROUDIER: Categorize data into 3 science purposes: TRANSIT, ECLIPSE, PHASE CURVE
     '''
     def __init__(self):
         self._version_ = datcore.timingversion()
@@ -137,7 +139,7 @@ G. ROUDIER: Categorize data into 3 science purposes: TRANSIT, ECLIPSE, PHASE CUR
 
 class calibration(dawgie.Algorithm):
     '''
-G. ROUDIER: Data re-calibration and reduction
+    G. ROUDIER: Data re-calibration and reduction
     '''
     def __init__(self):
         self._version_ = dawgie.VERSION(1,3,0)
@@ -207,6 +209,9 @@ G. ROUDIER: Data re-calibration and reduction
         if 'Spitzer' in flttype:
             caled = datcore.spitzercal(cll, out)
             pass
+        # if 'Spitzer' in flttype:
+        #     caled = datcore.spitzercal(cll, tim, tid, flttype, out, verbose=False)
+        #     pass
         return caled
 
     @staticmethod

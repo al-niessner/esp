@@ -62,28 +62,6 @@ then
         ssh mentor5 ${PWD}/.ci/docker_scrub.sh
     fi
 
-    until python3 <<EOF
-import json
-import sys
-
-try:
-    data = json.loads ('$(curl --connect-timeout 10 --expect100-timeout 10 -XGET http://mentor0.jpl.nasa.gov:8080/app/pl/state)')
-
-    if data['name'] == 'running' and data['status'] == 'active':
-        print ('match')
-        sys.exit(0)
-    else:
-        print ('no match')
-        sys.exit (1)
-except Exception as ex:
-    print ('exception', ex)
-    sys.exit(2)
-EOF
-    do
-        sleep 600
-    done
-    ${PWD}/.ci/update_runids.py -L /proj/sdp/data/logs -l ops.log -m /proj/sdp/ops/front-end/markdown/about.md
-
     state=`get_state`
 else
     sendmail -f no-reply@esp.jpl.nasa.gov sdp@jpl.nasa.gov<<EOF

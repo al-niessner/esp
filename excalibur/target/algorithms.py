@@ -105,6 +105,7 @@ class autofill(dawgie.Algorithm):
             update = self._autofill(var_create, ds._tn())
             pass
         else: self._failure(errstring)
+
         if update: ds.update()
         return
 
@@ -186,4 +187,4 @@ class regress(dawgie.Regression):
     def variables(self)->[dawgie.SV_REF, dawgie.V_REF]:
         return [dawgie.SV_REF(trg.task,autofill(),autofill().state_vectors()[0])]
     pass
-# ---------------- ---------------------------------------------------
+# -------------------------------------------------------------------

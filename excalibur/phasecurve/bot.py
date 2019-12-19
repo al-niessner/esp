@@ -7,7 +7,8 @@ import excalibur.phasecurve.algorithms as phcalg
 class Actor(dawgie.Task):
     def list(self)->[dawgie.Task]:
         return [
-            phcalg.normalization()
+            phcalg.pcnormalization(),
+            phcalg.pcwhitelight()
         ]
     pass
 # --------- ----------------------------------------------------------

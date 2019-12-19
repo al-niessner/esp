@@ -14,6 +14,7 @@ import numpy.polynomial.polynomial as poly
 import lmfit as lm
 import matplotlib.pyplot as plt
 import astropy.io.fits as pyfits
+# from astropy.wcs import WCS
 import time as raissatime
 from ldtk import LDPSetCreator, BoxcarFilter
 import datetime
@@ -31,7 +32,7 @@ from scipy.ndimage.morphology import binary_dilation
 # -- SV VALIDITY -- --------------------------------------------------
 def checksv(sv):
     '''
-G. ROUDIER: Tests for empty SV shell
+    G. ROUDIER: Tests for empty SV shell
     '''
     valid = False
     errstring = None
@@ -161,8 +162,8 @@ def timing(force, ext, clc, out, verbose=False):
     data['IGNORED'] = [False]*len(data['LOC'])
     time = np.array(data['TIME'].copy())
     ignore = np.array(data['IGNORED'].copy())
-    scanangle = np.array(data['SCANANGLE'].copy())
     exposlen = np.array(data['EXPLEN'].copy())
+    scanangle = np.array(data['SCANANGLE'].copy())
     ordt = np.argsort(time)
     exlto = exposlen.copy()[ordt]
     tmeto = time.copy()[ordt]
@@ -196,21 +197,73 @@ def timing(force, ext, clc, out, verbose=False):
                 visto = np.floor(sphase)
 
                 for e in epochs:
-
                     vmask = visto == e
                     tmask = ((sphase[vmask]-e) > (0.25-2*pdur)) & ((sphase[vmask]-e) < (0.25+2*pdur))
                     if tmask.sum() > 50:
                         out['data'][p]['transit'].append(e)
-
                     emask = ((sphase[vmask]-e) > (0.25+dp-2*pdur)) & ((sphase[vmask]-e) < (0.25+dp+2*pdur))
                     if emask.sum() > 50:
                         out['data'][p]['eclipse'].append(e)
 
-                    if (tmask.sum() > 50) & (emask.sum() > 50):
+                    # if (tmask.sum() > 50) & (emask.sum() > 50):
+                        # out['data'][p]['phasecurve'].append(e)
+
+                # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                # Rob Zellem's method of finding phase curves
+                # after some thought, RZ thinks we should run this two different ways: one with the way that Kyle has been doing
+                # with his shifted phasing, and use this for transits/eclipses alone
+                # and then again to find phase curves
+
+                # RZ breaks up the data by the amount of time that has passed
+                deltatime = np.gradient(time[np.argsort(time)])
+                # If more than 0.25 orbital phase has passed, then this classified as a new observation
+                # Chose 0.25 in case a transit/eclipse is observed after eclipse/transit, but does not classify as a phase curve
+                observations = deltatime >= priors[p]['period']/4  # returns a boolean
+                idxobs, = np.where(observations)  # where the boundaries are index-wise
+
+                pcvisto = np.zeros(len(time))
+                for nobs in np.arange(len(idxobs)):
+                    if nobs==0:
+                        tstart = 0
+                    else:
+                        tstart = idxobs[nobs]
+                    if nobs==len(idxobs)-1:
+                        tstop = -1
+                    else:
+                        tstop = idxobs[nobs+1]
+
+                    try:
+                        obsmask = (time >= time[np.argsort(time)][tstart]) & (time <= time[np.argsort(time)][tstop])
+                    except IndexError:
+                        import pdb; pdb.set_trace()
+
+                    pcvisto[obsmask] = np.floor((time[np.argsort(time)][tstart] - tmjd)/priors[p]['period'])
+
+                pcepochs = np.unique(pcvisto)
+
+                sphase = (time - tmjd)/priors[p]['period']
+
+                for e in pcepochs:
+                    vmask = pcvisto == e
+                    # could make this more robust by determining if *any* out of transit
+                    # Right now, it requires there to be 1 transit duration pre-/post-transit
+                    tmask = ((sphase[vmask]-e) >= 1-2*pdur) & ((sphase[vmask]-e) <= 1+2*pdur)
+                    # While this does find eclipses, it fails if a phase curve starts with an eclipse
+                    # or if there are multiple phase curves in our dataset
+                    # Need to update to check if there is at least one eclipse pre-/post- transit
+                    # Right now, it requires there to be 1 transit duration pre-eclipse
+                    emask = ((sphase[vmask]-e) >= 1+dp-2*pdur) & ((sphase[vmask]-e) <= 1+dp+2*pdur)
+                    if (tmask.sum() > 20) & (emask.sum() > 20):
                         out['data'][p]['phasecurve'].append(e)
+
+                # if ("4.5" in ext):
+                #     import pdb; pdb.set_trace()
+
+                pass
 
                 out['STATUS'].append(True)
                 out['data'][p]['visits'] = visto.astype(int)  # should maintain same order as time
+                out['data'][p]['pcvisits'] = pcvisto  # phase curve visits
                 pass
             else:  # HST
                 smaors = priors[p]['sma']/priors['R*']/ssc['Rsun/AU']
@@ -235,6 +288,7 @@ def timing(force, ext, clc, out, verbose=False):
                 visto = np.ones(tmetod.size)
                 dvis = np.ones(tmetod.size)
                 vis = np.ones(tmetod.size)
+
                 for index in wherev: visto[index:] += 1
                 # DOUBLE SCAN VISIT RE NUMBERING -----------------------------
                 dvisto = visto.copy()
@@ -1048,6 +1102,8 @@ def validrange(flttype):
     if fltr in ['G430L']: vrange = [0.30, 0.55]
     if fltr in ['G140M']: vrange = [0.12, 0.17]
     if fltr in ['G750L']: vrange = [0.55, 0.95]
+    if fltr in ['3.6']: vrange = [3.1,3.92]
+    if fltr in ['4.5']: vrange = [3.95,4.95]
     return vrange
 # ----------------------------- --------------------------------------
 # -- FILTERS AND GRISMS -- -------------------------------------------
@@ -1089,6 +1145,18 @@ def fng(flttype):
         llim = 4.91
         ulim = 4.93
         pass
+    # if fltr == '3.6':
+    #     wvrng = [3100e1, 3950e1 ]  # Angstroms
+    #     disp = 0  # Angstroms/Pixel
+    #     llim = 0
+    #     ulim = 0
+    #     pass
+    # if fltr == '4.5':
+    #     wvrng = [3900e1, 4950e1 ]  # Angstroms
+    #     disp = 0  # Angstroms/Pixel
+    #     llim = 0
+    #     ulim = 0
+    #     pass
     return wvrng, disp, llim, ulim
 # ------------------------ -------------------------------------------
 # -- ISOLATE -- ------------------------------------------------------
