@@ -2350,7 +2350,7 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv, chainlen
             z += 0  # fuck you pylint
             # to do: update duration for eccentric orbits
             # https://arxiv.org/pdf/1001.2010.pdf eq 16
-            tdur = priors[p]['period']/(2*np.pi)/smaors
+            tdur = priors[p]['period']/(np.pi)/smaors
             rprs = (priors[p]['rp']*7.1492e7) / (priors['R*']*6.955e8)
             inc_lim = 90 - np.rad2deg(np.arctan((priors[p]['rp'] * ssc['Rjup/Rsun'] + priors['R*']) / (priors[p]['sma']/ssc['Rsun/AU'])))
             w = priors[p].get('omega',0)

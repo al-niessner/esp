@@ -186,7 +186,7 @@ def timing(force, ext, clc, out, verbose=False):
                 tmjd = priors[p]['t0']
                 if tmjd > 2400000.5: tmjd -= 2400000.5
                 smaors = priors[p]['sma']/priors['R*']/ssc['Rsun/AU']
-                tdur = priors[p]['period']/(2*np.pi)/smaors  # rough estimate
+                tdur = priors[p]['period']/(np.pi)/smaors  # rough estimate
                 pdur = tdur/priors[p]['period']
                 w = priors[p].get('omega',0)
                 dp = 0.5 * (1 + priors[p]['ecc']*(4./np.pi)*np.cos(np.deg2rad(w)))  # phase offset for eccentric orbit
@@ -199,10 +199,10 @@ def timing(force, ext, clc, out, verbose=False):
                 for e in epochs:
                     vmask = visto == e
                     tmask = ((sphase[vmask]-e) > (0.25-2*pdur)) & ((sphase[vmask]-e) < (0.25+2*pdur))
-                    if tmask.sum() > 50:
+                    if tmask.sum() > 25:
                         out['data'][p]['transit'].append(e)
                     emask = ((sphase[vmask]-e) > (0.25+dp-2*pdur)) & ((sphase[vmask]-e) < (0.25+dp+2*pdur))
-                    if emask.sum() > 50:
+                    if emask.sum() > 25:
                         out['data'][p]['eclipse'].append(e)
 
                     # if (tmask.sum() > 50) & (emask.sum() > 50):
@@ -235,7 +235,8 @@ def timing(force, ext, clc, out, verbose=False):
                     try:
                         obsmask = (time >= time[np.argsort(time)][tstart]) & (time <= time[np.argsort(time)][tstop])
                     except IndexError:
-                        import pdb; pdb.set_trace()
+                        pass
+                        # import pdb; pdb.set_trace()
 
                     pcvisto[obsmask] = np.floor((time[np.argsort(time)][tstart] - tmjd)/priors[p]['period'])
 

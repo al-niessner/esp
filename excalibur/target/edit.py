@@ -802,10 +802,269 @@ overwrite[starID] =
             'inc_ref':'Bonomo et al. 2017',
             'omega':347,
             'omega_lowerr':-3,
-            'omega_upperr':3,
+            'omega_uperr':3,
+            'omega_ref':'Wong et al. 2014',
             'ecc':0.29,
             'ecc_lowerr':-0.01,
-            'ecc_upperr':0.01,
+            'ecc_uperr':0.01,
+        }
+    }
+    overwrite['HAT-P-19'] = {
+        'b':{
+            'omega':256,
+            'omega_lowerr':-77,
+            'omega_uperr':77,
+            'omega_ref':"Hartman et al. 2011"
+        }
+    }
+    overwrite['HAT-P-15'] = {
+        'b':{
+            'omega':262.5,
+            'omega_lowerr':-2.9,
+            'omega_uperr':2.4,
+            'omega_ref':"Bonomo et al. 2017"
+        }
+    }
+    overwrite['HAT-P-16'] = {
+        'b':{
+            'omega':213.0,
+            'omega_lowerr':-5.5,
+            'omega_uperr':5.1,
+            'omega_ref':"Bonomo et al. 2017"
+        }
+    }
+    overwrite['HAT-P-17'] = {
+        'b':{
+            'omega':200.5,
+            'omega_lowerr':-1.3,
+            'omega_uperr':1.3,
+            'omega_ref':"Bonomo et al. 2017"
+        }
+    }
+    overwrite['HAT-P-18'] = {
+        'b':{
+            'omega':104.0,
+            'omega_lowerr':-50,
+            'omega_uperr':50,
+            'omega_ref':"Esposito et al. 2014"
+        }
+    }
+    overwrite['HAT-P-2'] = {
+        'b':{
+            'omega':188.0,
+            'omega_lowerr':-0.2,
+            'omega_uperr':0.2,
+            'omega_ref':"Ment et al. 2018"
+        }
+    }
+    overwrite['HAT-P-23'] = {
+        'b':{
+            'omega':121.0,
+            'omega_lowerr':-9,
+            'omega_uperr':11,
+            'omega_ref':"Stassun et al. 2017"
+        }
+    },
+    overwrite['HAT-P-26'] = {
+        'b':{
+            'omega':46.0,
+            'omega_lowerr':-71,
+            'omega_uperr':33,
+            'omega_ref':"Knutson et al. 2014"
+        }
+    }
+    overwrite['HAT-P-30'] = {
+        'b':{
+            'omega':114.0,
+            'omega_lowerr':-77,
+            'omega_uperr':200,
+            'omega_ref':"Knutson et al. 2014"
+        }
+    }
+    overwrite['HAT-P-32'] = {
+        'b':{
+            'omega':50.0,
+            'omega_lowerr':-18,
+            'omega_uperr':27,
+            'omega_ref':"Wang et al. 2019"
+        }
+    }
+    overwrite['HAT-P-34'] = {
+        'b':{
+            'omega':21.9,
+            'omega_lowerr':-5.6,
+            'omega_uperr':5.2,
+            'omega_ref':"Bonomo et al. 2017"
+        }
+    }
+    overwrite['HAT-P-38'] = {
+        'b':{
+            'omega':240,
+            'omega_lowerr':-104,
+            'omega_uperr':104,
+            'omega_ref':"Sato et al. 2012"
+        }
+    }
+    overwrite['HD 17156'] = {
+        'b':{
+            'omega':121.51,
+            'omega_lowerr':-0.3,
+            'omega_uperr':0.3,
+            'omega_ref':"Ment et al. 2018"
+        }
+    }
+    overwrite['K2-132'] = {
+        'b':{
+            'omega':82.6,
+            'omega_lowerr':-4.2,
+            'omega_uperr':4.0,
+            'omega_ref':"Jones et al. 2018"
+        }
+    }
+    overwrite['K2-136'] = {
+        'c':{
+            'omega':24.6,
+            'omega_lowerr':-74.0,
+            'omega_uperr':141.0,
+            'omega_ref':"Mann et al. 2017"
+        }
+    }
+    overwrite['K2-18'] = {
+        'b':{
+            'omega':-5.7,
+            'omega_lowerr':-33.8,
+            'omega_uperr':46.40,
+            'omega_ref':"Sarkis et al. 2018"
+        }
+    }
+    overwrite['K2-19'] = {
+        'b':{
+            'omega':179,
+            'omega_lowerr':-52,
+            'omega_uperr':52,
+            'omega_ref':"Barros et al. 2015"
+        }
+    }
+    overwrite['K2-21'] = {
+        'b':{
+            'omega':34.38,
+            'omega_lowerr':-133,
+            'omega_uperr':101,
+            'omega_ref':"Dressing et al. 2017"
+        },
+        'c':{
+            'omega':59.96,
+            'omega_lowerr':-120,
+            'omega_uperr':75,
+            'omega_ref':"Dressing et al. 2017"
+        }
+    }
+    overwrite['K2-22'] = {
+        'b':{
+            'omega':46.7,
+            'omega_lowerr':-144,
+            'omega_uperr':90,
+            'omega_ref':"Dressing et al. 2017"
+        }
+    }
+    overwrite['K2-25'] = {
+        'b':{
+            'omega':62,
+            'omega_lowerr':-39,
+            'omega_uperr':44,
+            'omega_ref':"Mann et al. 2016"
+        }
+    }
+    overwrite['WASP-10'] = {
+        'b':{
+            'omega':151.9,
+            'omega_lowerr':-8.8,
+            'omega_uperr':11,
+            'omega_ref':"Bonomo et al. 2017"
+        }
+    }
+    overwrite['WASP-12'] = {
+        'b':{
+            'omega':272.7,
+            'omega_lowerr':-1.3,
+            'omega_uperr':2.4,
+            'omega_ref':"Knutson et al. 2014"
+        }
+    }
+    overwrite['K2-90'] = {
+        'c':{
+            'omega':56.7,
+            'omega_lowerr':-129,
+            'omega_uperr':79.9,
+            'omega_ref':"Dressing et al. 2017"
+        }
+    }
+    overwrite['WASP-14'] = {
+        'b':{
+            'omega':251.61,
+            'omega_lowerr':-0.41,
+            'omega_uperr':0.41,
+            'omega_ref':"Bonomo et al. 2017"
+        }
+    }
+    overwrite['WASP-34'] = {
+        'b':{
+            'omega':215,
+            'omega_lowerr':-150,
+            'omega_uperr':77,
+            'omega_ref':"Knutson et al. 2014"
+        }
+    }
+    overwrite['WASP-5'] = {
+        'b':{
+            'omega':34.38,
+            'omega_lowerr':-22,
+            'omega_uperr':-26.93,
+            'omega_ref':"Gillon et al. 2009"
+        }
+    }
+    overwrite['WASP-7'] = {
+        'b':{
+            'omega':109,
+            'omega_lowerr':-55,
+            'omega_uperr':170,
+            'omega_ref':"Knutson et al. 2014"
+        }
+    }
+    overwrite['WASP-8'] = {
+        'b':{
+            'omega':274.21,
+            'omega_lowerr':-0.33,
+            'omega_uperr':0.33,
+            'omega_ref':"Bonomo et al. 2017"
+        }
+    }
+    overwrite['Kepler-11'] = {
+        'g':{
+            'omega':97.0,
+            'omega_lowerr':-30,
+            'omega_uperr':30,
+            'omega_ref':"Borsato et al. 2014"
+        },
+        'b':{
+            'omega':71.46,
+            'omega_lowerr':-17,
+            'omega_uperr':17,
+            'omega_ref':"Borsato et al. 2014"
+        }
+    }
+    overwrite['Kepler-9'] = {
+        'b':{
+            'omega':357.0,
+            'omega_lowerr':-0.4,
+            'omega_uperr':0.5,
+            'omega_ref':"Borsato et al. 2019"
+        },
+        'c':{
+            'omega':167.5,
+            'omega_lowerr':-0.1,
+            'omega_uperr':0.1,
+            'omega_ref':"Borsato et al. 2019"
         }
     }
     overwrite['LHS 3844'] = {
@@ -813,7 +1072,7 @@ overwrite[starID] =
         'FEH*_units':'[Fe/H]', 'FEH*_ref':"Kyle's best guess",
         'b':{
             'mass':0.0118,
-            'mass_upperr':0.0051,
+            'mass_uperr':0.0051,
             'mass_lowerr':-0.0036,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
@@ -825,7 +1084,7 @@ overwrite[starID] =
     overwrite['K2-136'] = {
         'b':{
             'mass':0.0105,
-            'mass_upperr':0.0045,
+            'mass_uperr':0.0045,
             'mass_lowerr':-0.0032,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
@@ -835,7 +1094,7 @@ overwrite[starID] =
         },
         'c':{
             'mass':0.0272,
-            'mass_upperr':0.0116,
+            'mass_uperr':0.0116,
             'mass_lowerr':-0.0081,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
@@ -845,7 +1104,7 @@ overwrite[starID] =
         },
         'd':{
             'mass':0.0130,
-            'mass_upperr':0.0056,
+            'mass_uperr':0.0056,
             'mass_lowerr':-0.0039,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
@@ -857,7 +1116,7 @@ overwrite[starID] =
     overwrite['K2-25'] = {
         'b':{
             'mass':0.0335,
-            'mass_upperr':0.0143,
+            'mass_uperr':0.0143,
             'mass_lowerr':-0.0100,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
@@ -871,7 +1130,7 @@ overwrite[starID] =
         'FEH*_units':'[Fe/H]', 'FEH*_ref':"Kyle's best guess",
         'b':{
             'mass':0.0118,
-            'mass_upperr':0.0051,
+            'mass_uperr':0.0051,
             'mass_lowerr':-0.0036,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
@@ -883,7 +1142,7 @@ overwrite[starID] =
     overwrite['K2-124'] = {
         'b':{
             'mass':0.0259,
-            'mass_upperr':0.0110,
+            'mass_uperr':0.0110,
             'mass_lowerr':-0.0077,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
@@ -895,7 +1154,7 @@ overwrite[starID] =
     overwrite['K2-138'] = {
         'b':{
             'mass':0.0135,
-            'mass_upperr':0.0058,
+            'mass_uperr':0.0058,
             'mass_lowerr':-0.0040,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
@@ -905,7 +1164,7 @@ overwrite[starID] =
         },
         'c':{
             'mass':0.0213,
-            'mass_upperr':0.0091,
+            'mass_uperr':0.0091,
             'mass_lowerr':-0.0064,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
@@ -915,7 +1174,7 @@ overwrite[starID] =
         },
         'd':{
             'mass':0.0229,
-            'mass_upperr':0.0097,
+            'mass_uperr':0.0097,
             'mass_lowerr':-0.0068,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
@@ -925,7 +1184,7 @@ overwrite[starID] =
         },
         'e':{
             'mass':0.0313,
-            'mass_upperr':0.0133,
+            'mass_uperr':0.0133,
             'mass_lowerr':-0.0093,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
@@ -935,7 +1194,7 @@ overwrite[starID] =
         },
         'f':{
             'mass':0.0246,
-            'mass_upperr':0.0105,
+            'mass_uperr':0.0105,
             'mass_lowerr':-0.0074,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
@@ -947,7 +1206,7 @@ overwrite[starID] =
     overwrite['K2-167'] = {
         'b':{
             'mass':0.0246,
-            'mass_upperr':0.0105,
+            'mass_uperr':0.0105,
             'mass_lowerr':-0.0074,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
@@ -959,7 +1218,7 @@ overwrite[starID] =
     overwrite['K2-19'] = {
         'b':{
             'mass':0.2554,
-            'mass_upperr':0.109,
+            'mass_uperr':0.109,
             'mass_lowerr':-0.0764,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
@@ -969,7 +1228,7 @@ overwrite[starID] =
         },
         'c':{
             'mass':0.0683,
-            'mass_upperr':0.0292,
+            'mass_uperr':0.0292,
             'mass_lowerr':-0.0204,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
@@ -979,7 +1238,7 @@ overwrite[starID] =
         },
         'd':{
             'mass':0.011,
-            'mass_upperr':0.0047,
+            'mass_uperr':0.0047,
             'mass_lowerr':-0.0033,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
@@ -991,7 +1250,7 @@ overwrite[starID] =
     overwrite['K2-21'] = {
         'b':{
             'mass':0.0153,
-            'mass_upperr':0.0065,
+            'mass_uperr':0.0065,
             'mass_lowerr':-0.0046,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
@@ -1001,7 +1260,7 @@ overwrite[starID] =
         },
         'c':{
             'mass':0.0210,
-            'mass_upperr':0.0089,
+            'mass_uperr':0.0089,
             'mass_lowerr':-0.0063,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
@@ -1013,7 +1272,7 @@ overwrite[starID] =
     overwrite['K2-212'] = {
         'b':{
             'mass':0.0213,
-            'mass_upperr':0.0091,
+            'mass_uperr':0.0091,
             'mass_lowerr':-0.0064,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
@@ -1025,7 +1284,7 @@ overwrite[starID] =
     overwrite['K2-26'] = {
         'b':{
             'mass':0.0230,
-            'mass_upperr':0.0098,
+            'mass_uperr':0.0098,
             'mass_lowerr':-0.0069,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
@@ -1037,7 +1296,7 @@ overwrite[starID] =
     overwrite['K2-28'] = {
         'b':{
             'mass':0.0193,
-            'mass_upperr':0.0082,
+            'mass_uperr':0.0082,
             'mass_lowerr':-0.0058,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
@@ -1049,7 +1308,7 @@ overwrite[starID] =
     overwrite['K2-289'] = {
         'b':{
             'mass':0.4283,
-            'mass_upperr':0.1824,
+            'mass_uperr':0.1824,
             'mass_lowerr':-0.1279,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
@@ -1061,7 +1320,7 @@ overwrite[starID] =
     overwrite['K2-3'] = {
         'b':{
             'mass':0.0181,
-            'mass_upperr':0.0077,
+            'mass_uperr':0.0077,
             'mass_lowerr':-0.0054,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
@@ -1071,7 +1330,7 @@ overwrite[starID] =
         },
         'c':{
             'mass':0.0154,
-            'mass_upperr':0.0066,
+            'mass_uperr':0.0066,
             'mass_lowerr':-0.0046,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
@@ -1081,7 +1340,7 @@ overwrite[starID] =
         },
         'd':{
             'mass':0.0154,
-            'mass_upperr':0.0066,
+            'mass_uperr':0.0066,
             'mass_lowerr':-0.0046,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
@@ -1093,7 +1352,7 @@ overwrite[starID] =
     overwrite['K2-32'] = {
         'b':{
             'mass':0.0717,
-            'mass_upperr':0.0306,
+            'mass_uperr':0.0306,
             'mass_lowerr':-0.0215,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
@@ -1103,7 +1362,7 @@ overwrite[starID] =
         },
         'c':{
             'mass':0.0238,
-            'mass_upperr':0.0101,
+            'mass_uperr':0.0101,
             'mass_lowerr':-0.0071,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
@@ -1113,7 +1372,7 @@ overwrite[starID] =
         },
         'd':{
             'mass':0.0310,
-            'mass_upperr':0.0132,
+            'mass_uperr':0.0132,
             'mass_lowerr':-0.0092,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
@@ -1128,7 +1387,7 @@ overwrite[starID] =
     overwrite['K2-52'] = {
         'b':{
             'mass':1.0821,
-            'mass_upperr':0.4619,
+            'mass_uperr':0.4619,
             'mass_lowerr':-0.3237,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
@@ -1140,7 +1399,7 @@ overwrite[starID] =
     overwrite['K2-52'] = {
         'b':{
             'mass':0.0222,
-            'mass_upperr':0.0094,
+            'mass_uperr':0.0094,
             'mass_lowerr':-0.0066,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
@@ -1154,7 +1413,7 @@ overwrite[starID] =
         'FEH*_units':'[Fe/H]', 'FEH*_ref':"Kyle's best guess",
         'b':{
             'mass':0.0539,
-            'mass_upperr':0.0230,
+            'mass_uperr':0.0230,
             'mass_lowerr':-0.0161,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
@@ -1166,7 +1425,7 @@ overwrite[starID] =
     overwrite['K2-58'] = {
         'b':{
             'mass':0.0221,
-            'mass_upperr':0.0094,
+            'mass_uperr':0.0094,
             'mass_lowerr':-0.0066,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
@@ -1176,7 +1435,7 @@ overwrite[starID] =
         },
         'c':{
             'mass':0.0138,
-            'mass_upperr':0.0059,
+            'mass_uperr':0.0059,
             'mass_lowerr':-0.0041,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
@@ -1186,7 +1445,7 @@ overwrite[starID] =
         },
         'd':{
             'mass':0.0144,
-            'mass_upperr':0.0061,
+            'mass_uperr':0.0061,
             'mass_lowerr':-0.0043,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
@@ -1198,7 +1457,7 @@ overwrite[starID] =
     overwrite['K2-79'] = {
         'b':{
             'mass':0.0382,
-            'mass_upperr':0.0163,
+            'mass_uperr':0.0163,
             'mass_lowerr':-0.0114,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
@@ -1210,7 +1469,7 @@ overwrite[starID] =
     overwrite['K2-87'] = {
         'b':{
             'mass':0.2410,
-            'mass_upperr':0.1029,
+            'mass_uperr':0.1029,
             'mass_lowerr':-0.0721,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
@@ -1222,7 +1481,7 @@ overwrite[starID] =
     overwrite['K2-9'] = {
         'b':{
             'mass':0.0187,
-            'mass_upperr':0.008,
+            'mass_uperr':0.008,
             'mass_lowerr':-0.0056,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
@@ -1234,7 +1493,7 @@ overwrite[starID] =
     overwrite['K2-90'] = {
         'b':{
             'mass':0.0222,
-            'mass_upperr':0.0094,
+            'mass_uperr':0.0094,
             'mass_lowerr':-0.0066,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
@@ -1244,7 +1503,7 @@ overwrite[starID] =
         },
         'c':{
             'mass':0.0119,
-            'mass_upperr':0.0051,
+            'mass_uperr':0.0051,
             'mass_lowerr':-0.0036,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
@@ -1256,7 +1515,7 @@ overwrite[starID] =
     overwrite['K2-93'] = {
         'b':{
             'mass':0.0258,
-            'mass_upperr':0.0110,
+            'mass_uperr':0.0110,
             'mass_lowerr':-0.0077,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
@@ -1268,7 +1527,7 @@ overwrite[starID] =
     overwrite['K2-95'] = {
         'b':{
             'mass':0.0420,
-            'mass_upperr':0.0179,
+            'mass_uperr':0.0179,
             'mass_lowerr':-0.0125,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
@@ -1280,7 +1539,7 @@ overwrite[starID] =
     overwrite['K2-96'] = {
         'b':{
             'mass':0.0143,
-            'mass_upperr':0.0061,
+            'mass_uperr':0.0061,
             'mass_lowerr':-0.0043,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
@@ -1290,7 +1549,7 @@ overwrite[starID] =
         },
         'c':{
             'mass':0.0252,
-            'mass_upperr':0.0107,
+            'mass_uperr':0.0107,
             'mass_lowerr':-0.0075,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
@@ -1302,7 +1561,7 @@ overwrite[starID] =
     overwrite['K2-97'] = {
         'b':{
             'mass':0.6808,
-            'mass_upperr':0.2892,
+            'mass_uperr':0.2892,
             'mass_lowerr':-0.2030,
             'mass_ref':'Pearson 2019',
             'mass_units':'Jupiter mass',
@@ -1314,7 +1573,7 @@ overwrite[starID] =
     overwrite['Kepler-9'] = {
         'b':{
             'mass':0.137,
-            'mass_upperr':0.008,
+            'mass_uperr':0.008,
             'mass_lowerr':-0.01,
             'mass_ref':'Hadden & Lithwick et al. 2017',
             'mass_units':'Jupiter mass',
