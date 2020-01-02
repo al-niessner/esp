@@ -33,11 +33,6 @@ import theano.compile.ops as tco
 
 theano.config.exception_verbosity = 'high'
 
-import os
-# COMMENT FOLLOWING WHEN MERGING TO MASTER
-os.environ["LDTK_ROOT"] = '/home/rzellem/.ldtk'
-
-
 from collections import namedtuple
 CONTEXT = namedtuple('CONTEXT', ['alt', 'ald', 'allz', 'orbp', 'commonoim', 'ecc',
                                  'g1', 'g2', 'g3', 'g4', 'ootoindex', 'ootorbits',
