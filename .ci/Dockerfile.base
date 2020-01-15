@@ -27,6 +27,9 @@ RUN set -ex && \
                           matplotlib==2.2.3 \
                           pymc3==3.6 \
                           scipy==1.1.0 \
+		          joblib==0.13.2 \
+                          scikit-learn==0.20.3 \
+			  pillow==7.0.0 \
                           service_identity && \
    rm -rf ${HOME}/.cache && \
    mkdir /.theano && chmod 777 /.theano && \

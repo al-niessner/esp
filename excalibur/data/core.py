@@ -22,10 +22,11 @@ import datetime
 import scipy.interpolate as itp
 import scipy.signal
 import scipy.optimize as opt
-from scipy.misc import imresize
+# from scipy.misc import imresize
 from scipy.optimize import least_squares
 from scipy.ndimage.measurements import label
 from scipy.ndimage.morphology import binary_dilation
+from PIL import Image as pilimage
 
 
 # ------------- ------------------------------------------------------
@@ -2971,10 +2972,11 @@ def phot(data,xc,yc,r=5,dr=4):
     xvh,yvh = mesh_box([xc,yc], (np.round(r)+1)*10)
     rvh = ((xvh-xc)**2 + (yvh-yc)**2)**0.5
     maskh = (rvh<r*10)
-
     # downsize to native resolution to get pixel weights
     xv,yv = mesh_box([xc,yc], (np.round(r)+1))
-    mask = imresize(maskh, xv.shape)  # rough approx, usually over estimates area
+    # mask = imresize(maskh, xv.shape)  # rough approx, usually over estimates area
+    # VIRISHA, HAMSA: Kyle, we changed this to replace the scipy deprecated imresize
+    mask = np.array(pilimage.fromarray(maskh).resize(xv.shape))
     mask = mask / mask.max()
     flux = np.sum(data[yv,xv] * mask)
     # fmask = flux*mask  # should this be used for NP calculation?
