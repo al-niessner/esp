@@ -2357,12 +2357,12 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv, chainlen
 
             # mask out data by event type
             if selftype == 'transit':
-                pmask = (phase > -2*tdur/priors[p]['period']) & (phase < 2*tdur/priors[p]['period'])
+                pmask = (phase > -1.5*tdur/priors[p]['period']) & (phase < 1.5*tdur/priors[p]['period'])
             elif selftype == 'eclipse':
                 # https://arxiv.org/pdf/1001.2010.pdf eq 33
                 t0e = priors[p]['t0']+ priors[p]['period']*0.5 * (1 + priors[p]['ecc']*(4./np.pi)*np.cos(np.deg2rad(w)))
                 z, phase = datcore.time2z(time, priors[p]['inc'], t0e, smaors, priors[p]['period'], priors[p]['ecc'])
-                pmask = (phase > -2*tdur/priors[p]['period']) & (phase < 2*tdur/priors[p]['period'])
+                pmask = (phase > -1.5*tdur/priors[p]['period']) & (phase < 1.5*tdur/priors[p]['period'])
             elif selftype == 'phasecurve':
                 print('implement phasecurve mask')
 
@@ -2505,12 +2505,14 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv, chainlen
 
             pymc3log.propagate = False
 
+            # rint('before fit')
+            # import pdb; pdb.set_trace()
             trace_aper = fit_data(ta, aper, aper_err, [wxa, wya, npp], tpars, inc_lim)
             # trace_aper = fit_data(ta[::5], aper[::5], aper_err[::5], [wxa[::5], wya[::5], npp[::5]], tpars, inc_lim)
 
             # lets hope Tmid posterior is gaussian...
             gpars = fit_gaussian(trace_aper['tmid'])
-            mask = np.abs(trace_aper['tmid'] - gpars[1]) < 0.75*gpars[2]
+            mask = np.abs(trace_aper['tmid'] - gpars[1]) < np.abs(0.75*gpars[2])
 
             tpars['tm'] = np.median(trace_aper['tmid'][mask])
             tpars['a0'] = np.median(trace_aper['b'][mask])
