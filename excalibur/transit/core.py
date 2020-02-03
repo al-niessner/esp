@@ -2142,7 +2142,7 @@ def norm_spitzer(cal, tme, fin, out, selftype, debug=False):
             sphot[:,j] = sigma_clip(sphot[:,j], dt)
             sphot[:,j] = sigma_clip(sphot[:,j], dt)
         std = np.nanstd(sphot,0)
-        bi = np.argmin(std)
+        bi = np.nanargmin(std)
 
         # reformat some data
         flux = np.array(cal['data']['PHOT']).reshape(-1,5)[:,bi]
@@ -2453,7 +2453,7 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv, chainlen
                     linear = (m*stime + b)
                     lcmode = transit(time=time, values=tpars)
                     f1 = lcmode - 1
-                    model = fpfs*(2*f1 + tpars['rp']**2)+1
+                    model = np.clip(fpfs*(2*f1 + tpars['rp']**2)+1,0,1)
                     detrended = flux/model
                     # gw, nearest = gaussian_weights(np.array(syspars).T, w=np.array([w1,w2,w3]), neighbors=int(nn))
                     # gw[np.isnan(gw)] = 1./nn
@@ -2498,15 +2498,13 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv, chainlen
 
                     trace = pm.sample(chainlen,
                                       pm.Metropolis(),
-                                      chains=5,
+                                      chains=4,
                                       tune=500,
                                       progressbar=False)
                 return trace
 
             pymc3log.propagate = False
 
-            # rint('before fit')
-            # import pdb; pdb.set_trace()
             trace_aper = fit_data(ta, aper, aper_err, [wxa, wya, npp], tpars, inc_lim)
             # trace_aper = fit_data(ta[::5], aper[::5], aper_err[::5], [wxa[::5], wya[::5], npp[::5]], tpars, inc_lim)
 

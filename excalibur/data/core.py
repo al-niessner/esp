@@ -2974,9 +2974,8 @@ def phot(data,xc,yc,r=5,dr=4):
     maskh = (rvh<r*10)
     # downsize to native resolution to get pixel weights
     xv,yv = mesh_box([xc,yc], (np.round(r)+1))
-    # mask = imresize(maskh, xv.shape)  # rough approx, usually over estimates area
-    # VIRISHA, HAMSA: Kyle, we changed this to replace the scipy deprecated imresize
-    mask = np.array(pilimage.fromarray(maskh).resize(xv.shape))
+
+    mask = np.array(pilimage.fromarray(maskh.astype(float)).resize(xv.shape, pilimage.BILINEAR))
     mask = mask / mask.max()
     flux = np.sum(data[yv,xv] * mask)
     # fmask = flux*mask  # should this be used for NP calculation?
