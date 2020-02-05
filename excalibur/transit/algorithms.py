@@ -18,7 +18,7 @@ import excalibur.target.edit as trgedit
 # FILTERS
 fltrs = (trgedit.activefilters.__doc__).split('\n')
 fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
-# fltrs = [f for f in fltrs if 'G430' in f]
+fltrs = [f for f in fltrs if 'Spitzer' not in f]
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class normalization(dawgie.Algorithm):
@@ -165,6 +165,7 @@ class whitelight(dawgie.Algorithm):
     def _whitelight(self, nrm, fin, out, ext):
         # IF YOU UNDERSTAND THIS ALGO: DO WHAT I SAY, NOT WHAT IS BEING DONE HERE...
         # I dont understand anything
+        # neither I
         if 'Spitzer' in ext:
             wl = trncore.lightcurve_spitzer(nrm, fin, out, self._type, ext, self.__out[-1], chainlen=int(5e3))
         elif self._type == 'transit':

@@ -21,7 +21,8 @@ import excalibur.system.algorithms as sysalg
 # FILTERS
 fltrs = (trgedit.activefilters.__doc__).split('\n')
 fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
-# fltrs = [f for f in fltrs if 'G430' in f]
+# KICK SPITZER FOR THE MOMENT
+fltrs = [f for f in fltrs if 'Spitzer' not in f]
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class collect(dawgie.Algorithm):
@@ -142,7 +143,7 @@ class calibration(dawgie.Algorithm):
     G. ROUDIER: Data re-calibration and reduction
     '''
     def __init__(self):
-        self._version_ = dawgie.VERSION(1,3,0)
+        self._version_ = dawgie.VERSION(1,4,0)
         self.__fin = sysalg.finalize()
         self.__col = collect()
         self.__tim = timing()
@@ -200,11 +201,8 @@ class calibration(dawgie.Algorithm):
         if 'SCAN' in flttype:
             caled = datcore.scancal(cll, tim, tid, flttype, out, verbose=False)
             pass
-        if 'G750' in flttype:
-            caled = datcore.stiscal(fin, cll, tim, tid, flttype, out, verbose=False)
-            pass
-        if 'G430' in flttype:
-            caled = datcore.stiscal_G430L(fin, cll, tim, tid, flttype, out, verbose=False)
+        if 'STIS' in flttype:
+            caled = datcore.stiscal_unified(fin, cll, tim, tid, flttype, out, verbose=False)
             pass
         if 'Spitzer' in flttype:
             caled = datcore.spitzercal(cll, out)

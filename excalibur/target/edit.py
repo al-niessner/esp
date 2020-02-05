@@ -377,6 +377,11 @@ XO-5 : XO5
 # -- ACTIVE FILTERS -- -----------------------------------------------
 # OBSERVATORY/INSTRUMENT/DETECTOR/FILTER/MODE
 # HST-STIS-FUV.MAMA-G140M-STARE
+# Spitzer-IRAC-IR-36-SUB
+# Spitzer-IRAC-IR-45-SUB
+# HST-WFC3-IR-G141-SCAN
+# HST-WFC3-IR-G102-SCAN
+# HST-STIS-CCD-G750L-STARE
 def activefilters():
     '''
 Spitzer-IRAC-IR-36-SUB
