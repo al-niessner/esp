@@ -199,10 +199,10 @@ def timing(force, ext, clc, out, verbose=False):
 
                 for e in epochs:
                     vmask = visto == e
-                    tmask = ((sphase[vmask]-e) > (0.25-2*pdur)) & ((sphase[vmask]-e) < (0.25+2*pdur))
+                    tmask = ((sphase[vmask]-e) > (0.25-1.5*pdur)) & ((sphase[vmask]-e) < (0.25+1.5*pdur))
                     if tmask.sum() > 25:
                         out['data'][p]['transit'].append(e)
-                    emask = ((sphase[vmask]-e) > (0.25+dp-2*pdur)) & ((sphase[vmask]-e) < (0.25+dp+2*pdur))
+                    emask = ((sphase[vmask]-e) > (0.25+dp-1.5*pdur)) & ((sphase[vmask]-e) < (0.25+dp+1.5*pdur))
                     if emask.sum() > 25:
                         out['data'][p]['eclipse'].append(e)
 
