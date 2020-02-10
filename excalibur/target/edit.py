@@ -1584,10 +1584,6 @@ overwrite[starID] =
             'mass_units':'Jupiter mass',
         }
     }
-    # overwrite['GJ 436'] = {
-    #     'b':{'inc':86.774,
-    #          'inc_uperr':0.03, 'inc_lowerr':-0.03
-    #     }
-    # }
+    # Spitzer orbit parameters
     return overwrite
 # -------------------------------------------------------------------
