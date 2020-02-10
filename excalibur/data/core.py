@@ -1263,7 +1263,7 @@ def ag2ttf(flttype):
         ttp = ttp[select]
         pass
     if grism == 'G750L':
-        select = (mu > 5.24e3) & (mu < 1e4)
+        select = (mu > 5.24e3) & (mu < 1.27e4)
         mu = mu[select]
         ttp = ttp[select]
         pass
@@ -1860,8 +1860,8 @@ def starecal(_fin, clc, tim, tid, flttype, out,
     return calibrated
 # -------------------------- -----------------------------------------
 # -- STIS CALIBRATION -- ---------------------------------------------
-def stiscal(_fin, clc, tim, tid, flttype, out,
-            verbose=False, debug=False):
+def stiscal_G750L(_fin, clc, tim, tid, flttype, out,
+                  verbose=False, debug=False):
     '''
     R. ESTRELA: STIS .flt data extraction and wavelength calibration
     '''
@@ -2034,13 +2034,13 @@ def stiscal(_fin, clc, tim, tid, flttype, out,
             ffit = poly.polyval(pixels, coefs)
             div = cont_data[i,:]/ffit
             div_list.append(div)
-            # if debug:
-            #    plt.figure()
-            #    plt.plot(pixels, ffit,color='red')
-            #    plt.plot(cont_data[i,:],color='blue')
-            #    plt.xlabel('Pixels')
-            #    plt.title('Contemporaneous Flat Fringe - Polynomial fit')
-            #    pass
+            if debug:
+                plt.figure()
+                plt.plot(pixels, ffit,color='red')
+                plt.plot(cont_data[i,:],color='blue')
+                plt.xlabel('Pixels')
+                plt.title('Contemporaneous Flat Fringe - Polynomial fit')
+                pass
             pass
         #############
         # COSMIC RAY REJECTION IN THE 2D IMAGE
@@ -2578,8 +2578,8 @@ def stiscal_G430L(fin, clc, tim, tid, flttype, out,
         return mid, bin_spec
 
     def chisqfunc(args):
-        avar, bvar = args
-        chisq = np.sum((g_wav*bin_spec_norm - f(bvar+(avar)*mid_ang))**2)
+        avar, bvar, scvar = args
+        chisq = np.sum(((g_wav*bin_spec_norm[cond_mid])*scvar - f(bvar+(avar)*mid_ang[cond_mid]))**2)
         return chisq
 
     dispersion_list = []
@@ -2627,96 +2627,41 @@ def stiscal_G430L(fin, clc, tim, tid, flttype, out,
                 th_norm=tt/np.max(tt)
                 f = itp.interp1d(x_finite, spec_norm, bounds_error=False, fill_value=0)
                 # f_x = f(x)
-                g = itp.interp1d(wavett, th_norm, bounds_error=False, fill_value=0)
                 mid_ang = mid*10
-                g_wav= g(mid_ang)
+                g = itp.interp1d(wavett, th_norm, bounds_error=False, fill_value=0)
+                cond_mid = np.where((mid_ang >= wavett[0]) & (mid_ang <= wavett[-1]))
+                g_wav= g(mid_ang[cond_mid])
+                # model = scipy.signal.medfilt(g_wav*bin_spec_norm[cond_mid], 5)
                 # wave = np.arange(spec.size)*disper*1e-4 + shift
-                x0 = (1./2.72,-1000)
+                x0 = (1./2.72,-1000,1.)
                 result = opt.minimize(chisqfunc,x0,method='Nelder-Mead')
                 d_frc = result.x[0]
                 d = 1./result.x[0]
                 dispersion_list.append(d)
                 s = result.x[1]
-                calib_spec=f(s+(d_frc)*mid_ang)
+                sc = result.x[2]
+                calib_spec=f(s+(d_frc)*mid_ang[cond_mid])
                 data['SPECTRUM'][index] = calib_spec*np.max(wavecalspec[finitespec])
-                import pdb; pdb.set_trace()
                 if debug:
-                    plt.plot(mid,calib_spec,'o',label='calibrated spec')
-                    plt.plot(mid,g_wav*bin_spec_norm,label='model times th')
-                    plt.legend(loc='upper left', shadow=False, fontsize='16', frameon=True,scatterpoints=1)
+                    plt.plot(mid[cond_mid],calib_spec,'o',label='calibrated spec')
+                    plt.plot(mid[cond_mid],g_wav*bin_spec_norm[cond_mid]*sc,'o',label='calibrated spec')
+                    plt.legend(loc='lower right', shadow=False, fontsize='16', frameon=True,scatterpoints=1)
                     plt.xlabel('Wavelength [nm]')
+                    plt.ylabel('Normalized Flux')
                     plt.show()
                     pass
-                liref = itp.interp1d(wavett*1e-4, tt,
+                liref = itp.interp1d(wavett, tt,
                                      bounds_error=False, fill_value=np.nan)
-                mid_micron = mid*0.001
-                phot2counts = liref(mid_micron)
+                phot2counts = liref(mid_ang[cond_mid])
                 data['PHT2CNT'][index] = phot2counts
-                data['WAVE'][index] = mid*0.001
+                data['WAVE'][index] = mid[cond_mid]*0.001
                 data['DISPERSION'][index] = d
                 data['SHIFT'][index] = s
+                err = data['SPECERR'][index]
+                data['SPECERR'][index] = err[cond_mid]
                 disp_all.append(np.median(dispersion_list))
                 pass
             pass
-
-    # DISPERSION ANALYSIS + 2nd WAVECAL (If necessary)
-
-    disp_all = np.array(dispersion_list)
-    # disp_1sig = np.mean(disp_all)+np.std(disp_all)
-    th = np.median(disp_all) + 2*np.std(disp_all)
-    cond = disp_all > th
-    if (np.std(disp_all))**2 < 1e-7:
-        print('yes')
-        for v in set(visits):
-            select = (visits == v) & ~(data['IGNORED'])
-            for index, valid in enumerate(select):
-                if valid:
-                    spec = data['SPECTRUM_CLEAN'][index]
-                    set_wav = np.array([400,570])
-                    if np.sum(np.isfinite(spec)) > (spec.size/2):
-                        # wavecalspec = spec.copy()
-                        wavecalspec = spec[:-1]
-                        finitespec = np.isfinite(wavecalspec)
-                        spec_norm=wavecalspec[finitespec]/np.max(wavecalspec[finitespec])
-                        phoenix_model = phoenix(set_wav)
-                        bin_spec = phoenix_model[1]
-                        mid = phoenix_model[0]
-                        bin_spec_norm = bin_spec/np.max(bin_spec)
-                        # select=spec_norm > 1e-1
-                        x=np.arange(len(wavecalspec))
-                        x_finite=x[finitespec]
-                        th_norm=tt/np.max(tt)
-                        f = itp.interp1d(x_finite, spec_norm, bounds_error=False, fill_value=0)
-                        # f_x = f(x)
-                        g = itp.interp1d(wavett, th_norm, bounds_error=False, fill_value=0)
-                        mid_ang = mid*10
-                        g_wav= g(mid_ang)
-                        # wave = np.arange(spec.size)*disper*1e-4 + shift
-                        x0 = (1./2.72,-1000)
-                        result = opt.minimize(chisqfunc,x0,method='Nelder-Mead')
-                        d_frc = result.x[0]
-                        d = 1./result.x[0]
-                        dispersion_list.append(d)
-                        s = result.x[1]
-                        calib_spec=f(s+(d_frc)*mid_ang)
-                        data['SPECTRUM'][index] = calib_spec*np.max(wavecalspec[finitespec])
-                        if debug:
-                            plt.plot(mid,calib_spec,'o',label='calibrated spec')
-                            plt.plot(mid,g_wav*bin_spec_norm,label='model times th')
-                            plt.legend(loc='upper left', shadow=False, fontsize='16', frameon=True,scatterpoints=1)
-                            plt.xlabel('Wavelength [nm]')
-                            plt.show()
-                            pass
-                        liref = itp.interp1d(wavett*1e-4, tt,
-                                             bounds_error=False, fill_value=np.nan)
-                        mid_micron = mid*0.001
-                        phot2counts = liref(mid_micron)
-                        data['PHT2CNT'][index] = phot2counts
-                        data['WAVE'][index] = mid*0.001
-                        data['DISPERSION'][index] = d
-                        data['SHIFT'][index] = s
-                        pass
-                    pass
 
     if debug:
         for v in set(visits):
@@ -2730,7 +2675,6 @@ def stiscal_G430L(fin, clc, tim, tid, flttype, out,
                 pass
             plt.show()
             pass
-
     if debug:
         plt.figure(figsize=[6,6])
         spec_all=[]
@@ -2790,7 +2734,12 @@ def stiscal_G430L(fin, clc, tim, tid, flttype, out,
                     # inte = integrate.quad(lambda x: func_teste(x), pixels[0],pixels[-1])
                     # inte = integrate.quad(lambda x: func_spec(x), 0.3, 0.54)
                     inte = np.sum(spec_fin[cond]*(wav_fin[cond[0]+1]-wav_fin[cond[0]]))
-                    inte_res.append(inte[0])
+                    inte_res.append(inte)
+                    # inte_res = np.array(inte_res)
+                    # phase_all = np.array(phase_all)
+                    # cond_out = np.where((phase_all > 0.01) | (phase_all < -0.01))
+                    # oot = inte_res[cond_out]
+                    # norm = inte_res/np.mean(oot)
                     pass
                 pass
             pass
@@ -2817,7 +2766,7 @@ def stiscal_G430L(fin, clc, tim, tid, flttype, out,
         allerr = allerr[allerr > 0.9]
 
         plt.figure()
-        for spectrum in data['SPECTRUM0']: plt.plot(spectrum)
+        for spectrum in data['SPECTRUM_CLEAN']: plt.plot(spectrum)
         plt.ylabel('Stellar Spectra [Counts]')
         plt.xlabel('Pixel Number')
         plt.figure()
@@ -2976,29 +2925,30 @@ def stiscal_unified(fin, clc, tim, tid, flttype, out,
         visitignore[visitexplength != ref] = True
         data['IGNORED'][select] = visitignore
         pass
-    # COSMIC RAYS REJECTION - MEDIAN FILTER + SIGMA CLIPPING
-    for index, ignore in enumerate(data['IGNORED']):
-        # COSMIC RAY REJECTION IN THE 2D IMAGE
-        frame = data['MEXP'][index].copy()
-        img_cr = frame.copy()
-        allframe_list = []
-        for i in range(0,len(frame)):
-            img_sm = scipy.signal.medfilt(img_cr[i,:], 9)
-            std = np.std(img_cr[i,:] - img_sm)
-            # std = np.std(img_sm)
-            bad = np.abs(img_cr[i,:] - img_sm) > 2*std
-            line = img_cr[i,:]
-            line[bad] = img_sm[bad]
-            img_sm2 = scipy.signal.medfilt(line, 9)
-            std2 = np.std(line - img_sm2)
-            bad2 = np.abs(line - img_sm2) > 2*std2
-            line2 = line.copy()
-            line2[bad2] = img_sm2[bad2]
-            allframe_list.append(line2)
-            pass
-        allframe = np.array(allframe_list)
+#     # COSMIC RAYS REJECTION - MEDIAN FILTER + SIGMA CLIPPING
+#     for index, ignore in enumerate(data['IGNORED']):
+#         # COSMIC RAY REJECTION IN THE 2D IMAGE
+#         frame = data['MEXP'][index].copy()
+#         img_cr = frame.copy()
+#         allframe_list = []
+#         for i in range(0,len(frame)):
+#             img_sm = scipy.signal.medfilt(img_cr[i,:], 9)
+#             std = np.std(img_cr[i,:] - img_sm)
+#             # std = np.std(img_sm)
+#             bad = np.abs(img_cr[i,:] - img_sm) > 2*std
+#             line = img_cr[i,:]
+#             line[bad] = img_sm[bad]
+#             img_sm2 = scipy.signal.medfilt(line, 9)
+#             std2 = np.std(line - img_sm2)
+#             bad2 = np.abs(line - img_sm2) > 2*std2
+#             line2 = line.copy()
+#             line2[bad2] = img_sm2[bad2]
+#             allframe_list.append(line2)
+#             pass
+#         allframe = np.array(allframe_list)
 
         # FLAT FRINGE G750L
+    for index, ignore in enumerate(data['IGNORED']):
         if 'G750L' in flttype:
             # SELECT DATE AND TIME OF THE EXPOSURE FOR FLAT FRINGE SELECTION
             frame = data['MEXP'][index].copy()
@@ -3060,43 +3010,56 @@ def stiscal_unified(fin, clc, tim, tid, flttype, out,
                 ffit = poly.polyval(pixels, coefs)
                 div = cont_data[ll,:]/ffit
                 div_list.append(div)
+                # COSMIC RAY REJECTION IN THE 2D IMAGE
+            img_cr = frame.copy()
+            allframe_list = []
+            for i in range(0,len(frame)):
+                img_sm = scipy.signal.medfilt(img_cr[i,:], 9)
+                # std = np.std(img_cr[i,:] - img_sm)
+                std = np.std(img_sm)
+                bad = np.abs(img_cr[i,:] - img_sm) > 3*std
+                line = img_cr[i,:]
+                line[bad] = img_sm[bad]
+                allframe_list.append(line)
+                pass
+            allframe = np.array(allframe_list)
             # APPLY FLAT FRINGE
             # plt.figure()
-                if not ignore:
-                    find_spec = np.where(allframe == np.max(allframe))
-                    spec_idx = find_spec[0][0]
-                    spec_idx_up = spec_idx+4
-                    spec_idx_dwn = spec_idx-3
-                    spec_idx_all = np.arange(spec_idx_dwn,spec_idx_up,1)
-                    frame2 = allframe.copy()
-                    for i,flatnorm in zip(spec_idx_all,div_list):
-                        frame_sel = allframe[i,:]
-                        coefs_f = poly.polyfit(pixels,frame_sel, 12)
-                        ffit_f = poly.polyval(pixels, coefs_f)
-                        frame2[i,400:1023] = frame2[i,400:1023]/flatnorm[400:1023]
-                        if debug:
-                            plt.subplot(2, 1, 1)
-                            plt.plot(pixels,frame_sel,color='blue')
-                            plt.plot(pixels, ffit_f,color='red')
-                            plt.subplot(2, 1, 2)
-                            norm = frame_sel/ffit_f
-                            plt.plot(norm, color='orange',label='Observed spectrum')
-                            plt.plot(flatnorm,color='blue',label='Contemporaneous Flat fringe')
-                            plt.xlabel('pixels')
-                            plt.ylabel('Normalized flux')
-                            plt.legend(loc='lower right', shadow=False, frameon=False, fontsize='7', scatterpoints=1)
-                            pass
-                        pass
-                        data['SPECTRUM'][index] = np.nansum(frame2, axis=0)
-                        data['SPECERR'][index] = np.sqrt(np.nansum(frame2, axis=0))
+            if not ignore:
+                find_spec = np.where(allframe == np.max(allframe))
+                spec_idx = find_spec[0][0]
+                spec_idx_up = spec_idx+4
+                spec_idx_dwn = spec_idx-3
+                spec_idx_all = np.arange(spec_idx_dwn,spec_idx_up,1)
+                frame2 = allframe.copy()
+                for i,flatnorm in zip(spec_idx_all,div_list):
+                    frame_sel = allframe[i,:]
+                    coefs_f = poly.polyfit(pixels,frame_sel, 12)
+                    ffit_f = poly.polyval(pixels, coefs_f)
+                    frame2[i,400:1023] = frame2[i,400:1023]/flatnorm[400:1023]
+                    if debug:
+                        plt.subplot(2, 1, 1)
+                        plt.plot(pixels,frame_sel,color='blue')
+                        plt.plot(pixels, ffit_f,color='red')
+                        plt.subplot(2, 1, 2)
+                        norm = frame_sel/ffit_f
+                        plt.plot(norm, color='orange',label='Observed spectrum')
+                        plt.plot(flatnorm,color='blue',label='Contemporaneous Flat fringe')
+                        plt.xlabel('pixels')
+                        plt.ylabel('Normalized flux')
+                        plt.legend(loc='lower right', shadow=False, frameon=False, fontsize='7', scatterpoints=1)
                         pass
                     pass
-                else:
-                    data['SPECTRUM'][index] = np.nansum(frame, axis=0)*np.nan
-                    data['SPECERR'][index] = np.nansum(frame, axis=0)*np.nan
-                    data['TRIAL'][index] = 'Exposure Length Outlier'
+                    data['SPECTRUM'][index] = np.nansum(frame2, axis=0)
+                    data['SPECERR'][index] = np.sqrt(np.nansum(frame2, axis=0))
                     pass
                 pass
+            else:
+                data['SPECTRUM'][index] = np.nansum(frame, axis=0)*np.nan
+                data['SPECERR'][index] = np.nansum(frame, axis=0)*np.nan
+                data['TRIAL'][index] = 'Exposure Length Outlier'
+                pass
+            pass
         if 'G430' in flttype:
             if not ignore:
                 data['SPECTRUM'][index] = np.nansum(allframe, axis=0)
@@ -3165,7 +3128,7 @@ def stiscal_unified(fin, clc, tim, tid, flttype, out,
     if 'G430' in flttype:
         set_wav = np.array([290,570])
     if 'G750' in flttype:
-        set_wav = np.array([524,950])
+        set_wav = np.array([524,1027])
 
     def phoenix(set_wav):
         # PHOENIX MODELS
@@ -3228,7 +3191,7 @@ def stiscal_unified(fin, clc, tim, tid, flttype, out,
         if 'G430' in flttype:
             window = 5
         else:
-            window = 3
+            window = 5
         bin_spec = scipy.signal.medfilt(bin_spec, window)
         return mid, bin_spec
 
@@ -3292,7 +3255,7 @@ def stiscal_unified(fin, clc, tim, tid, flttype, out,
                 # model = scipy.signal.medfilt(g_wav*bin_spec_norm[cond_mid], 5)
                 # wave = np.arange(spec.size)*disper*1e-4 + shift
                 if 'G750' in flttype:
-                    x0 = (1./4.91,-1000,1.)
+                    x0 = (1./4.72,-1000,1.)
                 else:
                     x0 = (1./2.72,-1000,1.)
                 result = opt.minimize(chisqfunc,x0,method='Nelder-Mead')
@@ -3305,16 +3268,15 @@ def stiscal_unified(fin, clc, tim, tid, flttype, out,
                 data['SPECTRUM'][index] = calib_spec*np.max(wavecalspec[finitespec])
                 if debug:
                     plt.plot(mid[cond_mid],calib_spec,'o',label='calibrated spec')
-                    plt.plot(mid[cond_mid],(g_wav*bin_spec_norm[cond_mid])*sc,label='model times th')
+                    plt.plot(mid[cond_mid],g_wav*bin_spec_norm[cond_mid]*sc,'o',label='calibrated spec')
                     plt.legend(loc='lower right', shadow=False, fontsize='16', frameon=True,scatterpoints=1)
                     plt.xlabel('Wavelength [nm]')
                     plt.ylabel('Normalized Flux')
                     plt.show()
                     pass
-                liref = itp.interp1d(wavett*1e-4, tt,
+                liref = itp.interp1d(wavett, tt,
                                      bounds_error=False, fill_value=np.nan)
-                mid_micron = mid[cond_mid]*0.001
-                phot2counts = liref(mid_micron)
+                phot2counts = liref(mid_ang[cond_mid])
                 data['PHT2CNT'][index] = phot2counts
                 data['WAVE'][index] = mid[cond_mid]*0.001
                 data['DISPERSION'][index] = d
@@ -3325,7 +3287,7 @@ def stiscal_unified(fin, clc, tim, tid, flttype, out,
                 pass
             pass
 
-    if debug:
+    if verbose:
         for v in set(visits):
             select = (visits == v) & ~(data['IGNORED'])
             plt.figure()
@@ -3337,7 +3299,6 @@ def stiscal_unified(fin, clc, tim, tid, flttype, out,
                 pass
             plt.show()
             pass
-
     if debug:
         plt.figure(figsize=[6,6])
         spec_all=[]

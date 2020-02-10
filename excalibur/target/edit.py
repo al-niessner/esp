@@ -382,6 +382,7 @@ XO-5 : XO5
 # HST-WFC3-IR-G141-SCAN
 # HST-WFC3-IR-G102-SCAN
 # HST-STIS-CCD-G750L-STARE
+
 def activefilters():
     '''
 Spitzer-IRAC-IR-36-SUB

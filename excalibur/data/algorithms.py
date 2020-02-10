@@ -201,9 +201,11 @@ class calibration(dawgie.Algorithm):
         if 'SCAN' in flttype:
             caled = datcore.scancal(cll, tim, tid, flttype, out, verbose=False)
             pass
-        if 'STIS' in flttype:
-            caled = datcore.stiscal_unified(fin, cll, tim, tid, flttype, out, verbose=False)
+        if 'G430' in flttype:
+            caled = datcore.stiscal_G430L(fin, cll, tim, tid, flttype, out, verbose=False)
             pass
+        if 'G750' in flttype:
+            caled = datcore.stiscal_G750L(fin, cll, tim, tid, flttype, out, verbose=False)
         if 'Spitzer' in flttype:
             caled = datcore.spitzercal(cll, out)
             pass
