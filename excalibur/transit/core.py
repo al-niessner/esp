@@ -670,8 +670,9 @@ def tplbuild(spectra, wave, vrange, disp, superres=False, medest=False):
 def wlversion():
     '''
     G. ROUDIER: 1.2.0 includes a multi instrument orbital solution
+    K. Pearson: 1.2.1 new priors for spitzer eclipse based on transit solution
     '''
-    return dawgie.VERSION(1,2,0)
+    return dawgie.VERSION(1,2,1)
 
 def hstwhitelight(allnrm, fin, out, allext, selftype, chainlen=int(1e4), verbose=False):
     '''
@@ -2411,6 +2412,21 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv, chainlen
                 tpars['inc'] = hstwhitelight_sv['data'][p]['mcpost']['mean']['inc']
             except KeyError:
                 tpars['inc'] = priors[p]['inc']
+
+            # update values from transit
+            if selftype == "eclipse":
+                if fltr in priors[p]:
+                    tpars['rp'] = priors[p][fltr]['rprs']
+                    tpars['ar'] = priors[p][fltr]['ars']
+                    tpars['inc']= priors[p][fltr]['inc']
+                elif 'Spitzer-IRAC-IR-45-SUB' in priors[p]:
+                    tpars['rp'] = priors[p]["Spitzer-IRAC-IR-45-SUB"]['rprs']
+                    tpars['ar'] = priors[p]["Spitzer-IRAC-IR-45-SUB"]['ars']
+                    tpars['inc']= priors[p]["Spitzer-IRAC-IR-45-SUB"]['inc']
+                elif 'Spitzer-IRAC-IR-36-SUB' in priors[p]:
+                    tpars['rp'] = priors[p]["Spitzer-IRAC-IR-36-SUB"]['rprs']
+                    tpars['ar'] = priors[p]["Spitzer-IRAC-IR-36-SUB"]['ars']
+                    tpars['inc']= priors[p]["Spitzer-IRAC-IR-36-SUB"]['inc']
 
             # resize aperture data, moved clipping to normalization, too lazy to rename variables
             photmask = np.ones(subt.shape).astype(bool)  # np.abs(res) < 3*np.std(res)
