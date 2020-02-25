@@ -18,7 +18,7 @@ import excalibur.classifier.states as clsstates
 # FILTERS
 fltrs = (trgedit.activefilters.__doc__).split('\n')
 fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
-fltrs = [f for f in fltrs if 'Spitzer' not in f]
+# fltrs = [f for f in fltrs if 'Spitzer' not in f]
 # ---------------------- ---------------------------------------------
 
 # -- ALGORITHMS -- ---------------------------------------------------
@@ -37,7 +37,6 @@ G. ROUDIER: Data collection by filters
         return 'inference'
 
     def previous(self):
-        # can include model.pkl in train.py or the training script itself
         return [dawgie.ALG_REF(trn.task, self.__whitelight),
                 dawgie.ALG_REF(sys.task, self.__finalize)]
 
