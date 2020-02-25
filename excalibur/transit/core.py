@@ -14,6 +14,7 @@ import logging
 import numpy as np
 import lmfit as lm
 
+
 import pymc3 as pm
 log = logging.getLogger(__name__)
 pymc3log = logging.getLogger('pymc3')
@@ -2415,6 +2416,8 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv, chainlen
 
             # update values from transit
             if selftype == "eclipse":
+                tpars['u1'] = 0
+                tpars['u2'] = 0
                 if fltr in priors[p]:
                     tpars['rp'] = priors[p][fltr]['rprs']
                     tpars['ar'] = priors[p][fltr]['ars']
@@ -2553,7 +2556,7 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv, chainlen
             if selftype == 'eclipse':
                 fpfs = np.median(trace_aper['fpfs'][mask])
                 f1 = lcmodel1 - 1
-                lcmodel1 = fpfs*(2*f1 + tpars['rp']**2)+1
+                lcmodel1 = np.clip(fpfs*(2*f1 + tpars['rp']**2)+1,0,1)
                 tpars['fpfs'] = np.median(trace_aper['fpfs'][mask])
                 terrs['fpfs'] = np.std(trace_aper['fpfs'][mask2])
 
@@ -2606,6 +2609,8 @@ def spitzer_spectrum(wht, out, ext, selftype):
                 out['data'][p]['WB'].append(3.6)
             elif '45' in ext:
                 out['data'][p]['WB'].append(4.5)
+            else:
+                continue
 
             # isolate the mode of rprs/fpfs using a gaussian filter on mid-transit
             trace_aper = wht['data'][p][i]['aper_trace']
@@ -2627,7 +2632,7 @@ def spitzer_spectrum(wht, out, ext, selftype):
 
 def spitzer_pixel_map(sv, title, savedir):
     '''
-    K. PEARSON plot of intrapixel sensitivity
+    K. PEARSON plot
     '''
     f,ax = plt.subplots(1,figsize=(8.5,7))
     im = ax.scatter(
@@ -2709,14 +2714,12 @@ def spitzer_lightcurve(sv, savedir=None, suptitle=''):
         bta, bfa*1e6, 'co', zorder=3, alpha=0.75,
         label=r'$\sigma$ = {:.0f} ppm'.format(bstd)
     )
-
     ax[2,0].errorbar(
         sv['aper_time'], res*1e6,
         yerr=0,
         marker='.', ls='none', color='black',alpha=0.15,
         label=r'$\sigma$ = {:.0f} ppm'.format(std)
     )
-
     ax[2,0].legend(loc='best')
     ax[2,0].set_xlim([min(sv['aper_time']), max(sv['aper_time'])])
     ax[2,0].set_xlabel('Time [JD]')

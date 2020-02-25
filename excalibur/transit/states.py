@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 # -- SV -- -----------------------------------------------------------
 class NormSV(dawgie.StateVector):
     def __init__(self, name):
-        self._version_ = dawgie.VERSION(1,1,0)
+        self._version_ = dawgie.VERSION(1,1,1)
         self.__name = name
         self['STATUS'] = excalibur.ValuesList()
         self['data'] = excalibur.ValuesDict()
@@ -55,7 +55,7 @@ class NormSV(dawgie.StateVector):
 
 class WhiteLightSV(dawgie.StateVector):
     def __init__(self, name):
-        self._version_ = dawgie.VERSION(1,1,0)
+        self._version_ = dawgie.VERSION(1,1,1)
         self.__name = name
         self['STATUS'] = excalibur.ValuesList()
         self['data'] = excalibur.ValuesDict()
