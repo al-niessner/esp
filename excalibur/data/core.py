@@ -2633,7 +2633,7 @@ def stiscal_G430L(fin, clc, tim, tid, flttype, out,
                 g_wav= g(mid_ang[cond_mid])
                 # model = scipy.signal.medfilt(g_wav*bin_spec_norm[cond_mid], 5)
                 # wave = np.arange(spec.size)*disper*1e-4 + shift
-                x0 = (1./2.72,-1000,1.)
+                x0 = (1./2.72,-1000)
                 result = opt.minimize(chisqfunc,x0,method='Nelder-Mead')
                 d_frc = result.x[0]
                 d = 1./result.x[0]
@@ -2695,22 +2695,23 @@ def stiscal_G430L(fin, clc, tim, tid, flttype, out,
         plt.colorbar()
         plt.title('Flattened 1D spectrum - all exposures')
 
-    for v in set(visits):
-        select = (visits == v) & ~(data['IGNORED'])
-        plt.figure()
-        for index, valid in enumerate(select):
-            spec_all = np.array(data['SPECTRUM'][index])
-            wave_all = np.array(data['WAVE'][index])
-            phot_all = np.array(data['PHT2CNT'][index])
-            err_all = np.array(data['SPECERR'][index])
-            cond_wavcut = np.where(wave_all > 0.45)
-            data['SPECTRUM'][index] = spec_all[cond_wavcut]
-            data['WAVE'][index] = wave_all[cond_wavcut]
-            data['PHT2CNT'][index] = phot_all[cond_wavcut]
-            data['SPECERR'][index] = err_all[cond_wavcut]
-            pass
-        plt.show()
-    pass
+    if debug:
+        for v in set(visits):
+            select = (visits == v) & ~(data['IGNORED'])
+            plt.figure()
+            for index, valid in enumerate(select):
+                spec_all = np.array(data['SPECTRUM'][index])
+                wave_all = np.array(data['WAVE'][index])
+                phot_all = np.array(data['PHT2CNT'][index])
+                err_all = np.array(data['SPECERR'][index])
+                cond_wavcut = np.where(wave_all > 0.45)
+                data['SPECTRUM'][index] = spec_all[cond_wavcut]
+                data['WAVE'][index] = wave_all[cond_wavcut]
+                data['PHT2CNT'][index] = phot_all[cond_wavcut]
+                data['SPECERR'][index] = err_all[cond_wavcut]
+                pass
+            plt.show()
+        pass
 
     if debug:
         inte_res=[]
