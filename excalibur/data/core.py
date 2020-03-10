@@ -2578,8 +2578,8 @@ def stiscal_G430L(fin, clc, tim, tid, flttype, out,
         return mid, bin_spec
 
     def chisqfunc(args):
-        avar, bvar, scvar = args
-        chisq = np.sum(((g_wav*bin_spec_norm[cond_mid])*scvar - f(bvar+(avar)*mid_ang[cond_mid]))**2)
+        avar, bvar= args
+        chisq = np.sum(((g_wav*bin_spec_norm[cond_mid]) - f(bvar+(avar)*mid_ang[cond_mid]))**2)
         return chisq
 
     dispersion_list = []
@@ -2639,12 +2639,11 @@ def stiscal_G430L(fin, clc, tim, tid, flttype, out,
                 d = 1./result.x[0]
                 dispersion_list.append(d)
                 s = result.x[1]
-                sc = result.x[2]
                 calib_spec=f(s+(d_frc)*mid_ang[cond_mid])
                 data['SPECTRUM'][index] = calib_spec*np.max(wavecalspec[finitespec])
                 if debug:
                     plt.plot(mid[cond_mid],calib_spec,'o',label='calibrated spec')
-                    plt.plot(mid[cond_mid],g_wav*bin_spec_norm[cond_mid]*sc,'o',label='calibrated spec')
+                    plt.plot(mid[cond_mid],g_wav*bin_spec_norm[cond_mid],'o',label='calibrated spec')
                     plt.legend(loc='lower right', shadow=False, fontsize='16', frameon=True,scatterpoints=1)
                     plt.xlabel('Wavelength [nm]')
                     plt.ylabel('Normalized Flux')

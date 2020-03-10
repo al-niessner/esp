@@ -22,7 +22,7 @@ import excalibur.system.algorithms as sysalg
 fltrs = (trgedit.activefilters.__doc__).split('\n')
 fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
 # KICK SPITZER FOR THE MOMENT
-# fltrs = [f for f in fltrs if 'Spitzer' not in f]
+fltrs = [f for f in fltrs if 'Spitzer' not in f]
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class collect(dawgie.Algorithm):
@@ -143,7 +143,7 @@ class calibration(dawgie.Algorithm):
     G. ROUDIER: Data re-calibration and reduction
     '''
     def __init__(self):
-        self._version_ = dawgie.VERSION(1,4,0)
+        self._version_ = dawgie.VERSION(1,4,1)
         self.__fin = sysalg.finalize()
         self.__col = collect()
         self.__tim = timing()
