@@ -1212,6 +1212,7 @@ def whitelight(nrm, fin, out, ext, selftype, multiwl, chainlen=int(1e4), verbose
         out['data'][p]['postflatphase'] = postflatphase
         out['data'][p]['mcpost'] = mcpost
         out['data'][p]['mctrace'] = mctrace
+        out['data'][p]['tauwhite'] = tauwhite
         out['STATUS'].append(True)
         wl = True
         if verbose:
