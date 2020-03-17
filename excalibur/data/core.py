@@ -2695,23 +2695,20 @@ def stiscal_G430L(fin, clc, tim, tid, flttype, out,
         plt.colorbar()
         plt.title('Flattened 1D spectrum - all exposures')
 
-    if debug:
-        for v in set(visits):
-            select = (visits == v) & ~(data['IGNORED'])
-            plt.figure()
-            for index, valid in enumerate(select):
-                spec_all = np.array(data['SPECTRUM'][index])
-                wave_all = np.array(data['WAVE'][index])
-                phot_all = np.array(data['PHT2CNT'][index])
-                err_all = np.array(data['SPECERR'][index])
-                cond_wavcut = np.where(wave_all > 0.45)
-                data['SPECTRUM'][index] = spec_all[cond_wavcut]
-                data['WAVE'][index] = wave_all[cond_wavcut]
-                data['PHT2CNT'][index] = phot_all[cond_wavcut]
-                data['SPECERR'][index] = err_all[cond_wavcut]
-                pass
-            plt.show()
-        pass
+    for v in set(visits):
+        select = (visits == v) & ~(data['IGNORED'])
+        for index, valid in enumerate(select):
+            spec_all = np.array(data['SPECTRUM'][index])
+            wave_all = np.array(data['WAVE'][index])
+            phot_all = np.array(data['PHT2CNT'][index])
+            err_all = np.array(data['SPECERR'][index])
+            cond_wavcut = np.where(wave_all > 0.45)
+            data['SPECTRUM'][index] = spec_all[cond_wavcut]
+            data['WAVE'][index] = wave_all[cond_wavcut]
+            data['PHT2CNT'][index] = phot_all[cond_wavcut]
+            data['SPECERR'][index] = err_all[cond_wavcut]
+            pass
+    pass
 
     if debug:
         inte_res=[]
@@ -2925,27 +2922,27 @@ def stiscal_unified(fin, clc, tim, tid, flttype, out,
         visitignore[visitexplength != ref] = True
         data['IGNORED'][select] = visitignore
         pass
-#     # COSMIC RAYS REJECTION - MEDIAN FILTER + SIGMA CLIPPING
-#     for index, ignore in enumerate(data['IGNORED']):
-#         # COSMIC RAY REJECTION IN THE 2D IMAGE
-#         frame = data['MEXP'][index].copy()
-#         img_cr = frame.copy()
-#         allframe_list = []
-#         for i in range(0,len(frame)):
-#             img_sm = scipy.signal.medfilt(img_cr[i,:], 9)
-#             std = np.std(img_cr[i,:] - img_sm)
-#             # std = np.std(img_sm)
-#             bad = np.abs(img_cr[i,:] - img_sm) > 2*std
-#             line = img_cr[i,:]
-#             line[bad] = img_sm[bad]
-#             img_sm2 = scipy.signal.medfilt(line, 9)
-#             std2 = np.std(line - img_sm2)
-#             bad2 = np.abs(line - img_sm2) > 2*std2
-#             line2 = line.copy()
-#             line2[bad2] = img_sm2[bad2]
-#             allframe_list.append(line2)
-#             pass
-#         allframe = np.array(allframe_list)
+    # COSMIC RAYS REJECTION - MEDIAN FILTER + SIGMA CLIPPING
+    for index, ignore in enumerate(data['IGNORED']):
+        if 'G430L' in flttype:
+            frame = data['MEXP'][index].copy()
+            img_cr = frame.copy()
+            allframe_list = []
+            for i in range(0,len(frame)):
+                img_sm = scipy.signal.medfilt(img_cr[i,:], 9)
+                std = np.std(img_cr[i,:] - img_sm)
+                # std = np.std(img_sm)
+                bad = np.abs(img_cr[i,:] - img_sm) > 2*std
+                line = img_cr[i,:]
+                line[bad] = img_sm[bad]
+                img_sm2 = scipy.signal.medfilt(line, 9)
+                std2 = np.std(line - img_sm2)
+                bad2 = np.abs(line - img_sm2) > 2*std2
+                line2 = line.copy()
+                line2[bad2] = img_sm2[bad2]
+                allframe_list.append(line2)
+                pass
+            allframe = np.array(allframe_list)
 
         # FLAT FRINGE G750L
     for index, ignore in enumerate(data['IGNORED']):
