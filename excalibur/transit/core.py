@@ -1537,8 +1537,9 @@ def spectrumversion():
     G. ROUDIER: Neutral outlier rej/inpaint
     Whitelight +/- 5Hs instead of Previous +/- 1PN
     LDX robust to infinitely small errors + spectral binning boost
+    R. Estrela: 1.2.0 lowing down the resolution of G430L
     '''
-    return dawgie.VERSION(1,1,9)
+    return dawgie.VERSION(1,2,0)
 
 def spectrum(fin, nrm, wht, out, ext, selftype,
              chainlen=int(1e4), verbose=False, lcplot=False):
@@ -1560,9 +1561,13 @@ def spectrum(fin, nrm, wht, out, ext, selftype,
         waves = nrm['data'][p]['wave']
         nspec = nrm['data'][p]['nspec']
         photnoise = nrm['data'][p]['photnoise']
-        if 'STIS' in ext:
+        if 'G750' in ext:
             wave, _trash = binnagem(wave, 100)
             wave = np.resize(wave,(1,100))
+            pass
+        if 'G430' in ext:
+            wave, _trash = binnagem(wave, 25)
+            wave = np.resize(wave,(1,25))
             pass
         time = nrm['data'][p]['time']
         visits = nrm['data'][p]['visits']
@@ -1950,9 +1955,13 @@ def fastspec(fin, nrm, wht, ext, selftype,
     waves = nrm['data'][p]['wave']
     nspec = nrm['data'][p]['nspec']
     photnoise = nrm['data'][p]['photnoise']
-    if 'STIS' in ext:
+    if 'G750' in ext:
         wave, _trash = binnagem(wave, 100)
         wave = np.resize(wave,(1,100))
+        pass
+    if 'G430' in ext:
+        wave, _trash = binnagem(wave, 25)
+        wave = np.resize(wave,(1,25))
         pass
     time = nrm['data'][p]['time']
     visits = nrm['data'][p]['visits']
