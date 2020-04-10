@@ -530,7 +530,11 @@ overwrite[starID] =
              'sma_uperr':0.0014, 'sma_lowerr':-0.0014,
              'sma_ref':'Howard et al. 2012 + high ecc',
              'period':10.338523,
-             'period_ref':'Howard et al. 2012'}}
+             'period_ref':'Howard et al. 2012',
+             'omega':200.5,
+             'omega_lowerr':-1.3,
+             'omega_uperr':1.3,
+             'omega_ref':"Bonomo et al. 2017"}}
     overwrite['HAT-P-3'] = {
         'b':{'inc':87.24,
              'inc_uperr':0.69, 'inc_lowerr':-0.69,
@@ -546,7 +550,11 @@ overwrite[starID] =
              'logg_ref':'Torres et al. 2017', 'logg_units':'log10[cm.s-2]'}}
     overwrite['HAT-P-38'] = {
         'FEH*':0.06, 'FEH*_uperr':0.1, 'FEH*_lowerr':-0.1,
-        'FEH*_units':'[Fe/H]', 'FEH*_ref':'Sato et al. 2012'}
+        'FEH*_units':'[Fe/H]', 'FEH*_ref':'Sato et al. 2012',
+        'b':{'omega':240,
+             'omega_lowerr':-104,
+             'omega_uperr':104,
+             'omega_ref':"Sato et al. 2012"}}
     overwrite['HAT-P-41'] = {
         'R*':1.683, 'R*_uperr':0.058, 'R*_lowerr':-0.036,
         'R*_ref':'Hartman et al. 2012',
@@ -626,14 +634,6 @@ overwrite[starID] =
         'c':{'logg':3.2300188146519129,
              'logg_uperr':0.3, 'logg_lowerr':-0.3,
              'logg_ref':'Petigura et al. 2016', 'logg_units':'log10[cm.s-2]'}}
-    overwrite['K2-25'] = {
-        'b':{'logg':3.8403983985773555,
-             'logg_uperr':0.38, 'logg_lowerr':-0.38,
-             'logg_ref':'Mann et al. 2016', 'logg_units':'log10[cm.s-2]',
-             'sma':0.029535117574370662,
-             'sma_uperr':0.0021173577439160705,
-             'sma_lowerr':-0.0021173577439160705,
-             'sma_ref':'Mann et al. 2016'}}
     overwrite['K2-3'] = {
         'b':{'logg':2.5561945544995859,
              'logg_uperr':0.26, 'logg_lowerr':-0.26,
@@ -776,7 +776,11 @@ overwrite[starID] =
              'sma_uperr':0.00056, 'sma_lowerr':-0.0005,
              'sma_ref':'Collins et al. 2017',
              'period':1.09142245,
-             'period_ref':'Stassun et al. 2017'}}
+             'period_ref':'Stassun et al. 2017',
+             'omega':272.7,
+             'omega_lowerr':-1.3,
+             'omega_uperr':2.4,
+             'omega_ref':"Knutson et al. 2014"}}
     overwrite['WASP-39'] = {
         'FEH*':-0.10, 'FEH*_uperr':0.1, 'FEH*_lowerr':-0.1,
         'FEH*_units':'[Fe/H]', 'FEH*_ref':'Faedi et al. 2011'}
@@ -839,14 +843,6 @@ overwrite[starID] =
             'omega_ref':"Bonomo et al. 2017"
         }
     }
-    overwrite['HAT-P-17'] = {
-        'b':{
-            'omega':200.5,
-            'omega_lowerr':-1.3,
-            'omega_uperr':1.3,
-            'omega_ref':"Bonomo et al. 2017"
-        }
-    }
     overwrite['HAT-P-18'] = {
         'b':{
             'omega':104.0,
@@ -903,14 +899,6 @@ overwrite[starID] =
             'omega_ref':"Bonomo et al. 2017"
         }
     }
-    overwrite['HAT-P-38'] = {
-        'b':{
-            'omega':240,
-            'omega_lowerr':-104,
-            'omega_uperr':104,
-            'omega_ref':"Sato et al. 2012"
-        }
-    }
     overwrite['HD 17156'] = {
         'b':{
             'omega':121.51,
@@ -927,42 +915,12 @@ overwrite[starID] =
             'omega_ref':"Jones et al. 2018"
         }
     }
-    overwrite['K2-136'] = {
-        'c':{
-            'omega':24.6,
-            'omega_lowerr':-74.0,
-            'omega_uperr':141.0,
-            'omega_ref':"Mann et al. 2017"
-        }
-    }
     overwrite['K2-18'] = {
         'b':{
             'omega':-5.7,
             'omega_lowerr':-33.8,
             'omega_uperr':46.40,
             'omega_ref':"Sarkis et al. 2018"
-        }
-    }
-    overwrite['K2-19'] = {
-        'b':{
-            'omega':179,
-            'omega_lowerr':-52,
-            'omega_uperr':52,
-            'omega_ref':"Barros et al. 2015"
-        }
-    }
-    overwrite['K2-21'] = {
-        'b':{
-            'omega':34.38,
-            'omega_lowerr':-133,
-            'omega_uperr':101,
-            'omega_ref':"Dressing et al. 2017"
-        },
-        'c':{
-            'omega':59.96,
-            'omega_lowerr':-120,
-            'omega_uperr':75,
-            'omega_ref':"Dressing et al. 2017"
         }
     }
     overwrite['K2-22'] = {
@@ -973,36 +931,12 @@ overwrite[starID] =
             'omega_ref':"Dressing et al. 2017"
         }
     }
-    overwrite['K2-25'] = {
-        'b':{
-            'omega':62,
-            'omega_lowerr':-39,
-            'omega_uperr':44,
-            'omega_ref':"Mann et al. 2016"
-        }
-    }
     overwrite['WASP-10'] = {
         'b':{
             'omega':151.9,
             'omega_lowerr':-8.8,
             'omega_uperr':11,
             'omega_ref':"Bonomo et al. 2017"
-        }
-    }
-    overwrite['WASP-12'] = {
-        'b':{
-            'omega':272.7,
-            'omega_lowerr':-1.3,
-            'omega_uperr':2.4,
-            'omega_ref':"Knutson et al. 2014"
-        }
-    }
-    overwrite['K2-90'] = {
-        'c':{
-            'omega':56.7,
-            'omega_lowerr':-129,
-            'omega_uperr':79.9,
-            'omega_ref':"Dressing et al. 2017"
         }
     }
     overwrite['WASP-14'] = {
@@ -1106,7 +1040,11 @@ overwrite[starID] =
             'mass_units':'Jupiter mass',
             'logg':2.9791,
             'logg_lowerr':-0.15, 'logg_uperr':0.15,
-            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]',
+            'omega':24.6,
+            'omega_lowerr':-74.0,
+            'omega_uperr':141.0,
+            'omega_ref':"Mann et al. 2017"
         },
         'd':{
             'mass':0.0130,
@@ -1128,7 +1066,15 @@ overwrite[starID] =
             'mass_units':'Jupiter mass',
             'logg':2.948,
             'logg_lowerr':-0.15, 'logg_uperr':0.15,
-            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]',
+            'sma':0.029535117574370662,
+            'sma_uperr':0.0021173577439160705,
+            'sma_lowerr':-0.0021173577439160705,
+            'sma_ref':'Mann et al. 2016',
+            'omega':62,
+            'omega_lowerr':-39,
+            'omega_uperr':44,
+            'omega_ref':"Mann et al. 2016"
         }
     }
     overwrite['LHS 3844'] = {
@@ -1230,7 +1176,11 @@ overwrite[starID] =
             'mass_units':'Jupiter mass',
             'logg':3.1228,
             'logg_lowerr':-0.15, 'logg_uperr':0.15,
-            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]',
+            'omega':179,
+            'omega_lowerr':-52,
+            'omega_uperr':52,
+            'omega_ref':"Barros et al. 2015"
         },
         'c':{
             'mass':0.0683,
@@ -1262,7 +1212,11 @@ overwrite[starID] =
             'mass_units':'Jupiter mass',
             'logg':3.1488,
             'logg_lowerr':-0.15, 'logg_uperr':0.15,
-            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]',
+            'omega':34.38,
+            'omega_lowerr':-133,
+            'omega_uperr':101,
+            'omega_ref':"Dressing et al. 2017"
         },
         'c':{
             'mass':0.0210,
@@ -1272,7 +1226,11 @@ overwrite[starID] =
             'mass_units':'Jupiter mass',
             'logg':3.0235,
             'logg_lowerr':-0.15, 'logg_uperr':0.15,
-            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]',
+            'omega':59.96,
+            'omega_lowerr':-120,
+            'omega_uperr':75,
+            'omega_ref':"Dressing et al. 2017"
         }
     }
     overwrite['K2-212'] = {
@@ -1515,7 +1473,11 @@ overwrite[starID] =
             'mass_units':'Jupiter mass',
             'logg':3.3391,
             'logg_lowerr':-0.1548, 'logg_uperr':0.1548,
-            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]',
+            'omega':56.7,
+            'omega_lowerr':-129,
+            'omega_uperr':79.9,
+            'omega_ref':"Dressing et al. 2017"
         }
     }
     overwrite['K2-93'] = {
@@ -1585,1096 +1547,699 @@ overwrite[starID] =
             'mass_units':'Jupiter mass',
         }
     }
-    # Spitzer orbit parameters
-    overwrite["CoRoT-2"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.16402,
-                "ars": 6.55654,
-                "inc": 88.17,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["GJ 1132"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.04328,
-                "ars": 15.55013,
-                "inc": 88.41,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["GJ 9827"] = {
-        "c": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.01535,
-                "ars": 14.81933,
-                "inc": 89.07,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["GJ 9827"] = {
-        "d": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.02939,
-                "ars": 21.09813,
-                "inc": 87.5,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["HAT-P-11"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.0553,
-                "ars": 16.40778,
-                "inc": 89.25,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["HAT-P-11"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.05764,
-                "ars": 16.39854,
-                "inc": 89.3,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["HAT-P-12"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.13376,
-                "ars": 11.59899,
-                "inc": 89.04,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["HAT-P-12"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.13297,
-                "ars": 11.64491,
-                "inc": 89.02,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["HAT-P-18"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.13458,
-                "ars": 15.73276,
-                "inc": 89.22,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["HAT-P-18"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.13574,
-                "ars": 15.91154,
-                "inc": 89.12,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["HAT-P-23"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.11296,
-                "ars": 4.83098,
-                "inc": 88.09,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["HAT-P-23"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.11389,
-                "ars": 4.87315,
-                "inc": 88.11,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["HAT-P-26"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.06491,
-                "ars": 11.7023,
-                "inc": 87.63,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["HAT-P-26"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.07147,
-                "ars": 11.77419,
-                "inc": 88.36,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["HAT-P-32"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.1449,
-                "ars": 5.16291,
-                "inc": 88.14,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["HAT-P-32"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.14428,
-                "ars": 5.16313,
-                "inc": 87.99,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["HAT-P-41"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.09487,
-                "ars": 5.39102,
-                "inc": 87.95,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["HAT-P-41"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.09852,
-                "ars": 5.39795,
-                "inc": 87.71,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["HAT-P-7"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.0794,
-                "ars": 3.98578,
-                "inc": 82.12,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["HAT-P-7"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.0767,
-                "ars": 3.98697,
-                "inc": 82.2,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["HAT-P-8"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.08855,
-                "ars": 6.15786,
-                "inc": 87.8,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["HD 106315"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.0,
-                "ars": 16.42263,
-                "inc": 88.4,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["HD 106315"] = {
-        "c": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.0,
-                "ars": 27.8084,
-                "inc": 88.13,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["HD 149026"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.0474,
-                "ars": 6.61568,
-                "inc": 86.53,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["HD 149026"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.05156,
-                "ars": 6.7782,
-                "inc": 86.95,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["K2-136"] = {
-        "c": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.03503,
-                "ars": 37.97529,
-                "inc": 89.42,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["K2-212"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.02741,
-                "ars": 25.95824,
-                "inc": 88.9,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["K2-24"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.03017,
-                "ars": 28.50549,
-                "inc": 89.11,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["K2-25"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.06718,
-                "ars": 21.74092,
-                "inc": 88.12,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["K2-28"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.07282,
-                "ars": 15.84264,
-                "inc": 88.24,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["K2-33"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.03973,
-                "ars": 8.34229,
-                "inc": 87.15,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["K2-33"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.02997,
-                "ars": 8.37543,
-                "inc": 86.54,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["KELT-1"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.07476,
-                "ars": 3.62157,
-                "inc": 86.03,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["KELT-1"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.07465,
-                "ars": 3.61508,
-                "inc": 85.93,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["KELT-14"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.11765,
-                "ars": 4.25404,
-                "inc": 78.32,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["KELT-14"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.11681,
-                "ars": 4.22688,
-                "inc": 78.28,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["KELT-16"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.11043,
-                "ars": 3.22807,
-                "inc": 84.75,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["KELT-20"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.11647,
-                "ars": 7.5429,
-                "inc": 86.27,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["KELT-7"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.08994,
-                "ars": 5.44082,
-                "inc": 83.49,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["KELT-7"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.09024,
-                "ars": 5.35605,
-                "inc": 83.24,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["KELT-9"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.08344,
-                "ars": 3.14982,
-                "inc": 85.19,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["LHS 3844"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.05664,
-                "ars": 7.00905,
-                "inc": 86.73,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["Qatar-1"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.14485,
-                "ars": 6.28053,
-                "inc": 84.31,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["Qatar-1"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.14594,
-                "ars": 6.28849,
-                "inc": 84.32,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["Qatar-2"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.16342,
-                "ars": 6.0256,
-                "inc": 87.21,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["Qatar-2"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.16222,
-                "ars": 6.00541,
-                "inc": 86.92,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["TrES-3"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.18247,
-                "ars": 5.89226,
-                "inc": 81.32,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-1"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.10108,
-                "ars": 5.59113,
-                "inc": 87.68,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-1"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.10292,
-                "ars": 5.58926,
-                "inc": 87.91,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-101"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.1081,
-                "ars": 8.34586,
-                "inc": 84.87,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-101"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.10929,
-                "ars": 8.27857,
-                "inc": 84.77,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-107"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.13483,
-                "ars": 17.97194,
-                "inc": 89.53,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-107"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.14243,
-                "ars": 17.69367,
-                "inc": 89.39,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-121"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.1208,
-                "ars": 3.70752,
-                "inc": 86.77,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-121"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.124,
-                "ars": 3.71265,
-                "inc": 86.79,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-127"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.09657,
-                "ars": 8.01469,
-                "inc": 88.62,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-127"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.10308,
-                "ars": 7.93979,
-                "inc": 88.56,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-13"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.08655,
-                "ars": 8.51026,
-                "inc": 87.2,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-13"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.09188,
-                "ars": 8.55737,
-                "inc": 87.14,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-131"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.07821,
-                "ars": 8.55926,
-                "inc": 85.27,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-131"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.0775,
-                "ars": 8.54597,
-                "inc": 85.19,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-140"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.17439,
-                "ars": 7.84361,
-                "inc": 82.88,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-17"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.12071,
-                "ars": 7.35888,
-                "inc": 88.47,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-17"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.12238,
-                "ars": 7.36001,
-                "inc": 88.37,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-19"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.14104,
-                "ars": 3.54269,
-                "inc": 79.53,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-19"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.14291,
-                "ars": 3.53035,
-                "inc": 79.68,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-21"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.09778,
-                "ars": 9.94629,
-                "inc": 87.78,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-21"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.10535,
-                "ars": 9.91119,
-                "inc": 87.68,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-29"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.09579,
-                "ars": 12.03178,
-                "inc": 89.23,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-29"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.09553,
-                "ars": 12.00757,
-                "inc": 89.17,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-31"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.12368,
-                "ars": 7.9913,
-                "inc": 84.39,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-31"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.12592,
-                "ars": 8.01206,
-                "inc": 84.27,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-33"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.10751,
-                "ars": 3.50596,
-                "inc": 85.86,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-33"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.10943,
-                "ars": 3.58477,
-                "inc": 85.87,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-36"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.13333,
-                "ars": 5.93013,
-                "inc": 83.5,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-36"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.13114,
-                "ars": 5.91477,
-                "inc": 84.14,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-39"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.14207,
-                "ars": 11.74539,
-                "inc": 88.28,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-39"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.14455,
-                "ars": 11.75102,
-                "inc": 88.34,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-4"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.14123,
-                "ars": 5.43481,
-                "inc": 87.72,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-4"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.15239,
-                "ars": 5.36784,
-                "inc": 87.81,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-43"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.15832,
-                "ars": 5.0809,
-                "inc": 82.93,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-43"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.15863,
-                "ars": 5.0855,
-                "inc": 83.08,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-52"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.16373,
-                "ars": 7.44766,
-                "inc": 85.72,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-52"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.16185,
-                "ars": 7.47573,
-                "inc": 85.86,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-6"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.13974,
-                "ars": 10.95247,
-                "inc": 89.38,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-6"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.14044,
-                "ars": 11.1486,
-                "inc": 89.38,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-62"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.10793,
-                "ars": 9.73354,
-                "inc": 88.9,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-62"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.08672,
-                "ars": 9.86124,
-                "inc": 87.4,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-63"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.07669,
-                "ars": 6.54232,
-                "inc": 88.19,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-63"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.07608,
-                "ars": 6.55811,
-                "inc": 88.12,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-67"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.163,
-                "ars": 12.79277,
-                "inc": 85.78,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-67"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.1559,
-                "ars": 12.73652,
-                "inc": 85.8,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-69"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.12587,
-                "ars": 12.26856,
-                "inc": 86.83,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-69"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.129,
-                "ars": 12.17183,
-                "inc": 86.77,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-74"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.08881,
-                "ars": 5.5089,
-                "inc": 81.61,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-74"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.09369,
-                "ars": 5.57636,
-                "inc": 81.9,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-76"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.09472,
-                "ars": 3.99483,
-                "inc": 87.07,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-76"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.10528,
-                "ars": 4.03252,
-                "inc": 87.62,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-79"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.10731,
-                "ars": 7.25924,
-                "inc": 85.83,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-79"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.10769,
-                "ars": 7.22125,
-                "inc": 85.8,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-80"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.16648,
-                "ars": 12.59496,
-                "inc": 89.07,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-80"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.1704,
-                "ars": 12.58074,
-                "inc": 89.11,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["WASP-95"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.10169,
-                "ars": 6.04296,
-                "inc": 86.7,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["XO-1"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.1286,
-                "ars": 11.32682,
-                "inc": 89.28,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["XO-1"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.13057,
-                "ars": 11.43151,
-                "inc": 89.23,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["XO-2"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.09888,
-                "ars": 7.88375,
-                "inc": 88.52,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["XO-2"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.10202,
-                "ars": 7.84415,
-                "inc": 88.66,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["XO-3"] = {
-        "b": {
-            "Spitzer-IRAC-IR-36-SUB": {
-                "rprs": 0.08464,
-                "ars": 6.36893,
-                "inc": 84.01,
-                "ref": "KAP"
-            }
-        }
-    }
-    overwrite["XO-3"] = {
-        "b": {
-            "Spitzer-IRAC-IR-45-SUB": {
-                "rprs": 0.08648,
-                "ars": 6.38318,
-                "inc": 84.23,
-                "ref": "KAP"
-            }
-        }
-    }
+
+    overwrite["CoRoT-2"]= {"b":{"Spitzer-IRAC-IR-45-SUB": {
+        "rprs": 0.15417,
+        "ars": 6.60677,
+        "inc": 88.08,
+        "ref": "KAP"
+    }}}
+
+    overwrite['GJ 1132'] = {
+        'b':{'inc':88.41,
+             'inc_uperr':2.6, 'inc_lowerr':-2.7,
+             'inc_ref':'KAP'
+            }
+    }
+#     overwrite["GJ 1132"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+#         "rprs": 0.03591,
+#         "ars": 15.67466,
+#         "inc": 87.48,
+#         "ref": "KAP"
+#     }
+#     overwrite["GJ 9827"]["c"]["Spitzer-IRAC-IR-45-SUB"] = {
+#         "rprs": 0.01535,
+#         "ars": 14.81933,
+#         "inc": 89.07,
+#         "ref": "KAP"
+#     }
+#     overwrite["GJ 9827"]["d"]["Spitzer-IRAC-IR-45-SUB"] = {
+#         "rprs": 0.02939,
+#         "ars": 21.09813,
+#         "inc": 87.5,
+#         "ref": "KAP"
+#     }
+    overwrite["HAT-P-11"]["b"]["Spitzer-IRAC-IR-36-SUB"] = {
+        "rprs": 0.05472,
+        "ars": 16.68736,
+        "inc": 90.0,
+        "ref": "KAP"
+    }
+    overwrite["HAT-P-11"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.05737,
+        "ars": 16.69862,
+        "inc": 90.0,
+        "ref": "KAP"
+    }
+    overwrite["HAT-P-12"] = {"b":{"Spitzer-IRAC-IR-36-SUB":{
+        "rprs": 0.13596,
+        "ars": 11.70552,
+        "inc": 89.22,
+        "ref": "KAP"
+    }}}
+    overwrite["HAT-P-12"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.12542,
+        "ars": 11.79633,
+        "inc": 89.22,
+        "ref": "KAP"
+    }
+    overwrite["HAT-P-18"]["b"]["Spitzer-IRAC-IR-36-SUB"] = {
+        "rprs": 0.13101,
+        "ars": 15.91216,
+        "inc": 89.14,
+        "ref": "KAP"
+    }
+    overwrite["HAT-P-18"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.1341,
+        "ars": 16.03188,
+        "inc": 89.14,
+        "ref": "KAP"
+    }
+#     overwrite["HAT-P-23"]["b"]["Spitzer-IRAC-IR-36-SUB"] = {
+#         "rprs": 0.10812,
+#         "ars": 5.08796,
+#         "inc": 85.1,
+#         "ref": "KAP"
+#     }
+#     overwrite["HAT-P-23"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+#         "rprs": 0.10907,
+#         "ars": 5.11757,
+#         "inc": 85.1,
+#         "ref": "KAP"
+#    }
+    overwrite["HAT-P-26"]["b"]["Spitzer-IRAC-IR-36-SUB"] = {
+        "rprs": 0.0627,
+        "ars": 11.88456,
+        "inc": 87.97,
+        "ref": "KAP"
+    }
+    overwrite["HAT-P-26"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.06869,
+        "ars": 11.83711,
+        "inc": 87.97,
+        "ref": "KAP"
+    }
+    overwrite["HAT-P-32"]["b"]["Spitzer-IRAC-IR-36-SUB"] = {
+        "rprs": 0.14229,
+        "ars": 5.30456,
+        "inc": 89.96,
+        "ref": "KAP"
+    }
+    overwrite["HAT-P-32"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.14319,
+        "ars": 5.28352,
+        "inc": 89.96,
+        "ref": "KAP"
+    }
+    overwrite["HAT-P-41"]["b"]["Spitzer-IRAC-IR-36-SUB"] = {
+        "rprs": 0.09061,
+        "ars": 5.45354,
+        "inc": 89.71,
+        "ref": "KAP"
+    }
+    overwrite["HAT-P-41"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.09406,
+        "ars": 5.46372,
+        "inc": 89.71,
+        "ref": "KAP"
+    }
+    overwrite["HAT-P-7"]= {"b":{"Spitzer-IRAC-IR-36-SUB":{
+        "rprs": 0.07729,
+        "ars": 4.00235,
+        "inc": 83.11,
+        "ref": "KAP"
+    }}}
+    overwrite["HAT-P-7"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.07431,
+        "ars": 4.00443,
+        "inc": 83.11,
+        "ref": "KAP"
+    }
+#     overwrite["HAT-P-8"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+#         "rprs": 0.08855,
+#         "ars": 6.15786,
+#         "inc": 87.8,
+#         "ref": "KAP"
+#     }
+#     overwrite["HD 106315"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+#         "rprs": 0.0,
+#         "ars": 16.42263,
+#         "inc": 88.4,
+#         "ref": "KAP"
+#     }
+#     overwrite["HD 106315"]["c"]["Spitzer-IRAC-IR-45-SUB"] = {
+#         "rprs": 0.0,
+#         "ars": 27.8084,
+#         "inc": 88.13,
+#         "ref": "KAP"
+#     }
+    overwrite["HD 149026"]= {"b":{"Spitzer-IRAC-IR-36-SUB":{
+        "rprs": 0.04715,
+        "ars": 6.7022,
+        "inc": 86.67,
+        "ref": "KAP"
+    }}}
+    overwrite["HD 149026"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.0508,
+        "ars": 6.69519,
+        "inc": 86.67,
+        "ref": "KAP"
+    }
+#     overwrite["HD 209458"]["b"]["Spitzer-IRAC-IR-36-SUB"] = {
+#         "rprs": 0.08969,
+#         "ars": 8.50999,
+#         "inc": 86.33,
+#         "ref": "KAP"
+#     }
+#     overwrite["HD 209458"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+#         "rprs": 0.09393,
+#         "ars": 8.49389,
+#         "inc": 86.33,
+#         "ref": "KAP"
+#     }
+    overwrite["K2-132"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.02366,
+        "ars": 5.10981,
+        "inc": 77.46,
+        "ref": "KAP"
+    }
+#     overwrite["K2-136"]["c"]["Spitzer-IRAC-IR-36-SUB"] = {
+#         "rprs": 0.05995,
+#         "ars": 37.51501,
+#         "inc": 89.6,
+#         "ref": "KAP"
+#     }
+#     overwrite["K2-136"]["c"]["Spitzer-IRAC-IR-45-SUB"] = {
+#         "rprs": 0.02834,
+#         "ars": 38.19971,
+#         "inc": 89.6,
+#         "ref": "KAP"
+#     }
+    overwrite["K2-212"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.02706,
+        "ars": 26.01843,
+        "inc": 89.19,
+        "ref": "KAP"
+    }
+    overwrite["K2-24"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.0315,
+        "ars": 28.52787,
+        "inc": 89.08,
+        "ref": "KAP"
+    }
+#     overwrite["K2-25"]["b"]["Spitzer-IRAC-IR-36-SUB"] = {
+#         "rprs": NaN,
+#         "ars": NaN,
+#         "inc": NaN,
+#         "ref": "KAP"
+#     }
+    overwrite["K2-25"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.105559,
+        "ars": 21.82933,
+        "inc": 88.13,
+        "ref": "KAP"
+    }
+    overwrite["K2-28"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.05347,
+        "ars": 15.843,
+        "inc": 88.9,
+        "ref": "KAP"
+    }
+    overwrite["K2-33"]["b"]= {"Spitzer-IRAC-IR-36-SUB":{
+        "rprs": 0.032,
+        "ars": 8.38191,
+        "inc": 83.72,
+        "ref": "KAP"
+    }}
+    overwrite["K2-33"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.03212,
+        "ars": 8.38039,
+        "inc": 83.72,
+        "ref": "KAP"
+    }
+    overwrite["KELT-1"]["b"]["Spitzer-IRAC-IR-36-SUB"] = {
+        "rprs": 0.07319,
+        "ars": 3.6293,
+        "inc": 84.95,
+        "ref": "KAP"
+    }
+    overwrite["KELT-1"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.06731,
+        "ars": 3.63812,
+        "inc": 84.95,
+        "ref": "KAP"
+    }
+    overwrite["KELT-14"] = {"b":{"Spitzer-IRAC-IR-36-SUB":{
+        "rprs": 0.11846,
+        "ars": 4.28352,
+        "inc": 78.3,
+        "ref": "KAP"
+    }}}
+    overwrite["KELT-14"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.11612,
+        "ars": 4.24534,
+        "inc": 78.3,
+        "ref": "KAP"
+    }
+    overwrite["KELT-16"]= {"b":{"Spitzer-IRAC-IR-45-SUB":{
+        "rprs": 0.11004,
+        "ars": 3.239,
+        "inc": 84.4,
+        "ref": "KAP"
+    }}}
+    overwrite["KELT-20"]= {"b":{"Spitzer-IRAC-IR-45-SUB":{
+        "rprs": 0.11524,
+        "ars": 7.46091,
+        "inc": 86.12,
+        "ref": "KAP"
+    }}}
+    overwrite["KELT-7"]={"b":{"Spitzer-IRAC-IR-36-SUB":{
+        "rprs": 0.09075,
+        "ars": 5.23451,
+        "inc": 82.82,
+        "ref": "KAP"
+    }}}
+    overwrite["KELT-7"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.08985,
+        "ars": 5.23938,
+        "inc": 82.82,
+        "ref": "KAP"
+    }
+    overwrite["KELT-9"]={"b":{"Spitzer-IRAC-IR-45-SUB":{
+        "rprs": 0.08249,
+        "ars": 3.19869,
+        "inc": 86.79,
+        "ref": "KAP"
+    }}}
+    overwrite["LHS 3844"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.05646,
+        "ars": 7.0373,
+        "inc": 88.5,
+        "ref": "KAP"
+    }
+    overwrite["Qatar-1"]={"b":{"Spitzer-IRAC-IR-36-SUB":{
+        "rprs": 0.14617,
+        "ars": 6.27199,
+        "inc": 84.08,
+        "ref": "KAP"
+    }}}
+    overwrite["Qatar-1"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.14198,
+        "ars": 6.3013,
+        "inc": 84.08,
+        "ref": "KAP"
+    }
+    overwrite["Qatar-2"]={"b":{"Spitzer-IRAC-IR-36-SUB": {
+        "rprs": 0.16336,
+        "ars": 5.8899,
+        "inc": 86.12,
+        "ref": "KAP"
+    }}}
+    overwrite["Qatar-2"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.16304,
+        "ars": 5.94104,
+        "inc": 86.12,
+        "ref": "KAP"
+    }
+    overwrite["TrES-3"]={"b":{"Spitzer-IRAC-IR-45-SUB":{
+        "rprs": 0.16639,
+        "ars": 5.98068,
+        "inc": 81.85,
+        "ref": "KAP"
+    }}}
+    overwrite["WASP-1"]={"b":{"Spitzer-IRAC-IR-36-SUB": {
+        "rprs": 0.09646,
+        "ars": 5.71308,
+        "inc": 90.0,
+        "ref": "KAP"
+    }}}
+    overwrite["WASP-1"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.09964,
+        "ars": 5.67935,
+        "inc": 90.0,
+        "ref": "KAP"
+    }
+    overwrite["WASP-101"]={"b":{"Spitzer-IRAC-IR-36-SUB":{
+        "rprs": 0.10685,
+        "ars": 8.32318,
+        "inc": 84.76,
+        "ref": "KAP"
+    }}}
+    overwrite["WASP-101"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.10875,
+        "ars": 8.30395,
+        "inc": 84.76,
+        "ref": "KAP"
+    }
+    overwrite["WASP-107"]={"b":{"Spitzer-IRAC-IR-36-SUB":{
+        "rprs": 0.13341,
+        "ars": 18.10372,
+        "inc": 89.93,
+        "ref": "KAP"
+    }}}
+    overwrite["WASP-107"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.14157,
+        "ars": 18.04266,
+        "inc": 89.93,
+        "ref": "KAP"
+    }
+    overwrite["WASP-121"]={"b":{"Spitzer-IRAC-IR-36-SUB":{
+        "rprs": 0.11918,
+        "ars": 3.75692,
+        "inc": 89.93,
+        "ref": "KAP"
+    }}}
+    overwrite["WASP-121"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.12097,
+        "ars": 3.77292,
+        "inc": 89.93,
+        "ref": "KAP"
+    }
+    overwrite["WASP-127"]={"b":{"Spitzer-IRAC-IR-36-SUB": {
+        "rprs": 0.09465,
+        "ars": 8.06482,
+        "inc": 88.7,
+        "ref": "KAP"
+    }}}
+    overwrite["WASP-127"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.10356,
+        "ars": 8.02415,
+        "inc": 88.7,
+        "ref": "KAP"
+    }
+    overwrite["WASP-13"]={"b":{"Spitzer-IRAC-IR-36-SUB": {
+        "rprs": 0.08714,
+        "ars": 8.05456,
+        "inc": 85.43,
+        "ref": "KAP"
+    }}}
+    overwrite["WASP-13"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.09283,
+        "ars": 8.02884,
+        "inc": 85.43,
+        "ref": "KAP"
+    }
+    overwrite["WASP-131"]={"b":{"Spitzer-IRAC-IR-36-SUB": {
+        "rprs": 0.07731,
+        "ars": 8.43526,
+        "inc": 85.0,
+        "ref": "KAP"
+    }}}
+    overwrite["WASP-131"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.07629,
+        "ars": 8.47147,
+        "inc": 85.0,
+        "ref": "KAP"
+    }
+    overwrite["WASP-140"]={"b":{"Spitzer-IRAC-IR-45-SUB": {
+        "rprs": 0.15882,
+        "ars": 8.00504,
+        "inc": 83.3,
+        "ref": "KAP"
+    }}}
+    overwrite["WASP-17"]={"b":{"Spitzer-IRAC-IR-36-SUB": {
+        "rprs": 0.11219,
+        "ars": 7.54489,
+        "inc": 89.97,
+        "ref": "KAP"
+    }}}
+    overwrite["WASP-17"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.11898,
+        "ars": 7.46699,
+        "inc": 89.97,
+        "ref": "KAP"
+    }
+    overwrite["WASP-19"]={"b":{"Spitzer-IRAC-IR-36-SUB": {
+        "rprs": 0.14216,
+        "ars": 3.47724,
+        "inc": 78.51,
+        "ref": "KAP"
+    }}}
+    overwrite["WASP-19"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.14102,
+        "ars": 3.49199,
+        "inc": 78.51,
+        "ref": "KAP"
+    }
+    overwrite["WASP-21"]={"b":{"Spitzer-IRAC-IR-36-SUB": {
+        "rprs": 0.09412,
+        "ars": 9.97247,
+        "inc": 88.75,
+        "ref": "KAP"
+    }}}
+    overwrite["WASP-21"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.04464,
+        "ars": 9.72834,
+        "inc": 88.75,
+        "ref": "KAP"
+    }
+    overwrite["WASP-29"]={"b":{"Spitzer-IRAC-IR-36-SUB": {
+        "rprs": 0.09419,
+        "ars": 12.30495,
+        "inc": 89.93,
+        "ref": "KAP"
+    }}}
+    overwrite["WASP-29"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.09394,
+        "ars": 12.31367,
+        "inc": 89.93,
+        "ref": "KAP"
+    }
+    overwrite["WASP-31"]={"b":{"Spitzer-IRAC-IR-36-SUB": {
+        "rprs": 0.10103,
+        "ars": 8.02383,
+        "inc": 84.21,
+        "ref": "KAP"
+    }}}
+    overwrite["WASP-31"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.11153,
+        "ars": 8.01901,
+        "inc": 84.21,
+        "ref": "KAP"
+    }
+    overwrite["WASP-33"]={"b":{"Spitzer-IRAC-IR-36-SUB": {
+        "rprs": 0.10682,
+        "ars": 3.5413,
+        "inc": 86.63,
+        "ref": "KAP"
+    }}}
+    overwrite["WASP-33"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.1084,
+        "ars": 3.6099,
+        "inc": 86.63,
+        "ref": "KAP"
+    }
+    overwrite["WASP-36"]={"b":{"Spitzer-IRAC-IR-36-SUB": {
+        "rprs": 0.12992,
+        "ars": 5.88029,
+        "inc": 83.15,
+        "ref": "KAP"
+    }}}
+    overwrite["WASP-36"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.13419,
+        "ars": 5.84215,
+        "inc": 83.15,
+        "ref": "KAP"
+    }
+    overwrite["WASP-39"]["b"] ={"Spitzer-IRAC-IR-36-SUB": {
+        "rprs": 0.13816,
+        "ars": 11.58054,
+        "inc": 88.03,
+        "ref": "KAP"
+    }}
+    overwrite["WASP-39"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.14286,
+        "ars": 11.58493,
+        "inc": 88.03,
+        "ref": "KAP"
+    }
+    overwrite["WASP-4"]={"b":{"Spitzer-IRAC-IR-36-SUB": {
+        "rprs": 0.13608,
+        "ars": 5.48493,
+        "inc": 89.06,
+        "ref": "KAP"
+    }}}
+    overwrite["WASP-4"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.15113,
+        "ars": 5.47592,
+        "inc": 89.06,
+        "ref": "KAP"
+    }
+    overwrite["WASP-43"]["b"] = {"Spitzer-IRAC-IR-36-SUB": {
+        "rprs": 0.15356,
+        "ars": 5.26328,
+        "inc": 84.25,
+        "ref": "KAP"
+    }}
+    overwrite["WASP-43"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.15523,
+        "ars": 5.26395,
+        "inc": 84.25,
+        "ref": "KAP"
+    }
+    overwrite["WASP-52"]={"b":{"Spitzer-IRAC-IR-36-SUB": {
+        "rprs": 0.16534,
+        "ars": 7.29716,
+        "inc": 85.25,
+        "ref": "KAP"
+    }}}
+    overwrite["WASP-52"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.16452,
+        "ars": 7.31186,
+        "inc": 85.25,
+        "ref": "KAP"
+    }
+    overwrite["WASP-6"]["b"]["Spitzer-IRAC-IR-36-SUB"] = {
+        "rprs": 0.13768,
+        "ars": 11.5668,
+        "inc": 89.99,
+        "ref": "KAP"
+    }
+    overwrite["WASP-6"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.13993,
+        "ars": 11.77256,
+        "inc": 89.99,
+        "ref": "KAP"
+    }
+    overwrite["WASP-62"]={"b":{"Spitzer-IRAC-IR-36-SUB": {
+        "rprs": 0.10694,
+        "ars": 9.63148,
+        "inc": 88.25,
+        "ref": "KAP"
+    }}}
+    overwrite["WASP-62"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.08844,
+        "ars": 9.84845,
+        "inc": 88.25,
+        "ref": "KAP"
+    }
+    overwrite["WASP-63"]={"b":{"Spitzer-IRAC-IR-36-SUB": {
+        "rprs": 0.07479,
+        "ars": 6.63717,
+        "inc": 89.37,
+        "ref": "KAP"
+    }}}
+    overwrite["WASP-63"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.07187,
+        "ars": 6.65457,
+        "inc": 89.37,
+        "ref": "KAP"
+    }
+    overwrite["WASP-67"]={"b":{"Spitzer-IRAC-IR-36-SUB": {
+        "rprs": 0.13746,
+        "ars": 12.92629,
+        "inc": 86.05,
+        "ref": "KAP"
+    }}}
+    overwrite["WASP-67"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.13229,
+        "ars": 12.91299,
+        "inc": 86.05,
+        "ref": "KAP"
+    }
+    overwrite["WASP-69"]={"b":{"Spitzer-IRAC-IR-36-SUB": {
+        "rprs": 0.12707,
+        "ars": 11.05987,
+        "inc": 86.11,
+        "ref": "KAP"
+    }}}
+    overwrite["WASP-69"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.12998,
+        "ars": 11.06867,
+        "inc": 86.11,
+        "ref": "KAP"
+    }
+    overwrite["WASP-74"]={"b":{"Spitzer-IRAC-IR-36-SUB": {
+        "rprs": 0.09019,
+        "ars": 5.36976,
+        "inc": 81.07,
+        "ref": "KAP"
+    }}}
+    overwrite["WASP-74"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.09479,
+        "ars": 5.31398,
+        "inc": 81.07,
+        "ref": "KAP"
+    }
+    overwrite["WASP-76"]={"b":{"Spitzer-IRAC-IR-36-SUB": {
+        "rprs": 0.09439,
+        "ars": 3.9565,
+        "inc": 85.98,
+        "ref": "KAP"
+    }}}
+    overwrite["WASP-76"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.10368,
+        "ars": 3.99989,
+        "inc": 85.98,
+        "ref": "KAP"
+    }
+    overwrite["WASP-79"]={"b":{"Spitzer-IRAC-IR-36-SUB": {
+        "rprs": 0.10751,
+        "ars": 7.17676,
+        "inc": 85.57,
+        "ref": "KAP"
+    }}}
+    overwrite["WASP-79"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.10644,
+        "ars": 7.2146,
+        "inc": 85.57,
+        "ref": "KAP"
+    }
+    overwrite["WASP-80"]={"b":{"Spitzer-IRAC-IR-36-SUB": {
+        "rprs": 0.16864,
+        "ars": 11.70746,
+        "inc": 87.89,
+        "ref": "KAP"
+    }}}
+    overwrite["WASP-80"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.17257,
+        "ars": 11.76194,
+        "inc": 87.89,
+        "ref": "KAP"
+    }
+    overwrite["WASP-95"]={"b":{"Spitzer-IRAC-IR-45-SUB": {
+        "rprs": 0.0997,
+        "ars": 6.15376,
+        "inc": 88.4,
+        "ref": "KAP"
+    }}}
+    overwrite["XO-1"]={"b":{"Spitzer-IRAC-IR-36-SUB": {
+        "rprs": 0.13111,
+        "ars": 11.20137,
+        "inc": 88.31,
+        "ref": "KAP"
+    }}}
+    overwrite["XO-1"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.13096,
+        "ars": 11.43554,
+        "inc": 88.31,
+        "ref": "KAP"
+    }
+    overwrite["XO-2"]["b"]["Spitzer-IRAC-IR-36-SUB"] = {
+        "rprs": 0.09526,
+        "ars": 8.00034,
+        "inc": 89.32,
+        "ref": "KAP"
+    }
+    overwrite["XO-2"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.07278,
+        "ars": 7.98249,
+        "inc": 89.32,
+        "ref": "KAP"
+    }
+    overwrite["XO-3"]["b"]["Spitzer-IRAC-IR-36-SUB"] = {
+        "rprs": 0.08461,
+        "ars": 6.3953,
+        "inc": 84.13,
+        "ref": "KAP"
+    }
+    overwrite["XO-3"]["b"]["Spitzer-IRAC-IR-45-SUB"] = {
+        "rprs": 0.08647,
+        "ars": 6.37613,
+        "inc": 84.26,
+        "ref": "KAP"
+    }
+
+    # spitzer orbit parameters
     return overwrite
 # -------------------------------------------------------------------
