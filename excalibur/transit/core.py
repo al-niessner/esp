@@ -87,7 +87,7 @@ def checksv(sv):
 # ----------------- --------------------------------------------------
 # -- NORMALIZATION -- ------------------------------------------------
 def normversion():
-    return dawgie.VERSION(1,1,3)
+    return dawgie.VERSION(1,1,4)
 
 def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
     '''
@@ -672,8 +672,9 @@ def wlversion():
     '''
     G. ROUDIER: 1.2.0 includes a multi instrument orbital solution
     K. Pearson: 1.2.2 new eclipse model + priors from transit
+              : 1.2.3 new priors
     '''
-    return dawgie.VERSION(1,2,2)
+    return dawgie.VERSION(1,2,3)
 
 def hstwhitelight(allnrm, fin, out, allext, selftype, chainlen=int(1e4), verbose=False):
     '''

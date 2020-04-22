@@ -83,8 +83,9 @@ def autofillversion():
     '''
     1.1.1: manual trigger to autofill
     1.1.2: manual trigger for new spitzer priors
+    1.1.3: manual trigger to fix new priors
     '''
-    return dawgie.VERSION(1,1,2)
+    return dawgie.VERSION(1,1,3)
 def autofill(ident, thistarget, out,
              queryurl="https://archive.stsci.edu/hst/search.php?target=",
              action="&action=Search&resolver=SIMBAD&radius=3.0",
