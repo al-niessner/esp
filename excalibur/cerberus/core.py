@@ -374,7 +374,7 @@ G. ROUDIER: Cerberus retrievial
                     nodes.append(hzi)
                     pass
                 # BOOST TEMPERATURE PRIOR TO [50%, 400%] Teq
-                tpr = pm.Uniform('T', eqtemp/2e0, 4e0*eqtemp)
+                tpr = pm.Uniform('T', 0.75e0*eqtemp, 1.5e0*eqtemp)
                 nodes.append(tpr)
                 # MODEL SPECIFIC ABSORBERS
                 modelpar = pm.Uniform(model, lower=-6e0, upper=6e0,
