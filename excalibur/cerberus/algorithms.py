@@ -20,6 +20,8 @@ fltrs = (trgedit.activefilters.__doc__).split('\n')
 fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
 # Cerberus enabled for G141
 # fltrs = [f for f in fltrs if 'G141' in f]
+# KICK SPITZER FOR THE MOMENT
+fltrs = [f for f in fltrs if 'Spitzer' not in f]
 # ----------------------- --------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class xslib(dawgie.Algorithm):
