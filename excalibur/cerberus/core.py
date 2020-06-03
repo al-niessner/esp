@@ -99,8 +99,7 @@ G. ROUDIER: Builds Cerberus cross section library
                 matnu = np.array(library[myexomol]['nutemp'])[select]
                 sigma2 = np.array(library[myexomol]['Itemp'])[select]
                 for nubin, mydw in zip(nugrid, dwnu):
-                    select = ((matnu > (nubin-mydw/2.)) &
-                              (matnu <= nubin+mydw/2.))
+                    select = ((matnu > (nubin-mydw/2.)) & (matnu <= nubin+mydw/2.))
                     bini.append(np.sum(sigma2[select]))
                     pass
                 bini = np.array(bini)/dwnu
@@ -317,7 +316,7 @@ G. ROUDIER: Wrapper around HITRAN partition functions (Gamache et al. 2011)
 # -- ATMOS -- --------------------------------------------------------
 def atmosversion():
     import dawgie
-    return dawgie.VERSION(1,1,2)
+    return dawgie.VERSION(1,2,0)
 
 def atmos(fin, xsl, spc, out,
           hazedir=os.path.join(excalibur.context['data_dir'], 'CERBERUS/HAZE'),
@@ -331,10 +330,9 @@ G. ROUDIER: Cerberus retrievial
     crbhzlib = {'PROFILE':[]}
     hazelib(crbhzlib, hazedir=hazedir, verbose=verbose)
     # MODELS
-    modfam = ['TEC', 'PHOTOCHEM', 'HEQ']
-    modparlbl = {'TEC':['XtoH', 'CtoO'],
-                 'PHOTOCHEM':['HCN', 'CH4', 'C2H2', 'CO2', 'H2CO'],
-                 'HEQ':['TIO', 'H2CO', 'H2O', 'NH3', 'CO2']}
+    modfam = ['TEC', 'PHOTOCHEM']
+    modparlbl = {'TEC':['XtoH', 'CtoO', 'NtoO'],
+                 'PHOTOCHEM':['HCN', 'CH4', 'C2H2', 'CO2', 'H2CO']}
     if (singlemod is not None) and (singlemod in modfam):
         modfam = [modfam[modfam.index(singlemod)]]
         pass
@@ -373,7 +371,7 @@ G. ROUDIER: Cerberus retrievial
                     hzi = pm.Uniform('HIndex', -4e0, 0e0)
                     nodes.append(hzi)
                     pass
-                # BOOST TEMPERATURE PRIOR TO [50%, 400%] Teq
+                # BOOST TEMPERATURE PRIOR TO [75%, 150%] Teq
                 tpr = pm.Uniform('T', 0.75e0*eqtemp, 1.5e0*eqtemp)
                 nodes.append(tpr)
                 # MODEL SPECIFIC ABSORBERS
@@ -437,7 +435,9 @@ G. ROUDIER: Cerberus forward model probing up to 'Hsmax' scale heights from soli
     dz = []
     addz = []
     if cheq is not None:
-        mixratio, fH2, fHe = crbce(p, temp, C2Or=cheq['CtoO'], X2Hr=cheq['XtoH'])
+        mixratio, fH2, fHe = crbce(p, temp,
+                                   C2Or=cheq['CtoO'], X2Hr=cheq['XtoH'],
+                                   N2Or=cheq['NtoO'])
         mmw, fH2, fHe = getmmw(mixratio, protosolar=False, fH2=fH2, fHe=fHe)
         pass
     else: mmw, fH2, fHe = getmmw(mixratio)
@@ -963,7 +963,7 @@ G. ROUDIER: Wrapper around EXOMOL Cerberus library
     return sigma, nu
 # ------------ -------------------------------------------------------
 # -- CHEMICAL EQUILIBRIUM -- -----------------------------------------
-def crbce(p, temp, C2Or=0., X2Hr=0.):
+def crbce(p, temp, C2Or=0., X2Hr=0., N2Or=0.):
     '''
 G. ROUDIER: BURROWS AND SHARP 1998 + ANDERS & GREVESSE 1989
     '''
@@ -983,6 +983,7 @@ G. ROUDIER: BURROWS AND SHARP 1998 + ANDERS & GREVESSE 1989
     e1 = 2.346515e-8
     RcalpmolpK = 1.9872036  # cal/mol/K
     solCtO = solar['nC']/solar['nO']
+    solNtO = solar['nN']/solar['nO']
     metal = solar.copy()
     metal['nH'] = 0.
     metal['nHe'] = 0.
@@ -1008,6 +1009,8 @@ G. ROUDIER: BURROWS AND SHARP 1998 + ANDERS & GREVESSE 1989
         pass
     if C2Or < -10.: C2Or = -10.
     if C2Or > 10.: C2Or = 10.
+    if N2Or < -10.: N2Or = -10.
+    if N2Or > 10.: N2Or = 10.
     pH2 = nH2*p
     K1 = np.exp((a1/temp + b1 + c1*temp + d1*temp**2 + e1*temp**3)/(RcalpmolpK*temp))
     AH2 = (pH2**2.)/(2.*K1)
@@ -1026,7 +1029,7 @@ G. ROUDIER: BURROWS AND SHARP 1998 + ANDERS & GREVESSE 1989
     d2 = -7.8284e-4
     e2 = 4.729048e-8
     K2 = np.exp((a2/temp + b2 + c2*temp + d2*temp**2 + e2*temp**3)/(RcalpmolpK*temp))
-    AN = (10.**X2Hr)*solar['nN']/nH
+    AN = (10.**X2Hr)*(10.**N2Or)*solNtO*solar['nO']/nH  # solar['nN']/nH
     AH2 = (pH2**2.)/(8.*K2)
     BN2 = AN + AH2 - np.sqrt((AN + AH2)**2. - (AN)**2.)
     BNH3 = 2.*(AN - BN2)
@@ -1051,6 +1054,7 @@ G. ROUDIER: Wrapper around Cerberus forward model
         tceqdict = {}
         tceqdict['XtoH'] = float(mdp[0])
         tceqdict['CtoO'] = float(mdp[1])
+        tceqdict['NtoO'] = float(mdp[2])
         fmc = crbmodel(None, float(hza), float(ctp), ctxt.solidr, ctxt.orbp,
                        ctxt.xsl['data'][ctxt.p]['XSECS'],
                        ctxt.xsl['data'][ctxt.p]['QTGRID'],
@@ -1087,6 +1091,7 @@ G. ROUDIER: Wrapper around Cerberus forward model, spherical shell symmetry
         tceqdict = {}
         tceqdict['XtoH'] = float(mdp[0])
         tceqdict['CtoO'] = float(mdp[1])
+        tceqdict['NtoO'] = float(mdp[2])
         fmc = crbmodel(None, float(hza), float(ctp), ctxt.solidr, ctxt.orbp,
                        ctxt.xsl['data'][ctxt.p]['XSECS'],
                        ctxt.xsl['data'][ctxt.p]['QTGRID'],
@@ -1147,6 +1152,7 @@ def hazelib(sv,
                   kind='linear', bounds_error=False, fill_value=0e0)
     javspl = itp(pressure[sortme], jav[sortme],
                  kind='linear', bounds_error=False, fill_value=0e0)
+    # MICROPHYSICS BASED PROFILE
     if verbose:
         myfig = plt.figure(figsize=(12, 6))
         for vmr in density.T:

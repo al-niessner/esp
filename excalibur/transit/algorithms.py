@@ -18,6 +18,7 @@ import excalibur.target.edit as trgedit
 # FILTERS
 fltrs = (trgedit.activefilters.__doc__).split('\n')
 fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
+fltrs = [f for f in fltrs if 'Spitzer' not in f]
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class normalization(dawgie.Algorithm):
@@ -71,8 +72,11 @@ class normalization(dawgie.Algorithm):
     def _norm(self, cal, tme, fin, index):
         if 'Spitzer' in fltrs[index]:
             normed = trncore.norm_spitzer(cal, tme, fin, self.__out[index], self._type)
+            pass
         else:
-            normed = trncore.norm(cal, tme, fin, fltrs[index], self.__out[index], self._type, verbose=False)
+            normed = trncore.norm(cal, tme, fin, fltrs[index], self.__out[index],
+                                  self._type, verbose=False)
+            pass
         return normed
 
     def _failure(self, errstr):
@@ -82,7 +86,9 @@ class normalization(dawgie.Algorithm):
 
 class whitelight(dawgie.Algorithm):
     '''
-    G. ROUDIER: See inheritance and CI5 thread with A NIESSNER for __init__() method and class attributes https://github-fn.jpl.nasa.gov/EXCALIBUR/esp/pull/86
+    G. ROUDIER: See inheritance and CI5 thread with A NIESSNER
+    for __init__() method and class attributes
+    https://github-fn.jpl.nasa.gov/EXCALIBUR/esp/pull/86
     '''
     def __init__(self, nrm=normalization()):
         self._version_ = trncore.wlversion()
@@ -90,7 +96,6 @@ class whitelight(dawgie.Algorithm):
         self._nrm = nrm
         self.__fin = sysalg.finalize()
         self.__out = [trnstates.WhiteLightSV(ext) for ext in fltrs]
-        # MERGE PROTOTYPE
         self.__out.append(trnstates.WhiteLightSV('HST'))
         return
 
@@ -112,7 +117,8 @@ class whitelight(dawgie.Algorithm):
         if self._type == "transit":
             allnormdata = []
             allext = []
-            hstfltrs = ['HST-WFC3-IR-G141-SCAN','HST-WFC3-IR-G102-SCAN','HST-STIS-CCD-G750L-STARE','HST-STIS-CCD-G430L-STARE']
+            hstfltrs = ['HST-WFC3-IR-G141-SCAN', 'HST-WFC3-IR-G102-SCAN',
+                        'HST-STIS-CCD-G750L-STARE', 'HST-STIS-CCD-G430L-STARE']
             for ext in hstfltrs:
                 update = False
                 nrm = self._nrm.sv_as_dict()[ext]
@@ -162,15 +168,14 @@ class whitelight(dawgie.Algorithm):
         return wl
 
     def _whitelight(self, nrm, fin, out, ext):
-        # IF YOU UNDERSTAND THIS ALGO: DO WHAT I SAY, NOT WHAT IS BEING DONE HERE...
-        # I dont understand anything
-        # neither I
         if 'Spitzer' in ext:
-            wl = trncore.lightcurve_spitzer(nrm, fin, out, self._type, ext, self.__out[-1], chainlen=int(1e4))
-        elif self._type == 'transit':
-            wl = trncore.whitelight(nrm, fin, out, ext, self._type, self.__out[-1], chainlen=int(1e4), verbose=False)
-        else:  # hst + eclipse = no no
-            wl = False
+            wl = trncore.lightcurve_spitzer(nrm, fin, out, self._type, ext,
+                                            self.__out[-1], chainlen=int(1e4))
+            pass
+        else:
+            wl = trncore.whitelight(nrm, fin, out, ext, self._type,
+                                    self.__out[-1], chainlen=int(1e4), verbose=False)
+            pass
         return wl
 
     def _failure(self, errstr):
@@ -236,10 +241,11 @@ class spectrum(dawgie.Algorithm):
         return
 
     def _spectrum(self, fin, nrm, wht, out, ext):
-        if "Spitzer" in ext:
-            s = trncore.spitzer_spectrum(wht, out, ext)  # , self._type)
+        if "Spitzer" in ext: s = trncore.spitzer_spectrum(wht, out, ext)
         else:
-            s = trncore.spectrum(fin, nrm, wht, out, ext, self._type, chainlen=int(1e4), verbose=False)
+            s = trncore.spectrum(fin, nrm, wht, out, ext, self._type, chainlen=int(1e4),
+                                 verbose=False)
+            pass
         return s
 
     def _failure(self, errstr):
