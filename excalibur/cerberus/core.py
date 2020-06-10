@@ -1120,7 +1120,8 @@ G. ROUDIER: Wrapper around Cerberus forward model, spherical shell symmetry
 # -- HAZE DENSITY PROFILE LIBRARY -- ---------------------------------
 def hazelib(sv,
             hazedir=os.path.join(excalibur.context['data_dir'], 'CERBERUS/HAZE'),
-            datafile='Jup-ISS-aerosol.dat', verbose=False):
+            datafile='Jup-ISS-aerosol.dat', verbose=False,
+            fromjupiter=False, narrow=True):
     vdensity = {'PRESSURE':[], 'CONSTANT':[], 'JMAX':[], 'MAX':[],
                 'JMEDIAN':[], 'MEDIAN':[], 'JAVERAGE':[], 'AVERAGE':[]}
     with open(os.path.join(hazedir, datafile), 'r') as fp: data = fp.readlines()
@@ -1139,20 +1140,80 @@ def hazelib(sv,
         pressure.append(line[0])
         density.append(line[1:])
         pass
-    pressure = 1e-3*np.array(pressure)  # [bar]
-    density = 1e-6*np.array(density)  # [n/m^3]
-    jmax = np.nanmax(density, 1)
-    jmed = np.median(density, 1)
-    jav = np.mean(density, 1)
-    isobar = pressure*0. + np.mean(jav)
-    sortme = np.argsort(pressure)
-    jmaxspl = itp(pressure[sortme], jmax[sortme],
-                  kind='linear', bounds_error=False, fill_value=0e0)
-    jmedspl = itp(pressure[sortme], jmed[sortme],
-                  kind='linear', bounds_error=False, fill_value=0e0)
-    javspl = itp(pressure[sortme], jav[sortme],
-                 kind='linear', bounds_error=False, fill_value=0e0)
-    # MICROPHYSICS BASED PROFILE
+    # JUPITER PROFILES
+    if fromjupiter:
+        pressure = 1e-3*np.array(pressure)  # [bar]
+        density = 1e-6*np.array(density)  # [n/m^3]
+        jmax = np.nanmax(density, 1)
+        jmed = np.median(density, 1)
+        jav = np.mean(density, 1)
+        isobar = pressure*0. + np.mean(jav)
+        sortme = np.argsort(pressure)
+        jmaxspl = itp(pressure[sortme], jmax[sortme],
+                      kind='linear', bounds_error=False, fill_value=0e0)
+        jmedspl = itp(pressure[sortme], jmed[sortme],
+                      kind='linear', bounds_error=False, fill_value=0e0)
+        javspl = itp(pressure[sortme], jav[sortme],
+                     kind='linear', bounds_error=False, fill_value=0e0)
+        pass
+    else:
+        if narrow:
+            density = [0.322749941, 0.618855379, 0.659653289, 0.660104488, 0.687461411,
+                       0.701591071, 0.823367371, 0.998717644, 1.254642603, 1.483661838,
+                       1.726335787, 1.928591783, 2.157824745, 2.387176443, 2.58959867,
+                       2.778603657, 2.981049632, 3.237164569, 3.573854191, 3.9373308,
+                       4.273759202, 4.448824507, 4.341700309, 4.019449062, 3.683756827,
+                       3.227214438, 2.891522204, 2.461790549, 1.978247447, 1.481168369,
+                       1.010947518, 0.500379957, 0.030087865, -0.252101639]
+            pressure = [1.874253147, 1.632296367, 1.349380195, 1.080826407, 0.797986227,
+                        0.388012349, -0.09324151, -0.461724056, -0.788259321,
+                        -1.100508193, -1.540042745, -1.922811684, -2.362270245,
+                        -2.872400855, -3.354110663, -3.849878889, -4.345723106,
+                        -4.78533365, -5.182996913, -5.524274519, -5.766459273,
+                        -5.9653289, -6.205005937, -6.40106388, -6.597045832,
+                        -6.863015911, -7.058997863, -7.282716694, -7.47786274,
+                        -7.616395156, -7.740945144, -7.851132748, -7.933279506,
+                        -7.974086915]
+            pass
+        else:
+            density = [-1.222929936, -0.76433121, -0.229299363, 0.025477707, 0.25477707,
+                       0.789808917, 1.503184713, 2.089171975, 2.369426752, 2.522292994,
+                       2.675159236, 2.904458599, 3.133757962, 3.337579618, 3.541401274,
+                       3.694267516, 3.796178344, 3.821656051, 3.898089172, 3.923566879,
+                       4.0,
+                       4.025477707, 4.050955414, 4.127388535, 4.152866242, 4.178343949,
+                       4.127388535, 3.974522293, 3.796178344, 3.541401274, 3.261146497,
+                       2.904458599, 2.624203822, 2.267515924, 1.961783439, 1.630573248,
+                       1.299363057, 0.968152866, 0.636942675, 0.280254777, -0.076433121,
+                       -0.433121019, -0.76433121, -1.070063694, -1.299363057]
+            pressure = [2.812911584, 2.809025154, 2.63499946, 2.327755587, 2.156320846,
+                        2.083990068, 1.976249595, 1.835690381, 1.528230595, 1.086257152,
+                        0.678182014, 0.337255749, 0.030227788, -0.310482565, -0.718989528,
+                        -1.059268056, -1.534707978, -1.941703552, -2.518622477,
+                        -2.85782144, -3.33304545, -3.807837634, -4.214833207,
+                        -4.690057217, -5.097052791, -5.60574328, -6.012091115,
+                        -6.4175753, -6.788945266, -7.057972579, -7.292885674,
+                        -7.493252726, -7.626470906, -7.725143042, -7.790348699,
+                        -7.855338443, -7.954226492, -8.019216237, -8.118104286,
+                        -8.182878117, -8.281550254, -8.38022239, -8.411313829,
+                        -8.476519486, -8.508474576]
+            pass
+        density = 1e-6*(10**(np.array(density)))
+        density = np.array([density, density])
+        density = density.T
+        jmax = np.nanmax(density, 1)
+        jmed = np.median(density, 1)
+        jav = np.mean(density, 1)
+        pressure = 10**(np.array(pressure))
+        isobar = pressure*0. + np.mean(jav)
+        sortme = np.argsort(pressure)
+        jmaxspl = itp(pressure[sortme], jmax[sortme],
+                      kind='linear', bounds_error=False, fill_value=0e0)
+        jmedspl = itp(pressure[sortme], jmed[sortme],
+                      kind='linear', bounds_error=False, fill_value=0e0)
+        javspl = itp(pressure[sortme], jav[sortme],
+                     kind='linear', bounds_error=False, fill_value=0e0)
+        pass
     if verbose:
         myfig = plt.figure(figsize=(12, 6))
         for vmr in density.T:
@@ -1183,7 +1244,7 @@ def hazelib(sv,
         plt.semilogy()
         plt.semilogx()
         plt.gca().invert_yaxis()
-        plt.xlim([1e-4, 1e4])
+        plt.xlim([1e-4, 1e5])
         plt.tick_params(axis='both', labelsize=20)
         plt.title('Profile Library', fontsize=24)
         myfig.tight_layout()
