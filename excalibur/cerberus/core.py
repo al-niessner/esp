@@ -362,10 +362,10 @@ G. ROUDIER: Cerberus retrievial
                 nodes.append(hza)
                 # KILL HAZE POWER INDEX FOR SPHERICAL SHELL
                 if sphshell:
-                    hzloc = pm.Uniform('HLoc', -6., 1.)
-                    nodes.append(hzloc)
-                    hzthick = pm.Uniform('HThick', 1., 20.)
-                    nodes.append(hzthick)
+                    #  hzloc = pm.Uniform('HLoc', -6., 1.)
+                    #  nodes.append(hzloc)
+                    #  hzthick = pm.Uniform('HThick', 1., 20.)
+                    #  nodes.append(hzthick)
                     pass
                 else:
                     hzi = pm.Uniform('HIndex', -4e0, 0e0)
@@ -418,7 +418,7 @@ def crbmodel(mixratio, rayleigh, cloudtp, rp0, orbp, xsecs, qtgrid,
              temp, wgrid, lbroadening=False, lshifting=False,
              cialist=['H2-H', 'H2-H2', 'H2-He', 'He-H'].copy(),
              xmollist=['TIO', 'CH4', 'H2O', 'H2CO', 'HCN', 'CO', 'CO2', 'NH3'].copy(),
-             nlevels=100, Hsmax=15., solrad=10.,
+             nlevels=100, Hsmax=20., solrad=10.,
              hzlib=None, hzp=None, hzslope=-4., hztop=None, hzwscale=1e0,
              cheq=None, h2rs=True, logx=False, pnet='b', sphshell=False,
              verbose=False, debug=False):
