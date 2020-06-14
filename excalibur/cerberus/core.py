@@ -362,10 +362,10 @@ G. ROUDIER: Cerberus retrievial
                 nodes.append(hza)
                 # KILL HAZE POWER INDEX FOR SPHERICAL SHELL
                 if sphshell:
-                    #  hzloc = pm.Uniform('HLoc', -6., 1.)
-                    #  nodes.append(hzloc)
-                    #  hzthick = pm.Uniform('HThick', 1., 20.)
-                    #  nodes.append(hzthick)
+                    hzloc = pm.Uniform('HLoc', -6.0001, -5.9999)
+                    nodes.append(hzloc)
+                    hzthick = pm.Uniform('HThick', 0.9999, 1.0001)
+                    nodes.append(hzthick)
                     pass
                 else:
                     hzi = pm.Uniform('HIndex', -4e0, 0e0)
