@@ -134,6 +134,7 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
         out['data'][p]['trial'] = []
         out['data'][p]['vignore'] = []
         out['data'][p]['stdns'] = []
+        out['data'][p]['hstbreath'] = []
         singlevisit = False
         svnkey = 'svn'+selftype
         if tme['data'][p][svnkey].__len__() == 1:
@@ -529,6 +530,7 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
                     out['data'][p]['phase'].append(eclphase)
                     out['data'][p]['photnoise'].append(nphotn)
                     out['data'][p]['stdns'].append(np.nanstd(np.nanmedian(viss, axis=1)))
+                    out['data'][p]['hstbreath'].append(hstbreath)
                     if verbose:
                         plt.figure()
                         for w,s in zip(visw[check], vnspec):
