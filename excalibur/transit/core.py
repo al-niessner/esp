@@ -87,7 +87,10 @@ def checksv(sv):
 # ----------------- --------------------------------------------------
 # -- NORMALIZATION -- ------------------------------------------------
 def normversion():
-    return dawgie.VERSION(1,1,4)
+    '''
+    1.1.5: add hstbreath parameters to SV
+    '''
+    return dawgie.VERSION(1,1,5)
 
 def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
     '''
