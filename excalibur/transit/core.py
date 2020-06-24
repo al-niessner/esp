@@ -678,8 +678,9 @@ def wlversion():
     G. ROUDIER: 1.2.0 includes a multi instrument orbital solution
     K. Pearson: 1.2.2 new eclipse model + priors from transit
               : 1.2.3 new priors
+    N. HUBERFE: 1.2.4 new priors
     '''
-    return dawgie.VERSION(1,2,3)
+    return dawgie.VERSION(1,2,4)
 
 def hstwhitelight(allnrm, fin, out, allext, selftype, chainlen=int(1e4), verbose=False):
     '''
@@ -1010,7 +1011,8 @@ def hstwhitelight(allnrm, fin, out, allext, selftype, chainlen=int(1e4), verbose
         pass
     return True
 
-def whitelight(nrm, fin, out, ext, selftype, multiwl, chainlen=int(1e4), verbose=False):
+def whitelight(nrm, fin, out, ext, selftype, multiwl, chainlen=int(1e4),
+               verbose=False, parentprior=False):
     '''
     G. ROUDIER: Orbital parameters recovery
     '''
@@ -1157,16 +1159,47 @@ def whitelight(nrm, fin, out, ext, selftype, multiwl, chainlen=int(1e4), verbose
                  orbits=orbits, period=period,
                  selectfit=selectfit, smaors=smaors,
                  time=time, tmjd=tmjd, ttv=ttv, visits=visits, ginc=inc, gttv=alltknot)
+        # Set up priors for if parentprior is true
+        if selftype in ['transit'] and 'G141-SCAN' in ext:
+            oslope_alpha = 0.004633620507894198; oslope_beta = 0.012556238027618398
+            vslope_alpha = -0.0013980054382670398; vslope_beta = 0.0016336714834115414
+            oitcp_alpha = 1.0000291019498646; oitcp_beta = 7.176342068341074e-05
+        elif selftype in ['transit'] and 'G430L-STARE' in ext:
+            oslope_alpha = 0.04587012155603797; oslope_beta = 0.03781489933244744
+            vslope_alpha = -0.0006729851708645652; vslope_beta = 0.008957326101096843
+            oitcp_alpha = 0.9999462758123321; oitcp_beta = 0.0001556495709041709
+        elif selftype in ['transit'] and 'G750L-STARE' in ext:
+            oslope_alpha = 0.027828748287645484; oslope_beta = 0.02158079144341918
+            vslope_alpha = 0.0012904512219440258; vslope_beta = 0.004194712807907309
+            oitcp_alpha = 1.0000037868438292; oitcp_beta = 4.845142445585787e-05
+        else:  # Handle estimation for non-optimized instrumentation
+            # Lorentzian beta parameter is not directly analogous
+            # to standard deviation but is approximately so
+            vslope_alpha = 0e0
+            vslope_beta = (1/tauvs)**0.5
+            oslope_alpha = 0e0
+            oslope_beta = (1/tauvs)**0.5
+            oitcp_alpha = 1e0
+            oitcp_beta = (1/tauvi)**0.5
         # PYMC3 --------------------------------------------------------------------------
         with pm.Model():
             rprs = pm.TruncatedNormal('rprs', mu=rpors, tau=taurprs,
                                       lower=rpors/2e0, upper=2e0*rpors)
             nodes.append(rprs)
-            allvslope = pm.TruncatedNormal('vslope', mu=0e0, tau=tauvs,
-                                           lower=-3e-2/trdura,
-                                           upper=3e-2/trdura, shape=shapevis)
-            alloslope = pm.Normal('oslope', mu=0e0, tau=tauvs, shape=shapevis)
-            alloitcp = pm.Normal('oitcp', mu=1e0, tau=tauvi, shape=shapevis)
+            if parentprior:
+                # use parent distr fitted Lorentzians (also called Cauchy)
+                allvslope = pm.Cauchy('vslope', alpha=vslope_alpha,
+                                      beta=vslope_beta, shape=shapevis)
+                alloslope = pm.Cauchy('oslope', alpha=oslope_alpha,
+                                      beta=oslope_beta, shape=shapevis)
+                alloitcp = pm.Cauchy('oitcp', alpha=oitcp_alpha,
+                                     beta=oitcp_beta, shape=shapevis)
+            else:
+                allvslope = pm.TruncatedNormal('vslope', mu=0e0, tau=tauvs,
+                                               lower=-3e-2/trdura,
+                                               upper=3e-2/trdura, shape=shapevis)
+                alloslope = pm.Normal('oslope', mu=0e0, tau=tauvs, shape=shapevis)
+                alloitcp = pm.Normal('oitcp', mu=1e0, tau=tauvi, shape=shapevis)
             nodes.append(allvslope)
             nodes.append(alloslope)
             nodes.append(alloitcp)

@@ -175,7 +175,8 @@ class whitelight(dawgie.Algorithm):
             pass
         else:
             wl = trncore.whitelight(nrm, fin, out, ext, self._type,
-                                    self.__out[-1], chainlen=int(1e4), verbose=False)
+                                    self.__out[-1], chainlen=int(1e4), verbose=False,
+                                    parentprior=True)
             pass
         return wl
 
