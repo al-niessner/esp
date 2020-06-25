@@ -49,17 +49,21 @@ G. ROUDIER: Tests for empty SV shell
 # ----------------- --------------------------------------------------
 # -- X SECTIONS LIBRARY -- -------------------------------------------
 def myxsecsversion():
+    '''
+    Alya Al-Kibbi:111
+    Changed CH4 line list to HITEMP
+    '''
     import dawgie
-    return dawgie.VERSION(1,1,0)
+    return dawgie.VERSION(1,1,1)
 
 def myxsecs(spc, out,
             hitemp=os.path.join(excalibur.context['data_dir'], 'CERBERUS/HITEMP'),
             tips=os.path.join(excalibur.context['data_dir'], 'CERBERUS/TIPS'),
             ciadir=os.path.join(excalibur.context['data_dir'], 'CERBERUS/HITRAN/CIA'),
             exomoldir=os.path.join(excalibur.context['data_dir'], 'CERBERUS/EXOMOL'),
-            knownspecies=['NO', 'OH', 'C2H2', 'N2', 'N2O', 'O3', 'O2'].copy(),
+            knownspecies=['NO', 'CH4','OH', 'C2H2', 'N2', 'N2O', 'O3', 'O2'].copy(),
             cialist=['H2-H', 'H2-H2', 'H2-He', 'He-H'].copy(),
-            xmspecies=['TIO', 'CH4', 'H2O', 'H2CO', 'HCN', 'CO', 'CO2', 'NH3'].copy(),
+            xmspecies=['TIO', 'H2O', 'H2CO', 'HCN', 'CO', 'CO2', 'NH3'].copy(),
             verbose=False):
     '''
 G. ROUDIER: Builds Cerberus cross section library
@@ -362,9 +366,9 @@ G. ROUDIER: Cerberus retrievial
                 nodes.append(hza)
                 # KILL HAZE POWER INDEX FOR SPHERICAL SHELL
                 if sphshell:
-                    hzloc = pm.Uniform('HLoc', -6.0001, -5.9999)
+                    hzloc = pm.Uniform('HLoc', -6.0, 1.0)
                     nodes.append(hzloc)
-                    hzthick = pm.Uniform('HThick', 0.9999, 1.0001)
+                    hzthick = pm.Uniform('HThick', 1.0, 20.0)
                     nodes.append(hzthick)
                     pass
                 else:
@@ -1121,7 +1125,7 @@ G. ROUDIER: Wrapper around Cerberus forward model, spherical shell symmetry
 def hazelib(sv,
             hazedir=os.path.join(excalibur.context['data_dir'], 'CERBERUS/HAZE'),
             datafile='Jup-ISS-aerosol.dat', verbose=False,
-            fromjupiter=False, narrow=True):
+            fromjupiter=True, narrow=True):
     vdensity = {'PRESSURE':[], 'CONSTANT':[], 'JMAX':[], 'MAX':[],
                 'JMEDIAN':[], 'MEDIAN':[], 'JAVERAGE':[], 'AVERAGE':[]}
     with open(os.path.join(hazedir, datafile), 'r') as fp: data = fp.readlines()
