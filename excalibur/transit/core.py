@@ -1577,8 +1577,9 @@ def spectrumversion():
     Whitelight +/- 5Hs instead of Previous +/- 1PN
     LDX robust to infinitely small errors + spectral binning boost
     R. Estrela: 1.2.0 lowing down the resolution of G430L
+    N. Huber-Feely: 1.2.1 Add saving of trace to SV
     '''
-    return dawgie.VERSION(1,2,0)
+    return dawgie.VERSION(1,2,1)
 
 def spectrum(fin, nrm, wht, out, ext, selftype,
              chainlen=int(1e4), verbose=False, lcplot=False):
@@ -1675,6 +1676,7 @@ def spectrum(fin, nrm, wht, out, ext, selftype,
         out['data'][p]['ESerr'] = []
         out['data'][p]['LD'] = []
         out['data'][p]['MCPOST'] = []
+        out['data'][p]['MCTRACE'] = []
         out['data'][p]['RSTAR'] = []
         out['data'][p]['rp0hs'] = []
         out['data'][p]['Hs'] = []
@@ -1777,12 +1779,22 @@ def spectrum(fin, nrm, wht, out, ext, selftype,
                 pass
             # Exclude first channel with Uniform prior
             if not startflag:
+                # save MCMC samples in SV
+                mctrace = {}
+                for key in mcpost['mean'].keys():
+                    tracekeys = key.split('__')
+                    if tracekeys.__len__() > 1:
+                        mctrace[key] = trace[tracekeys[0]][:, int(tracekeys[1])]
+                        pass
+                    else: mctrace[key] = trace[tracekeys[0]]
+                    pass
                 clspvl = np.nanmedian(trace['rprs'])
                 # Spectrum outlier rejection + inpaint with np.nan
                 if abs(clspvl - whiterprs) > 5e0*Hs: clspvl = np.nan
                 out['data'][p]['ES'].append(clspvl)
                 out['data'][p]['ESerr'].append(np.nanstd(trace['rprs']))
                 out['data'][p]['MCPOST'].append(mcpost)
+                out['data'][p]['MCTRACE'].append(mctrace)
                 out['data'][p]['WBlow'].append(wl)
                 out['data'][p]['WBup'].append(wh)
                 out['data'][p]['WB'].append(np.mean([wl, wh]))
