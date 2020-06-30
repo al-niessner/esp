@@ -319,8 +319,12 @@ G. ROUDIER: Wrapper around HITRAN partition functions (Gamache et al. 2011)
 # ------------------------------ -------------------------------------
 # -- ATMOS -- --------------------------------------------------------
 def atmosversion():
+    '''
+    Alya Al-Kibbi:121
+    Changes so that retrieval is done with CH4 being from HITEMP list instead of Exomol list
+    '''
     import dawgie
-    return dawgie.VERSION(1,2,0)
+    return dawgie.VERSION(1,2,1)
 
 def atmos(fin, xsl, spc, out,
           hazedir=os.path.join(excalibur.context['data_dir'], 'CERBERUS/HAZE'),
@@ -421,7 +425,7 @@ G. ROUDIER: Cerberus retrievial
 def crbmodel(mixratio, rayleigh, cloudtp, rp0, orbp, xsecs, qtgrid,
              temp, wgrid, lbroadening=False, lshifting=False,
              cialist=['H2-H', 'H2-H2', 'H2-He', 'He-H'].copy(),
-             xmollist=['TIO', 'CH4', 'H2O', 'H2CO', 'HCN', 'CO', 'CO2', 'NH3'].copy(),
+             xmollist=['TIO', 'H2O', 'H2CO', 'HCN', 'CO', 'CO2', 'NH3'].copy(),
              nlevels=100, Hsmax=20., solrad=10.,
              hzlib=None, hzp=None, hzslope=-4., hztop=None, hzwscale=1e0,
              cheq=None, h2rs=True, logx=False, pnet='b', sphshell=False,
