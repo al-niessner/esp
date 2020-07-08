@@ -52,9 +52,12 @@ def myxsecsversion():
     '''
     Alya Al-Kibbi:111
     Changed CH4 line list to HITEMP
+    Alya Al-Kibbi:112
+    Built interpolator on cross sections assuming constant broadening and shifting effects (like exomol)
+    Done to speed up processing of CH4 HITEMP line list
     '''
     import dawgie
-    return dawgie.VERSION(1,1,1)
+    return dawgie.VERSION(1,1,2)
 
 def myxsecs(spc, out,
             hitemp=os.path.join(excalibur.context['data_dir'], 'CERBERUS/HITEMP'),
@@ -275,6 +278,78 @@ G. ROUDIER: Builds Cerberus cross section library
                 plt.ylabel('Line intensity $S_{296K}$ [$cm.molecule^{-1}$]')
                 plt.show()
                 pass
+            # BUILDS INTERPOLATORS SIMILAR TO EXOMOL DB DATA HANDLING
+            mmr = 2.3  # Fortney 2015 for hot Jupiters
+            solrad = 10.
+            Hsmax = 15.
+            nlevels = 100.
+            pgrid = np.arange(np.log(solrad)-Hsmax, np.log(solrad)+Hsmax/nlevels,
+                              Hsmax/(nlevels-1))
+            pgrid = np.exp(pgrid)
+            p = pgrid[::-1]
+            allxsections = []
+            allwavenumbers = []
+            alltemperatures = []
+            for Tstep in np.arange(300, 2000, 100):
+                log.warning('>---- %s K', str(Tstep))
+                sigma, lsig = absorb(library[ks], qtgrid[ks], Tstep, p, mmr,
+                                     False, False, wgrid, debug=False)
+                allxsections.append(sigma[0])
+                allwavenumbers.append(lsig)
+                alltemperatures.append(Tstep)
+                pass
+            library[ks]['nu'] = []
+            library[ks]['I'] = []
+            library[ks]['T'] = []
+            library[ks]['SPL'] = []
+            library[ks]['SPLNU'] = []
+            for indextemp, mytemp in enumerate(alltemperatures):
+                bini = []
+                matnu = np.array(allwavenumbers)[indextemp]
+                sigma2 = np.array(allxsections)[indextemp]
+                for nubin, mydw in zip(nugrid, dwnu):
+                    select = ((matnu > (nubin-mydw/2.)) & (matnu <= nubin+mydw/2.))
+                    bini.append(np.sum(sigma2[select]))
+                    pass
+                bini = np.array(bini)/dwnu
+                library[ks]['nu'].extend(list(nugrid))
+                library[ks]['I'].extend(list(bini))
+                library[ks]['T'].extend(list(np.ones(nugrid.size)*mytemp))
+                pass
+            for iline in set(library[ks]['nu']):
+                select = np.array(library[ks]['nu']) == iline
+                y = np.array(library[ks]['I'])[select]
+                x = np.array(library[ks]['T'])[select]
+                sortme = np.argsort(x)
+                x = x[sortme]
+                y = y[sortme]
+                myspl = itp(x, y, bounds_error=False, fill_value=0)
+                library[ks]['SPL'].append(myspl)
+                library[ks]['SPLNU'].append(iline)
+                pass
+            if verbose:
+                fts = 20
+                plt.figure(figsize=(16,12))
+                haha = [huhu for huhu in set(library[ks]['T'])]
+                haha = np.sort(np.array(haha))
+                haha = haha[::-1]
+                for temp in haha:
+                    select = np.array(library[ks]['T']) == temp
+                    plt.semilogy(1e4/(np.array(library[ks]['nu'])[select]),
+                                 np.array(library[ks]['I'])[select],
+                                 label=str(int(temp))+'K')
+                    pass
+                plt.title(ks)
+                plt.xlabel('Wavelength $\\lambda$[$\\mu m$]',
+                           fontsize=fts+4)
+                plt.ylabel('Cross Section [$cm^{2}.molecule^{-1}$]',
+                           fontsize=fts+4)
+                plt.tick_params(axis='both', labelsize=fts)
+                plt.legend(bbox_to_anchor=(0.95, 0., 0.12, 1),
+                           loc=5, ncol=1, mode='expand', numpoints=1,
+                           borderaxespad=0., frameon=True)
+                plt.show()
+                pass
             pass
         out['data'][p]['XSECS'] = library
         out['data'][p]['QTGRID'] = qtgrid
@@ -425,8 +500,8 @@ G. ROUDIER: Cerberus retrievial
 def crbmodel(mixratio, rayleigh, cloudtp, rp0, orbp, xsecs, qtgrid,
              temp, wgrid, lbroadening=False, lshifting=False,
              cialist=['H2-H', 'H2-H2', 'H2-He', 'He-H'].copy(),
-             xmollist=['TIO', 'H2O', 'H2CO', 'HCN', 'CO', 'CO2', 'NH3'].copy(),
-             nlevels=100, Hsmax=20., solrad=10.,
+             xmollist=['TIO', 'CH4', 'H2O', 'H2CO', 'HCN', 'CO', 'CO2', 'NH3'].copy(),
+             nlevels=100, Hsmax=15., solrad=10.,
              hzlib=None, hzp=None, hzslope=-4., hztop=None, hzwscale=1e0,
              cheq=None, h2rs=True, logx=False, pnet='b', sphshell=False,
              verbose=False, debug=False):
