@@ -89,8 +89,9 @@ def checksv(sv):
 def normversion():
     '''
     1.1.5: add hstbreath parameters to SV
+    1.1.6: add timing parameter start model
     '''
-    return dawgie.VERSION(1,1,5)
+    return dawgie.VERSION(1,1,6)
 
 def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
     '''
@@ -314,9 +315,19 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
                         params.add('oslope', value=1e-4,
                                    min=(minrfos - maxrfos)/maxtscale,
                                    max=(maxrfos - minrfos)/maxtscale)
-                        params.add('ologtau', value=np.mean([minoscale, maxoscale]),
+                        if 'HST' in ext:  # empirically fit start point model
+                            coef = 0.3494939103124791
+                            ologtau_start = maxoscale*coef + minoscale*(1-coef)
+                        else:
+                            ologtau_start = np.mean([minoscale, maxoscale])
+                        params.add('ologtau', value=ologtau_start,
                                    min=minoscale, max=maxoscale)
-                        params.add('ologdelay', value=np.mean([minoscale, maxdelay]),
+                        if 'HST' in ext:  # empirically fit start point model
+                            coef = 0.7272498969170312
+                            ologdelay_start = maxdelay*coef + minoscale*(1-coef)
+                        else:
+                            ologdelay_start = np.mean([minoscale, maxdelay])
+                        params.add('ologdelay', value=ologdelay_start,
                                    min=minoscale, max=maxdelay)
                         normcond = zorb > np.nanmedian(zorb)
                         if True in normcond:
