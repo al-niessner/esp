@@ -57,7 +57,7 @@ def myxsecsversion():
     Done to speed up processing of CH4 HITEMP line list
     '''
     import dawgie
-    return dawgie.VERSION(1,1,2)
+    return dawgie.VERSION(1,1,3)
 
 def myxsecs(spc, out,
             hitemp=os.path.join(excalibur.context['data_dir'], 'CERBERUS/HITEMP'),
@@ -286,13 +286,13 @@ G. ROUDIER: Builds Cerberus cross section library
             pgrid = np.arange(np.log(solrad)-Hsmax, np.log(solrad)+Hsmax/nlevels,
                               Hsmax/(nlevels-1))
             pgrid = np.exp(pgrid)
-            p = pgrid[::-1]
+            pressuregrid = pgrid[::-1]
             allxsections = []
             allwavenumbers = []
             alltemperatures = []
             for Tstep in np.arange(300, 2000, 100):
                 log.warning('>---- %s K', str(Tstep))
-                sigma, lsig = absorb(library[ks], qtgrid[ks], Tstep, p, mmr,
+                sigma, lsig = absorb(library[ks], qtgrid[ks], Tstep, pressuregrid, mmr,
                                      False, False, wgrid, debug=False)
                 allxsections.append(sigma[0])
                 allwavenumbers.append(lsig)
@@ -646,7 +646,8 @@ G. ROUDIER: Builds optical depth matrix
         # GAS ARRAY, ZPRIME VERSUS WAVELENGTH  -------------------------------------------
         for elem in mixratio:
             mmr = 10.**(mixratio[elem]-6.)
-            if elem not in xmollist:
+            # Fake use of xmollist due to changes in xslib v112
+            if not xmollist:
                 # HITEMP/HITRAN ROTHMAN ET AL. 2010 --------------------------------------
                 sigma, lsig = absorb(xsecs[elem], qtgrid[elem], temp, p, mmr,
                                      lbroadening, lshifting, wgrid, debug=False)

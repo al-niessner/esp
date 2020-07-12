@@ -585,6 +585,9 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
             vesel = abs((stdns/ref - 1e0)*1e2) > 5e1
             kickout = list(np.array(out['data'][p]['visits'])[vesel])
             pass
+        # TEST FOR SEPARATE VISITS -------------------------------------------------------
+        # GJ 1132
+        # kickout = [1, 2, 3, 4]
         if kickout:
             for v in kickout:
                 i2pop = out['data'][p]['visits'].index(v)
