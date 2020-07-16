@@ -22,9 +22,7 @@ import excalibur.system.algorithms as sysalg
 fltrs = (trgedit.activefilters.__doc__).split('\n')
 fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
 # KICK SPITZER FOR THE MOMENT
-# fltrs = [f for f in fltrs if 'Spitzer' not in f]
-
-
+# fltrs = [f for f in fltrs if 'Spitzer' in f]
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class collect(dawgie.Algorithm):

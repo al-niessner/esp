@@ -18,8 +18,7 @@ import excalibur.target.edit as trgedit
 # FILTERS
 fltrs = (trgedit.activefilters.__doc__).split('\n')
 fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
-# KICK SPITZER FOR THE MOMENT
-fltrs = [f for f in fltrs if 'Spitzer' not in f]
+# fltrs = [f for f in fltrs if 'Spitzer' in f]
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class normalization(dawgie.Algorithm):
@@ -122,7 +121,10 @@ class whitelight(dawgie.Algorithm):
                         'HST-STIS-CCD-G750L-STARE', 'HST-STIS-CCD-G430L-STARE']
             for ext in hstfltrs:
                 update = False
-                nrm = self._nrm.sv_as_dict()[ext]
+                try:
+                    nrm = self._nrm.sv_as_dict()[ext]
+                except KeyError:
+                    break
                 vnrm, snrm = trncore.checksv(nrm)
                 if vnrm and vfin:
                     log.warning('--< %s MERGING: %s >--', self._type.upper(), ext)

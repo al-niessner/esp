@@ -28,6 +28,7 @@ from scipy.ndimage.measurements import label
 from scipy.ndimage.morphology import binary_dilation
 from PIL import Image as pilimage
 
+from photutils import aperture_photometry, CircularAperture, CircularAnnulus
 
 # ------------- ------------------------------------------------------
 # -- SV VALIDITY -- --------------------------------------------------
@@ -199,10 +200,10 @@ def timing(force, ext, clc, out, verbose=False):
 
                 for e in epochs:
                     vmask = visto == e
-                    tmask = ((sphase[vmask]-e) > (0.25-1.5*pdur)) & ((sphase[vmask]-e) < (0.25+1.5*pdur))
+                    tmask = ((sphase[vmask]-e) > (0.25-1.75*pdur)) & ((sphase[vmask]-e) < (0.25+1.75*pdur))
                     if tmask.sum() > 25:
                         out['data'][p]['transit'].append(e)
-                    emask = ((sphase[vmask]-e) > (0.25+dp-1.5*pdur)) & ((sphase[vmask]-e) < (0.25+dp+1.5*pdur))
+                    emask = ((sphase[vmask]-e) > (0.25+dp-1.75*pdur)) & ((sphase[vmask]-e) < (0.25+dp+1.75*pdur))
                     if emask.sum() > 25:
                         out['data'][p]['eclipse'].append(e)
 
@@ -3446,38 +3447,28 @@ def spitzercal(clc, out):
     dbs = os.path.join(dawgie.context.data_dbs, 'mast')
 
     data = {
-        'LOC':[], 'EXPLEN':[], 'EXP':[], 'EXPC':[], 'TIME':[],
-        'FRAME':[], 'NOISEPIXEL': [], 'FAIL':[],
-        'PHOT':[], 'WX':[], 'WY':[], 'BG': [],  # Aperture photometry
+        'LOC':[], 'EXPLEN':[], 'TIME':[],
+        'FRAME':[], 'NOISEPIXEL': [],
+        'PHOT':[], 'WX':[], 'WY':[], 'BG': [],
+        'FAILED':[]
     }
+
     c = 0
     # LOAD DATA --------------------------------------------------------------------------
     for loc in sorted(clc['LOC']):
         fullloc = os.path.join(dbs, loc)
         with pyfits.open(fullloc) as hdulist:
-            alltime = []
-            allexplen = []
-            allloc = []
-            allframes = []
-            allfail = []
-            # photometry
-            allbg = []              # background flux
-            allwx = []; allwy = []  # flux weighted centroids
-            allphot = []            # aperture flux
-            allnp = []              # noise pixel
-
             for fits in hdulist:
+                # if science data
                 if (fits.size != 0) and (fits.header.get('exptype')=='sci'):
                     start = fits.header.get('MJD_OBS') + 2400000.5
 
-                    if fits.data.ndim == 2:  # full frame data
-                        # simulate subframe
-                        xs = fits.data.shape[1]
-                        ys = fits.data.shape[0]
-                        subdata = fits.data[int(ys/2)-16:int(ys/2)+16, int(xs/2)-16:int(xs/2)+16]
-                        dcube = np.array([subdata])
+                    if fits.data.ndim == 2:
+                        # full frame data - todo locate star in field
+                        continue
                     elif fits.data.ndim == 3:
                         dcube = fits.data.copy()
+
                     # convert from ADU to e/s
                     dcube *= float(fits.header.get('FLUXCONV',0.1257))
                     dcube *= float(fits.header.get('GAIN',3.7))
@@ -3487,183 +3478,76 @@ def spitzercal(clc, out):
                     dt = idur/nimgs/(24*60*60)
                     dcube[np.isnan(dcube)] = 0
                     dcube[np.isinf(dcube)] = 0
-                    template = np.median(dcube,0)
 
-                    template = template-template.min()
-                    template /= np.max(template)
-
-                    residual = dcube.copy()
-
+                    # for each subframe
                     for i in range(nimgs):
 
-                        N = template.flatten().shape[0]
-                        A = np.vstack([template.flatten(), np.ones(N)]).T
-                        aa, bb = np.linalg.lstsq(A, dcube[i].flatten())[0]
-                        residual[i] = dcube[i] - (aa*template+bb)
-
-                        # allamp_temp.append(aa)
-                        # allbg_temp.append(bb)
-                        # save template ??
-
-                        alltime.append(start+dt*i)
-                        allexplen.append(dt*24*60)  # exposure time [s]
-                        allloc.append(loc)
-                        allframes.append(i)
-                        pass
-                    pass
-
-                    # 3sigma clip on standard deviation of residual typically removes value from star
-                    # stds = [np.std(residual[i]) for i in range(residual.shape[0])]
-                    # mask = np.zeros(residual.shape).astype(bool)
-                    # for i in range(mask.shape[0]): mask[i] = np.abs(residual[i])>4*stds[i]
-
-                    mask = np.abs(residual)>4*np.std(residual,0)  # compute standard deviation in time
-
-                    # replace bad pixels
-                    for i in range(nimgs):
-                        labels, nlabel = label(mask[i])
-                        for j in range(1,nlabel+1):
-                            mmask = labels==j  # mini mask
-                            smask = binary_dilation(mmask)  # dilated mask
-                            bmask = np.logical_xor(smask,mmask)  # bounding pixels
-                            dcube[i][mmask] = np.mean(dcube[i][bmask])  # replace
-                            pass
-                        fail = False
                         try:
-                            # quickly estimate brightest pixel on detector
-                            # lets hope there are no cosmic rays
-                            yc, xc = np.unravel_index(np.argmax(dcube[i],axis=None), dcube[i].shape)
+                            wx, wy, apers, bgs, npps = aper_phot(dcube[i])
+                            data['TIME'].append(start + i*dt)
+                            data['FRAME'].append(i)
+                            data['WX'].append(wx)
+                            data['WY'].append(wy)
 
-                            # estimate priors
-                            xv,yv = mesh_box([xc,yc],5)
-                            wx = np.sum(np.unique(xv)*dcube[i][yv,xv].sum(0))/np.sum(dcube[i][yv,xv].sum(0))
-                            wy = np.sum(np.unique(yv)*dcube[i][yv,xv].sum(1))/np.sum(dcube[i][yv,xv].sum(1))
+                            # nd arrays
+                            data['BG'].append(bgs)
+                            data['PHOT'].append(apers)
+                            data['NOISEPIXEL'].append(npps)
 
-                        except (ValueError, IndexError):  # todo find the correct exception
-                            fail = True
-
-                        try:
-                            area2, bg2, np2 = phot(dcube[i], wx, wy, r=2, dr=8)
-                            area25, bg25, np25 = phot(dcube[i], wx, wy, r=2.5, dr=8)
-                            area3, bg3, np3 = phot(dcube[i], wx, wy, r=3, dr=8)
-                            area35, bg35, np35 = phot(dcube[i], wx, wy, r=3.5, dr=8)
-                            area4, bg4, np4 = phot(dcube[i], wx, wy, r=4, dr=8)
+                            data['FAILED'].append(False)
                         except (ValueError, IndexError):
-                            fail = True
-                            area2, area25, area3, area35, area4 = 0,0,0,0,0
-                            bg2, bg25, bg3, bg35, bg4 = 0,0,0,0,0
-                            np2, np25, np3, np35, np4 = 0,0,0,0,0
+                            data['FAILED'].append(True)
 
-                        # aperture photometry
-                        allwx.append(wx)
-                        allwy.append(wy)
-                        allbg.append([bg2, bg25, bg3, bg35, bg4])
-                        allphot.append([area2, area25, area3, area35, area4])
-                        allnp.append([np2, np25, np3, np35, np4])
-
-                        allfail.append(fail)
-                        pass
-
-            data['TIME'].extend(alltime)       # MJD of observation
-            data['EXPLEN'].extend(allexplen)   # exposure time
-            data['LOC'].extend(allloc)        # file path on disk
-            data['FRAME'].extend(allframes)   # frame number in data cube
-
-            data['NOISEPIXEL'].extend(allnp)  # noise pixel parameter, Beta
-            data['PHOT'].extend(allphot)      # aperture size
-            data['BG'].extend(allbg)          # background value
-            data['WX'].extend(allwx)          # flux weighted centroid
-            data['WY'].extend(allwy)          #
-
-            data['FAIL'].extend(allfail)      # fail flag - usually can't fit centroid or do aperture phot
-            c+=1
-
+    # transfer data
     for key in data: out['data'][key] = data[key]
-    calibrated = not np.all(data['FAIL'])
+    calibrated = not np.all(data['FAILED'])
     if calibrated: out['STATUS'].append(True)
 
     return calibrated
 
+def aper_phot(img):
 
-def mixed_psf(x,y,x0,y0,a,sigx,sigy,rot,b, w):
-    '''
-    K. PEARSON: weighted sum of Gaussian + Lorentz PSF
-    '''
-    gaus = gaussian_psf(x,y,x0,y0,a,sigx,sigy,rot, 0)
-    lore = lorentz_psf(x,y,x0,y0,a,sigx,sigy,rot, 0)
-    return (1-w)*gaus + w*lore + b
+    # flux weighted centroid
+    yc, xc = np.unravel_index(np.argmax(img,axis=None),  img.shape)
+    xv,yv = mesh_box([xc,yc],5)
+    wx = np.sum(np.unique(xv)*img[yv,xv].sum(0))/np.sum(img[yv,xv].sum(0))
+    wy = np.sum(np.unique(yv)*img[yv,xv].sum(1))/np.sum(img[yv,xv].sum(1))
 
-def gaussian_psf(x,y,x0,y0,a,sigx,sigy,rot, b):
-    '''
-    K. PEARSON: Gaussian PSF
-    '''
-    rx = (x-x0)*np.cos(rot) - (y-y0)*np.sin(rot)
-    ry = (x-x0)*np.sin(rot) + (y-y0)*np.cos(rot)
-    gausx = np.exp(-(rx)**2 / (2*sigx**2))
-    gausy = np.exp(-(ry)**2 / (2*sigy**2))
-    return a*gausx*gausy + b
+    # loop through aper sizes
+    apers = []; bgs = []; npps = []
+    for r in np.arange(1.5,4.1,0.15):
+        area, bg, npp = phot(img, wx, wy, r=r, dr=7)
+        apers.append(area); bgs.append(bg); npps.append(npp)
 
-def lorentz_psf(x,y,x0,y0,a,sigx,sigy,rot, b):
-    '''
-    K. PEARSON: Lorentz PSF
-    '''
-    rx = (x-x0)*np.cos(rot) - (y-y0)*np.sin(rot)
-    ry = (x-x0)*np.sin(rot) + (y-y0)*np.cos(rot)
-    lorex = sigx**2 / (rx**2 + sigx**2)
-    lorey = sigy**2 / (ry**2 + sigy**2)
-    return a*lorex*lorey + b
+    return wx, wy, apers, bgs, npps
 
 def mesh_box(pos,box):
-    '''
-    K. PEARSON: array indices for box extraction
-    '''
     pos = [int(np.round(pos[0])),int(np.round(pos[1]))]
     x = np.arange(pos[0]-box, pos[0]+box+1)
     y = np.arange(pos[1]-box, pos[1]+box+1)
     xv, yv = np.meshgrid(x, y)
     return xv.astype(int),yv.astype(int)
 
-def fit_psf(data,pos,init,lo,up,psf_function=gaussian_psf,lossfn='linear',box=15):
-    '''
-    K. PEARSON: fitting routine for different PSFs
-    '''
-    xv,yv = mesh_box(pos, box)
+def phot(data,xc,yc,r=5,dr=5):
 
-    def fcn2min(pars):
-        model = psf_function(xv,yv,*pars)
-        return (data[yv,xv]-model).flatten()
-    res = least_squares(fcn2min,x0=[*pos,*init],bounds=[lo,up],loss=lossfn,jac='3-point')
-    return res.x
-
-def phot(data,xc,yc,r=5,dr=4):
-    '''
-    K. PEARSON: Aperture photometry
-    '''
     if dr>0:
         bgflux = skybg_phot(data,xc,yc,r,dr)
     else:
         bgflux = 0
+    positions = [(xc, yc)]
     data = data-bgflux
     data[data<0] = 0
 
-    # interpolate to high res grid for subpixel precision
-    xvh,yvh = mesh_box([xc,yc], (np.round(r)+1)*10)
-    rvh = ((xvh-xc)**2 + (yvh-yc)**2)**0.5
-    maskh = (rvh<r*10)
-    # downsize to native resolution to get pixel weights
-    xv,yv = mesh_box([xc,yc], (np.round(r)+1))
+    apertures = CircularAperture(positions, r=r)
+    phot_table = aperture_photometry(data, apertures, method='exact')
+    subdata = data[
+        apertures.to_mask()[0].bbox.iymin:apertures.to_mask()[0].bbox.iymax,
+        apertures.to_mask()[0].bbox.ixmin:apertures.to_mask()[0].bbox.ixmax
+    ] * apertures.to_mask()[0].data
+    npp = subdata.sum()**2 / np.sum(subdata**2)
+    return float(phot_table['aperture_sum']), bgflux, npp
 
-    mask = np.array(pilimage.fromarray(maskh.astype(float)).resize(xv.shape, pilimage.BILINEAR))
-    mask = mask / mask.max()
-    flux = np.sum(data[yv,xv] * mask)
-    # fmask = flux*mask  # should this be used for NP calculation?
-    noisepixel = data[yv,xv].sum()**2 / np.sum(data[yv,xv]**2)
-    return flux, bgflux, noisepixel
-
-def skybg_phot(data,xc,yc,r=5,dr=5):
-    '''
-    K. PEARSON: Aperture photometry for sky annulus
-    '''
+def skybg_phot(data,xc,yc,r=10,dr=5):
     # create a crude annulus to mask out bright background pixels
     xv,yv = mesh_box([xc,yc], np.round(r+dr))
     rv = ((xv-xc)**2 + (yv-yc)**2)**0.5
@@ -3671,29 +3555,4 @@ def skybg_phot(data,xc,yc,r=5,dr=5):
     cutoff = np.percentile(data[yv,xv][mask], 50)
     dat = np.copy(data)
     dat[dat>cutoff] = cutoff  # ignore bright pixels like stars
-    return min(np.mean(data[yv,xv][mask]), np.median(data[yv,xv][mask]))
-
-class psf():
-    '''
-    K. PEARSON: Interface for different PSF models
-    '''
-    def __init__(self,pars,psf_function):
-        self.pars = pars
-        self.fn = psf_function
-
-    def eval(self,x,y):
-        return self.fn(x,y,*self.pars)
-
-    def pylint(self):
-        print('pylint is stupid',self.pars)
-
-def estimate_sigma(x,maxidx=-1):
-    '''
-    K. PEARSON: estimates width of PSF
-    '''
-    if maxidx == -1:
-        maxidx = np.argmax(x)
-    lower = np.abs(x-0.5*np.max(x))[:maxidx].argmin()
-    upper = np.abs(x-0.5*np.max(x))[maxidx:].argmin()+maxidx
-    FWHM = upper-lower
-    return FWHM/(2*np.sqrt(2*np.log(2)))
+    return min(np.mean(dat[yv,xv][mask]),np.median(dat[yv,xv][mask]))

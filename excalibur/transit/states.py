@@ -117,7 +117,15 @@ class WhiteLightSV(dawgie.StateVector):
                 for p in self['data'].keys():
                     # for each event
                     for i in range(len(self['data'][p])):
+                        # light curve fit
                         fig = spitzer_lightcurve(self['data'][p][i])
+                        buf = io.BytesIO()
+                        fig.savefig(buf, format='png')
+                        visitor.add_image('...', ' ', buf.getvalue())
+                        plt.close(fig)
+
+                        # posterior
+                        fig = spitzer_posterior(self['data'][p][i])
                         buf = io.BytesIO()
                         fig.savefig(buf, format='png')
                         visitor.add_image('...', ' ', buf.getvalue())
