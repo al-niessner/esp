@@ -46,7 +46,6 @@ ECLIPSE
 - whitelight (orbital solution and instrumental behavior recovery)
 - spectrum (exoplanet emission spectrum recovery)
 
-
 PHASECURVE
 
 CERBERUS
@@ -56,4 +55,3 @@ CERBERUS
 ### --< Source Code >--
 
 [Github](https://github-fn.jpl.nasa.gov/EXCALIBUR/esp)
-.
