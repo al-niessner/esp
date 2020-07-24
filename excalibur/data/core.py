@@ -75,7 +75,7 @@ def collect(name, scrape, out):
 # ------------------ -------------------------------------------------
 # -- TIMING -- -------------------------------------------------------
 def timingversion():
-    return dawgie.VERSION(1,1,2)
+    return dawgie.VERSION(1,1,3)
 
 def timing(force, ext, clc, out, verbose=False):
     '''

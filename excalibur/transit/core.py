@@ -95,8 +95,9 @@ def normversion():
     '''
     1.1.5: add hstbreath parameters to SV
     1.1.6: add timing parameter start model
+    1.1.7: new sigma clip for spitzer
     '''
-    return dawgie.VERSION(1,1,6)
+    return dawgie.VERSION(1,1,7)
 
 def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
     '''
@@ -698,8 +699,9 @@ def wlversion():
     K. Pearson: 1.2.2 new eclipse model + priors from transit
               : 1.2.3 new priors
     N. HUBERFE: 1.2.4 new priors
+    K. Pearson: 1.2.5 nested sampling for spitzer
     '''
-    return dawgie.VERSION(1,2,4)
+    return dawgie.VERSION(1,2,5)
 
 def hstwhitelight(allnrm, fin, out, allext, selftype, chainlen=int(1e4), verbose=False):
     '''
@@ -944,6 +946,9 @@ def hstwhitelight(allnrm, fin, out, allext, selftype, chainlen=int(1e4), verbose
             pass
         mctrace = {}
         for key in mcpost['mean'].keys():
+            if len(key.split('[')) > 1:  # change PyMC3.8 key format to previous
+                pieces = key.split('[')
+                key = '{}__{}'.format(pieces[0], pieces[1].strip(']'))
             tracekeys = key.split('__')
             if tracekeys.__len__() > 1:
                 mctrace[key] = trace[tracekeys[0]][:, int(tracekeys[1])]
@@ -1233,6 +1238,9 @@ def whitelight(nrm, fin, out, ext, selftype, multiwl, chainlen=int(1e4),
             pass
         mctrace = {}
         for key in mcpost['mean'].keys():
+            if len(key.split('[')) > 1:  # change PyMC3.8 key format to previous
+                pieces = key.split('[')
+                key = '{}__{}'.format(pieces[0], pieces[1].strip(']'))
             tracekeys = key.split('__')
             if tracekeys.__len__() > 1:
                 mctrace[key] = trace[tracekeys[0]][:, int(tracekeys[1])]
@@ -1801,6 +1809,9 @@ def spectrum(fin, nrm, wht, out, ext, selftype,
                 # save MCMC samples in SV
                 mctrace = {}
                 for key in mcpost['mean'].keys():
+                    if len(key.split('[')) > 1:  # change PyMC3.8 key format to previous
+                        pieces = key.split('[')
+                        key = '{}__{}'.format(pieces[0], pieces[1].strip(']'))
                     tracekeys = key.split('__')
                     if tracekeys.__len__() > 1:
                         mctrace[key] = trace[tracekeys[0]][:, int(tracekeys[1])]
