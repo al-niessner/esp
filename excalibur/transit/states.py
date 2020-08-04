@@ -4,7 +4,7 @@ import io
 import dawgie
 
 import excalibur
-from excalibur.transit.core import spitzer_lightcurve, composite_spectrum
+from excalibur.transit.core import spitzer_lightcurve, composite_spectrum, spitzer_posterior
 
 import numpy as np
 import matplotlib.pyplot as plt

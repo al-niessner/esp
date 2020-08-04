@@ -3023,7 +3023,17 @@ def spitzer_posterior(SV, title='', savedir=None):
     fancy_labels = {
         'rprs':r'R$_{p}$/R$_{s}$',
         'tmid':r'T$_{mid}$',
-        'ars':r'a/R$_{s}$'
+        'ars':r'a/R$_{s}$',
+        'inc':r'I',
+        'u1':r'u$_1$',
+        'erprs':r'R$_{e}$/R$_{s}$', 
+        'omega':r'$\omega$',
+        'ecc':r'$e$',
+        'c0':r'$c_0$',
+        'c1':r'$c_1$',
+        'c2':r'$c_2$',
+        'c3':r'$c_3$',
+        'c4':r'$c_4$'
     }
 
     flabels = [fancy_labels[k] for k in SV['aper_errs'].keys()]
