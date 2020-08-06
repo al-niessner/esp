@@ -7,7 +7,7 @@ excalibur = os.path.join ('excalibur', '__init__.py')
 deps = ['astropy==3.0.4',
         'ldtk==1.0',
         'lmfit==0.9.11',
-        'matplotlib==2.2.3',
+        'matplotlib==3.3.0',
         'pymc3==3.8',
         'scipy==1.1.0',
         'joblib==0.12.5',
