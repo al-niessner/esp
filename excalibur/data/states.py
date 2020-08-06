@@ -67,7 +67,6 @@ class CalibrateSV(dawgie.StateVector):
                 visitor.add_image('...', ' ', buf.getvalue())
                 plt.close(myfig)
 
-
                 if np.sum(allignore) > 0:
                     gbgi = np.random.uniform()
                     gbgi = int(gbgi*(np.sum(allignore) - 1))

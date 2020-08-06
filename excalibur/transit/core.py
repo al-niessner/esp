@@ -3026,7 +3026,7 @@ def spitzer_posterior(SV, title='', savedir=None):
         'ars':r'a/R$_{s}$',
         'inc':r'I',
         'u1':r'u$_1$',
-        'erprs':r'R$_{e}$/R$_{s}$', 
+        'erprs':r'R$_{e}$/R$_{s}$',
         'omega':r'$\omega$',
         'ecc':r'$e$',
         'c0':r'$c_0$',
