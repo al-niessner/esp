@@ -1704,6 +1704,7 @@ def spectrum(fin, nrm, wht, out, ext, selftype,
         out['data'][p]['LD'] = []
         out['data'][p]['MCPOST'] = []
         out['data'][p]['MCTRACE'] = []
+        out['data'][p]['LCFIT'] = []
         out['data'][p]['RSTAR'] = []
         out['data'][p]['rp0hs'] = []
         out['data'][p]['Hs'] = []
@@ -1808,6 +1809,7 @@ def spectrum(fin, nrm, wht, out, ext, selftype,
             if not startflag:
                 # save MCMC samples in SV
                 mctrace = {}
+                mcests = {}
                 for key in mcpost['mean'].keys():
                     if len(key.split('[')) > 1:  # change PyMC3.8 key format to previous
                         pieces = key.split('[')
@@ -1815,10 +1817,37 @@ def spectrum(fin, nrm, wht, out, ext, selftype,
                     tracekeys = key.split('__')
                     if tracekeys.__len__() > 1:
                         mctrace[key] = trace[tracekeys[0]][:, int(tracekeys[1])]
+                        mcests[key] = np.nanmedian(mctrace[key])
                         pass
-                    else: mctrace[key] = trace[tracekeys[0]]
+                    else:
+                        mctrace[key] = trace[tracekeys[0]]
+                        mcests[key] = np.nanmedian(mctrace[key])
                     pass
+                # save rprs
                 clspvl = np.nanmedian(trace['rprs'])
+                # now produce fitted estimates
+
+                def get_ests(n, v):  # for param get all visit param values as list
+                    return [mcests['{}__{}'.format(n, i)] for i in range(len(v))]
+
+                specparams = (mcests['rprs'], get_ests('vslope', visits),
+                              get_ests('oslope', visits), get_ests('oitcp', visits))
+                r, avs, aos, aoi = specparams
+                allimout = []
+                for iv in range(len(visits)):
+                    imout = timlc(time[iv], orbits[iv],
+                                          vslope=float(avs[iv]), vitcp=1e0,
+                                          oslope=float(aos[iv]), oitcp=float(aoi[iv]))
+                    allimout.extend(imout)
+                    pass
+                allimout = np.array(allimout)
+                lout = tldlc(abs(allz), clspvl, g1=g1[0], g2=g2[0], g3=g3[0],
+                             g4=g4[0])
+                lout = lout*np.array(allimout)
+                lcfit = {'expected': lout[valid], 'observed': data[valid],
+                         'im': allimout[valid], 'phase': allphase[valid],
+                         'dnoise': np.nanmedian(dnoise[valid]),
+                         'residuals': data[valid]-lout[valid]}
                 # Spectrum outlier rejection + inpaint with np.nan
                 if abs(clspvl - whiterprs) > 5e0*Hs: clspvl = np.nan
                 out['data'][p]['ES'].append(clspvl)
@@ -1828,6 +1857,7 @@ def spectrum(fin, nrm, wht, out, ext, selftype,
                 out['data'][p]['WBlow'].append(wl)
                 out['data'][p]['WBup'].append(wh)
                 out['data'][p]['WB'].append(np.mean([wl, wh]))
+                out['data'][p]['LCFIT'].append(lcfit)
                 pass
             else: startflag = False
             pass
