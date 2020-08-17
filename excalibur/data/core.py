@@ -87,6 +87,8 @@ def timing(force, ext, clc, out, verbose=False):
     dbs = os.path.join(dawgie.context.data_dbs, 'mast')
     data = {'LOC':[], 'SCANANGLE':[], 'TIME':[], 'EXPLEN':[]}
     # LOAD DATA ------------------------------------------------------
+    if 'JWST' in ext:
+        pass
     if 'Spitzer' in ext:
         for loc in sorted(clc['LOC']):
             fullloc = os.path.join(dbs, loc)

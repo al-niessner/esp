@@ -25,6 +25,8 @@ class CalibrateSV(dawgie.StateVector):
         if len(self['STATUS']) == 2:
             if 'Spitzer' in self.__name:
                 pass
+            elif "JWST" in self.__name:
+                pass
             else:
                 data = self['data']
                 timing = np.array([d for d,i in zip(data['TIME'], data['IGNORED']) if not i])

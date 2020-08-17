@@ -504,7 +504,16 @@ def dbscp(locations, dbs, out):
                 out['name'][mainheader.get('DPID')] = filedict
 
                 pass
-            pass
+            # JWST
+            elif 'jwst' in mainheader.get('TELESCOP').lower():
+                # TODO add filter for science frames only
+                filedict['observatory'] = mainheader.get('TELESCOP').strip()
+                filedict['instrument'] = mainheader.get('INSTRUME').strip()
+                filedict['mode'] = mainheader.get('PUPIL').strip()  # maybe EXP_TYPE?
+                filedict['detector'] = mainheader.get('DETECTOR').strip()
+                filedict['filter'] = mainheader.get('FILTER').strip()
+                out['name'][mainheader.get("FILENAME")] = filedict
+                pass
 
         mastout = os.path.join(dbs, md5+'_'+sha)
         onmast = os.path.isfile(mastout)

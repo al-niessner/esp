@@ -122,7 +122,7 @@ class autofill(dawgie.Algorithm):
 
 class scrape(dawgie.Algorithm):
     def __init__(self):
-        self._version_ = dawgie.VERSION(1,1,0)
+        self._version_ = dawgie.VERSION(1,1,1)
         self.__autofill = autofill()
         self.__out = trgstates.DatabaseSV('databases')
         return

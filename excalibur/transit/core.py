@@ -2685,145 +2685,151 @@ def gaussian_weights(X, w=None, neighbors=50, feature_scale=1000):
     gw[np.isnan(gw)] = 0.01
     return gw, nearest.astype(int)
 
-class lc_fitter(object):
 
-    def __init__(self, time, data, dataerr, prior, bounds, syspars, neighbors=50,verbose=False):
-        self.time = time
-        self.data = data
-        self.dataerr = dataerr
-        self.prior = prior
-        self.bounds = bounds
-        self.syspars = syspars
-        self.verbose = verbose
-        self.gw, self.nearest = gaussian_weights(syspars, neighbors=neighbors)
-        self.fit_nested()
+try:
+    from ELCA_GKR_C import lc_fitter, transit
+    print("imported light curve fitting from C code")
+except:
+    # fall back
+    class lc_fitter(object):
 
-    def fit_nested(self):
-        freekeys = list(self.bounds.keys())
-        boundarray = np.array([self.bounds[k] for k in freekeys])
-        bounddiff = np.diff(boundarray,1).reshape(-1)
+        def __init__(self, time, data, dataerr, prior, bounds, syspars, neighbors=50,verbose=False):
+            self.time = time
+            self.data = data
+            self.dataerr = dataerr
+            self.prior = prior
+            self.bounds = bounds
+            self.syspars = syspars
+            self.verbose = verbose
+            self.gw, self.nearest = gaussian_weights(syspars, neighbors=neighbors)
+            self.fit_nested()
 
-        def loglike(pars):
-            # chi-squared
-            for i in range(len(pars)):
-                self.prior[freekeys[i]] = pars[i]
-            lightcurve = transit(self.time, self.prior)
-            detrended = self.data/lightcurve
-            wf = weightedflux(detrended, self.gw, self.nearest)
-            model = lightcurve*wf
-            return -0.5 * np.sum(((self.data-model)/self.dataerr)**2)
+        def fit_nested(self):
+            freekeys = list(self.bounds.keys())
+            boundarray = np.array([self.bounds[k] for k in freekeys])
+            bounddiff = np.diff(boundarray,1).reshape(-1)
 
-        def prior_transform(upars):
-            # transform unit cube to prior volume
-            return (boundarray[:,0] + bounddiff*upars)
+            def loglike(pars):
+                # chi-squared
+                for i in range(len(pars)):
+                    self.prior[freekeys[i]] = pars[i]
+                lightcurve = transit(self.time, self.prior)
+                detrended = self.data/lightcurve
+                wf = weightedflux(detrended, self.gw, self.nearest)
+                model = lightcurve*wf
+                return -0.5 * np.sum(((self.data-model)/self.dataerr)**2)
 
-        dsampler = dynesty.DynamicNestedSampler(
-            loglike, prior_transform,
-            ndim=len(freekeys), bound='multi', sample='unif',
-            maxiter_init=5000, dlogz_init=1, dlogz=0.05,
-            maxiter_batch=100, maxbatch=10, nlive_batch=100,
-            print_progress=self.verbose
-        )
-        dsampler.run_nested()
-        self.results = dsampler.results
+            def prior_transform(upars):
+                # transform unit cube to prior volume
+                return (boundarray[:,0] + bounddiff*upars)
 
-        # alloc data for best fit + error
-        self.errors = {}
-        self.quantiles = {}
-        self.parameters = copy.deepcopy(self.prior)
+            dsampler = dynesty.DynamicNestedSampler(
+                loglike, prior_transform,
+                ndim=len(freekeys), bound='multi', sample='unif',
+                maxiter_init=5000, dlogz_init=1, dlogz=0.05,
+                maxiter_batch=100, maxbatch=10, nlive_batch=100,
+                print_progress=self.verbose
+            )
+            dsampler.run_nested()
+            self.results = dsampler.results
 
-        tests = [copy.deepcopy(self.prior) for i in range(6)]
+            # alloc data for best fit + error
+            self.errors = {}
+            self.quantiles = {}
+            self.parameters = copy.deepcopy(self.prior)
 
-        # Derive kernel density estimate for best fit
-        weights = np.exp(self.results.logwt - self.results.logz[-1])
-        samples = self.results['samples']
-        logvol = self.results['logvol']
-        wt_kde = gaussian_kde(resample_equal(-logvol, weights))  # KDE
-        logvol_grid = np.linspace(logvol[0], logvol[-1], 1000)  # resample
-        wt_grid = wt_kde.pdf(-logvol_grid)  # evaluate KDE PDF
-        self.weights = np.interp(-logvol, -logvol_grid, wt_grid)  # interpolate
+            tests = [copy.deepcopy(self.prior) for i in range(6)]
 
-        # errors + final values
-        mean, cov = dynesty.utils.mean_and_cov(self.results.samples, weights)
-        mean2, cov2 = dynesty.utils.mean_and_cov(self.results.samples, self.weights)
-        for i in range(len(freekeys)):
-            self.errors[freekeys[i]] = cov[i,i]**0.5
-            tests[0][freekeys[i]] = mean[i]
-            tests[1][freekeys[i]] = mean2[i]
+            # Derive kernel density estimate for best fit
+            weights = np.exp(self.results.logwt - self.results.logz[-1])
+            samples = self.results['samples']
+            logvol = self.results['logvol']
+            wt_kde = gaussian_kde(resample_equal(-logvol, weights))  # KDE
+            logvol_grid = np.linspace(logvol[0], logvol[-1], 1000)  # resample
+            wt_grid = wt_kde.pdf(-logvol_grid)  # evaluate KDE PDF
+            self.weights = np.interp(-logvol, -logvol_grid, wt_grid)  # interpolate
 
-            counts, bins = np.histogram(samples[:,i], bins=100, weights=weights)
-            mi = np.argmax(counts)
-            tests[5][freekeys[i]] = bins[mi] + 0.5*np.mean(np.diff(bins))
+            # errors + final values
+            mean, cov = dynesty.utils.mean_and_cov(self.results.samples, weights)
+            mean2, cov2 = dynesty.utils.mean_and_cov(self.results.samples, self.weights)
+            for i in range(len(freekeys)):
+                self.errors[freekeys[i]] = cov[i,i]**0.5
+                tests[0][freekeys[i]] = mean[i]
+                tests[1][freekeys[i]] = mean2[i]
 
-            # finds median and +- 2sigma, will vary from mode if non-gaussian
-            self.quantiles[freekeys[i]] = dynesty.utils.quantile(self.results.samples[:,i], [0.025, 0.5, 0.975], weights=weights)
-            tests[2][freekeys[i]] = self.quantiles[freekeys[i]][1]
+                counts, bins = np.histogram(samples[:,i], bins=100, weights=weights)
+                mi = np.argmax(counts)
+                tests[5][freekeys[i]] = bins[mi] + 0.5*np.mean(np.diff(bins))
 
-        # find minimum near weighted mean
-        mask = (samples[:,0] < self.parameters[freekeys[0]]+2*self.errors[freekeys[0]]) & (samples[:,0] > self.parameters[freekeys[0]]-2*self.errors[freekeys[0]])
-        bi = np.argmin(self.weights[mask])
+                # finds median and +- 2sigma, will vary from mode if non-gaussian
+                self.quantiles[freekeys[i]] = dynesty.utils.quantile(self.results.samples[:,i], [0.025, 0.5, 0.975], weights=weights)
+                tests[2][freekeys[i]] = self.quantiles[freekeys[i]][1]
 
-        for i in range(len(freekeys)):
-            tests[3][freekeys[i]] = samples[mask][bi,i]
-            tests[4][freekeys[i]] = np.average(samples[mask][:,i],weights=self.weights[mask],axis=0)
+            # find minimum near weighted mean
+            mask = (samples[:,0] < self.parameters[freekeys[0]]+2*self.errors[freekeys[0]]) & (samples[:,0] > self.parameters[freekeys[0]]-2*self.errors[freekeys[0]])
+            bi = np.argmin(self.weights[mask])
 
-        # find best fit
-        chis = []
-        res = []
-        for i in range(len(tests)):
-            lightcurve = transit(self.time, tests[i])
-            detrended = self.data / lightcurve
-            wf = weightedflux(detrended, self.gw, self.nearest)
-            model = lightcurve*wf
-            residuals = self.data - model
-            res.append(residuals)
-            btime, br = time_bin(self.time, residuals)
-            blc = transit(btime, tests[i])
-            mask = blc < 1
-            if mask.sum() <= 10:
-                mask = np.ones(blc.shape)
-            duration = btime[mask].max() - btime[mask].min()
-            tmask = ((btime - tests[i]['tmid']) < duration) & ((btime - tests[i]['tmid']) > -1*duration)
-            chis.append(np.mean(br[tmask]**2))
+            for i in range(len(freekeys)):
+                tests[3][freekeys[i]] = samples[mask][bi,i]
+                tests[4][freekeys[i]] = np.average(samples[mask][:,i],weights=self.weights[mask],axis=0)
 
-        mi = np.argmin(chis)
-        self.parameters = copy.deepcopy(tests[mi])
+            # find best fit
+            chis = []
+            res = []
+            for i in range(len(tests)):
+                lightcurve = transit(self.time, tests[i])
+                detrended = self.data / lightcurve
+                wf = weightedflux(detrended, self.gw, self.nearest)
+                model = lightcurve*wf
+                residuals = self.data - model
+                res.append(residuals)
+                btime, br = time_bin(self.time, residuals)
+                blc = transit(btime, tests[i])
+                mask = blc < 1
+                if mask.sum() <= 10:
+                    mask = np.ones(blc.shape)
+                duration = btime[mask].max() - btime[mask].min()
+                tmask = ((btime - tests[i]['tmid']) < duration) & ((btime - tests[i]['tmid']) > -1*duration)
+                chis.append(np.mean(br[tmask]**2))
 
-        # plt.scatter(samples[mask,0], samples[mask,1], c=weights[mask]); plt.show()
+            mi = np.argmin(chis)
+            self.parameters = copy.deepcopy(tests[mi])
 
-        # best fit model
-        self.transit = transit(self.time, self.parameters)
-        detrended = self.data / self.transit
-        self.wf = weightedflux(detrended, self.gw, self.nearest)
-        self.model = self.transit*self.wf
-        self.residuals = self.data - self.model
-        self.detrended = self.data/self.wf
+            # plt.scatter(samples[mask,0], samples[mask,1], c=weights[mask]); plt.show()
 
-    def plot_bestfit(self):
-        f = plt.figure(figsize=(12,7))
-        # f.subplots_adjust(top=0.94,bottom=0.08,left=0.07,right=0.96)
-        ax_lc = plt.subplot2grid((4,5), (0,0), colspan=5,rowspan=3)
-        ax_res = plt.subplot2grid((4,5), (3,0), colspan=5, rowspan=1)
-        axs = [ax_lc, ax_res]
+            # best fit model
+            self.transit = transit(self.time, self.parameters)
+            detrended = self.data / self.transit
+            self.wf = weightedflux(detrended, self.gw, self.nearest)
+            self.model = self.transit*self.wf
+            self.residuals = self.data - self.model
+            self.detrended = self.data/self.wf
 
-        bt, bf = time_bin(self.time, self.detrended)
+        def plot_bestfit(self):
+            f = plt.figure(figsize=(12,7))
+            # f.subplots_adjust(top=0.94,bottom=0.08,left=0.07,right=0.96)
+            ax_lc = plt.subplot2grid((4,5), (0,0), colspan=5,rowspan=3)
+            ax_res = plt.subplot2grid((4,5), (3,0), colspan=5, rowspan=1)
+            axs = [ax_lc, ax_res]
 
-        axs[0].errorbar(self.time, self.detrended, yerr=np.std(self.residuals)/np.median(self.data), ls='none', marker='.', color='black', zorder=1, alpha=0.5)
-        axs[0].plot(bt,bf,'c.',alpha=0.5,zorder=2)
-        axs[0].plot(self.time, self.transit, 'r-', zorder=3)
-        axs[0].set_xlabel("Time [day]")
-        axs[0].set_ylabel("Relative Flux")
-        axs[0].grid(True,ls='--')
+            bt, bf = time_bin(self.time, self.detrended)
 
-        axs[1].plot(self.time, self.residuals/np.median(self.data)*1e6, 'k.', alpha=0.5)
-        bt, br = time_bin(self.time, self.residuals/np.median(self.data)*1e6)
-        axs[1].plot(bt,br,'c.',alpha=0.5,zorder=2)
-        axs[1].set_xlabel("Time [day]")
-        axs[1].set_ylabel("Residuals [ppm]")
-        axs[1].grid(True,ls='--')
-        plt.tight_layout()
+            axs[0].errorbar(self.time, self.detrended, yerr=np.std(self.residuals)/np.median(self.data), ls='none', marker='.', color='black', zorder=1, alpha=0.5)
+            axs[0].plot(bt,bf,'c.',alpha=0.5,zorder=2)
+            axs[0].plot(self.time, self.transit, 'r-', zorder=3)
+            axs[0].set_xlabel("Time [day]")
+            axs[0].set_ylabel("Relative Flux")
+            axs[0].grid(True,ls='--')
 
-        return f,axs
+            axs[1].plot(self.time, self.residuals/np.median(self.data)*1e6, 'k.', alpha=0.5)
+            bt, br = time_bin(self.time, self.residuals/np.median(self.data)*1e6)
+            axs[1].plot(bt,br,'c.',alpha=0.5,zorder=2)
+            axs[1].set_xlabel("Time [day]")
+            axs[1].set_ylabel("Residuals [ppm]")
+            axs[1].grid(True,ls='--')
+            plt.tight_layout()
+
+            return f,axs
 
 def time_bin(time, flux, dt=1./(60*24)):
     bins = int(np.floor((max(time) - min(time))/dt))
@@ -3094,7 +3100,7 @@ def spitzer_posterior(SV, title='', savedir=None):
         plt.savefig(savedir+title+".png")
         plt.close()
     else:
-        return f
+        return fig
 
 def spitzer_pixel_map(sv, title='', savedir=None):
     '''
