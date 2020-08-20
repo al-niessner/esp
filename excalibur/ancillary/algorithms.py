@@ -46,7 +46,7 @@ class estimate(dawgie.Algorithm):
 
 class population(dawgie.Analyzer):
     def __init__(self):
-        self._version_ = dawgie.VERSION(1,0,2)
+        self._version_ = dawgie.VERSION(1,0,3)
         self.__out = ancstates.PopulationSV('statistics')
         return
 
@@ -75,7 +75,7 @@ class population(dawgie.Analyzer):
                         if svn not in temp[tgn]: temp[tgn][svn] = {}
                         temp[tgn][svn][vn] = data[svn][tgn][vn]
             data = temp
-        elif 'keys' in dir(aspects):
+        elif 'keys' not in dir(aspects):
             data = dict([i for i in aspects])
         targets = data
 
