@@ -18,7 +18,7 @@ estimators that mutually rely upon each other.
 1. In `estimators.py`, define a new function that accepts `priors` & `ests` parameters
 for stellar estimators and `priors`, `ests` & `planet` parameters for planetary
 estimators. Note: Define the `ests` parameter as `_ests` if you will not use previous estimates to prevent the pylint unused-variable warning. Alternatively, using the Python `class` estimator approach below will more cleanly prevent this warning.
-2. In `core.py`, import your new estimator or reference by `ancestor.your_function`
+2. If your estimator function was defined outside of `estimators.py` then in `core.py`, import your new estimator. Otherwise, no action is needed and you can reference the function by `ancestor.your_function_name` in step 3 (where it says `my_imported_method`).
 3. In `core.py`, include the estimator in the `getestimators()` function by
 adding a line of the form `PlEstimator(name='example', 'descr='Example estimator', units='Ex', method=my_imported_method)` for planetary estimators and something of
 an identical form except changing `PlEstimator` to `StEstimator` for

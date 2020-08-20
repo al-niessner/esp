@@ -46,7 +46,7 @@ class estimate(dawgie.Algorithm):
 
 class population(dawgie.Analyzer):
     def __init__(self):
-        self._version_ = dawgie.VERSION(1,0,1)
+        self._version_ = dawgie.VERSION(1,0,2)
         self.__out = ancstates.PopulationSV('statistics')
         return
 
@@ -64,26 +64,40 @@ class population(dawgie.Analyzer):
         return [self.__out]
 
     def run(self, aspects:dawgie.Aspect):
-        data = aspects.as_dict()['ancillary.estimate.parameters']
-        targets = data.keys()
+        data = aspects
+        if 'as_dict' in dir(aspects):  # temporary workaround for dawgie discrepancy
+            data = aspects.as_dict()
+            temp = {}
+            for svn in data:
+                for tgn in data[svn]:
+                    for vn in data[svn][tgn]:
+                        if tgn not in temp: temp[tgn] = {}
+                        if svn not in temp[tgn]: temp[tgn][svn] = {}
+                        temp[tgn][svn][vn] = data[svn][tgn][vn]
+            data = temp
+        elif 'keys' in dir(aspects):
+            data = dict([i for i in aspects])
+        targets = data
 
         # now group together values by attribute
+        svname = 'ancillary.estimate.parameters'
         st_attrs = defaultdict(list)
         pl_attrs = defaultdict(list)
         for trgt in targets:
+            tr_data = data[trgt][svname]
             # verify SV succeeded for target
-            if data[trgt]['STATUS'][-1] or 'planets' in data[trgt]['data']:
+            if tr_data['STATUS'][-1] or 'planets' in tr_data['data']:
                 # get stellar attributes
-                st_keys = [i for i in data[trgt]['data'].keys()
-                           if is_st_key(i, data[trgt]['data']['planets'])]
+                st_keys = [i for i in tr_data['data'].keys()
+                           if is_st_key(i, tr_data['data']['planets'])]
                 for key in st_keys:
-                    st_attrs[key].append(data[trgt]['data'][key])
+                    st_attrs[key].append(tr_data['data'][key])
                 # get planetary attributes
-                for pl in data[trgt]['data']['planets']:
-                    pl_keys = [i for i in data[trgt]['data'][pl].keys()
+                for pl in tr_data['data']['planets']:
+                    pl_keys = [i for i in tr_data['data'][pl].keys()
                                if not any([ext in i for ext in anccore.SV_EXTS])]
                     for key in pl_keys:
-                        pl_attrs[key].append(data[trgt]['data'][pl][key])
+                        pl_attrs[key].append(tr_data['data'][pl][key])
 
         # Add to SV
         self.__out['data']['st_attrs'] = st_attrs
