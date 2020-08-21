@@ -262,7 +262,7 @@ class spectrum(dawgie.Algorithm):
 
 class population(dawgie.Analyzer):
     def __init__(self):
-        self._version_ = dawgie.VERSION(1,0,1)
+        self._version_ = dawgie.VERSION(1,0,2)
         self.__out = [trnstates.PopulationSV(ext) for ext in fltrs]
         return
 
@@ -318,7 +318,10 @@ class population(dawgie.Analyzer):
                     if tr_data['STATUS'][-1] or 'MCTRACE' in tr_data['data'][pl]:
                         # logic for saving spectrum IM parameters
                         if 'MCTRACE' in tr_data['data'][pl]:
-                            num_visits = len(wl_data['data'][pl]['visits'])
+                            if pl in wl_data['data']:
+                                num_visits = len(wl_data['data'][pl]['visits'])
+                            else:  # always at least one visit
+                                num_visits = 1
                             trace = tr_data['data'][pl]['MCTRACE']
                             for row in trace:
                                 for key in row:
