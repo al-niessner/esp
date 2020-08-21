@@ -262,7 +262,7 @@ class spectrum(dawgie.Algorithm):
 
 class population(dawgie.Analyzer):
     def __init__(self):
-        self._version_ = dawgie.VERSION(1,0,0)
+        self._version_ = dawgie.VERSION(1,0,1)
         self.__out = [trnstates.PopulationSV(ext) for ext in fltrs]
         return
 
@@ -338,9 +338,13 @@ class population(dawgie.Analyzer):
                                     elif 'G102' in fltr:
                                         bins = 30
                                     im_bins[param_name]['bins'] = bins
+                    if pl not in wl_data['data']:
+                        continue
                     if wl_data['STATUS'][-1] or 'mctrace' in wl_data['data'][pl]:
                         # logic for saving whitelight IM parameters
-                        if 'mctrace' in tr_data['data'][pl]:
+                        if 'mctrace' in wl_data['data'][pl]:
+                            if 'visits' not in wl_data['data'][pl]:
+                                continue
                             num_visits = len(wl_data['data'][pl]['visits'])
                             trace = wl_data['data'][pl]['mctrace']
                             for key in trace:
