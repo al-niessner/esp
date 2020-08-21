@@ -12,4 +12,11 @@ class Actor(dawgie.Task):
             trnalg.spectrum()
         ]
     pass
+
+class Agent(dawgie.Analysis):
+    def list(self)->[dawgie.Analyzer]:
+        return [
+            trnalg.population()
+        ]
+    pass
 # --------- ----------------------------------------------------------

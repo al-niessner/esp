@@ -4,6 +4,9 @@ import dawgie.context
 
 import logging; log = logging.getLogger(__name__)
 
+from collections import defaultdict
+import numpy as np
+
 import excalibur.transit as trn
 import excalibur.transit.core as trncore
 import excalibur.transit.states as trnstates
@@ -254,6 +257,107 @@ class spectrum(dawgie.Algorithm):
 
     def _failure(self, errstr):
         log.warning('--< %s SPECTRUM: %s >--', self._type.upper(), errstr)
+        return
+    pass
+
+class population(dawgie.Analyzer):
+    def __init__(self):
+        self._version_ = dawgie.VERSION(1,0,0)
+        self.__out = [trnstates.PopulationSV(ext) for ext in fltrs]
+        return
+
+    def feedback(self):
+        return []
+
+    def name(self):
+        return 'population'
+
+    def traits(self)->[dawgie.SV_REF, dawgie.V_REF]:
+        return [*[dawgie.SV_REF(trn.task, spectrum(),
+                                spectrum().state_vectors()[i])
+                                for i in range(len(spectrum().state_vectors()))],
+                *[dawgie.SV_REF(trn.task, whitelight(),
+                                whitelight().state_vectors()[i])
+                                for i in range(len(whitelight().state_vectors()))]]
+
+    def state_vectors(self):
+        return self.__out
+
+    def run(self, aspects:dawgie.Aspect):
+        data = aspects
+        if 'as_dict' in dir(aspects):  # temporary workaround for dawgie discrepancy
+            data = aspects.as_dict()
+            temp = {}
+            for svn in data:
+                for tgn in data[svn]:
+                    for vn in data[svn][tgn]:
+                        if tgn not in temp: temp[tgn] = {}
+                        if svn not in temp[tgn]: temp[tgn][svn] = {}
+                        temp[tgn][svn][vn] = data[svn][tgn][vn]
+            data = temp
+        elif 'keys' not in dir(aspects):
+            data = dict([i for i in aspects])
+        targets = data
+
+        # now handle IM parameter distribution
+        banned_params = ['rprs']
+        sv_prefix = 'transit.spectrum.'
+        wl_prefix = 'transit.whitelight.'
+        for idx, fltr in enumerate(fltrs):
+            im_bins = defaultdict(lambda: defaultdict(list))
+            wl_im_bins = defaultdict(lambda: defaultdict(list))
+            for trgt in targets:
+                svname = sv_prefix + fltr
+                wlname = wl_prefix + fltr
+                if svname not in data[trgt] or wlname not in data[trgt]:
+                    continue
+                tr_data = data[trgt][svname]
+                wl_data = data[trgt][wlname]
+                for pl in tr_data['data']:
+                    # verify SV succeeded for target
+                    if tr_data['STATUS'][-1] or 'MCTRACE' in tr_data['data'][pl]:
+                        # logic for saving spectrum IM parameters
+                        if 'MCTRACE' in tr_data['data'][pl]:
+                            num_visits = len(wl_data['data'][pl]['visits'])
+                            trace = tr_data['data'][pl]['MCTRACE']
+                            for row in trace:
+                                for key in row:
+                                    keyparts = key.split('__')
+                                    if len(keyparts) > 1 and int(keyparts[1]) >= num_visits:
+                                        continue
+                                    param_name = keyparts[0]
+                                    if param_name in banned_params:
+                                        continue
+                                    param_val = np.nanmedian(row[key])
+                                    im_bins[param_name]['values'].append(param_val)
+                                    bins = 60
+                                    if 'G430' in fltr:
+                                        bins = 30
+                                    elif 'G750' in fltr:
+                                        bins = 40
+                                    elif 'G102' in fltr:
+                                        bins = 30
+                                    im_bins[param_name]['bins'] = bins
+                    if wl_data['STATUS'][-1] or 'mctrace' in wl_data['data'][pl]:
+                        # logic for saving whitelight IM parameters
+                        if 'mctrace' in tr_data['data'][pl]:
+                            num_visits = len(wl_data['data'][pl]['visits'])
+                            trace = wl_data['data'][pl]['mctrace']
+                            for key in trace:
+                                keyparts = key.split('__')
+                                if len(keyparts) > 1 and int(keyparts[1]) >= num_visits:
+                                    continue
+                                param_name = keyparts[0]
+                                if param_name in banned_params:
+                                    continue
+                                param_val = np.nanmedian(trace[key])
+                                wl_im_bins[param_name]['values'].append(param_val)
+            self.__out[idx]['data']['IMPARAMS'] = dict(im_bins)
+            self.__out[idx]['data']['wl'] = dict()
+            self.__out[idx]['data']['wl']['imparams'] = dict(wl_im_bins)
+            self.__out[idx]['STATUS'].append(True)
+
+        aspects.ds().update()
         return
     pass
 # -------------------------------------------------------------------

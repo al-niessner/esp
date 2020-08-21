@@ -8,6 +8,7 @@ from excalibur.transit.core import spitzer_lightcurve, composite_spectrum, spitz
 
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.stats import cauchy, norm, t
 # ------------- ------------------------------------------------------
 # -- SV -- -----------------------------------------------------------
 class NormSV(dawgie.StateVector):
@@ -351,6 +352,29 @@ class SpectrumSV(dawgie.StateVector):
         pass
     pass
 
+class PopulationSV(dawgie.StateVector):
+    def __init__(self, name):
+        self._version_ = dawgie.VERSION(1,0,0)
+        self.__name = name
+        self['STATUS'] = excalibur.ValuesList()
+        self['data'] = excalibur.ValuesDict()
+        self['STATUS'].append(False)
+        return
+
+    def name(self):
+        return self.__name
+
+    def view(self, visitor:dawgie.Visitor)->None:
+        if 'IMPARAMS' in self['data']:
+            visitor.add_primitive('Spectrum Instrument Model Distribution')
+            for key in self['data']['IMPARAMS']:
+                data = self['data']['IMPARAMS'][key]
+                bins = data['bins'] if 'bins' in data else 'auto'
+                distrplot(key, data['values'], visitor, fit_t=True,
+                          bins=bins)
+        else:
+            visitor.add_primitive('No instrument model statistics detected.')
+    pass
 # ------------- ------------------------------------------------------
 # -- HELPER FUNCTIONS ------------------------------------------------
 def merge_mean(data, depth=0):
@@ -381,4 +405,61 @@ def calculate_bounds(data, z_thresh=3.5):
 def upper_outlier_mask(data):
     _, upbound = calculate_bounds(data)
     return np.array([True if i > upbound else False for i in data])
+
+def outlier_aware_hist(data, lower=None, upper=None, bins='auto'):
+    # note: code is taken with little modification from https://stackoverflow.com/questions/15837810/making-pyplot-hist-first-and-last-bins-include-outliers
+    if not lower or lower < data.min():
+        lower = data.min()
+        lower_outliers = False
+    else:
+        lower_outliers = True
+    if not upper or upper > data.max():
+        upper = data.max()
+        upper_outliers = False
+    else:
+        upper_outliers = True
+    _, _, patches = plt.hist(data, range=(lower, upper), bins=bins, density=True)
+    if lower_outliers:
+        n_lower_outliers = (data < lower).sum()
+        patches[0].set_height(patches[0].get_height() + n_lower_outliers)
+        patches[0].set_facecolor('c')
+        patches[0].set_label('Lower outliers: ({:.2f}, {:.2f})'.format(data.min(), lower))
+    if upper_outliers:
+        n_upper_outliers = (data > upper).sum()
+        patches[-1].set_height(patches[-1].get_height() + n_upper_outliers)
+        patches[-1].set_facecolor('m')
+        patches[-1].set_label('Upper outliers: ({:.2f}, {:.2f})'.format(upper, data.max()))
+    if lower_outliers or upper_outliers:
+        plt.legend()
+
+def distrplot(title, values, visitor, units=None, fit_t=False, bins='auto'):
+    myfig = plt.figure()
+    plt.title(title)
+    outlier_aware_hist(np.array(values), *calculate_bounds(values), bins)
+    plt.ylabel('Density')
+    if units is None:
+        plt.xlabel('Estimate')
+    else:
+        plt.xlabel('Estimate [{}]'.format(units))
+    if fit_t:
+        cauchy_fit = cauchy.fit(values)
+        t_fit = t.fit(values)
+        norm_fit = norm.fit(values)
+        xlim = plt.xlim()
+        x = np.arange(xlim[0], xlim[1], (xlim[1]-xlim[0])/1000)
+        plt.plot(x, cauchy.pdf(x, loc=cauchy_fit[0], scale=cauchy_fit[1]),
+                 label='fit Lorentzian')
+        plt.plot(x, t.pdf(x, df=t_fit[0], loc=t_fit[1], scale=t_fit[2]),
+                 label='fit T ({:.1f} DF)'.format(t_fit[0]))
+        plt.plot(x, norm.pdf(x, loc=norm_fit[0], scale=norm_fit[1]),
+                 label='fit Gaussian')
+        fit_msg = '{} t fit: df={:.5f}, loc={:.6f}, scale={:.6f}'
+        visitor.add_primitive(fit_msg.format(title, t_fit[0], t_fit[1], t_fit[2]))
+        fit_msg = '{} Gaussian fit: loc={:.6f}, scale={:.6f}'
+        visitor.add_primitive(fit_msg.format(title, norm_fit[0], norm_fit[1]))
+    plt.legend()
+    buf = io.BytesIO()
+    myfig.savefig(buf, format='png')
+    visitor.add_image('...', ' ', buf.getvalue())
+    plt.close(myfig)
 # -------- -----------------------------------------------------------
