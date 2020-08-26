@@ -501,7 +501,7 @@ def dbscp(locations, dbs, out):
                 else:
                     filedict['filter'] = mainheader.get('CHNLNUM')
 
-                out['name'][mainheader.get('DPID')] = filedict
+                out['name'][str(mainheader.get('DPID'))] = filedict
 
                 pass
             # JWST
