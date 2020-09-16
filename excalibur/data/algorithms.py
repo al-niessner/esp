@@ -105,9 +105,7 @@ class timing(dawgie.Algorithm):
         vcol, ecol = datcore.checksv(col)
         validtype = []
         for test in col['activefilters'].keys():
-            if ('SCAN' in test) or ('STIS' in test) or ('Spitzer' in test):
-                if test in fltrs: validtype.append(test)
-                pass
+            if test in fltrs: validtype.append(test)
             pass
         svupdate = []
         if vfin and vcol:
@@ -169,9 +167,7 @@ class calibration(dawgie.Algorithm):
         vfin, sfin = trncore.checksv(fin)
         validtype = []
         for test in cll['activefilters'].keys():
-            if ('SCAN' in test) or ('STARE' in test) or ('Spitzer' in test):
-                if test in fltrs: validtype.append(test)
-                pass
+            if test in fltrs: validtype.append(test)
             pass
         svupdate = []
         for datatype in validtype:
@@ -209,9 +205,8 @@ class calibration(dawgie.Algorithm):
         if 'Spitzer' in flttype:
             caled = datcore.spitzercal(cll, out)
             pass
-        # if 'Spitzer' in flttype:
-        #     caled = datcore.spitzercal(cll, tim, tid, flttype, out, verbose=False)
-        #     pass
+        if 'NIRISS' in flttype:
+            caled = datcore.jwstcal_NIRISS(fin, cll, tim, tid, flttype, out, verbose=False)
         return caled
 
     @staticmethod

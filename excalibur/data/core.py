@@ -25,7 +25,7 @@ import scipy.optimize as opt
 # from scipy.misc import imresize
 from scipy.optimize import least_squares
 from scipy.ndimage.measurements import label
-from scipy.ndimage.morphology import binary_dilation
+from scipy.ndimage.morphology import binary_dilation, binary_closing, binary_erosion, binary_fill_holes
 from PIL import Image as pilimage
 
 from photutils import aperture_photometry, CircularAperture, CircularAnnulus
@@ -87,7 +87,30 @@ def timing(force, ext, clc, out, verbose=False):
     dbs = os.path.join(dawgie.context.data_dbs, 'mast')
     data = {'LOC':[], 'SCANANGLE':[], 'TIME':[], 'EXPLEN':[]}
     # LOAD DATA ------------------------------------------------------
-    if 'JWST' in ext:
+    if 'jwst' in ext.lower():
+        for loc in sorted(clc['LOC']):
+            fullloc = os.path.join(dbs, loc)
+            with pyfits.open(fullloc) as hdulist:
+                header0 = hdulist[0].header
+                ftime = []
+                exptime = []
+                for fits in hdulist:
+                    if "primary" in fits.name.lower():
+                        # keywords for NIRISS
+                        start = fits.header.get("TIME-BJD")
+                        ngroup = fits.header.get("ngroups",1)
+                        dtgroup = fits.header.get("tgroup") / (24*60*60.)
+                        nframe = fits.header.get("nframes",1)
+                        dtframe = fits.header.get("tframes")
+                        # https://jwst-docs.stsci.edu/near-infrared-imager-and-slitless-spectrograph/niriss-instrumentation/niriss-detector-overview/niriss-detector-readout-patterns
+                        # TODO handle multiple frames
+                        data['TIME'].extend([start + i*dtgroup for i in range(ngroup)])
+                        data['EXPLEN'].extend([dtgroup]*ngroup)
+                        data['LOC'].append(loc)
+                        pass
+                    pass
+                pass
+            pass
         pass
     if 'Spitzer' in ext:
         for loc in sorted(clc['LOC']):
@@ -172,7 +195,7 @@ def timing(force, ext, clc, out, verbose=False):
     exlto = exposlen.copy()[ordt]
     tmeto = time.copy()[ordt]
     ssc = syscore.ssconstants()
-    if 'Spitzer' not in ext:
+    if 'Spitzer' not in ext and 'JWST' not in ext:
         ignto = ignore.copy()[ordt]
         scato = scanangle.copy()[ordt]
         pass
@@ -181,94 +204,49 @@ def timing(force, ext, clc, out, verbose=False):
         for p in priors['planets']:
             out['data'][p] = {}
 
-            if 'Spitzer' in ext:
+            if 'Spitzer' in ext or 'JWST' in ext:
                 out['data'][p]['transit'] = []
                 out['data'][p]['eclipse'] = []
                 out['data'][p]['phasecurve'] = []
                 vis = np.ones(time.size)
 
-                tmjd = priors[p]['t0']
-                if tmjd > 2400000.5: tmjd -= 2400000.5
                 smaors = priors[p]['sma']/priors['R*']/ssc['Rsun/AU']
                 tdur = priors[p]['period']/(np.pi)/smaors  # rough estimate
                 pdur = tdur/priors[p]['period']
+
+                # https://arxiv.org/pdf/1001.2010.pdf eq 33
                 w = priors[p].get('omega',0)
-                dp = 0.5 * (1 + priors[p]['ecc']*(4./np.pi)*np.cos(np.deg2rad(w)))  # phase offset for eccentric orbit
+                tme = priors[p]['t0']+ priors[p]['period']*0.5 * (1 + priors[p]['ecc']*(4./np.pi)*np.cos(np.deg2rad(w)))
+                tm = priors[p]['t0']
+                if tm > 2400000.5 and 'Spitzer' in ext:
+                    tme -= 2400000.5
+                    tm = priors[p]['t0'] - 2400000.5
 
-                # shift phase so we can measure adequate baseline surrounding a transit/eclipse
-                sphase = (time-(tmjd-0.25*priors[p]['period']))/priors[p]['period']
-                epochs = np.unique(np.floor(sphase))
-                visto = np.floor(sphase)
+                rsun = 6.955e8  # m
+                au = 1.496e11  # m
+                period = priors[p]['period']
+                offset = 0.25
+                tphase = (time - tm + offset*period)/period
+                ephase = (time - tme + offset*period)/period
+                pdur = 2*np.arctan(priors['R*']*rsun/(priors[p]['sma']*au))/(2*np.pi)
+                events = np.unique(np.floor(tphase))
+                min_images = 200
+                for e in events:  # loop through different years
 
-                for e in epochs:
-                    vmask = visto == e
-                    tmask = ((sphase[vmask]-e) > (0.25-1.75*pdur)) & ((sphase[vmask]-e) < (0.25+1.75*pdur))
-                    if tmask.sum() > 25:
+                    tmask = (tphase > e + (offset-2*pdur)) & (tphase < e + (offset+2*pdur))
+                    mmask = (tphase > e + (offset-2*pdur+0.25)) & (tphase < e + (offset+2*pdur+0.25))
+                    emask = (ephase > e + (offset-2*pdur)) & (ephase < e + (offset+2*pdur))
+                    emask2 = (ephase > (e-1) + (offset-2*pdur)) & (ephase < (e-1) + (offset+2*pdur))  # eclipse at prior orbit
+                    # tmask2 = (tphase > (e+1) + (offset-2*pdur)) & (tphase < (e+1) + (offset+2*pdur) )  # transit at next orbit
+                    if tmask.sum() > min_images:
                         out['data'][p]['transit'].append(e)
-                    emask = ((sphase[vmask]-e) > (0.25+dp-1.75*pdur)) & ((sphase[vmask]-e) < (0.25+dp+1.75*pdur))
-                    if emask.sum() > 25:
+                    if emask.sum() > min_images:
                         out['data'][p]['eclipse'].append(e)
-
-                    # if (tmask.sum() > 50) & (emask.sum() > 50):
-                        # out['data'][p]['phasecurve'].append(e)
-
-                # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-                # Rob Zellem's method of finding phase curves
-                # after some thought, RZ thinks we should run this two different ways: one with the way that Kyle has been doing
-                # with his shifted phasing, and use this for transits/eclipses alone
-                # and then again to find phase curves
-
-                # RZ breaks up the data by the amount of time that has passed
-                deltatime = np.gradient(time[np.argsort(time)])
-                # If more than 0.25 orbital phase has passed, then this classified as a new observation
-                # Chose 0.25 in case a transit/eclipse is observed after eclipse/transit, but does not classify as a phase curve
-                observations = deltatime >= priors[p]['period']/4  # returns a boolean
-                idxobs, = np.where(observations)  # where the boundaries are index-wise
-
-                pcvisto = np.zeros(len(time))
-                for nobs in np.arange(len(idxobs)):
-                    if nobs==0:
-                        tstart = 0
-                    else:
-                        tstart = idxobs[nobs]
-                    if nobs==len(idxobs)-1:
-                        tstop = -1
-                    else:
-                        tstop = idxobs[nobs+1]
-
-                    try:
-                        obsmask = (time >= time[np.argsort(time)][tstart]) & (time <= time[np.argsort(time)][tstop])
-                    except IndexError:
-                        pass
-                        # import pdb; pdb.set_trace()
-
-                    pcvisto[obsmask] = np.floor((time[np.argsort(time)][tstart] - tmjd)/priors[p]['period'])
-
-                pcepochs = np.unique(pcvisto)
-
-                sphase = (time - tmjd)/priors[p]['period']
-
-                for e in pcepochs:
-                    vmask = pcvisto == e
-                    # could make this more robust by determining if *any* out of transit
-                    # Right now, it requires there to be 1 transit duration pre-/post-transit
-                    tmask = ((sphase[vmask]-e) >= 1-2*pdur) & ((sphase[vmask]-e) <= 1+2*pdur)
-                    # While this does find eclipses, it fails if a phase curve starts with an eclipse
-                    # or if there are multiple phase curves in our dataset
-                    # Need to update to check if there is at least one eclipse pre-/post- transit
-                    # Right now, it requires there to be 1 transit duration pre-eclipse
-                    emask = ((sphase[vmask]-e) >= 1+dp-2*pdur) & ((sphase[vmask]-e) <= 1+dp+2*pdur)
-                    if (tmask.sum() > 20) & (emask.sum() > 20):
+                    if tmask.sum() > min_images and emask.sum() > min_images and mmask.sum() > min_images:
                         out['data'][p]['phasecurve'].append(e)
 
-                # if ("4.5" in ext):
-                #     import pdb; pdb.set_trace()
-
-                pass
-
+                visto = np.floor(tphase)
                 out['STATUS'].append(True)
-                out['data'][p]['visits'] = visto.astype(int)  # should maintain same order as time
-                out['data'][p]['pcvisits'] = pcvisto  # phase curve visits
                 pass
             else:  # HST
                 smaors = priors[p]['sma']/priors['R*']/ssc['Rsun/AU']
@@ -3558,3 +3536,95 @@ def skybg_phot(data,xc,yc,r=10,dr=5):
     dat = np.copy(data)
     dat[dat>cutoff] = cutoff  # ignore bright pixels like stars
     return min(np.mean(dat[yv,xv][mask]),np.median(dat[yv,xv][mask]))
+
+def linfit(x, y):
+    A = np.vstack([np.ones(len(x)), x]).T
+    return np.linalg.lstsq(A, y, rcond=None)[0]  # b, m
+
+def jwstcal_NIRISS(fin, clc, tim, tid, flttype, out, verbose=False):
+    '''
+    K. PEARSON: JWST NIRISS spectral extraction
+    '''
+    calibrated = False
+    dbs = os.path.join(dawgie.context.data_dbs, 'mast')
+
+    data = {
+        'TIME':[],
+        'SPEC':[],
+        'WAVE':[],
+        'LOC':[],
+        'RAMP':[],
+        'RAMP_OFFSET':[],
+        'RAMP_NUM':[],
+        'FAILED':[]
+    }
+
+    for loc in sorted(clc['LOC']):
+        fullloc = os.path.join(dbs, loc)
+        with pyfits.open(fullloc) as hdulist:
+            header0 = hdulist[0].header
+            ftime = []
+            exptime = []
+            for fits in hdulist:
+                if "primary" in fits.name.lower():
+                    # keywords for NIRISS
+                    start = fits.header.get("TIME-BJD")
+                    ngroup = fits.header.get("ngroups",1)
+                    dtgroup = fits.header.get("tgroup") / (24*60*60.)
+                    nframe = fits.header.get("nframes",1)
+                    dtframe = fits.header.get("tframes")
+                    data['TIME'].extend([start + i*dtgroup for i in range(ngroup)])
+                    data['LOC'].append(loc)
+                elif "sci" in fits.name.lower():
+                    ngroup, nramp, height, width = fits.shape
+                    slope = np.zeros((height,width))
+                    offset = np.zeros((height,width))
+                    # TODO optimize
+                    for x in range(width):
+                        for y in range(height):
+                            pix = fits.data[:,:,y,x].flatten()
+                            t = np.array([np.arange(1,nramp+1)*dtgroup*24*60*60]).flatten()
+                            # TODO outlier rejection from neighboring pixels
+                            b,m = linfit(t,pix)
+                            slope[y,x] = m
+                            offset[y,x] = b
+
+                    data['RAMP'].append(slope)
+                    data['RAMP_OFFSET'].append(offset)
+
+                    # first order extraction
+                    sub = slope[:96]
+                    # find data above the background
+                    mask = sub > np.percentile(sub,65)
+                    mask = binary_closing(mask)
+                    mask = binary_erosion(mask)
+                    mask = binary_dilation(mask)
+                    mask = binary_fill_holes(mask)
+                    labels, ngroups = label(mask)
+                    inds, counts = np.unique(labels,return_counts=True)
+                    sinds = np.argsort(counts)[::-1]
+                    submask = labels == inds[sinds[1]]  # second biggest is data, first is bg
+
+                    # approx wavecal
+                    # https://jwst-docs.stsci.edu/near-infrared-imager-and-slitless-spectrograph/niriss-instrumentation/niriss-gr700xd-grism
+                    minx = 18
+                    maxx = 1487
+                    x = np.array([112,328,545,765,988,1213,1441])
+                    w = np.array([2.7,2.4,2.1,1.8,1.5,1.2,0.9])
+                    fwave = itp.interp1d(width*(x-minx)/(maxx-minx), w, fill_value="extrapolate")
+
+                    # assumes ngroup = 1
+                    # remake image by subtracting 0 read
+                    dcube = np.zeros((nramp,height,width))
+                    for k in range(nramp):
+                        dcube[k] = fits.data[0,k] - offset
+                        data['SPEC'].append(np.sum(dcube[k][:96]*submask,0))
+                        data['WAVE'].append(fwave(np.arange(width)))
+                        data['RAMP_NUM'].append(k+1)
+
+    # transfer data
+    for key in data: out['data'][key] = data[key]
+    calibrated = not np.all(data['FAILED']) or len(data['FAILED']) == 0
+    if calibrated: out['STATUS'].append(True)
+
+    return calibrated

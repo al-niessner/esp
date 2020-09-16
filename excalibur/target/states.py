@@ -175,7 +175,7 @@ class DatabaseSV(dawgie.StateVector):
                         nb = vlist.count(v)
                         if v is not None:
                             percent = 1e2*vlist.count(v)/total
-                            out = (v +
+                            out = (str(v) +
                                    ': ' + str(int(nb)) +
                                    ' (' + str(round(percent)) + '%)')
                             table.get_cell(0, i).add_primitive(out)

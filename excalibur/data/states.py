@@ -153,69 +153,80 @@ class TimingSV(dawgie.StateVector):
     def view(self, visitor:dawgie.Visitor)->None:
         if self['STATUS'][-1]:
             for p in self['data'].keys():
-                vlabels = ['TRANSIT', 'ECLIPSE', 'PHASE CURVE']
-                hlabels = ['PLANET: '+p, 'VISIT NUMBER']
-                table = visitor.add_table(clabels=hlabels, rows=len(vlabels))
-                table.get_cell(0, 0).add_primitive(vlabels[0])
-                table.get_cell(0, 1).add_primitive(self['data'][p]['transit'])
-                table.get_cell(1, 0).add_primitive(vlabels[1])
-                table.get_cell(1, 1).add_primitive(self['data'][p]['eclipse'])
-                table.get_cell(2, 0).add_primitive(vlabels[2])
-                table.get_cell(2, 1).add_primitive(self['data'][p]['phasecurve'])
+                if 'Spitzer' in self.__name or 'JWST' in self.__name:
+                    vlabels = ['TRANSIT', 'ECLIPSE', 'PHASE CURVE']
+                    hlabels = ['PLANET: '+p, 'VISIT NUMBER']
+                    table = visitor.add_table(clabels=hlabels, rows=len(vlabels))
+                    table.get_cell(0, 0).add_primitive(vlabels[0])
+                    table.get_cell(0, 1).add_primitive(self['data'][p]['transit'])
+                    table.get_cell(1, 0).add_primitive(vlabels[1])
+                    table.get_cell(1, 1).add_primitive(self['data'][p]['eclipse'])
+                    table.get_cell(2, 0).add_primitive(vlabels[2])
+                    table.get_cell(2, 1).add_primitive(self['data'][p]['phasecurve'])
+                else:
+                    vlabels = ['TRANSIT', 'ECLIPSE', 'PHASE CURVE']
+                    hlabels = ['PLANET: '+p, 'VISIT NUMBER']
+                    table = visitor.add_table(clabels=hlabels, rows=len(vlabels))
+                    table.get_cell(0, 0).add_primitive(vlabels[0])
+                    table.get_cell(0, 1).add_primitive(self['data'][p]['transit'])
+                    table.get_cell(1, 0).add_primitive(vlabels[1])
+                    table.get_cell(1, 1).add_primitive(self['data'][p]['eclipse'])
+                    table.get_cell(2, 0).add_primitive(vlabels[2])
+                    table.get_cell(2, 1).add_primitive(self['data'][p]['phasecurve'])
 
-                tmetod = self['data'][p]['tmetod']
-                thro = self['data'][p]['thro']
-                thrs = self['data'][p]['thrs']
-                whereo = self['data'][p]['whereo']
-                wherev = self['data'][p]['wherev']
-                phase = self['data'][p]['phase']
-                ignore = self['data'][p]['ignore']
-                dvis = self['data'][p]['dvisits']
-                phsto = phase.copy()[self['data'][p]['ordt']]
-                ignto = ignore.copy()[self['data'][p]['ordt']]
-                dvisto = dvis.copy()[self['data'][p]['ordt']]
+                    tmetod = self['data'][p]['tmetod']
+                    thro = self['data'][p]['thro']
+                    thrs = self['data'][p]['thrs']
+                    whereo = self['data'][p]['whereo']
+                    wherev = self['data'][p]['wherev']
+                    phase = self['data'][p]['phase']
+                    ignore = self['data'][p]['ignore']
+                    dvis = self['data'][p]['dvisits']
+                    phsto = phase.copy()[self['data'][p]['ordt']]
+                    ignto = ignore.copy()[self['data'][p]['ordt']]
+                    dvisto = dvis.copy()[self['data'][p]['ordt']]
 
-                myfig = plt.figure()
-                plt.plot(phsto, 'k.')
-                plt.plot(np.arange(phsto.size)[~ignto], phsto[~ignto], 'bo')
-                for i in wherev: plt.axvline(i, ls='--', color='r')
-                for i in whereo: plt.axvline(i, ls='-.', color='g')
-                plt.xlim(0, phsto.size - 1)
-                plt.ylim(-0.5, 0.5)
-                plt.xlabel('Time index')
-                plt.ylabel('Orbital Phase [2pi rad]')
-                buf = io.BytesIO()
-                myfig.savefig(buf, format='png')
-                visitor.add_image('...', ' ', buf.getvalue())
-                plt.close(myfig)
-
-                myfig = plt.figure()
-                plt.plot(tmetod, 'o')
-                plt.plot(tmetod*0+thro, 'r--')
-                plt.plot(tmetod*0+thrs, 'g-.')
-                for i in wherev: plt.axvline(i, ls='--', color='r')
-                for i in whereo: plt.axvline(i, ls='-.', color='g')
-                plt.xlim(0, tmetod.size - 1)
-                plt.xlabel('Time index')
-                plt.ylabel('Frame Separation [Days]')
-                plt.semilogy()
-                buf = io.BytesIO()
-                myfig.savefig(buf, format='png')
-                visitor.add_image('...', ' ', buf.getvalue())
-                plt.close(myfig)
-
-                if np.max(dvis) > np.max(self['data'][p]['visits']):
                     myfig = plt.figure()
-                    plt.plot(dvisto, 'o')
-                    plt.xlim(0, tmetod.size - 1)
+                    plt.plot(phsto, 'k.')
+                    plt.plot(np.arange(phsto.size)[~ignto], phsto[~ignto], 'bo')
+                    for i in wherev: plt.axvline(i, ls='--', color='r')
+                    for i in whereo: plt.axvline(i, ls='-.', color='g')
+                    plt.xlim(0, phsto.size - 1)
+                    plt.ylim(-0.5, 0.5)
                     plt.xlabel('Time index')
-                    plt.ylabel('Double Scan Visit Number')
+                    plt.ylabel('Orbital Phase [2pi rad]')
                     buf = io.BytesIO()
                     myfig.savefig(buf, format='png')
                     visitor.add_image('...', ' ', buf.getvalue())
                     plt.close(myfig)
+
+                    myfig = plt.figure()
+                    plt.plot(tmetod, 'o')
+                    plt.plot(tmetod*0+thro, 'r--')
+                    plt.plot(tmetod*0+thrs, 'g-.')
+                    for i in wherev: plt.axvline(i, ls='--', color='r')
+                    for i in whereo: plt.axvline(i, ls='-.', color='g')
+                    plt.xlim(0, tmetod.size - 1)
+                    plt.xlabel('Time index')
+                    plt.ylabel('Frame Separation [Days]')
+                    plt.semilogy()
+                    buf = io.BytesIO()
+                    myfig.savefig(buf, format='png')
+                    visitor.add_image('...', ' ', buf.getvalue())
+                    plt.close(myfig)
+
+                    if np.max(dvis) > np.max(self['data'][p]['visits']):
+                        myfig = plt.figure()
+                        plt.plot(dvisto, 'o')
+                        plt.xlim(0, tmetod.size - 1)
+                        plt.xlabel('Time index')
+                        plt.ylabel('Double Scan Visit Number')
+                        buf = io.BytesIO()
+                        myfig.savefig(buf, format='png')
+                        visitor.add_image('...', ' ', buf.getvalue())
+                        plt.close(myfig)
+                        pass
                     pass
-                pass
             pass
         return
     pass

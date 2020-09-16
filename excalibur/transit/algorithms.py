@@ -76,6 +76,8 @@ class normalization(dawgie.Algorithm):
         if 'Spitzer' in fltrs[index]:
             normed = trncore.norm_spitzer(cal, tme, fin, self.__out[index], self._type)
             pass
+        elif 'JWST' in fltrs[index]:
+            normed = trncore.norm_jwst_niriss(cal, tme, fin, self.__out[index], self._type)
         else:
             normed = trncore.norm(cal, tme, fin, fltrs[index], self.__out[index],
                                   self._type, verbose=False)
@@ -177,7 +179,9 @@ class whitelight(dawgie.Algorithm):
         if 'Spitzer' in ext:
             wl = trncore.lightcurve_spitzer(nrm, fin, out, self._type, ext,
                                             self.__out[-1], chainlen=int(1e4))
-            pass
+        elif 'JWST' in ext:
+            wl = trncore.lightcurve_jwst_niriss(nrm, fin, out, self._type, ext,
+                                                self.__out[-1], chainlen=int(1e4))
         else:
             wl = trncore.whitelight(nrm, fin, out, ext, self._type,
                                     self.__out[-1], chainlen=int(1e4), verbose=False,
@@ -248,7 +252,10 @@ class spectrum(dawgie.Algorithm):
         return
 
     def _spectrum(self, fin, nrm, wht, out, ext):
-        if "Spitzer" in ext: s = trncore.spitzer_spectrum(wht, out, ext)
+        if "Spitzer" in ext:
+            s = trncore.spitzer_spectrum(wht, out, ext)
+        elif "JWST" in ext:
+            s = trncore.jwst_niriss_spectrum(fin, nrm, wht, out, ext, self._type, chainlen=int(1e4))
         else:
             s = trncore.spectrum(fin, nrm, wht, out, ext, self._type, chainlen=int(1e4),
                                  verbose=False)

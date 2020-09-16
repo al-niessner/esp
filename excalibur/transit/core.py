@@ -26,6 +26,7 @@ pymc3log.setLevel(logging.ERROR)
 import matplotlib.pyplot as plt
 import scipy.constants as cst
 from scipy import spatial
+from scipy.signal import savgol_filter
 from scipy.ndimage import median_filter
 from scipy.ndimage import gaussian_filter as norm_kde
 from scipy.stats import gaussian_kde
@@ -2244,11 +2245,18 @@ def fastspec(fin, nrm, wht, ext, selftype,
 # -- NORMALIZATION -- ------------------------------------------------
 from copy import deepcopy
 
+def norm_jwst_niriss(cal, tme, fin, out, selftype, debug=False):
+    '''
+    K. PEARSON:
+        normalize each ramp
+        remove nans, remove zeros, 3 sigma clip time series
+    '''
+    normed = False
+    return normed
 
 def norm_spitzer(cal, tme, fin, out, selftype, debug=False):
     '''
-    K. PEARSON: prep data for light curve fitting
-        remove nans, remove zeros, 3 sigma clip time series
+    K. PEARSON: aperture selection, remove nans, remove zeros, 3 sigma clip time series
     '''
     normed = False
     priors = fin['priors'].copy()
@@ -2261,16 +2269,16 @@ def norm_spitzer(cal, tme, fin, out, selftype, debug=False):
 
         # make sure cal/tme are in sync
         mask = ~np.array(cal['data']['FAILED'])
-        visits = np.array(tme['data'][p]['visits'])[mask]
 
         keys = [
             'TIME','WX','WY','FRAME',
         ]
         for k in keys:
             out['data'][p][k] = np.array(cal['data'][k])
-        out['data'][p]['visits'] = visits
-        out['data'][p]['PHOT'] = np.zeros(visits.shape)
-        out['data'][p]['NOISEPIXEL'] = np.zeros(visits.shape)
+
+        # is set later during aperture selection
+        out['data'][p]['PHOT'] = np.zeros(len(cal['data']['TIME']))
+        out['data'][p]['NOISEPIXEL'] = np.zeros(len(cal['data']['TIME']))
 
         # remove nans
         nanmask = np.isnan(out['data'][p]['PHOT'])
@@ -2288,10 +2296,11 @@ def norm_spitzer(cal, tme, fin, out, selftype, debug=False):
         cnpp = np.array(cal['data']['NOISEPIXEL'])[~nanmask][ordt]
 
         # 3 sigma clip flux time series
+        phase = (out['data'][p]['TIME'] - fin['priors'][p]['t0'])/fin['priors'][p]['period']
         badmask = np.zeros(out['data'][p]['TIME'].shape).astype(bool)
-        for i in np.unique(out['data'][p]['visits']):
+        for i in np.unique(tme['data'][p][selftype]):
             # mask out orbit
-            omask = out['data'][p]['visits'] == i
+            omask = np.round(phase) == i
             dt = np.nanmean(np.diff(out['data'][p]['TIME'][omask]))*24*60
             ndt = int(7/dt)*2+1
 
@@ -2326,7 +2335,6 @@ def norm_spitzer(cal, tme, fin, out, selftype, debug=False):
             plt.plot(out['data'][p]['TIME'][badmask], out['data'][p]['PHOT'][badmask], 'r.')
             plt.show()
 
-            plt.plot(out['data'][p]['TIME'], out['data'][p]['G_PSF'],'g.')
             plt.plot(out['data'][p]['TIME'], out['data'][p]['PHOT'],'k.')
             plt.xlabel('Time')
             plt.ylabel('Flux')
@@ -2359,7 +2367,8 @@ def get_ld(priors, band='Spit36'):
     return float(lin), float(quad)
 
 def sigma_clip(ogdata,dt):
-    mdata = median_filter(ogdata, dt)
+    # mdata = median_filter(ogdata, dt)
+    mdata = savgol_filter(ogdata, dt, 2)
     res = ogdata - mdata
     try:
         std = np.nanmedian([np.nanstd(np.random.choice(res,100)) for i in range(250)])
@@ -2843,6 +2852,19 @@ def time_bin(time, flux, dt=1./(60*24)):
     zmask = (bflux==0) | (btime==0) | np.isnan(bflux) | np.isnan(btime)
     return btime[~zmask], bflux[~zmask]
 
+def lightcurve_jwst_niriss(nrm, fin, out, selftype, fltr, hstwhitelight_sv, chainlen=int(1e4)):
+    '''
+    K. PEARSON: temporary place holder
+    '''
+    wl = False
+    return wl
+
+def jwst_niriss_spectrum(nrm, fin, out, selftype, fltr, hstwhitelight_sv, chainlen=int(1e4)):
+    '''
+    K. PEARSON: temporary place holder
+    '''
+    spec = False
+    return spec
 
 def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv, chainlen=int(1e4)):
     '''
