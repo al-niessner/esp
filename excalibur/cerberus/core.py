@@ -426,8 +426,14 @@ G. ROUDIER: Cerberus retrievial
         eqtemp = orbp['T*']*np.sqrt(orbp['R*']*ssc['Rsun/AU']/(2.*orbp[p]['sma']))
         tspc = np.array(spc['data'][p]['ES'])
         terr = np.array(spc['data'][p]['ESerr'])
+
+        import numpy.polynomial.polynomial as poly
+        twav = np.array(spc['data'][p]['WB'])
         tspecerr = abs(tspc**2 - (tspc + terr)**2)
         tspectrum = tspc**2
+        # Raissa add
+        # mask = np.array([ 0,  2, 19, 51, 75, 93, 94])
+        # tspectrum[mask] = np.nan
         cleanup = np.isfinite(tspectrum) & (tspecerr < 1e0)
         solidr = orbp[p]['rp']*ssc['Rjup']  # MKS
         for model in modfam:
@@ -445,8 +451,10 @@ G. ROUDIER: Cerberus retrievial
                 nodes.append(hza)
                 # KILL HAZE POWER INDEX FOR SPHERICAL SHELL
                 if sphshell:
+                    # hzloc = pm.Uniform('HLoc', -6.0001, -5.9999) #fixed
                     hzloc = pm.Uniform('HLoc', -6.0, 1.0)
                     nodes.append(hzloc)
+                    # hzthick = pm.Uniform('HThick', 0.9991, 0.9999) #fixed
                     hzthick = pm.Uniform('HThick', 1.0, 20.0)
                     nodes.append(hzthick)
                     pass
@@ -456,9 +464,10 @@ G. ROUDIER: Cerberus retrievial
                     pass
                 # BOOST TEMPERATURE PRIOR TO [75%, 150%] Teq
                 tpr = pm.Uniform('T', 0.75e0*eqtemp, 1.5e0*eqtemp)
+                # tpr = pm.Uniform('T', 0.75e0*eqtemp, 1.25e0*eqtemp) #should put simetric 75 - 125
                 nodes.append(tpr)
                 # MODEL SPECIFIC ABSORBERS
-                modelpar = pm.Uniform(model, lower=-6e0, upper=6e0,
+                modelpar = pm.Uniform(model, lower=-6.1e0, upper=-6e0,
                                       shape=len(modparlbl[model]))
                 nodes.append(modelpar)
                 # CERBERUS MCMC
@@ -734,7 +743,7 @@ G. ROUDIER: Builds optical depth matrix
                     jpres = np.array(hzlib['PROFILE'][0]['PRESSURE'])
                     myfig = plt.figure(figsize=(12, 6))
                     plt.plot(1e6*jdata, jpres, color='blue',
-                             label='Zhang, West et al. 2014')
+                             label='Lavvas et al. 2017')
                     plt.axhline(refhzp, linestyle='--', color='blue')
                     plt.plot(1e6*rh, p, 'r', label='Parametrized density profile')
                     plt.plot(1e6*thisfrh(np.log10(p) - hzshift), p, 'g^')
@@ -744,7 +753,7 @@ G. ROUDIER: Builds optical depth matrix
                     plt.semilogy()
                     plt.semilogx()
                     plt.gca().invert_yaxis()
-                    plt.xlim([1e-4, 1e4])
+                    plt.xlim([1e-1, 1e5])
                     plt.tick_params(axis='both', labelsize=20)
                     plt.xlabel('Aerosol Density [$n.{cm}^{-3}$]', fontsize=24)
                     plt.ylabel('Pressure [bar]', fontsize=24)

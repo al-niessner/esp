@@ -1630,12 +1630,12 @@ def spectrum(fin, nrm, wht, out, ext, selftype,
         nspec = nrm['data'][p]['nspec']
         photnoise = nrm['data'][p]['photnoise']
         if 'G750' in ext:
-            wave, _trash = binnagem(wave, 100)
-            wave = np.resize(wave,(1,100))
+            wave, _trash = binnagem(wave, 150)
+            wave = np.resize(wave,(1,150))
             pass
         if 'G430' in ext:
-            wave, _trash = binnagem(wave, 25)
-            wave = np.resize(wave,(1,25))
+            wave, _trash = binnagem(wave, 182)
+            wave = np.resize(wave,(1,182))
             pass
         time = nrm['data'][p]['time']
         visits = nrm['data'][p]['visits']
@@ -2069,11 +2069,11 @@ def fastspec(fin, nrm, wht, ext, selftype,
     photnoise = nrm['data'][p]['photnoise']
     if 'G750' in ext:
         wave, _trash = binnagem(wave, 100)
-        wave = np.resize(wave,(1,100))
+        wave = np.resize(wave,(1,250))
         pass
     if 'G430' in ext:
         wave, _trash = binnagem(wave, 25)
-        wave = np.resize(wave,(1,25))
+        wave = np.resize(wave,(1,121))
         pass
     time = nrm['data'][p]['time']
     visits = nrm['data'][p]['visits']
