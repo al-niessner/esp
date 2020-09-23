@@ -11,6 +11,7 @@ import excalibur.target.edit as trgedit
 
 import excalibur.system as sys
 import excalibur.system.algorithms as sysalg
+import excalibur.system.core as syscore
 
 import excalibur.classifier.core as clscore
 import excalibur.classifier.states as clsstates
@@ -29,6 +30,7 @@ G. ROUDIER: Data collection by filters
     def __init__(self):
         self._version_ = clscore.predversion()
         self.__whitelight = trnalg.whitelight()
+        self.__spectrum = trnalg.spectrum()
         self.__finalize = sysalg.finalize()
         self.__out = [clsstates.PredictSV(ext) for ext in fltrs]
         return
@@ -38,6 +40,7 @@ G. ROUDIER: Data collection by filters
 
     def previous(self):
         return [dawgie.ALG_REF(trn.task, self.__whitelight),
+                dawgie.ALG_REF(trn.task, self.__spectrum),
                 dawgie.ALG_REF(sys.task, self.__finalize)]
 
     def state_vectors(self):
@@ -49,15 +52,16 @@ G. ROUDIER: Data collection by filters
         for ext in fltrs:
             update = False
             vwl, swl = trncore.checksv(self.__whitelight.sv_as_dict()[ext])
-
-            if vwl and vfin:
+            vsp, ssp = trncore.checksv(self.__spectrum.sv_as_dict()[ext])
+            if vwl and vsp and vfin:
                 log.warning('--< CLASSIFICATION: %s >--', ext)
                 update = self._predict(self.__whitelight.sv_as_dict()[ext],
+                                       self.__spectrum.sv_as_dict()[ext],
                                        self.__finalize.sv_as_dict()['parameters'],
                                        fltrs.index(ext))
                 pass
             else:
-                errstr = [m for m in [swl, sfin] if m is not None]
+                errstr = [m for m in [swl, ssp, sfin] if m is not None]
                 self._failure(errstr[0])
                 pass
             if update: svupdate.append(self.__out[fltrs.index(ext)])
@@ -66,8 +70,8 @@ G. ROUDIER: Data collection by filters
         if self.__out: ds.update()
         return
 
-    def _predict(self, wl, fin, index):
-        status = clscore.predict(wl, fin['priors'], self.__out[index])
+    def _predict(self, wl, sp, fin, index):
+        status = clscore.predict(wl, sp, fin['priors'], self.__out[index])
         return status
 
     @staticmethod
