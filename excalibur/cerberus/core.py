@@ -53,7 +53,8 @@ def myxsecsversion():
     Alya Al-Kibbi:111
     Changed CH4 line list to HITEMP
     Alya Al-Kibbi:112
-    Built interpolator on cross sections assuming constant broadening and shifting effects (like exomol)
+    Built interpolator on cross sections assuming constant broadening and
+    shifting effects (like exomol)
     Done to speed up processing of CH4 HITEMP line list
     '''
     import dawgie
@@ -656,7 +657,8 @@ G. ROUDIER: Builds optical depth matrix
         for elem in mixratio:
             mmr = 10.**(mixratio[elem]-6.)
             # Fake use of xmollist due to changes in xslib v112
-            if not xmollist:
+            # if not xmollist:
+            if elem not in xmollist:
                 # HITEMP/HITRAN ROTHMAN ET AL. 2010 --------------------------------------
                 sigma, lsig = absorb(xsecs[elem], qtgrid[elem], temp, p, mmr,
                                      lbroadening, lshifting, wgrid, debug=False)
@@ -753,7 +755,7 @@ G. ROUDIER: Builds optical depth matrix
                     plt.semilogy()
                     plt.semilogx()
                     plt.gca().invert_yaxis()
-                    plt.xlim([1e-1, 1e5])
+                    plt.xlim([1e-4, np.max(1e6*rh)])
                     plt.tick_params(axis='both', labelsize=20)
                     plt.xlabel('Aerosol Density [$n.{cm}^{-3}$]', fontsize=24)
                     plt.ylabel('Pressure [bar]', fontsize=24)

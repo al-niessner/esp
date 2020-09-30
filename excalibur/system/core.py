@@ -327,7 +327,9 @@ G. ROUDIER: Completes/Overrides parameters using target/edit.py
         pass
     for p in set(ptry):
         addback = True
-        for pkey in out['pneeded']:
+        planetchecklist = [k for k in out['pneeded']
+                           if k.split(':')[0] not in out['ignore']]
+        for pkey in planetchecklist:
             if pkey in [p+':mass', p+':rho']:
                 if 'logg' not in out['priors'][p].keys(): addback = False
                 else: out['pneeded'].pop(out['pneeded'].index(pkey))

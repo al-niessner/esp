@@ -29,6 +29,8 @@ from scipy.ndimage.morphology import binary_dilation, binary_closing, binary_ero
 from PIL import Image as pilimage
 
 from photutils import aperture_photometry, CircularAperture, CircularAnnulus
+# Use photutils v 0.7.2 There is an import issue with the latest versions
+# To be fixed
 
 # ------------- ------------------------------------------------------
 # -- SV VALIDITY -- --------------------------------------------------

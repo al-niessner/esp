@@ -673,9 +673,16 @@ overwrite[starID] =
              'rp_ref':'Vanderburg et al. 2016',
              'period':15.5712,
              'period_ref':'Vanderburg et al. 2016',
-             'logg':3.0,
-             'logg_lowerr':0.3, 'logg_uperr':-0.3,
-             'logg_ref':'Unknown', 'logg_units':'log10[cm.s-2]'}}
+             'mass':0.0258,
+             'mass_uperr':0.0110,
+             'mass_lowerr':-0.0077,
+             'mass_ref':'Pearson 2019',
+             'mass_units':'Jupiter mass',
+             'logg':2.9791,
+             'logg_lowerr':-0.1539, 'logg_uperr':0.1539,
+             'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+             }
+        }
     overwrite['K2-96'] = {
         'R*':0.872, 'R*_uperr':0.057, 'R*_lowerr':-0.057,
         'R*_ref':'Christiansen et al. 2017',
@@ -868,7 +875,7 @@ overwrite[starID] =
             'omega_uperr':11,
             'omega_ref':"Stassun et al. 2017"
         }
-    },
+    }
     overwrite['HAT-P-26'] = {
         'b':{
             'omega':46.0,
@@ -997,6 +1004,11 @@ overwrite[starID] =
     }
     overwrite['Kepler-9'] = {
         'b':{
+            'mass':0.137,
+            'mass_uperr':0.008,
+            'mass_lowerr':-0.01,
+            'mass_ref':'Hadden & Lithwick et al. 2017',
+            'mass_units':'Jupiter mass',
             'omega':357.0,
             'omega_lowerr':-0.4,
             'omega_uperr':0.5,
@@ -1482,18 +1494,6 @@ overwrite[starID] =
             'omega_ref':"Dressing et al. 2017"
         }
     }
-    overwrite['K2-93'] = {
-        'b':{
-            'mass':0.0258,
-            'mass_uperr':0.0110,
-            'mass_lowerr':-0.0077,
-            'mass_ref':'Pearson 2019',
-            'mass_units':'Jupiter mass',
-            'logg':2.9791,
-            'logg_lowerr':-0.1539, 'logg_uperr':0.1539,
-            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
-        }
-    }
     overwrite['K2-95'] = {
         'b':{
             'mass':0.0420,
@@ -1540,23 +1540,16 @@ overwrite[starID] =
             'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
         }
     }
-    overwrite['Kepler-9'] = {
-        'b':{
-            'mass':0.137,
-            'mass_uperr':0.008,
-            'mass_lowerr':-0.01,
-            'mass_ref':'Hadden & Lithwick et al. 2017',
-            'mass_units':'Jupiter mass',
+    overwrite["CoRoT-2"]= {
+        "b":{
+            "Spitzer-IRAC-IR-45-SUB":{
+                "rprs": 0.15417,
+                "ars": 6.60677,
+                "inc": 88.08,
+                "ref": "KAP"
+            }
         }
     }
-
-    overwrite["CoRoT-2"]= {"b":{"Spitzer-IRAC-IR-45-SUB": {
-        "rprs": 0.15417,
-        "ars": 6.60677,
-        "inc": 88.08,
-        "ref": "KAP"
-    }}}
-
     overwrite['GJ 1132'] = {
         'b':{'inc':88.41,
              'inc_uperr':2.6, 'inc_lowerr':-2.7,
