@@ -30,7 +30,7 @@ class collect(dawgie.Algorithm):
     G. ROUDIER: Data collection by filters
     '''
     def __init__(self):
-        self._version_ = dawgie.VERSION(1,1,1)
+        self._version_ = dawgie.VERSION(1,1,2)
         self.__create = trgalg.create()
         self.__scrape = trgalg.scrape()
         self.__out = trgstates.FilterSV('frames')
