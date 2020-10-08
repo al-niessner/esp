@@ -11,7 +11,7 @@ import excalibur.target.edit as trgedit
 
 import excalibur.system as sys
 import excalibur.system.algorithms as sysalg
-import excalibur.system.core as syscore
+# import excalibur.system.core as syscore
 
 import excalibur.classifier.core as clscore
 import excalibur.classifier.states as clsstates
@@ -19,7 +19,7 @@ import excalibur.classifier.states as clsstates
 # FILTERS
 fltrs = (trgedit.activefilters.__doc__).split('\n')
 fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
-# fltrs = [f for f in fltrs if 'Spitzer' not in f]
+fltrs = [f for f in fltrs if 'Spitzer' not in f]
 # ---------------------- ---------------------------------------------
 
 # -- ALGORITHMS -- ---------------------------------------------------

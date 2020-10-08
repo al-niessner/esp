@@ -680,9 +680,8 @@ overwrite[starID] =
              'mass_units':'Jupiter mass',
              'logg':2.9791,
              'logg_lowerr':-0.1539, 'logg_uperr':0.1539,
-             'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
-             }
-        }
+             'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'}
+    }
     overwrite['K2-96'] = {
         'R*':0.872, 'R*_uperr':0.057, 'R*_lowerr':-0.057,
         'R*_ref':'Christiansen et al. 2017',

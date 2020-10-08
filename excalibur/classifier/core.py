@@ -14,7 +14,7 @@ def predict(transit_whitelight, transit_spectrum, priors, out):
     Predicting the science plausibility of an exoplanet's lightcurve
     '''
     magicdir = os.path.join(excalibur.context['data_dir'], 'cls_models')
-    pr_thresh = 50
+    # pr_thresh = 50
     rsdpn_thresh = 3.5
     for planet in transit_whitelight['data']:
         try:
@@ -59,32 +59,31 @@ def predict(transit_whitelight, transit_spectrum, priors, out):
         out_transit_data = out_transit_data[out_transit_mask]
         # std = np.nanstd(out_transit_data) GMR: UNUSED
         # model = np.array(transit_whitelight['data'][planet]['postlc'])
-        X_t = int(in_transit)
+
+        # GMR: Quick fix, please make sure that is what you wanted
+        X_t = np.array([int(in_transit)])
         test = X_t.reshape(1,-1)
         if np.all(~np.isfinite(all_data)): fin_pred = ['All NAN input']
         else:
-            scaler = joblib.load(magicdir+'/cls_scaler.save')
+            # scaler = joblib.load(magicdir+'/cls_scaler.save')
             pca = joblib.load(magicdir+'/cls_pca.pkl')
             X_test = np.array(pca.transform(test))
             clstrain = joblib.load(magicdir+'/cls_rf.pkl')
 
             def sp_filter(pr, rsd):
-                if (pr <= 50 and rsd <= 3.5):
-                    val = 1
-                else:
-                    val = -1
+                if pr <= 50 and rsd <= 3.5: val = 1
+                else: val = -1
                 return val
+
             sp_pred = sp_filter(perc_rejected, rsdpn)
             cls_pred = clstrain.predict(X_test)
 
             def pred(sp_p, c_p):
-                if (c_p == 1 and sp_p == 1):
-                    val = 'Scientifically Plausible'
-                elif (c_p == 1 and sp_p == -1):
-                    val = 'Caution'
-                elif (c_p == 0):
-                    val = 'Scientifically Implausible'
+                if c_p == 1 and sp_p == 1: val = 'Scientifically Plausible'
+                elif c_p == 1 and sp_p == -1: val = 'Caution'
+                elif c_p == 0: val = 'Scientifically Implausible'
                 return list(val)
+
             fin_pred = pred(sp_pred, cls_pred)
             pass
         out['data'][planet] = {}

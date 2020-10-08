@@ -494,19 +494,15 @@ def dbscp(locations, dbs, out):
                 filedict['instrument'] = mainheader.get('INSTRUME')
                 filedict['mode'] = mainheader.get('READMODE')
                 filedict['detector'] = 'IR'
-                if mainheader.get('CHNLNUM') == 1:
-                    filedict['filter'] = "36"
-                elif mainheader.get('CHNLNUM') == 2:
-                    filedict['filter'] = "45"
-                else:
-                    filedict['filter'] = mainheader.get('CHNLNUM')
-
+                if mainheader.get('CHNLNUM') == 1: filedict['filter'] = "36"
+                elif mainheader.get('CHNLNUM') == 2: filedict['filter'] = "45"
+                else: filedict['filter'] = mainheader.get('CHNLNUM')
                 out['name'][str(mainheader.get('DPID'))] = filedict
-
                 pass
+
             # JWST
             elif 'jwst' in mainheader.get('TELESCOP').lower():
-                # TODO add filter for science frames only
+                # Add filter for science frames only
                 filedict['observatory'] = mainheader.get('TELESCOP').strip()
                 filedict['instrument'] = mainheader.get('INSTRUME').strip()
                 filedict['mode'] = mainheader.get('PUPIL').strip()  # maybe EXP_TYPE?

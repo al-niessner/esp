@@ -427,9 +427,7 @@ G. ROUDIER: Cerberus retrievial
         eqtemp = orbp['T*']*np.sqrt(orbp['R*']*ssc['Rsun/AU']/(2.*orbp[p]['sma']))
         tspc = np.array(spc['data'][p]['ES'])
         terr = np.array(spc['data'][p]['ESerr'])
-
-        import numpy.polynomial.polynomial as poly
-        twav = np.array(spc['data'][p]['WB'])
+        # twav = np.array(spc['data'][p]['WB'])
         tspecerr = abs(tspc**2 - (tspc + terr)**2)
         tspectrum = tspc**2
         # Raissa add

@@ -1,10 +1,9 @@
 # -- IMPORTS -- ------------------------------------------------------
-import io
 import dawgie
 import excalibur
 
 # import numpy as np GMR: UNUSED FOR NOW
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt GMR: UNUSED FOR NOW
 # ------------- ------------------------------------------------------
 
 # -- SV -- -----------------------------------------------------------

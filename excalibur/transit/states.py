@@ -231,8 +231,8 @@ class SpectrumSV(dawgie.StateVector):
                         plt.ylabel(str('$(R_p/R_*)^2$ [%]'))
                         buf = io.BytesIO()
                         fullspec = [mc['mean']['rprs'] if np.isnan(rp) else rp
-                                     for mc, rp in zip(self['data'][p]['MCPOST'],
-                                                       self['data'][p]['ES'])]
+                                    for mc, rp in zip(self['data'][p]['MCPOST'],
+                                                      self['data'][p]['ES'])]
                         fullspec = np.array(fullspec)
                         fullspecerr = np.array(self['data'][p]['ESerr'])
                         fullspecwave = np.array(self['data'][p]['WB'])
@@ -268,7 +268,7 @@ class SpectrumSV(dawgie.StateVector):
                         visitor.add_image('...', ' ', buf.getvalue())
                         plt.close(myfig)
                     # now display completion plot
-                    if ('Hs' in self['data'][p]):
+                    if 'Hs' in self['data'][p]:
                         Hs = self['data'][p]['Hs'][0]
                         if Hs > 1: Hs = Hs/(self['data'][p]['RSTAR'][0])
                         rp0hs = np.sqrt(np.nanmedian(vspectrum))

@@ -15,8 +15,11 @@ then
     python3 <<EOF
 mn = '<unknown>'
 count = 0
+rated = False
 with open ('pylint.rpt.txt', 'rt') as f:
     for l in f.readlines():
+        rated |= 0 < l.find ('code has been rated at')
+
         if l.startswith ('***'): mn = l.split()[2]
         if len (l) < 2: continue
         if l[0] not in 'CEFIRW' or l[1] != ':': continue
@@ -26,7 +29,7 @@ with open ('pylint.rpt.txt', 'rt') as f:
         print (count, mn, l.strip())
         pass
     pass
-if 0 < count:
+if 0 < count or not rated:
     print ('pylint check failed', count)
     with open ('.ci/status.txt', 'tw') as f: f.write ('failure')
 else: print ('pylint check success')

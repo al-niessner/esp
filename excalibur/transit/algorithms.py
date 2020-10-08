@@ -178,10 +178,10 @@ class whitelight(dawgie.Algorithm):
     def _whitelight(self, nrm, fin, out, ext):
         if 'Spitzer' in ext:
             wl = trncore.lightcurve_spitzer(nrm, fin, out, self._type, ext,
-                                            self.__out[-1], chainlen=int(1e4))
+                                            self.__out[-1])
         elif 'JWST' in ext:
             wl = trncore.lightcurve_jwst_niriss(nrm, fin, out, self._type, ext,
-                                                self.__out[-1], chainlen=int(1e4))
+                                                self.__out[-1])
         else:
             wl = trncore.whitelight(nrm, fin, out, ext, self._type,
                                     self.__out[-1], chainlen=int(1e4), verbose=False,
@@ -255,7 +255,7 @@ class spectrum(dawgie.Algorithm):
         if "Spitzer" in ext:
             s = trncore.spitzer_spectrum(wht, out, ext)
         elif "JWST" in ext:
-            s = trncore.jwst_niriss_spectrum(fin, nrm, wht, out, ext, self._type, chainlen=int(1e4))
+            s = trncore.jwst_niriss_spectrum(fin, nrm, wht, out, ext, self._type)
         else:
             s = trncore.spectrum(fin, nrm, wht, out, ext, self._type, chainlen=int(1e4),
                                  verbose=False)
@@ -280,12 +280,10 @@ class population(dawgie.Analyzer):
         return 'population'
 
     def traits(self)->[dawgie.SV_REF, dawgie.V_REF]:
-        return [*[dawgie.SV_REF(trn.task, spectrum(),
-                                spectrum().state_vectors()[i])
-                                for i in range(len(spectrum().state_vectors()))],
-                *[dawgie.SV_REF(trn.task, whitelight(),
-                                whitelight().state_vectors()[i])
-                                for i in range(len(whitelight().state_vectors()))]]
+        return [*[dawgie.SV_REF(trn.task, spectrum(), spectrum().state_vectors()[i])
+                  for i in range(len(spectrum().state_vectors()))],
+                *[dawgie.SV_REF(trn.task, whitelight(), whitelight().state_vectors()[i])
+                  for i in range(len(whitelight().state_vectors()))]]
 
     def state_vectors(self):
         return self.__out

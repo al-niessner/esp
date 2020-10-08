@@ -8,14 +8,17 @@ import excalibur.cerberus.core as crbcore
 import excalibur.transit.core
 
 import re
+
 import copy
+from copy import deepcopy
+
 import requests
 import logging
 import numpy as np
 import lmfit as lm
 
 import dynesty
-from dynesty import plotting
+# from dynesty import plotting
 from dynesty.utils import resample_equal
 
 import pymc3 as pm
@@ -24,13 +27,14 @@ pymc3log = logging.getLogger('pymc3')
 pymc3log.setLevel(logging.ERROR)
 
 import matplotlib.pyplot as plt
+
 import scipy.constants as cst
 from scipy import spatial
 from scipy.signal import savgol_filter
-from scipy.ndimage import median_filter
-from scipy.ndimage import gaussian_filter as norm_kde
+# from scipy.ndimage import median_filter
+# from scipy.ndimage import gaussian_filter as norm_kde
 from scipy.stats import gaussian_kde
-from scipy.optimize import least_squares
+# from scipy.optimize import least_squares
 
 import theano.tensor as tt
 import theano.compile.ops as tco
@@ -1833,12 +1837,12 @@ def spectrum(fin, nrm, wht, out, ext, selftype,
 
                 specparams = (mcests['rprs'], get_ests('vslope', visits),
                               get_ests('oslope', visits), get_ests('oitcp', visits))
-                r, avs, aos, aoi = specparams
+                _r, avs, aos, aoi = specparams
                 allimout = []
                 for iv in range(len(visits)):
                     imout = timlc(time[iv], orbits[iv],
-                                          vslope=float(avs[iv]), vitcp=1e0,
-                                          oslope=float(aos[iv]), oitcp=float(aoi[iv]))
+                                  vslope=float(avs[iv]), vitcp=1e0,
+                                  oslope=float(aos[iv]), oitcp=float(aoi[iv]))
                     allimout.extend(imout)
                     pass
                 allimout = np.array(allimout)
@@ -2243,9 +2247,9 @@ def fastspec(fin, nrm, wht, ext, selftype,
 # ------------------- ------------------------------------------------
 # ----------------- --------------------------------------------------
 # -- NORMALIZATION -- ------------------------------------------------
-from copy import deepcopy
-
-def norm_jwst_niriss(cal, tme, fin, out, selftype, debug=False):
+# GMR: Switch your inputs to names without _ to make use of them.
+# _ is a free pass for pylint just for now
+def norm_jwst_niriss(_cal, _tme, _fin, _out, _selftype, _debug=False):
     '''
     K. PEARSON:
         normalize each ramp
@@ -2268,7 +2272,7 @@ def norm_spitzer(cal, tme, fin, out, selftype, debug=False):
         out['data'][p] = {}
 
         # make sure cal/tme are in sync
-        mask = ~np.array(cal['data']['FAILED'])
+        # mask = ~np.array(cal['data']['FAILED'])
 
         keys = [
             'TIME','WX','WY','FRAME',
@@ -2370,10 +2374,13 @@ def sigma_clip(ogdata,dt):
     # mdata = median_filter(ogdata, dt)
     mdata = savgol_filter(ogdata, dt, 2)
     res = ogdata - mdata
-    try:
-        std = np.nanmedian([np.nanstd(np.random.choice(res,100)) for i in range(250)])
-    except:
-        std = np.nanstd(res)  # biased by outliers
+    # GMR: That does not work
+    # try:
+    #    std = np.nanmedian([np.nanstd(np.random.choice(res,100)) for i in range(250)])
+    #    pass
+    # except:
+    std = np.nanstd(res)  # biased by outliers
+
     mask = np.abs(res) > 3*std
     data = deepcopy(ogdata)
     data[mask] = np.nan
@@ -2417,16 +2424,18 @@ def ellke(k):
 # the algorithm of Bulirsch (1965):
 def ellpic_bulirsch(n,k):
     kc=np.sqrt(1.-k**2); la=n+1.
-    if(min(la) < 0.):
-        print('Negative l')
+    if min(la) < 0.:
+        # print('Negative l')
+        pass
     m0=1.; c=1.; la=np.sqrt(la); d=1./la; e=kc
     while 1:
         f = c; c = d/la+c; g = e/la; d = 2.*(f*g+d)
         la = g + la; g = m0; m0 = kc + m0
         if max(abs(1.-kc/g)) > 1.e-8:
             kc = 2*np.sqrt(e); e=kc*m0
-        else:
-            return 0.5*np.pi*(c*m0+d)/(m0*(m0+la))
+        else: return 0.5*np.pi*(c*m0+d)/(m0*(m0+la))
+        pass
+    pass
 
 #   Python translation of IDL code.
 #   This routine computes the lightcurve for occultation of a
@@ -2434,8 +2443,12 @@ def ellpic_bulirsch(n,k):
 #   cite Mandel & Agol (2002) and Eastman & Agol (2008) if you make use
 #   of this routine in your research.  Please report errors or bugs to
 #   jdeast@astronomy.ohio-state.edu
-def occultquad(z,u1,u2,p0):
 
+# GMR: This thing was put in excalibur but never ran right,
+# there are syntax errors everywhere
+
+# Yo Eastman use pylint next time
+def occultquad(z,u1,u2,p0):  # pylint: disable=too-many-return-statements
     nz = np.size(z)
     lambdad = np.zeros(nz)
     etad = np.zeros(nz)
@@ -2507,7 +2520,7 @@ def occultquad(z,u1,u2,p0):
 
     # Case 5, 6, 7 - the edge of planet lies at origin of star
     ocltor = np.where(z[notusedyet] == p)  # complement=notused3)
-    t = np.where(z[notusedyet] == p)
+    _t = np.where(z[notusedyet] == p)
     if np.size(ocltor) != 0:
         ndxuse = notusedyet[ocltor]
         if p < 0.5:
@@ -2572,7 +2585,7 @@ def occultquad(z,u1,u2,p0):
             edge = np.where(z[ndxuse] == 1.-p)  # complement=notused6)
             if np.size(edge[0]) != 0:
                 # lambda_5
-                lambdad[ndxuse[edge]] = 2./3./pi*np.arccos(1.-2.*p)-4./9./pi*np.sqrt(p*(1.-p))*(3.+2.*p-8.*p**2)
+                lambdad[ndxuse[edge]] = 2./3./np.pi*np.arccos(1.-2.*p)-4./9./np.pi*np.sqrt(p*(1.-p))*(3.+2.*p-8.*p**2)
                 if p > 0.5:
                     lambdad[ndxuse[edge]] -= 2./3.
                 notused6 = np.where(z[ndxuse] != 1.-p)
@@ -2670,7 +2683,8 @@ def solveme(M, e, eps):
     return E
 
 def transit(time, values):
-    sep,phase = time2z(time, values['inc'], values['tmid'], values['ars'], values['per'], values['ecc'])
+    sep, _phase = time2z(time, values['inc'], values['tmid'], values['ars'],
+                         values['per'], values['ecc'])
     model, _ = occultquad(abs(sep), values['u1'], values['u2'], values['rprs'])
     return model
 
@@ -2694,15 +2708,16 @@ def gaussian_weights(X, w=None, neighbors=50, feature_scale=1000):
     gw[np.isnan(gw)] = 0.01
     return gw, nearest.astype(int)
 
-
 try:
-    from ELCA_GKR_C import lc_fitter, transit
-    print("imported light curve fitting from C code")
-except:
+    from ELCA_GKR_C import lc_fitter, transit  # pylint: disable=import-error
+    # GMR: Use log
+    # print("imported light curve fitting from C code")
+    pass
+# GMR: Check exception name here
+except ModuleNotFoundError:
     # fall back
-    class lc_fitter(object):
-
-        def __init__(self, time, data, dataerr, prior, bounds, syspars, neighbors=50,verbose=False):
+    class lc_fitter(object):  # pylint: disable=too-many-instance-attributes
+        def __init__(self, time, data, dataerr, prior, bounds, syspars, neighbors=50, verbose=False):
             self.time = time
             self.data = data
             self.dataerr = dataerr
@@ -2712,6 +2727,7 @@ except:
             self.verbose = verbose
             self.gw, self.nearest = gaussian_weights(syspars, neighbors=neighbors)
             self.fit_nested()
+            return
 
         def fit_nested(self):
             freekeys = list(self.bounds.keys())
@@ -2720,8 +2736,7 @@ except:
 
             def loglike(pars):
                 # chi-squared
-                for i in range(len(pars)):
-                    self.prior[freekeys[i]] = pars[i]
+                for i, _osef in enumerate(pars): self.prior[freekeys[i]] = pars[i]
                 lightcurve = transit(self.time, self.prior)
                 detrended = self.data/lightcurve
                 wf = weightedflux(detrended, self.gw, self.nearest)
@@ -2755,13 +2770,14 @@ except:
             logvol = self.results['logvol']
             wt_kde = gaussian_kde(resample_equal(-logvol, weights))  # KDE
             logvol_grid = np.linspace(logvol[0], logvol[-1], 1000)  # resample
-            wt_grid = wt_kde.pdf(-logvol_grid)  # evaluate KDE PDF
-            self.weights = np.interp(-logvol, -logvol_grid, wt_grid)  # interpolate
-
+            # evaluate KDE PDF
+            wt_grid = wt_kde.pdf(-logvol_grid)  # pylint: disable=invalid-unary-operand-type
+            # interpolate
+            self.weights = np.interp(-logvol, -logvol_grid, wt_grid)  # pylint: disable=invalid-unary-operand-type
             # errors + final values
             mean, cov = dynesty.utils.mean_and_cov(self.results.samples, weights)
-            mean2, cov2 = dynesty.utils.mean_and_cov(self.results.samples, self.weights)
-            for i in range(len(freekeys)):
+            mean2, _cov2 = dynesty.utils.mean_and_cov(self.results.samples, self.weights)
+            for i, _osef in enumerate(freekeys):
                 self.errors[freekeys[i]] = cov[i,i]**0.5
                 tests[0][freekeys[i]] = mean[i]
                 tests[1][freekeys[i]] = mean2[i]
@@ -2778,14 +2794,15 @@ except:
             mask = (samples[:,0] < self.parameters[freekeys[0]]+2*self.errors[freekeys[0]]) & (samples[:,0] > self.parameters[freekeys[0]]-2*self.errors[freekeys[0]])
             bi = np.argmin(self.weights[mask])
 
-            for i in range(len(freekeys)):
+            for i, _osef in enumerate(freekeys):
                 tests[3][freekeys[i]] = samples[mask][bi,i]
-                tests[4][freekeys[i]] = np.average(samples[mask][:,i],weights=self.weights[mask],axis=0)
-
+                tests[4][freekeys[i]] = np.average(samples[mask][:,i],
+                                                   weights=self.weights[mask],axis=0)
+                pass
             # find best fit
             chis = []
             res = []
-            for i in range(len(tests)):
+            for i, _osef in enumerate(tests):
                 lightcurve = transit(self.time, tests[i])
                 detrended = self.data / lightcurve
                 wf = weightedflux(detrended, self.gw, self.nearest)
@@ -2852,21 +2869,30 @@ def time_bin(time, flux, dt=1./(60*24)):
     zmask = (bflux==0) | (btime==0) | np.isnan(bflux) | np.isnan(btime)
     return btime[~zmask], bflux[~zmask]
 
-def lightcurve_jwst_niriss(nrm, fin, out, selftype, fltr, hstwhitelight_sv, chainlen=int(1e4)):
+# GMR: Switch your inputs to names without _ to make use of them.
+# _ is a free pass for pylint just for now
+def lightcurve_jwst_niriss(_nrm, _fin, _out, _selftype, _fltr, _hstwhitelight_sv,
+                           _chainlen=int(1e4)):
     '''
     K. PEARSON: temporary place holder
     '''
     wl = False
     return wl
 
-def jwst_niriss_spectrum(nrm, fin, out, selftype, fltr, hstwhitelight_sv, chainlen=int(1e4)):
+# GMR: Switch your inputs to names without _ to make use of them.
+# _ is a free pass for pylint just for now
+def jwst_niriss_spectrum(_nrm, _fin, _out, _selftype, _fltr, _hstwhitelight_sv,
+                         _chainlen=int(1e4)):
     '''
     K. PEARSON: temporary place holder
     '''
     spec = False
     return spec
 
-def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv, chainlen=int(1e4)):
+# GMR: Switch your inputs to names without _ to make use of them.
+# _ is a free pass for pylint just for now
+def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv,
+                       _chainlen=int(1e4)):
     '''
     K. PEARSON: modeling of transits and eclipses from Spitzer
     '''
@@ -3006,7 +3032,7 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv, chainlen
                 out['data'][p][ec]['aper_xcent'] = wxa
                 out['data'][p][ec]['aper_ycent'] = wya
                 out['data'][p][ec]['aper_npp'] = npp
-                del(myfit.results['bound'])
+                del myfit.results['bound']
                 out['data'][p][ec]['aper_weights'] = myfit.weights
                 out['data'][p][ec]['aper_results'] = myfit.results
                 out['data'][p][ec]['aper_quantiles'] = myfit.quantiles
