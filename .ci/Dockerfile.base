@@ -27,14 +27,17 @@ RUN set -ex && \
                           numpy==1.19.1 \
                           pymc3==3.8 \
                           scipy==1.1.0 \
-		          joblib==0.12.5 \
+                          joblib==0.12.5 \
                           scikit-learn==0.20.3 \
-			  pillow==7.0.0 \
-			  photutils==0.7.2 \
+                          pillow==7.0.0 \
+                          photutils==0.7.2 \
                           dynesty==1.0.1 \
+                          pyvo==1.1 \
                           service_identity && \
    rm -rf ${HOME}/.cache && \
    mkdir /.theano && chmod 777 /.theano && \
    mkdir -p /proj/data/ldtk && chmod 777 /proj/data/ldtk && \
    curl -o /bin/dcp.py https://raw.githubusercontent.com/al-niessner/DCP/master/dcp.py && \
-   chmod 755 /bin/dcp.py
+   chmod 755 /bin/dcp.py && \
+   curl -o /lib/MandelTransit.c https://raw.githubusercontent.com/pearsonkyle/Exoplanet-Light-Curve-Analysis/master/C_sharedobject/MandelTransit.c && \
+   gcc -Ofast -shared -o /lib/lib_transit.so -fPIC /lib/MandelTransit.c

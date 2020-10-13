@@ -3,9 +3,10 @@ def createversion():
     '''
     1.2.0: Added Spitzer targets
     1.3.0: Added JWST-NIRISS-NIS-CLEAR-G700XD
+    1.4.0: Added more targets (242 total)
     '''
     import dawgie
-    return dawgie.VERSION(1,3,0)
+    return dawgie.VERSION(1,4,0)
 # ------------ -------------------------------------------------------
 # -- TARGET LIST -- --------------------------------------------------
 # FIRST COL HAS TO BE SOLVABLE BY
@@ -22,6 +23,7 @@ CoRoT-2 :
 CoRoT-7 :
 GJ 1132 :
 GJ 1214 :
+GJ 1252 :
 GJ 3053 : LHS 1140
 GJ 3470 :
 GJ 436 :
@@ -62,12 +64,17 @@ HD 149026 :
 HD 17156 :
 HD 189733 :
 HD 209458 :
+HD 213885 :
 HD 219134 :
+HD 219666 :
+HD 23472 :
 HD 97658 :
+HR 858 :
 K2-124 :
 K2-132 :
 K2-136 :
 K2-138 :
+K2-141 :
 K2-167 :
 K2-174 :
 K2-18 :
@@ -105,22 +112,77 @@ KELT-20 :
 KELT-3 :
 KELT-7 :
 KELT-9 :
-Kepler-11 :
-Kepler-13 :
+Kepler-10 :
+Kepler-102 :
+Kepler-104 :
+Kepler-1083 :
+Kepler-12 :
+Kepler-125 :
+Kepler-126 :
+Kepler-127 :
+Kepler-1339 :
 Kepler-138 :
+Kepler-14 :
+Kepler-1485 :
+Kepler-1492 :
+Kepler-156 :
+Kepler-1568 :
+Kepler-158 :
 Kepler-16 :
 Kepler-1625 :
-Kepler-51 :
+Kepler-1651 :
+Kepler-167 :
+Kepler-17 :
+Kepler-18 :
+Kepler-19 :
+Kepler-20 :
+Kepler-205 :
+Kepler-218 :
+Kepler-236 :
+Kepler-249 :
+Kepler-25 :
+Kepler-26 :
+Kepler-293 :
+Kepler-297 :
+Kepler-309 :
+Kepler-32 :
+Kepler-37 :
+Kepler-395 :
+Kepler-45 :
+Kepler-454 :
+Kepler-48 :
+Kepler-482 :
+Kepler-49 :
+Kepler-5 :
+Kepler-504 :
+Kepler-505 :
+Kepler-570 :
+Kepler-582 :
+Kepler-598 :
+Kepler-6 :
+Kepler-603 :
+Kepler-61 :
+Kepler-62 :
+Kepler-68 :
+Kepler-7 :
+Kepler-705 :
+Kepler-737 :
+Kepler-769 :
+Kepler-786 :
 Kepler-9 :
+Kepler-93 :
+Kepler-94 :
 LHS 3844 :
 OGLE-TR-056 :
 OGLE-TR-10 :
 Qatar-1 :
 Qatar-2 :
+TOI-270 :
+TOI-700 :
+TOI-849 :
 TrES-1 :
 TrES-2 :
 TrES-3 :
-TrES-4 :
 TRAPPIST-1 :
 WASP-1 :
 WASP-10 :
@@ -178,10 +240,13 @@ WASP-72 :
 WASP-74 :
 WASP-75 :
 WASP-76 :
+WASP-77 : WASP-77 A
 WASP-78 :
 WASP-79 :
 WASP-8 :
 WASP-80 :
+WASP-87 :
+WASP-94 : WASP-94 A
 WASP-95 :
 WASP-96 :
 WASP-97 :
@@ -204,6 +269,7 @@ CoRoT-2 : COROT2
 CoRoT-7 : COROT7
 GJ 1132 : GJ1132
 GJ 1214 : GJ1214
+GJ 1252 : GJ1252
 GJ 3053 : GJ3053
 GJ 3470 : GJ3470
 GJ 436 : GJ436
@@ -244,12 +310,18 @@ HD 149026 : HD149026
 HD 17156 : HD17156
 HD 189733 : HD189733
 HD 209458 : HD209458
+HD 213885 : HD213885
 HD 219134 : HD219134
+HD 219666 : HD219666
+HD 23472 : HD23472
+HD 3167 : HD3167
 HD 97658 : HD97658
+HR 858 : HR858
 K2-124 : K2124
 K2-132 : K2132
 K2-136 : K2136
 K2-138 : K2138
+K2-141 : K2141
 K2-167 : K2167
 K2-174 : K2174
 K2-18 : K218
@@ -287,23 +359,79 @@ KELT-20 : KELT20
 KELT-3 : KELT3
 KELT-7 : KELT7
 KELT-9 : KELT9
-Kepler-11 : KEPLER11
-Kepler-13 : KEPLER13
+Kepler-10 : KEPLER10
+Kepler-102 : KEPLER102
+Kepler-104 : KEPLER104
+Kepler-1083 : KEPLER1083
+Kepler-12 : KEPLER12
+Kepler-125 : KEPLER125
+Kepler-126 : KEPLER126
+Kepler-127 : KEPLER127
+Kepler-1339 : KEPLER1339
 Kepler-138 : KEPLER138
+Kepler-14 : KEPLER14
+Kepler-1485 : KEPLER1485
+Kepler-1492 : KEPLER1492
+Kepler-156 : KEPLER156
+Kepler-1568 : KEPLER1568
+Kepler-158 : KEPLER158
 Kepler-16 : KEPLER16
 Kepler-1625 : KEPLER1625
-Kepler-51 : KEPLER51
+Kepler-1651 : KEPLER1651
+Kepler-167 : KEPLER167
+Kepler-17 : KEPLER17
+Kepler-18 : KEPLER18
+Kepler-19 : KEPLER19
+Kepler-20 : KEPLER20
+Kepler-205 : KEPLER205
+Kepler-218 : KEPLER218
+Kepler-236 : KEPLER236
+Kepler-249 : KEPLER249
+Kepler-25 : KEPLER25
+Kepler-26 : KEPLER26
+Kepler-293 : KEPLER293
+Kepler-297 : KEPLER297
+Kepler-309 : KEPLER309
+Kepler-32 : KEPLER32
+Kepler-37 : KEPLER37
+Kepler-395 : KEPLER395
+Kepler-45 : KEPLER45
+Kepler-454 : KEPLER454
+Kepler-48 : KEPLER48
+Kepler-482 : KEPLER482
+Kepler-49 : KEPLER49
+Kepler-5 : KEPLER5
+Kepler-504 : KEPLER504
+Kepler-505 : KEPLER505
+Kepler-570 : KEPLER570
+Kepler-582 : KEPLER582
+Kepler-598 : KEPLER598
+Kepler-6 : KEPLER6
+Kepler-603 : KEPLER603
+Kepler-61 : KEPLER61
+Kepler-62 : KEPLER62
+Kepler-68 : KEPLER68
+Kepler-7 : KEPLER7
+Kepler-705 : KEPLER705
+Kepler-737 : KEPLER737
+Kepler-769 : KEPLER769
+Kepler-786 : KEPLER786
 Kepler-9 : KEPLER9
+Kepler-93 : KEPLER93
+Kepler-94 : KEPLER94
+LHS 1140 : LHS1140
 LHS 3844 : LHS3844
 OGLE-TR-056 : OGLETR056
 OGLE-TR-10 : OGLETR10
 Qatar-1 : QATAR1
 Qatar-2 : QATAR2
+TOI-270 : TOI270
+TOI-700 : TOI700
+TOI-849 : TOI849
 TRAPPIST-1 : TRAPPIST1
 TrES-1 : TRES1
 TrES-2 : TRES2
 TrES-3 : TRES3
-TrES-4 : TRES4
 WASP-1 : WASP1
 WASP-10 : WASP10
 WASP-100 : WASP100
@@ -360,10 +488,13 @@ WASP-72 : WASP72
 WASP-74 : WASP74
 WASP-75 : WASP75
 WASP-76 : WASP76
+WASP-77 : WASP77A
 WASP-78 : WASP78
 WASP-79 : WASP79
 WASP-8 : WASP8
 WASP-80 : WASP80
+WASP-87 : WASP87
+WASP-94 : WASP94A
 WASP-95 : WASP95
 WASP-96 : WASP96
 WASP-97 : WASP97

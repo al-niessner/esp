@@ -1,37 +1,25 @@
 # -- IMPORTS -- ------------------------------------------------------
-# import excalibur.data.core as datcore
-import excalibur.system.core as syscore
-# import excalibur.cerberus.core as crbcore
-# pylint: disable=import-self
-import excalibur.transit.core
-from excalibur.transit.core import transit, weightedflux, gaussian_weights, sigma_clip, get_ld
-
-# import re
-# import requests
-import logging
-import numpy as np
-# import lmfit as lm
-# import time as timer
-
-import pymc3 as pm
-log = logging.getLogger(__name__)
-pymc3log = logging.getLogger('pymc3')
-pymc3log.setLevel(logging.ERROR)
-
-# import scipy.constants as cst
-import matplotlib.pyplot as plt
-# from scipy.spatial import cKDTree
-from scipy.ndimage import median_filter
-
-# import ctypes
 import copy
-# from os import environ
+import ctypes
+import numpy as np
+import matplotlib.pyplot as plt
+from functools import wraps
 
-import theano
-import theano.tensor as tt
-import theano.compile.ops as tco
+import dynesty
+from dynesty.utils import resample_equal
 
-theano.config.exception_verbosity = 'high'
+from scipy.optimize import least_squares, brentq
+from scipy.stats import gaussian_kde
+
+try:
+    import astropy.constants
+    import astropy.units
+    from astropy.modeling.models import BlackBody
+except ImportError:
+    from astropy.modeling.blackbody import blackbody_lambda as BlackBody
+
+import excalibur.system.core as syscore
+import excalibur.transit.core as trncore
 
 from collections import namedtuple
 CONTEXT = namedtuple('CONTEXT', ['alt', 'ald', 'allz', 'orbp', 'commonoim', 'ecc',
@@ -49,13 +37,13 @@ def ctxtupdt(alt=None, ald=None, allz=None, orbp=None, commonoim=None, ecc=None,
     '''
     G. ROUDIER: Update global context for pymc3 deterministics
     '''
-    excalibur.transit.core.ctxt = CONTEXT(alt=alt, ald=ald, allz=allz, orbp=orbp,
-                                          commonoim=commonoim, ecc=ecc, g1=g1, g2=g2,
-                                          g3=g3, g4=g4, ootoindex=ootoindex,
-                                          ootorbits=ootorbits, orbits=orbits,
-                                          period=period, selectfit=selectfit,
-                                          smaors=smaors, time=time, tmjd=tmjd, ttv=ttv,
-                                          valid=valid, visits=visits, aos=aos, avi=avi)
+    trncore.ctxt = CONTEXT(alt=alt, ald=ald, allz=allz, orbp=orbp,
+                           commonoim=commonoim, ecc=ecc, g1=g1, g2=g2,
+                           g3=g3, g4=g4, ootoindex=ootoindex,
+                           ootorbits=ootorbits, orbits=orbits,
+                           period=period, selectfit=selectfit,
+                           smaors=smaors, time=time, tmjd=tmjd, ttv=ttv,
+                           valid=valid, visits=visits, aos=aos, avi=avi)
     return
 
 import ldtk
@@ -73,273 +61,629 @@ class LDPSet(ldtk.LDPSet):
     pass
 setattr(ldtk, 'LDPSet', LDPSet)
 setattr(ldtk.ldtk, 'LDPSet', LDPSet)
-# ------------- ------------------------------------------------------
-# -- SV VALIDITY -- --------------------------------------------------
-def checksv(sv):
+
+########################################################
+# LOAD IN FUNCTIONS FROM C
+try:
+    # main pipeline
+    lib_trans = np.ctypeslib.load_library('lib_transit.so','/lib')
+except OSError:
+    # local pipeline
+    # /proj/sdp/lib/MandelTransit.c
+    lib_trans = np.ctypeslib.load_library('lib_transit.so','/proj/sdp/lib')
+
+# define 1d array pointer in python
+array_1d_double = np.ctypeslib.ndpointer(dtype=ctypes.c_double,ndim=1,flags=['C_CONTIGUOUS','aligned'])
+
+# transit, orbital radius, anomaly
+input_type1 = [array_1d_double, ctypes.c_double, ctypes.c_double,
+               ctypes.c_double, ctypes.c_double, ctypes.c_double,
+               ctypes.c_double, ctypes.c_double, ctypes.c_double,
+               ctypes.c_double, ctypes.c_double, array_1d_double]
+
+# phasecurve, brightness, eclipse
+input_type2 = [array_1d_double, array_1d_double, ctypes.c_double, ctypes.c_double,
+               ctypes.c_double, ctypes.c_double, ctypes.c_double, ctypes.c_double,
+               ctypes.c_double, ctypes.c_double, ctypes.c_double,
+               ctypes.c_double, ctypes.c_double, array_1d_double]
+
+# transit
+occultquadC = lib_trans.occultquad
+occultquadC.argtypes = input_type1
+occultquadC.restype = None
+
+# orbital radius
+orbitalRadius = lib_trans.orbitalradius
+orbitalRadius.argtypes = input_type1
+orbitalRadius.restype = None
+
+# true anomaloy
+orbitalAnomaly = lib_trans.orbitalanomaly
+orbitalAnomaly.argtypes = input_type1
+orbitalAnomaly.restype = None
+
+# phase curve
+phaseCurve = lib_trans.phasecurve
+phaseCurve.argtypes = input_type2
+phaseCurve.restype = None
+
+# phase curve without eclipse
+brightnessCurve = lib_trans.brightness
+brightnessCurve.argtypes = input_type2
+brightnessCurve.restype = None
+
+# eclipse
+eclipseC = lib_trans.eclipse
+eclipseC.argtypes = input_type2
+eclipseC.restype = None
+
+# cast arrays into C compatible format with pythonic magic
+def format_args(f):
+    @wraps(f)
+    def wrapper(*args):
+        if len(args) == 2:
+            t = args[0]
+            values = args[1]
+        data = {}
+        data['time'] = np.require(t,dtype=ctypes.c_double,requirements='C')
+        data['model'] = np.require(np.ones(len(t)),dtype=ctypes.c_double,requirements='C')
+        data['cvals'] = np.require(np.zeros(5),dtype=ctypes.c_double,requirements='C')
+        if 'transit' in f.__name__ or 'orbit' in f.__name__ or 'anomaly' in f.__name__:
+            keys=['rprs','ars','per','inc','u1','u2','ecc','omega','tmid']
+        else:
+            keys=['fpfs','rprs','ars','per','inc','u1','u2','ecc','omega','tmid']
+        data['vals'] = [values[k] for k in keys]
+        for i,k in enumerate(['c0','c1','c2','c3','c4']): data['cvals'][i] = values[k]
+        return f(*args, **data)
+    return wrapper
+
+@format_args
+def brightness(_t, _values, **kwargs):
     '''
-    G. ROUDIER: Tests for empty SV shell
+    :INPUT:
+        t - ndarray
+        values - dictionary with
+            keys=['fpfs','rprs','ars','per','inc','u1','u2','ecc','omega','tmid']
+    :OUTPUT:
+        ndarray
     '''
-    valid = False
-    errstring = None
-    if sv['STATUS'][-1]: valid = True
-    else: errstring = sv.name()+' IS EMPTY'
-    return valid, errstring
+    brightnessCurve(kwargs['time'], kwargs['cvals'], *kwargs['vals'], len(kwargs['time']), kwargs['model'])
+    return kwargs['model']
 
-# ########################################################
-# # LOAD IN TRANSIT FUNCTION FROM C
+@format_args
+def phasecurve(_t, _values, **kwargs):
+    phaseCurve(kwargs['time'], kwargs['cvals'], *kwargs['vals'], len(kwargs['time']), kwargs['model'])
+    return kwargs['model']
 
-# # define 1d array pointer in python
-# array_1d_double = np.ctypeslib.ndpointer(dtype=ctypes.c_double,ndim=1,flags=['C_CONTIGUOUS','aligned'])
+@format_args
+def eclipse(_t, _values, **kwargs):
+    eclipseC(kwargs['time'], kwargs['cvals'], *kwargs['vals'], len(kwargs['time']), kwargs['model'])
+    return kwargs['model']
 
-# # load library
-# try:
-#     lib_trans = np.ctypeslib.load_library('lib_transit.so','/proj/src/ae/excalibur/transit/')
-# except:
-#     # for jupyter notebook stuff
-#     lib_trans = np.ctypeslib.load_library('lib_transit.so','/home/kpearson/esp/excalibur/transit/')
-# # load fn from library and define inputs
-# occultquadC = lib_trans.occultquad
+@format_args
+def orbitalradius(_t, _values, **kwargs):
+    # keys=['rprs','ars','per','inc','u1','u2','ecc','omega','tmid']
+    orbitalRadius(kwargs['time'], *kwargs['vals'], len(kwargs['time']), kwargs['model'])
+    return kwargs['model']
 
-# # inputs
-# occultquadC.argtypes = [array_1d_double, ctypes.c_double, ctypes.c_double,
-#                         ctypes.c_double, ctypes.c_double, ctypes.c_double,
-#                         ctypes.c_double, ctypes.c_double, ctypes.c_double,
-#                         ctypes.c_double, ctypes.c_double, array_1d_double]
+@format_args
+def trueanomaly(_t, _values, **kwargs):
+    orbitalAnomaly(kwargs['time'], *kwargs['vals'], len(kwargs['time']), kwargs['model'])
+    return kwargs['model']
 
-# # no outputs, last *double input is saved over in C
-# occultquadC.restype = None
+@format_args
+def transit(_t, _values, **kwargs):
+    occultquadC(kwargs['time'], *kwargs['vals'], len(kwargs['time']), kwargs['model'])
+    return kwargs['model']
+########################################################
 
-def rampmodel(time, pars):
-    return 1 + pars['a1']*np.exp(-1*time/pars["a2"])
 
-def phasecurvemodel(time, pars):
-    # R. Zellem's phasecurve model
-    phase = (time - pars["tm"])/pars["per"]
-    phase = phase - int(np.nanmin(phase))
+class lc_fitter:
+    '''
+    K. PEARSON class to fit phase curves with LM or nested sampling
+    '''
+    # pylint: disable=too-many-instance-attributes
+    def __init__(self, time, data, dataerr, prior, bounds, syspars, neighbors=100, mode='ns'):
+        self.time = time
+        self.data = data
+        self.dataerr = dataerr
+        self.prior = prior
+        self.bounds = bounds
+        self.syspars = syspars
+        self.neighbors = neighbors
 
-    # Make the model lightcurves
-    # Transit
-    lct = transit(time=time, values=pars)
+        if mode == 'ns':
+            self.fit_nested()
+        else:
+            self.fit_lm()
 
-    # Eclipse1
-    # Zero out ld for eclipse model
-    epars = pars.copy()
-    epars['u1'] = 0
-    epars['u2'] = 0
-    epars['tm'] = pars['Tmide']
-    lce1 = transit(time=time, values=epars)
+    def fit_lm(self):
 
-    # Inclusions of phase curve variations
-    c1 = pars["c1"]
-    c2 = pars["c2"]
-    c3 = pars["c3"]
-    c4 = pars["c4"]
-    tP = phase
+        freekeys = list(self.bounds.keys())
+        boundarray = np.array([self.bounds[k] for k in freekeys])
 
-    # Create the phasecurve portion
-    phasecurve = c1*np.cos(2.*np.pi*tP) + c2*np.sin(2.*np.pi*tP) + c3*np.cos(4.*np.pi*tP) + c4*np.sin(4.*np.pi*tP)
+        # trim data around predicted transit/eclipse time
+        self.gw, self.nearest = trncore.gaussian_weights(self.syspars, neighbors=self.neighbors)
 
-    # Subtract off the minimum so that the lightcurve's min = 0
-    lce1 = lce1 - np.nanmin(lce1)
+        # alloc arrays for C
+        time = np.require(self.time,dtype=ctypes.c_double,requirements='C')
+        lightcurve = np.require(np.zeros(len(time)),dtype=ctypes.c_double,requirements='C')
+        cvals = np.require(np.zeros(5),dtype=ctypes.c_double,requirements='C')
 
-    # Normalize the lightcurve between 0 and 1
-    lce1 = lce1/(pars["rp"]**2.)
+        def lc2min(pars):
+            for i,par in enumerate(pars):
+                self.prior[freekeys[i]] = par
 
-    idxe1, = np.where(lce1 < np.nanmedian(lce1))
+            # call C function
+            keys = ['fpfs', 'rprs','ars','per','inc','u1','u2','ecc','omega','tmid']
+            vals = [self.prior[k] for k in keys]
+            for i,k in enumerate(['c0','c1','c2','c3','c4']): cvals[i] = self.prior[k]
+            phaseCurve(self.time, cvals, *vals, len(self.time), lightcurve)
 
-    try:
-        phasecurveoffset1 = np.mean(phasecurve[idxe1[0]:idxe1[-1]])
-    except IndexError:
-        phasecurveoffset1=0
+            detrended = self.data/lightcurve
+            wf = trncore.weightedflux(detrended, self.gw, self.nearest)
+            model = lightcurve*wf
+            return ((self.data-model)/self.dataerr)**2
 
-    # Add in phasecurve curvature to each eclipse model
-    lce1 = lce1*(phasecurve + pars["FpFs1"] + (-1.)*phasecurveoffset1)
+        res = least_squares(lc2min, x0=[self.prior[k] for k in freekeys],
+                            bounds=[boundarray[:,0], boundarray[:,1]], jac='3-point',
+                            loss='linear', method='dogbox', ftol=1e-4, tr_options='exact')
 
-    lce = lce1
+        self.parameters = copy.deepcopy(self.prior)
+        self.errors = {}
 
-    model = lce + lct
+        for i,k in enumerate(freekeys):
+            self.parameters[k] = res.x[i]
+            self.errors[k] = 0
 
-    return model
+        # best fit model
+        self.transit = phasecurve(self.time, self.parameters)
+        detrended = self.data / self.transit
+        self.wf = trncore.weightedflux(detrended, self.gw, self.nearest)
+        self.model = self.transit*self.wf
+        self.residuals = self.data - self.model
+        self.detrended = self.data/self.wf
+        self.phase = (self.time-self.parameters['tmid'])/self.parameters['per']
+
+    def fit_nested(self):
+        freekeys = list(self.bounds.keys())
+
+        # trim data around predicted transit/eclipse time
+        self.gw, self.nearest = trncore.gaussian_weights(self.syspars, neighbors=self.neighbors)
+
+        # alloc arrays for C
+        time = np.require(self.time,dtype=ctypes.c_double,requirements='C')
+        lightcurve = np.require(np.zeros(len(time)),dtype=ctypes.c_double,requirements='C')
+        cvals = np.require(np.zeros(5),dtype=ctypes.c_double,requirements='C')
+
+        def loglike(pars):
+            # update free parameters
+            for i, par in enumerate(pars):
+                self.prior[freekeys[i]] = par
+
+            # call C function
+            keys = ['fpfs', 'rprs','ars','per','inc','u1','u2','ecc','omega','tmid']
+            vals = [self.prior[k] for k in keys]
+            for i,k in enumerate(['c0','c1','c2','c3','c4']): cvals[i] = self.prior[k]
+            phaseCurve(time, cvals, *vals, len(time), lightcurve)
+
+            detrended = self.data/lightcurve
+            wf = trncore.weightedflux(detrended, self.gw, self.nearest)
+            model = lightcurve*wf
+            return -0.5 * np.sum(((self.data-model)**2/self.dataerr**2))
+
+        def prior_transform(upars):
+            freekeys = list(self.bounds.keys())
+            boundarray = np.array([self.bounds[k] for k in freekeys])
+            bounddiff = np.diff(boundarray,1).reshape(-1)
+            vals = (boundarray[:,0] + bounddiff*upars)
+
+            # set limits of phase amplitude to be less than eclipse depth
+            edepth = vals[freekeys.index('rprs')]**2 * vals[freekeys.index('fpfs')]
+            for k in ['c1','c2','c3','c4']:
+                ki = freekeys.index(k)
+                vals[ki] = upars[ki] * edepth - 0.5*edepth
+
+            return vals
+
+        dsampler = dynesty.NestedSampler(loglike, prior_transform, len(freekeys), sample='unif', bound='multi', nlive=1000)
+        dsampler.run_nested(maxiter=2e6, print_progress=False, maxcall=2e6)
+        self.results = dsampler.results
+        del self.results['bound']
+
+        # alloc data for best fit + error
+        self.errors = {}
+        self.quantiles = {}
+        self.parameters = copy.deepcopy(self.prior)
+
+        tests = [copy.deepcopy(self.prior) for i in range(6)]
+
+        # Derive kernel density estimate for best fit
+        weights = np.exp(self.results.logwt - self.results.logz[-1])
+        samples = self.results['samples']
+        logvol = self.results['logvol']
+        wt_kde = gaussian_kde(resample_equal(-logvol, weights))  # KDE
+        logvol_grid = np.linspace(logvol[0], logvol[-1], 1000)  # resample
+        wt_grid = wt_kde.pdf(-1*logvol_grid)  # evaluate KDE PDF
+        self.weights = np.interp(-logvol, -1*logvol_grid, wt_grid)  # interpolate
+
+        # errors + final values
+        mean, cov = dynesty.utils.mean_and_cov(self.results.samples, weights)
+        mean2, _cov2 = dynesty.utils.mean_and_cov(self.results.samples, self.weights)
+        for i,fkey in enumerate(freekeys):
+            self.errors[freekeys[i]] = cov[i,i]**0.5
+            tests[0][fkey] = mean[i]
+            tests[1][fkey] = mean2[i]
+
+            counts, bins = np.histogram(samples[:,i], bins=100, weights=weights)
+            mi = np.argmax(counts)
+            tests[5][freekeys[i]] = bins[mi] + 0.5*np.mean(np.diff(bins))
+
+            # finds median and +- 2sigma, will vary from mode if non-gaussian
+            self.quantiles[freekeys[i]] = dynesty.utils.quantile(self.results.samples[:,i], [0.025, 0.5, 0.975], weights=weights)
+            tests[2][freekeys[i]] = self.quantiles[freekeys[i]][1]
+
+        # find minimum near weighted mean
+        mask = (samples[:,0] < self.parameters[freekeys[0]]+2*self.errors[freekeys[0]]) & (samples[:,0] > self.parameters[freekeys[0]]-2*self.errors[freekeys[0]])
+        bi = np.argmin(self.weights[mask])
+
+        for i, fkey in enumerate(freekeys):
+            tests[3][fkey] = samples[mask][bi,i]
+            tests[4][fkey] = np.average(samples[mask][:,i],weights=self.weights[mask],axis=0)
+
+        # find best fit
+        chis = []
+        res = []
+        for i, test in enumerate(tests):
+            lightcurve = phasecurve(self.time, test)
+            detrended = self.data / lightcurve
+            wf = trncore.weightedflux(detrended, self.gw, self.nearest)
+            model = lightcurve*wf
+            residuals = self.data - model
+            res.append(residuals)
+            btime, br = trncore.time_bin(self.time, residuals)
+            blc = transit(btime, tests[i])
+            mask = np.ones(blc.shape,dtype=bool)
+            # Future add more ephemesis on in transit fits
+            duration = btime[mask].max() - btime[mask].min()
+            tmask = ((btime - tests[i]['tmid']) < duration) & ((btime - tests[i]['tmid']) > -1*duration)
+            chis.append(np.mean(br[tmask]**2))
+
+        mi = np.argmin(chis)
+        self.parameters = copy.deepcopy(tests[mi])
+        # plt.scatter(samples[mask,0], samples[mask,1], c=weights[mask]); plt.show()
+
+        # best fit model
+        self.transit = phasecurve(self.time, self.parameters)
+        detrended = self.data / self.transit
+        self.wf = trncore.weightedflux(detrended, self.gw, self.nearest)
+        self.model = self.transit*self.wf
+        self.residuals = self.data - self.model
+        self.detrended = self.data/self.wf
+        self.phase = (self.time-self.parameters['tmid'])/self.parameters['per']
+
+    def plot_bestfit(self, bin_dt=10./(60*24), zoom=False, phase=True):
+        f = plt.figure(figsize=(12,7))
+        # f.subplots_adjust(top=0.94,bottom=0.08,left=0.07,right=0.96)
+        ax_lc = plt.subplot2grid((4,5), (0,0), colspan=5,rowspan=3)
+        ax_res = plt.subplot2grid((4,5), (3,0), colspan=5, rowspan=1)
+        axs = [ax_lc, ax_res]
+
+        bt, bf = trncore.time_bin(self.time, self.detrended, bin_dt)
+        bp = (bt-self.parameters['tmid'])/self.parameters['per']
+
+        if phase:
+            axs[0].plot(bp,bf,'co',alpha=0.5,zorder=2)
+            axs[0].plot(self.phase, self.transit, 'r-', zorder=3)
+            axs[0].set_xlim([min(self.phase), max(self.phase)])
+            axs[0].set_xlabel("Phase ")
+        else:
+            axs[0].plot(bt,bf,'co',alpha=0.5,zorder=2)
+            axs[0].plot(self.time, self.transit, 'r-', zorder=3)
+            axs[0].set_xlim([min(self.time), max(self.time)])
+            axs[0].set_xlabel("Time [day]")
+
+        axs[0].set_ylabel("Relative Flux")
+        axs[0].grid(True,ls='--')
+
+        if zoom:
+            axs[0].set_ylim([1-1.15*self.parameters['rprs']**2, 1+0.25*self.parameters['rprs']**2])
+        else:
+            if phase:
+                axs[0].errorbar(self.phase, self.detrended, yerr=np.std(self.residuals)/np.median(self.data), ls='none', marker='.', color='black', zorder=1, alpha=0.01)
+            else:
+                axs[0].errorbar(self.time, self.detrended, yerr=np.std(self.residuals)/np.median(self.data), ls='none', marker='.', color='black', zorder=1, alpha=0.01)
+
+        bt, br = trncore.time_bin(self.time, self.residuals/np.median(self.data)*1e6, bin_dt)
+        bp = (bt-self.parameters['tmid'])/self.parameters['per']
+
+        if phase:
+            axs[1].plot(self.phase, self.residuals/np.median(self.data)*1e6, 'k.', alpha=0.15, label=r'$\sigma$ = {:.0f} ppm'.format(np.std(self.residuals/np.median(self.data)*1e6)))
+            axs[1].plot(bp,br,'c.',alpha=0.5,zorder=2,label=r'$\sigma$ = {:.0f} ppm'.format(np.std(br)))
+            axs[1].set_xlim([min(self.phase), max(self.phase)])
+            axs[1].set_xlabel("Phase")
+
+        else:
+            axs[1].plot(self.time, self.residuals/np.median(self.data)*1e6, 'k.', alpha=0.15, label=r'$\sigma$ = {:.0f} ppm'.format(np.std(self.residuals/np.median(self.data)*1e6)))
+            axs[1].plot(bt,br,'c.',alpha=0.5,zorder=2,label=r'$\sigma$ = {:.0f} ppm'.format(np.std(br)))
+            axs[1].set_xlim([min(self.time), max(self.time)])
+            axs[1].set_xlabel("Time [day]")
+
+        axs[1].legend(loc='best')
+        axs[1].set_ylabel("Residuals [ppm]")
+        axs[1].grid(True,ls='--')
+        plt.tight_layout()
+        return f,axs
 
 # ----------------- --------------------------------------------------
 # -- NORMALIZATION -- ------------------------------------------------
-def norm_spitzer(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
+def norm_spitzer(cal, tme, fin, _ext, out, selftype):
     '''
-    K. PEARSON: prep data for light curve fitting
-        remove nans, remove zeros, 3 sigma clip time series
+    K. PEARSON: aperture selection, remove nans, remove zeros, 3 sigma clip time series
     '''
     normed = False
     priors = fin['priors'].copy()
 
-    planetloop = [pnet for pnet in tme['data'].keys()
-                  if (pnet in priors.keys()) and tme['data'][pnet][selftype]]
+    planetloop = [pnet for pnet in tme['data'].keys() if
+                  (pnet in priors.keys()) and tme['data'][pnet][selftype]]
 
     for p in planetloop:
-        if verbose or debug:
-            print("Working on planet: ", p)
         out['data'][p] = {}
 
-        # determine optimal aperture size
-        phot = np.array(cal['data']['PHOT']).reshape(-1,5)
-        sphot = np.copy(phot)
-        for j in range(phot.shape[1]):
-            dt = int(2.5/(24*60*np.percentile(np.diff(cal['data']['TIME']),25)))
-            dt = 2*dt + 1  # force it to be odd
-            sphot[:,j] = sigma_clip(sphot[:,j], dt)
-            sphot[:,j] = sigma_clip(sphot[:,j], dt)
-        std = np.nanstd(sphot,0)
-        bi = np.argmin(std)
-
-        # reformat some data
-        flux = np.array(cal['data']['PHOT']).reshape(-1,5)[:,bi]
-        noisep = np.array(cal['data']['NOISEPIXEL']).reshape(-1,5)[:,bi]
-        pflux = np.array(cal['data']['G_PSF'])
-        visits = tme['data'][p]['pcvisits']
-        orbits = tme['data'][p]['orbits']
-
-        # remove nans and zeros
-        mask = np.isnan(flux) | np.isnan(pflux) | (pflux == 0) | (flux == 0)
         keys = [
-            'TIME','WX','WY',
-            'G_PSF_ERR', 'G_PSF', 'G_XCENT', 'G_YCENT',
-            'G_SIGMAX', 'G_SIGMAY', 'G_ROT', 'G_MODEL',
+            'TIME','WX','WY','FRAME',
         ]
         for k in keys:
-            out['data'][p][k] = np.array(cal['data'][k])[~mask]
-        out['data'][p]['pcvisits'] = visits[~mask]
-        out['data'][p]['orbits'] = orbits[~mask]
-        out['data'][p]['NOISEPIXEL'] = noisep[~mask]
-        out['data'][p]['PHOT'] = flux[~mask]
+            out['data'][p][k] = np.array(cal['data'][k])
+
+        # is set later during aperture selection
+        out['data'][p]['PHOT'] = np.zeros(len(cal['data']['TIME']))
+        out['data'][p]['NOISEPIXEL'] = np.zeros(len(cal['data']['TIME']))
+
+        # remove nans
+        nanmask = np.isnan(out['data'][p]['PHOT'])
+        for k in out['data'][p].keys():
+            nanmask = nanmask | np.isnan(out['data'][p][k])
+
+        for k in out['data'][p].keys():
+            out['data'][p][k] = out['data'][p][k][~nanmask]
 
         # time order things
         ordt = np.argsort(out['data'][p]['TIME'])
         for k in out['data'][p].keys():
             out['data'][p][k] = out['data'][p][k][ordt]
-
-        # remove the first hour of data
-        idxchopped = (out['data'][p]['TIME'] - np.nanmin(out['data'][p]['TIME']))*24. > 1
-        for k in out['data'][p].keys():
-            out['data'][p][k] = out['data'][p][k][idxchopped]
+        cflux = np.array(cal['data']['PHOT'])[~nanmask][ordt]
+        cnpp = np.array(cal['data']['NOISEPIXEL'])[~nanmask][ordt]
 
         # 3 sigma clip flux time series
+        phase = (out['data'][p]['TIME'] - fin['priors'][p]['t0'])/fin['priors'][p]['period']
         badmask = np.zeros(out['data'][p]['TIME'].shape).astype(bool)
-        for i in tme['data'][p]['phasecurve']:
-            print(ext, i)
-            omask = out['data'][p]['pcvisits'] == i
+        for i in np.unique(tme['data'][p][selftype]):
+            # mask out phase curve data (previous eclipse | transit | eclipse)
+            omask = (phase > i-0.75) & (phase < i+0.75) & ~np.isnan(out['data'][p]['TIME'])
+
+            if omask.sum() == 0:
+                continue
 
             dt = np.nanmean(np.diff(out['data'][p]['TIME'][omask]))*24*60
-            medf = median_filter(out['data'][p]['PHOT'][omask], int(15/dt)*2+1)
-            res = out['data'][p]['PHOT'][omask] - medf
-            photmask = np.abs(res) > 3*np.std(res)
+            ndt = int(7/dt)*2+1
+            # aperture selection
+            stds = []
+            for j in range(cflux.shape[1]):
+                stds.append(np.nanstd(trncore.sigma_clip(cflux[omask,j], ndt)))
 
-            medf = median_filter(out['data'][p]['G_PSF'][omask], int(15/dt)*2+1)
-            res = out['data'][p]['G_PSF'][omask] - medf
-            psfmask = np.abs(res) > 3*np.std(res)
+            bi = np.argmin(stds)
+            out['data'][p]['PHOT'][omask] = cflux[omask,bi]
+            out['data'][p]['NOISEPIXEL'][omask] = cnpp[omask,bi]
 
-            badmask[omask] = photmask | psfmask
+            # sigma clip and remove nans
+            photmask = np.isnan(trncore.sigma_clip(out['data'][p]['PHOT'][omask], ndt))
+            xmask = np.isnan(trncore.sigma_clip(out['data'][p]['WX'][omask], ndt))
+            ymask = np.isnan(trncore.sigma_clip(out['data'][p]['WY'][omask], ndt))
+            nmask = np.isnan(trncore.sigma_clip(out['data'][p]['NOISEPIXEL'][omask], ndt))
 
-        if debug:
-            plt.plot(out['data'][p]['TIME'][~badmask], out['data'][p]['PHOT'][~badmask], 'k.',label='Filtered')
-            plt.plot(out['data'][p]['TIME'][badmask], out['data'][p]['PHOT'][badmask], 'r.',label='Raw')
-            plt.legend()
-            plt.show()
+            badmask[omask] = photmask | xmask | ymask | nmask
 
+        # remove outliers
         for k in out['data'][p].keys():
             out['data'][p][k] = out['data'][p][k][~badmask]
 
         # pass information along
+        out['data'][p]['transit'] = tme['data'][p]['transit']
+        out['data'][p]['eclipse'] = tme['data'][p]['eclipse']
         out['data'][p]['phasecurve'] = tme['data'][p]['phasecurve']
-        if debug:
-            plt.plot(out['data'][p]['TIME'], out['data'][p]['G_PSF'],'g.',label='G_PSF')
-            plt.plot(out['data'][p]['TIME'], out['data'][p]['PHOT'],'k.',label='PHOT')
-            plt.xlabel('Time')
-            plt.ylabel('Flux')
-            plt.legend()
-            plt.show()
+
         if out['data'][p][selftype]:
             normed = True
             out['STATUS'].append(True)
+
     return normed
 
-# from excalibur.transit.core import time_bin
+def plot_phasecurve(sv):
 
-def phasecurve_spitzer(nrm, fin, out, selftype, fltr, chainlen=25000, verbose=False, debug=False):
+    fig = plt.figure(figsize=(13,7))
+    ax_lc = plt.subplot2grid((4,5), (0,0), colspan=5,rowspan=3)
+    ax_res = plt.subplot2grid((4,5), (3,0), colspan=5, rowspan=1)
+    axs = [ax_lc, ax_res]
+
+    phase = (sv['aper_time']-sv['aper_pars']['tmid'])/sv['aper_pars']['per']
+    bin_dt = 10./24./60.
+    bt, bf = trncore.time_bin(sv['aper_time'], sv['aper_detrended'], bin_dt)
+    bp = (bt-sv['aper_pars']['tmid'])/sv['aper_pars']['per']
+    bt, br = trncore.time_bin(sv['aper_time'], sv['aper_residuals'], bin_dt)
+
+    # Tb = brightnessTemp(sv['aper_pars'],sv['aper_filter'])
+    # compute the brightness temperature over the orbit
+    bcurve = brightness(bt,sv['aper_pars'])
+    tbcurve = np.ones(bcurve.shape)
+    for i,bc in enumerate(bcurve):
+        sv['aper_pars']['fpfs'] = max((bc-1)/sv['aper_pars']['rprs']**2, 0.00001)
+        tbcurve[i] = brightnessTemp(sv['aper_pars'],sv['aper_filter'])
+
+    # residuals
+    axs[1].plot(phase, sv['aper_residuals']/np.median(sv['aper_flux'])*1e6, 'k.', alpha=0.15, label=r'$\sigma$ = {:.0f} ppm'.format(np.std(sv['aper_residuals']/np.median(sv['aper_flux'])*1e6)))
+
+    axs[1].plot(bp,1e6*br/np.median(sv['aper_flux']),'w.',zorder=2,label=r'$\sigma$ = {:.0f} ppm'.format(np.std(1e6*br/np.median(sv['aper_flux']))))
+
+    axs[1].set_xlim([min(phase), max(phase)])
+    axs[1].set_xlabel("Phase")
+    axs[1].legend(loc='best')
+    axs[1].set_ylabel("Residuals [ppm]")
+    axs[1].grid(True,ls='--')
+
+    axs[0].errorbar(phase, sv['aper_detrended'], yerr=np.std(sv['aper_residuals'])/np.median(sv['aper_flux']), ls='none', marker='.', color='black',alpha=0.1, zorder=1)
+
+    # map color to equilibrium temperature
+    im = axs[0].scatter(bp,bf,marker='o',c=tbcurve,vmin=500,vmax=2750,cmap='jet', zorder=2, s=20)
+    cbar = plt.colorbar(im)
+    cbar.ax.set_xlabel("B. Temp. [K]")
+
+    axs[0].plot(phase, sv['aper_transit'], 'w--', zorder=3)
+    axs[0].set_xlim([min(phase), max(phase)])
+    axs[0].set_xlabel("Phase ")
+
+    axs[0].set_ylabel("Relative Flux")
+    axs[0].grid(True,ls='--')
+    axs[0].set_ylim([0.955,1.03])
+
+    plt.tight_layout()
+    return fig
+
+def brightnessTemp(priors,f='IRAC 3.6um'):
+    # Solve for Tb using Fp/Fs, Ts and a filter bandpass
+    if '3.6' in f or '36' in f:
+        waveset = np.linspace(3.15, 3.9, 1000) * astropy.units.micron
+    else:
+        waveset = np.linspace(4,5,1000) * astropy.units.micron
+
+    def f2min(T, *args):
+        fpfs,tstar,waveset = args
+        fstar = BlackBody(waveset, tstar * astropy.units.K)
+        fplanet = BlackBody(waveset, T * astropy.units.K)
+        fp = np.trapz(fplanet, waveset)
+        fs = np.trapz(fstar, waveset)
+        return (fp/fs) - fpfs
+
+    tb = brentq(f2min, 1,3500, args=(priors['fpfs'],priors['T*'],waveset))
+    return tb
+
+def eclipse_ratio(priors,p='b',f='IRAC 3.6um', verbose=True):
+
+    Te = priors['T*']*(1-0.1)**0.25 * np.sqrt(0.5/priors[p]['ars'])
+
+    rprs = priors[p]['rp'] * astropy.constants.R_jup / (priors['R*'] * astropy.constants.R_sun)
+    tdepth = rprs.value**2
+
+    # bandpass integrated flux for planet
+    wave36 = np.linspace(3.15,3.95,1000) * astropy.units.micron
+    wave45 = np.linspace(4,5,1000) * astropy.units.micron
+
+    try:
+        fplanet = BlackBody(Te*astropy.units.K)(wave36)
+        fstar = BlackBody(priors['T*']*astropy.units.K)(wave36)
+    except TypeError:
+        fplanet = BlackBody(wave36, Te*astropy.units.K)
+        fstar = BlackBody(wave36, priors['T*']*astropy.units.K)
+
+    fp36 = np.trapz(fplanet, wave36)
+    fs36 = np.trapz(fstar, wave36)
+
+    try:
+        fplanet = BlackBody(Te*astropy.units.K)(wave45)
+        fstar = BlackBody(priors['T*']*astropy.units.K)(wave45)
+    except TypeError:
+        fplanet = BlackBody(wave45, Te*astropy.units.K)
+        fstar = BlackBody(wave45, priors['T*']*astropy.units.K)
+
+    fp45 = np.trapz(fplanet, wave45)
+    fs45 = np.trapz(fstar, wave45)
+
+    if verbose:
+        print(" Stellar temp: {:.1f} K".format(priors['T*']))
+        print(" Transit Depth: {:.4f} %".format(tdepth*100))
+
+    if '3.6' in f or '36' in f:
+        if verbose:
+            print(" Eclipse Depth @ IRAC 1 (3.6um): ~{:.0f} ppm".format(tdepth*fp36/fs36*1e6))
+            print("         Fp/Fs @ IRAC 1 (3.6um): ~{:.4f}".format(fp36/fs36))
+        return float(fp36/fs36)
+    else:
+        if verbose:
+            print(" Eclipse Depth @ IRAC 2 (4.5um): ~{:.0f} ppm".format(tdepth*fp45/fs45*1e6))
+            print("         Fp/Fs @ IRAC 2 (4.5um): ~{:.4f}".format(fp45/fs45))
+        return float(fp45/fs45)
+
+def phasecurve_spitzer(nrm, fin, out, selftype, fltr, mode='ns'):
+    '''
+    K. PEARSON: modeling of phase curves
+    '''
     wl= False
     priors = fin['priors'].copy()
     ssc = syscore.ssconstants()
-    planetloop = [pnet for pnet in nrm['data'].keys()
-                  if (pnet in priors.keys()) and nrm['data'][pnet][selftype]]
+    planetloop = [pnet for pnet in nrm['data'].keys()]
 
     for p in planetloop:
-        if verbose or debug:
-            print("Working on planet: ", p)
 
-        time = nrm['data'][p]['TIME']
-        visits = nrm['data'][p]['pcvisits']
         out['data'][p] = []
+
+        # extract data based on phase
+        if selftype == 'transit':
+            phase = (nrm['data'][p]['TIME'] - fin['priors'][p]['t0'])/fin['priors'][p]['period']
+        elif selftype == 'eclipse':
+            priors = fin['priors']
+            w = priors[p].get('omega',0)
+            tme = priors[p]['t0']+ priors[p]['period']*0.5 * (1 + priors[p]['ecc']*(4./np.pi)*np.cos(np.deg2rad(w)))
+            phase = (nrm['data'][p]['TIME'] - tme)/fin['priors'][p]['period']
+        if selftype == 'phasecurve':
+            phase = (nrm['data'][p]['TIME'] - fin['priors'][p]['t0'])/fin['priors'][p]['period']
 
         # loop through epochs
         ec = 0  # event counter
-        for event in nrm['data'][p]['phasecurve']:
-            # # To run only the first event
-            # if ec > 0:
-            #     break
-            # To run only the second event
-            if ec == 0:
-                out['data'][p].append({})
-                ec = ec +1
-                continue
+        for event in nrm['data'][p][selftype]:
             print('processing event:',event)
-            emask = visits == event
-            out['data'][p].append({})
-
-            # get data
-            time = nrm['data'][p]['TIME'][emask]
-            tmask = time < 2400000.5  # remove later
-            time[tmask] += 2400000.5
 
             # compute phase + priors
             smaors = priors[p]['sma']/priors['R*']/ssc['Rsun/AU']
-            # z, phase = datcore.time2z(time, priors[p]['inc'], priors[p]['t0'], smaors, priors[p]['period'], priors[p]['ecc'])
-            # tdur = priors[p]['period']/(2*np.pi)/smaors  # rough estimate
+            smaors_up = (priors[p]['sma']+priors[p]['sma_uperr'])/(priors['R*']-abs(priors['R*_lowerr']))/ssc['Rsun/AU']
+            smaors_lo = (priors[p]['sma']-abs(priors[p]['sma_lowerr']))/(priors['R*']+priors['R*_uperr'])/ssc['Rsun/AU']
+            priors[p]['ars'] = smaors
+            # to do: update duration for eccentric orbits
+            # https://arxiv.org/pdf/1001.2010.pdf eq 16
+            tmid = priors[p]['t0'] + event*priors[p]['period']
+            # tdur = priors[p]['period']/(np.pi)/smaors
             rprs = (priors[p]['rp']*7.1492e7) / (priors['R*']*6.955e8)
-            inc_lim = 90 - np.rad2deg(np.arctan((priors[p]['rp'] * ssc['Rjup/Rsun'] + priors['R*']) / (priors[p]['sma']/ssc['Rsun/AU'])))
-            fpfs = 0.01
-            tmid = priors[p]['t0']
-            # Sometimes the prior mid-transit time is after the current data...and for some reason, that messes up
-            # the function "transit" - so just roll back the clock....
-            while tmid >= max(time):
-                tmid = tmid - priors[p]['period']
-            tmid_err = np.sqrt(np.abs(priors[p]['t0_lowerr']*priors[p]['t0_uperr']))
-            # tmide = tmid-priors[p]['period']/2.
+            # inc_lim = 90 - np.rad2deg(np.arctan((priors[p]['rp'] * ssc['Rjup/Rsun'] + priors['R*']) / (priors[p]['sma']/ssc['Rsun/AU'])))
             w = priors[p].get('omega',0)
-            tmide = priors[p]['t0'] + priors[p]['period']*0.5 * (1 + priors[p]['ecc']*(4./np.pi)*np.cos(np.deg2rad(w)))  # to account for elliptical orbits
-            # tmide_err = np.sqrt(priors[p]['t0_lowerr']*priors[p]['t0_uperr'])
-            # Use Monte Carlo to estimate the uncertainty on tmide ***ASSUMES GAUSSIAN PRIORS***
-            t0_draws = np.random.normal(priors[p]['t0'], tmid_err, 100000)
-            period_draws = np.random.normal(priors[p]['period'], np.sqrt(np.abs(priors[p]['period_lowerr']*priors[p]['period_uperr'])), 100000)
-            ecc_draws = np.random.normal(priors[p]['ecc'], np.sqrt(np.abs(priors[p]['ecc_lowerr']*priors[p]['ecc_uperr'])), 100000)
-            w_draws = np.random.normal(w, np.sqrt(np.abs(priors[p].get('omega_lowerr',0)*priors[p].get('omega_uperr',0))), 100000)
-            tmide_err_draws = t0_draws + period_draws*0.5 * (1 + ecc_draws*(4./np.pi)*np.cos(np.deg2rad(w_draws)))  # to account for elliptical orbits
-            tmide_err = np.nanmax([np.nanstd(tmide_err_draws), 1./24.])  # uses either MC uncertainty or 1 hr, whichever is greater
+
+            # mask out data by event type
+            # pmask = (phase > event-1.5*tdur/priors[p]['period']) & (phase < event+1.5*tdur/priors[p]['period'])
+            pmask = (phase > event-0.65) & (phase < event+0.65)  # should check for eccentric orbits
+
+            if pmask.sum() == 0:
+                continue
+
+            # check if previous eclipse is present
+            emask = (phase > event-0.65) & (phase < event-0.55)
+            if emask.sum() > 10: tmid = priors[p]['t0'] + (event-1)*priors[p]['period']  # adjust prior for transit model
 
             # extract aperture photometry data
-            subt = time
-            aper = nrm['data'][p]['PHOT'][emask]
+            subt = nrm['data'][p]['TIME'][pmask]
+            aper = nrm['data'][p]['PHOT'][pmask]
             aper_err = np.sqrt(aper)
-            gpsf = nrm['data'][p]['G_PSF'][emask]
-            # gpsf_err = np.sqrt(gpsf)
 
-            if '3.6' in fltr:
-                lin,quad = get_ld(priors,'Spit36')
-            elif '4.5' in fltr:
-                lin,quad = get_ld(priors,'Spit45')
+            try:
+                if '36' in fltr:
+                    lin,quad = trncore.get_ld(priors,'Spit36')
+                elif '45' in fltr:
+                    lin,quad = trncore.get_ld(priors,'Spit45')
+            except ValueError:
+                lin,quad = 0,0
 
             # can't solve for wavelengths greater than below
             # whiteld = createldgrid([2.5],[2.6], priors, segmentation=int(10), verbose=verbose)
             # whiteld = createldgrid([wmin],[wmax], priors, segmentation=int(1), verbose=verbose)
-            # '''
-            # # LDTK breaks for Spitzer https://github.com/hpparvi/ldtk/issues/11 4
+
+            # LDTK breaks for Spitzer https://github.com/hpparvi/ldtk/issues/11
             # filters = [BoxcarFilter('a', 3150, 3950)]
             # tstar = priors['T*']
             # terr = np.sqrt(abs(priors['T*_uperr']*priors['T*_lowerr']))
@@ -350,348 +694,107 @@ def phasecurve_spitzer(nrm, fin, out, selftype, fltr, chainlen=25000, verbose=Fa
             # sc = LDPSetCreator(teff=(tstar, terr), logg=(loggstar, loggerr), z=(fehstar, feherr), filters=filters)
             # ps = sc.create_profiles(nsamples=int(1e4))
             # cq,eq = ps.coeffs_qd(do_mc=True)
-            # '''
+
+            fpfs = eclipse_ratio(priors, p, fltr)
+            edepth = fpfs*rprs**2
 
             tpars = {
-                'rp': rprs,
-                'tm': tmid,  # np.median(subt),
-                'tm_err': tmid_err,
-                'tmide': tmide,
-                'tmide_err': tmide_err,
-                'ar':smaors,
-                'per':priors[p]['period'],
-                'inc':priors[p]['inc'],
-                'inc_lim': inc_lim,
-                'u1':lin, 'u2': quad,
-                'ecc':priors[p]['ecc'],
-                'ome': 0,
-                'a0':1, 'a1':0, 'a2':0,
-                'c1':1, 'c2':0, 'c3':0, 'c4':0,
-                'FpFs1':fpfs,
+                # Star
+                'T*':priors['T*'],
+
+                # transit
+                'rprs': rprs,
+                'ars': smaors,
+                'tmid':tmid,
+                'per': priors[p]['period'],
+                'inc': priors[p]['inc'],
+
+                # eclipse
+                'fpfs': fpfs,
+                'omega': priors['b'].get('omega',0),
+                'ecc': priors['b']['ecc'],
+
+                # limb darkening (linear, quadratic)
+                'u1': lin, 'u2': quad,
+
+                # phase curve amplitudes
+                'c0':0, 'c1':-edepth*0.25, 'c2':0, 'c3':0, 'c4':0
             }
 
-            if verbose:
-                data = transit(time=subt, values=tpars)
-                plt.plot(subt,aper/np.median(aper),'ko')
-                plt.plot(subt,data,'g--')
-                plt.show()
+            # gather detrending parameters
+            wxa = nrm['data'][p]['WX'][pmask]
+            wya = nrm['data'][p]['WY'][pmask]
+            npp = nrm['data'][p]['NOISEPIXEL'][pmask]
+            syspars = np.array([wxa,wya,npp]).T
 
-            # perform a quick sigma clip
-            dt = np.nanmean(np.diff(subt))*24*60  # minutes
-            medf = median_filter(aper, int(15/dt)*2+1)  # needs to be odd
-            res = aper - medf
-            photmask = np.abs(res) < 3*np.std(res)
+            # only report params with bounds, all others will be fixed to initial value
+            mybounds = {
+                'rprs':[0.5*rprs,1.5*rprs],
+                'tmid':[tmid-0.01,tmid+0.01],
+                'ars':[smaors_lo,smaors_up],
 
-            # resize aperture data
-            ta = subt[photmask]
-            aper_err = aper_err[photmask]/np.nanmedian(aper[photmask])  # normalize the flux
-            aper = aper[photmask]/np.nanmedian(aper[photmask])  # normalize the flux
-            wxa = nrm['data'][p]['WX'][emask][photmask]
-            wya = nrm['data'][p]['WY'][emask][photmask]
-            npp = nrm['data'][p]['NOISEPIXEL'][emask][photmask]
+                'fpfs':[0,fpfs*2],
+                # 'omega':[priors[p]['omega']-25,priors[p]['omega']+25],
+                # 'ecc': [0,priors[p]['ecc']+0.1],
 
-            # sigma clip PSF data
-            dt = np.nanmean(np.diff(subt))*24*60  # minutes
-            medf = median_filter(gpsf, int(15/dt)*2+1)  # needs to be odd
-            res = gpsf - medf
-            # psfmask = np.abs(res) < 3*np.std(res)
+                # 'c0':[-0.025,0.025], gets set in code
+                'c1':[-edepth*0.35, 0.35*edepth],
+                'c2':[-edepth*0.35, 0.35*edepth],
+                'c3':[-edepth*0.35, 0.35*edepth],
+                'c4':[-edepth*0.35, 0.35*edepth]
+                }
 
-            # PSF photometry
-            # tp = subt[psfmask]
-            # psf_err = gpsf_err[psfmask]/np.nanmedian(gpsf[psfmask])  # normalize the flux
-            # psf = gpsf[psfmask]/np.nanmedian(gpsf[psfmask])  # normalize the flux
-            # wxp = nrm['data'][p]['G_XCENT'][emask][psfmask]
-            # wyp = nrm['data'][p]['G_YCENT'][emask][psfmask]
-            # sxp = nrm['data'][p]['G_SIGMAX'][emask][psfmask]
-            # syp = nrm['data'][p]['G_SIGMAY'][emask][psfmask]
-            # rot = nrm['data'][p]['G_ROT'][emask][psfmask]
+            # 10 minute time scale
+            nneighbors = int(10./24./60./np.mean(np.diff(subt)))
+            print(" N neighbors:",nneighbors)
+            print(" N datapoints:", len(subt))
+            myfit = lc_fitter(subt, aper, aper_err, tpars, mybounds, syspars,neighbors=nneighbors, mode=mode)
 
-            # if verbose:
-            #     # quick decorrelation to assess priors + phase mask
-            #     wf = weightedflux(aper, gw, nearest)
-            #     frac = len(aper) % 20
-            #     btt = subt[:-1*frac].reshape(-1,20).mean(1)
-            #     baper = (aper/wf /np.median(aper/wf))[:-1*frac].reshape(-1,20).mean(1)
+            # copy best fit parameters and uncertainties
+            terrs = {}
+            for k in myfit.bounds.keys():
+                print(" {} = {:.6f} +/- {:.6f}".format(k, myfit.parameters[k], myfit.errors[k]))
+                tpars[k] = myfit.parameters[k]
+                terrs[k] = myfit.errors[k]
 
-            #     plt.plot(subt, (aper/wf)/np.median(aper/wf), 'ko')
-            #     plt.plot(btt, baper, 'go')
-            #     plt.show()
-
-            # aperture selection
-            # estimate quadratic coefficients
-            # A = np.vstack([(subt-min(subt))**2, subt-min(subt), np.ones(subt.shape)]).T
-            # a2,a1,a0 = np.linalg.lstsq(A, aper)[0]
-            # quad = np.matmul(A,np.array([a2,a1,a0]))
-
-            def fit_data(time,flux,fluxerr, syspars, tpars):
-
-                gw, nearest = gaussian_weights(
-                    np.array(syspars).T,
-                    # w=np.array([1,1])
-                )
-
-                gw[np.isnan(gw)] = 0.01
-
-                @tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar],otypes=[tt.dvector])
-                def phasecurve2min(*pars):
-                    # rprs, tmid, inc, fpfs, Tmide, norm, c1, c2, c3, c4 = pars
-                    rprs, tmid, inc, fpfs, Tmide, c1, c2, c3, c4 = pars
-                    tpars['rp'] = float(rprs)
-                    tpars['tm'] = float(tmid)
-                    tpars['inc']= float(inc)
-                    tpars['FpFs1'] = float(fpfs)
-                    tpars['Tmide'] = float(Tmide)
-                    tpars['c1'] = float(c1)
-                    tpars['c2'] = float(c2)
-                    tpars['c3'] = float(c3)
-                    tpars['c4'] = float(c4)
-                    lcmodel = phasecurvemodel(time, tpars)
-                    detrended = flux/lcmodel
-                    wf=np.sum(detrended[nearest]*gw,axis=-1)
-                    return lcmodel*wf  # *float(norm)
-
-                with pm.Model():
-                    priors = [
-                        pm.Uniform('rprs', lower=0.5*tpars['rp'],  upper=1.5*tpars['rp']),
-                        # pm.Uniform('tmid', lower=min(time), upper=max(time)),
-                        pm.Normal('tmid', mu=tpars['tm'], tau=1./(tpars['tm_err']**2.)),
-                        pm.Uniform('inc',  lower=tpars['inc_lim'], upper=90),
-                        pm.Uniform('FpFs1',  lower=0, upper=0.01),
-                        # pm.Uniform('Tmide',  lower=min(time), upper=max(time)),
-                        pm.Normal('Tmide',  mu=tpars['tmide'], tau=1./(tpars['tmide_err']**2)),
-                        # pm.Uniform('norm', lower=0.9,  upper=1.1 ),
-                        pm.Uniform('c1', lower=0, upper=0.01),  # upper=0.003),
-                        pm.Uniform('c2', lower=0, upper=0.01),  # upper=0.003),
-                        pm.Uniform('c3', lower=0, upper=0.01),  # upper=0.003),
-                        pm.Uniform('c4', lower=0, upper=0.01)]  # upper=0.003),
-
-                    pm.Normal('likelihood',
-                              mu=phasecurve2min(*priors),
-                              tau=(1./fluxerr)**2,
-                              observed=flux
-                             )
-
-                    trace = pm.sample(chainlen,  # 12500
-                                      pm.Metropolis(),
-                                      cores=8,  # multi-processing
-                                      chains=4,
-                                      tune=0,  # 500,
-                                      progress_bar=True
-                                     )
-
-                    # logp = model.logp
-                    # values = np.array([logp(point) for point in trace.points()])
-
-                return trace
-
-            def fit_data_ramp(time,flux,fluxerr, syspars, tpars):
-
-                gw, nearest = gaussian_weights(
-                    np.array(syspars).T,
-                    # w=np.array([1,1])
-                )
-
-                gw[np.isnan(gw)] = 0.01
-
-                @tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar],otypes=[tt.dvector])
-                def phasecurve2min(*pars):
-                    # rprs, tmid, inc, fpfs, Tmide, norm, c1, c2, c3, c4 = pars
-                    rprs, tmid, inc, fpfs, Tmide, c1, c2, c3, c4, a1, a2 = pars
-                    tpars['rp'] = float(rprs)
-                    tpars['tm'] = float(tmid)
-                    tpars['inc']= float(inc)
-                    tpars['FpFs1'] = float(fpfs)
-                    tpars['Tmide'] = float(Tmide)
-                    tpars['c1'] = float(c1)
-                    tpars['c2'] = float(c2)
-                    tpars['c3'] = float(c3)
-                    tpars['c4'] = float(c4)
-                    tpars['a1'] = float(a1)
-                    tpars['a2'] = float(a2)
-                    lcmodel = phasecurvemodel(time, tpars)*rampmodel(time, tpars)
-                    detrended = flux/lcmodel
-                    wf=np.sum(detrended[nearest]*gw,axis=-1)
-                    # import pdb; pdb.set_trace()
-                    return lcmodel*wf  # *float(norm)
-
-                with pm.Model():
-                    priors = [
-                        pm.Uniform('rprs', lower=0.5*tpars['rp'],  upper=1.5*tpars['rp']),
-                        # pm.Uniform('tmid', lower=min(time), upper=max(time)),
-                        pm.Normal('tmid', mu=tpars['tm'], tau=1./(tpars['tm_err']**2.)),
-                        pm.Uniform('inc',  lower=tpars['inc_lim'], upper=90),
-                        pm.Uniform('FpFs1',  lower=0, upper=0.01),
-                        # pm.Uniform('Tmide',  lower=min(time), upper=max(time)),
-                        pm.Normal('Tmide',  mu=tpars['tmide'], tau=1./(tpars['tmide_err']**2)),
-                        # pm.Uniform('norm', lower=0.9,  upper=1.1 ),
-                        pm.Uniform('c1', lower=0, upper=0.01),  # upper=0.003),
-                        pm.Uniform('c2', lower=0, upper=0.01),  # upper=0.003),
-                        pm.Uniform('c3', lower=0, upper=0.01),  # upper=0.003),
-                        pm.Uniform('c4', lower=0, upper=0.01),  # upper=0.003),
-                        pm.Normal('a1', mu=1, tau=1./(np.nanstd(flux)**2.)),
-                        pm.Uniform('a2', lower=0, upper=100)
-                        # pm.Uniform('w1',   lower=0, upper=1), # weights for instrument model
-                        # pm.Uniform('w2',   lower=0, upper=1)
-                        ]
-
-                    pm.Normal('likelihood',
-                              mu=phasecurve2min(*priors),
-                              tau=(1./fluxerr)**2,
-                              observed=flux
-                             )
-
-                    trace = pm.sample(chainlen,  # 12500
-                                      pm.Metropolis(),
-                                      cores=8,  # multi-processing
-                                      chains=4,
-                                      tune=0,  # 500,
-                                      progress_bar=True
-                                     )
-
-                    # logp = model.logp
-                    # values = np.array([logp(point) for point in trace.points()])
-
-                return trace
-
-            # analyze different extraction techniques
-            print("Optimal aperture.")
-            print("Sparse sampling of the data.")
-            print("No ramp.")
-            trace_aper = fit_data(ta[::100],aper[::100],aper_err[::100], [wxa[::100],wya[::100]], tpars)
-
-            print("Analyzing chains.")
-            tpars['tm'] = np.median(trace_aper['tmid'])
-            # tpars['a0'] = np.median(trace_aper['norm'])
-            tpars['rp'] = np.median(trace_aper['rprs'])
-            tpars['inc']= np.median(trace_aper['inc'])
-            tpars['FpFs1'] = np.median(trace_aper['FpFs1'])
-            tpars['Tmide'] = np.median(trace_aper['Tmide'])
-            tpars['c1'] = np.median(trace_aper['c1'])
-            tpars['c2'] = np.median(trace_aper['c2'])
-            tpars['c3'] = np.median(trace_aper['c3'])
-            tpars['c4'] = np.median(trace_aper['c4'])
-
-            print("Constructing best-fit model.")
-            lcmodel = phasecurvemodel(ta[::100], tpars)
-
-            detrended = aper[::100]/lcmodel
-            gw, nearest = gaussian_weights(np.array([wxa[::100],wya[::100]]).T)
-            wf = weightedflux(detrended, gw, nearest)
-
-            chi2 = np.nansum(aper[::100]/wf/lcmodel)
-
-            print("Ramp.")
-            trace_aper_ramp = fit_data_ramp(ta[::100],aper[::100],aper_err[::100], [wxa[::100],wya[::100]], tpars)
-
-            print("Analyzing chains.")
-            tpars['tm'] = np.median(trace_aper_ramp['tmid'])
-            # tpars['a0'] = np.median(trace_aper['norm'])
-            tpars['rp'] = np.median(trace_aper_ramp['rprs'])
-            tpars['inc']= np.median(trace_aper_ramp['inc'])
-            tpars['FpFs1'] = np.median(trace_aper_ramp['FpFs1'])
-            tpars['Tmide'] = np.median(trace_aper_ramp['Tmide'])
-            tpars['c1'] = np.median(trace_aper_ramp['c1'])
-            tpars['c2'] = np.median(trace_aper_ramp['c2'])
-            tpars['c3'] = np.median(trace_aper_ramp['c3'])
-            tpars['c4'] = np.median(trace_aper_ramp['c4'])
-            tpars['a1'] = np.median(trace_aper_ramp['a1'])
-            tpars['a2'] = np.median(trace_aper_ramp['a2'])
-
-            print("Constructing best-fit model.")
-            lcmodel_ramp = phasecurvemodel(ta[::100], tpars)*rampmodel(ta[::100], tpars)
-
-            detrended = aper[::100]/lcmodel_ramp
-            gw, nearest = gaussian_weights(np.array([wxa[::100],wya[::100]]).T)
-            wf_ramp = weightedflux(detrended, gw, nearest)
-
-            chi2_ramp = np.nansum(aper[::100]/wf_ramp/lcmodel_ramp)
-
-            print("Full sampling of the winner.")
-            print(chi2, chi2_ramp)
-
-            if chi2 < chi2_ramp:
-                print("No ramp needed.")
-                trace_aper = fit_data(ta,aper,aper_err, [wxa,wya], tpars)
-            else:
-                print("Ramp needed.")
-                trace_aper = fit_data_ramp(ta,aper,aper_err, [wxa,wya], tpars)
-
-            print("Analyzing chains.")
-            tpars['tm'] = np.median(trace_aper['tmid'])
-            # tpars['a0'] = np.median(trace_aper['norm'])
-            tpars['rp'] = np.median(trace_aper['rprs'])
-            tpars['inc']= np.median(trace_aper['inc'])
-            tpars['FpFs1'] = np.median(trace_aper['FpFs1'])
-            tpars['Tmide'] = np.median(trace_aper['Tmide'])
-            tpars['c1'] = np.median(trace_aper['c1'])
-            tpars['c2'] = np.median(trace_aper['c2'])
-            tpars['c3'] = np.median(trace_aper['c3'])
-            tpars['c4'] = np.median(trace_aper['c4'])
-
-            if chi2 < chi2_ramp:
-                print("Constructing best-fit model.")
-                lcmodel = phasecurvemodel(ta, tpars)
-            else:
-                tpars['a1'] = np.median(trace_aper['a1'])
-                tpars['a2'] = np.median(trace_aper['a2'])
-                print("Constructing best-fit model.")
-                lcmodel = phasecurvemodel(ta, tpars)*rampmodel(ta, tpars)
-
-            detrended = aper/lcmodel
-            gw, nearest = gaussian_weights(np.array([wxa,wya]).T)
-            wf = weightedflux(detrended, gw, nearest)
-
-            print("Writing state vectors.")
-            out['data'][p][ec]['aper_time'] = ta
+            out['data'][p].append({})
+            out['data'][p][ec]['aper_time'] = subt
             out['data'][p][ec]['aper_flux'] = aper
             out['data'][p][ec]['aper_err'] = aper_err
             out['data'][p][ec]['aper_xcent'] = wxa
             out['data'][p][ec]['aper_ycent'] = wya
-            out['data'][p][ec]['aper_trace'] = pm.trace_to_dataframe(trace_aper)
-            out['data'][p][ec]['aper_wf'] = wf
-            out['data'][p][ec]['aper_model'] = lcmodel
+            out['data'][p][ec]['aper_npp'] = npp
+            try:
+                # nested sampling only
+                out['data'][p][ec]['aper_weights'] = myfit.weights
+                out['data'][p][ec]['aper_results'] = myfit.results
+                out['data'][p][ec]['aper_quantiles'] = myfit.quantiles
+            except AttributeError:
+                pass
+            out['data'][p][ec]['aper_wf'] = myfit.wf
+            out['data'][p][ec]['aper_model'] = myfit.model
+            out['data'][p][ec]['aper_transit'] = myfit.transit
+            out['data'][p][ec]['aper_residuals'] = myfit.residuals
+            out['data'][p][ec]['aper_detrended'] = myfit.detrended
+            out['data'][p][ec]['aper_filter'] = fltr
             out['data'][p][ec]['aper_pars'] = copy.deepcopy(tpars)
-            out['data'][p][ec]['noise_pixel'] = npp
-            if chi2 < chi2_ramp:
-                out['data'][p][ec]['noise_pixel'] = np.ones(len(ta))
-            else:
-                out['data'][p][ec]['noise_pixel'] = rampmodel(ta, tpars)
+            out['data'][p][ec]['aper_errs'] = copy.deepcopy(terrs)
 
+            # state vectors for classifer
+            z, _phase = trncore.time2z(subt, tpars['inc'], tpars['tmid'], tpars['ars'], tpars['per'], tpars['ecc'])
+            out['data'][p][ec]['postsep'] = z
+            out['data'][p][ec]['allwhite'] = myfit.detrended
+            out['data'][p][ec]['postlc'] = myfit.transit
             ec += 1
             out['STATUS'].append(True)
             wl = True
 
+            # plot_phasecurve(out['data'][p][ec-1])
+            # plt.show()
+            # trncore.plot_pixelmap(out['data'][p][ec-1])
+            # plt.show()
+            # trncore.plot_posterior(out['data'][p][ec-1], fltr)
+            # plt.show()
             pass
         pass
     return wl
-
-# '''
-# (Pdb) z, phase = datcore.time2z( time, priors[p]['inc'], priors[p]['t0'], smaors, priors[p]['period'], priors[p]['ecc'] )
-# (Pdb) plt.plot( phase[pmask][photmask], aper/wf, 'ko'); plt.show()
-
-# f,ax = plt.subplots(3)
-# ax[0].plot(subt, aper,'ko')
-# ax[0].set_ylabel('Counts [ADU]')
-# ax[1].plot(subt, wx,'ro')
-# ax[1].set_ylabel('X Centroid [px]')
-# ax[2].plot(subt, wy,'bo')
-# ax[2].set_xlabel('Time [JD]')
-# ax[2].set_ylabel('Y Centroid [px]')
-# plt.show()
-# f,ax = plt.subplots(2,2)
-# ax[0,0].plot(wx-np.median(wx), aper/np.median(aper), 'go', alpha=0.5)
-# ax[0,0].set_xlabel('X Centroid [px]')
-# ax[0,0].set_ylabel('Relative Flux')
-# ax[0,0].set_title('Aperture Photometry')
-# ax[0,1].plot(wx-np.median(wx), gpsfm/np.median(gpsfm), 'bo', alpha=0.5)
-# ax[0,1].set_xlabel('X Centroid [px]')
-# ax[0,1].set_ylabel('Relative Flux')
-# ax[0,1].set_title('PSF Photometry')
-# ax[1,0].plot(wy-np.median(wy), aper/np.median(aper), 'go', alpha=0.5)
-# ax[1,0].set_xlabel('Y Centroid [px]')
-# ax[1,0].set_ylabel('Relative Flux')
-# ax[1,1].plot(wy-np.median(wy), gpsfm/np.median(gpsfm), 'bo', alpha=0.5)
-# ax[1,1].set_xlabel('Y Centroid [px]')
-# ax[1,1].set_ylabel('Relative Flux')
-# plt.show()
-# '''

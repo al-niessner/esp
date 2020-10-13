@@ -25,6 +25,8 @@ debug = False
 # FILTERS
 fltrs = (trgedit.activefilters.__doc__).split('\n')
 fltrs = [t.strip() for t in fltrs if len(t.replace(' ', '')) > 0]
+fltrs = [f for f in fltrs if 'JWST' not in f]
+fltrs = [f for f in fltrs if 'HST' not in f]
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 # ---------------- ---------------------------------------------------
@@ -33,7 +35,7 @@ class pcnormalization(dawgie.Algorithm):
     G. ROUDIER: Light curve normalization by Out Of Transit data
     '''
     def __init__(self):
-        self._version_ = dawgie.VERSION(1,1,1)
+        self._version_ = dawgie.VERSION(1,1,2)
         self._type = 'phasecurve'
         self.__cal = datalg.calibration()
         self.__tme = datalg.timing()
@@ -79,8 +81,7 @@ class pcnormalization(dawgie.Algorithm):
 
     def _norm(self, cal, tme, fin, index):
         if 'Spitzer' in fltrs[index]:
-            normed = phccore.norm_spitzer(cal, tme, fin, fltrs[index], self.__out[index], self._type,
-                                          verbose=verbose, debug=debug)
+            normed = phccore.norm_spitzer(cal, tme, fin, fltrs[index], self.__out[index], self._type)
         else:
             return True
         return normed
@@ -95,7 +96,7 @@ class pcwhitelight(dawgie.Algorithm):
     G. ROUDIER: See inheritance and CI5 thread with A NIESSNER for __init__() method and class attributes https://github-fn.jpl.nasa.gov/EXCALIBUR/esp/pull/86
     '''
     def __init__(self, nrm=pcnormalization()):
-        self._version_ = dawgie.VERSION(1,1,0)
+        self._version_ = dawgie.VERSION(1,1,1)
         self._type = 'phasecurve'
         self._nrm = nrm
         self.__fin = sysalg.finalize()
@@ -136,11 +137,8 @@ class pcwhitelight(dawgie.Algorithm):
         return
 
     def _whitelight(self, nrm, fin, out, index):
-        # if ('Spitzer' in fltrs[index]):
-        # To run for only 4.5 um
-        if 'Spitzer-IRAC-IR-4.5-SUB' in fltrs[index]:
-            wl = phccore.phasecurve_spitzer(nrm, fin, out, self._type, fltrs[index],
-                                            chainlen=int(2e4), verbose=False, debug=debug)
+        if 'Spitzer' in fltrs[index]:
+            wl = phccore.phasecurve_spitzer(nrm, fin, out, self._type, fltrs[index], mode='ns')
         else:
             return True
         return wl

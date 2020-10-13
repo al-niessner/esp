@@ -9,12 +9,8 @@ import dawgie.context
 import excalibur
 import excalibur.system.core as syscore
 
-import numpy as np
-import numpy.polynomial.polynomial as poly
 import lmfit as lm
 import matplotlib.pyplot as plt
-import astropy.io.fits as pyfits
-# from astropy.wcs import WCS
 import time as raissatime
 from ldtk import LDPSetCreator, BoxcarFilter
 import datetime
@@ -22,15 +18,18 @@ import datetime
 import scipy.interpolate as itp
 import scipy.signal
 import scipy.optimize as opt
-# from scipy.misc import imresize
-# from scipy.optimize import least_squares
 from scipy.ndimage.measurements import label
 from scipy.ndimage.morphology import binary_dilation, binary_closing, binary_erosion, binary_fill_holes
-# from PIL import Image as pilimage
-
 from photutils import aperture_photometry, CircularAperture
-# Use photutils v 0.7.2 There is an import issue with the latest versions
-# To be fixed
+import pyvo as vo
+
+import numpy as np
+import numpy.polynomial.polynomial as poly
+import astropy.io.fits as pyfits
+import astropy.units
+from astropy.wcs import WCS
+from astropy.coordinates import SkyCoord
+from astropy.time import Time
 
 # ------------- ------------------------------------------------------
 # -- SV VALIDITY -- --------------------------------------------------
@@ -77,7 +76,7 @@ def collect(name, scrape, out):
 # ------------------ -------------------------------------------------
 # -- TIMING -- -------------------------------------------------------
 def timingversion():
-    return dawgie.VERSION(1,1,4)
+    return dawgie.VERSION(1,1,5)
 
 def timing(force, ext, clc, out, verbose=False):
     '''
@@ -96,12 +95,12 @@ def timing(force, ext, clc, out, verbose=False):
                 header0 = hdulist[0].header
                 ftime = []
                 exptime = []
-                for fits in hdulist:
-                    if "primary" in fits.name.lower():
+                for hdu in hdulist:
+                    if "primary" in hdu.name.lower():
                         # keywords for NIRISS
-                        start = fits.header.get("TIME-BJD")
-                        ngroup = fits.header.get("ngroups",1)
-                        dtgroup = fits.header.get("tgroup") / (24*60*60.)
+                        start = hdu.header.get("TIME-BJD")
+                        ngroup = hdu.header.get("ngroups",1)
+                        dtgroup = hdu.header.get("tgroup") / (24*60*60.)
                         # nframe = fits.header.get("nframes",1)
                         # dtframe = fits.header.get("tframes")
                         # https://jwst-docs.stsci.edu/near-infrared-imager-and-slitless-spectrograph/niriss-instrumentation/niriss-detector-overview/niriss-detector-readout-patterns
@@ -121,11 +120,11 @@ def timing(force, ext, clc, out, verbose=False):
                 header0 = hdulist[0].header
                 ftime = []
                 exptime = []
-                for fits in hdulist:
-                    start = fits.header.get('MJD_OBS')
-                    if fits.data.ndim == 3:  # data cube
-                        idur = fits.header.get('ATIMEEND') - fits.header.get('AINTBEG')
-                        nimgs = fits.data.shape[0]
+                for hdu in hdulist:
+                    start = hdu.header.get('MJD_OBS')
+                    if hdu.data.ndim == 3:  # data cube
+                        idur = hdu.header.get('ATIMEEND') - hdu.header.get('AINTBEG')
+                        nimgs = hdu.data.shape[0]
                         dt = idur/nimgs/(24*60*60)
                         for i in range(nimgs):
                             ftime.append(start+dt*i)
@@ -134,7 +133,7 @@ def timing(force, ext, clc, out, verbose=False):
                         pass
                     else:
                         ftime.append(start)
-                        exptime.append(fits.header['EXPTIME'])
+                        exptime.append(hdu.header['EXPTIME'])
                     pass
                 data['LOC'].append(loc)
                 data['TIME'].extend(ftime)
@@ -3405,6 +3404,52 @@ def stiscal_unified(fin, clc, tim, tid, flttype, out,
     if calibrated: out['STATUS'].append(True)
     return calibrated
 
+
+def find_target(target, hdu, verbose=False):
+    # query simbad to get proper motions
+    service = vo.dal.TAPService("http://simbad.u-strasbg.fr/simbad/sim-tap")
+    # http://simbad.u-strasbg.fr/simbad/tap/tapsearch.html
+    query = '''
+    SELECT basic.OID, ra, dec, main_id, pmra, pmdec
+    FROM basic JOIN ident ON oidref = oid
+    WHERE id = '{}';
+    '''.format(target)
+
+    result = service.search(query)
+    # Future check that simbad returned a value
+
+    # set up astropy object
+    coord = SkyCoord(
+        ra=result['ra'][0]*astropy.units.deg,
+        dec=result['dec'][0]*astropy.units.deg,
+        distance=1*astropy.units.pc,
+        pm_ra_cosdec=result['pmra'][0]*astropy.units.mas/astropy.units.yr,
+        pm_dec=result['pmdec'][0]*astropy.units.mas/astropy.units.yr,
+        frame="icrs",
+        obstime=Time("2000-1-1T00:00:00")
+    )
+
+    # apply proper motion
+    t = Time(hdu.header['DATE_OBS'], format='isot', scale='utc')
+    coordpm = coord.apply_space_motion(new_obstime=t)
+
+    # wcs coordinate translation
+    try:
+        wcs = WCS(hdu.header)
+    except ValueError:
+        # https://github.com/astropy/astropy/issues/10527
+        hdu.header['NAXIS'] = 2
+        wcs = WCS(hdu.header)
+
+    pixcoord = wcs.wcs_world2pix([[coordpm.ra.value, coordpm.dec.value]],0)
+
+    if verbose:
+        print("Simbad:",result)
+        print("\nObs Date:",hdu.header['DATE_OBS'])
+        print("NEW:", coordpm.ra, coordpm.dec)
+        print("Pixels:",pixcoord[0])
+
+    return pixcoord[0]
 
 # ---------------------- ---------------------------------------------
 # -------------------------- -----------------------------------------

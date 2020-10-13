@@ -21,7 +21,9 @@ import excalibur.target.edit as trgedit
 # FILTERS
 fltrs = (trgedit.activefilters.__doc__).split('\n')
 fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
-fltrs = [f for f in fltrs if 'Spitzer' not in f]
+# fltrs = [f for f in fltrs if 'Spitzer' not in f]
+# fltrs = [f for f in fltrs if 'JWST' not in f]
+# fltrs = [f for f in fltrs if 'HST' not in f]
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class normalization(dawgie.Algorithm):
@@ -180,8 +182,7 @@ class whitelight(dawgie.Algorithm):
             wl = trncore.lightcurve_spitzer(nrm, fin, out, self._type, ext,
                                             self.__out[-1])
         elif 'JWST' in ext:
-            wl = trncore.lightcurve_jwst_niriss(nrm, fin, out, self._type, ext,
-                                                self.__out[-1])
+            wl = trncore.lightcurve_jwst_niriss(nrm, fin, out, self._type, ext, self.__out[-1], method='ns')
         else:
             wl = trncore.whitelight(nrm, fin, out, ext, self._type,
                                     self.__out[-1], chainlen=int(1e4), verbose=False,
@@ -255,7 +256,7 @@ class spectrum(dawgie.Algorithm):
         if "Spitzer" in ext:
             s = trncore.spitzer_spectrum(wht, out, ext)
         elif "JWST" in ext:
-            s = trncore.jwst_niriss_spectrum(fin, nrm, wht, out, ext, self._type)
+            s = trncore.jwst_niriss_spectrum(nrm, fin, out, self._type, wht, method='lm')
         else:
             s = trncore.spectrum(fin, nrm, wht, out, ext, self._type, chainlen=int(1e4),
                                  verbose=False)

@@ -4,6 +4,9 @@ import io
 import dawgie
 
 import excalibur
+from excalibur.transit.core import plot_posterior, plot_pixelmap
+from excalibur.phasecurve.core import plot_phasecurve
+
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -66,32 +69,59 @@ class WhiteLightSV(dawgie.StateVector):
     def view(self, visitor:dawgie.Visitor)->None:
         if self['STATUS'][-1]:
             for p in self['data'].keys():
-                visits = self['data'][p]['visits']
-                phase = self['data'][p]['phase']
-                allwhite = self['data'][p]['allwhite']
-                postim = self['data'][p]['postim']
-                postphase = self['data'][p]['postphase']
-                postlc = self['data'][p]['postlc']
-                postflatphase = self['data'][p]['postflatphase']
-                myfig = plt.figure(figsize=(10, 6))
-                plt.title(p)
-                for index, v in enumerate(visits):
-                    plt.plot(phase[index], allwhite[index], 'k+')
-                    plt.plot(postphase[index], allwhite[index]/postim[index],
-                             'o', label=str(v))
-                    pass
-                if len(visits) > 14: ncol = 2
-                else: ncol = 1
-                plt.plot(postflatphase, postlc, '^', label='M')
-                plt.xlabel('Orbital Phase')
-                plt.ylabel('Normalized Post White Light Curve')
-                plt.legend(bbox_to_anchor=(1 + 0.1*(ncol - 0.5), 0.5), loc=5, ncol=ncol,
-                           mode='expand', numpoints=1, borderaxespad=0., frameon=False)
-                plt.tight_layout(rect=[0,0,(1 - 0.1*ncol),1])
-                buf = io.BytesIO()
-                myfig.savefig(buf, format='png')
-                visitor.add_image('...', ' ', buf.getvalue())
-                plt.close(myfig)
+
+                if 'HST' in self.__name:
+
+                    visits = self['data'][p]['visits']
+                    phase = self['data'][p]['phase']
+                    allwhite = self['data'][p]['allwhite']
+                    postim = self['data'][p]['postim']
+                    postphase = self['data'][p]['postphase']
+                    postlc = self['data'][p]['postlc']
+                    postflatphase = self['data'][p]['postflatphase']
+                    myfig = plt.figure(figsize=(10, 6))
+                    plt.title(p)
+                    for index, v in enumerate(visits):
+                        plt.plot(phase[index], allwhite[index], 'k+')
+                        plt.plot(postphase[index], allwhite[index]/postim[index],
+                                 'o', label=str(v))
+                        pass
+                    if len(visits) > 14: ncol = 2
+                    else: ncol = 1
+                    plt.plot(postflatphase, postlc, '^', label='M')
+                    plt.xlabel('Orbital Phase')
+                    plt.ylabel('Normalized Post White Light Curve')
+                    plt.legend(bbox_to_anchor=(1 + 0.1*(ncol - 0.5), 0.5), loc=5, ncol=ncol,
+                               mode='expand', numpoints=1, borderaxespad=0., frameon=False)
+                    plt.tight_layout(rect=[0,0,(1 - 0.1*ncol),1])
+                    buf = io.BytesIO()
+                    myfig.savefig(buf, format='png')
+                    visitor.add_image('...', ' ', buf.getvalue())
+                    plt.close(myfig)
+                elif 'Spitzer' in self.__name:
+                    # for each event
+                    for i in range(len(self['data'][p])):
+                        # light curve fit
+                        fig = plot_phasecurve(self['data'][p][i])
+                        buf = io.BytesIO()
+                        fig.savefig(buf, format='png')
+                        visitor.add_image('...', ' ', buf.getvalue())
+                        plt.close(fig)
+
+                        # posterior
+                        fig = plot_pixelmap(self['data'][p][i], self.__name)
+                        buf = io.BytesIO()
+                        fig.savefig(buf, format='png')
+                        visitor.add_image('...', ' ', buf.getvalue())
+                        plt.close(fig)
+
+                        # posterior
+                        fig = plot_posterior(self['data'][p][i], self.__name)
+                        buf = io.BytesIO()
+                        fig.savefig(buf, format='png')
+                        visitor.add_image('...', ' ', buf.getvalue())
+                        plt.close(fig)
+
                 pass
             pass
         pass
