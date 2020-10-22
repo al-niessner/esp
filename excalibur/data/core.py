@@ -202,7 +202,8 @@ def timing(force, ext, clc, out, verbose=False):
         pass
 
     if tmeto.size > 1:
-        for p in priors['planets']:
+        timingplist = [p for p in priors['planets'] if p not in force['pignore']]
+        for p in timingplist:
             out['data'][p] = {}
 
             if 'Spitzer' in ext or 'JWST' in ext:

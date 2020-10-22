@@ -488,9 +488,10 @@ G. ROUDIER: Cerberus retrievial
                 pass
             mctrace = {}
             for key in mcpost['mean'].keys():
-                tracekeys = key.split('__')
+                tracekeys = key.split('[')
                 if tracekeys.__len__() > 1:
-                    mctrace[key] = trace[tracekeys[0]][:, int(tracekeys[1])]
+                    indtrace = int(tracekeys[1].split(']')[0])
+                    mctrace[key] = trace[tracekeys[0]][:, indtrace]
                     pass
                 else: mctrace[key] = trace[tracekeys[0]]
                 pass
@@ -655,8 +656,8 @@ G. ROUDIER: Builds optical depth matrix
         for elem in mixratio:
             mmr = 10.**(mixratio[elem]-6.)
             # Fake use of xmollist due to changes in xslib v112
-            # if not xmollist:
-            if elem not in xmollist:
+            # if elem not in xmollist:
+            if not xmollist:
                 # HITEMP/HITRAN ROTHMAN ET AL. 2010 --------------------------------------
                 sigma, lsig = absorb(xsecs[elem], qtgrid[elem], temp, p, mmr,
                                      lbroadening, lshifting, wgrid, debug=False)

@@ -112,7 +112,8 @@ class atmos(dawgie.Algorithm):
 
     def _atmos(self, fin, xsl, spc, index):
         am = crbcore.atmos(fin, xsl, spc, self.__out[index],
-                           mclen=int(15e3), sphshell=True, verbose=False)
+                           mclen=int(15e3),
+                           sphshell=True, verbose=False)
         return am
 
     @staticmethod
