@@ -102,7 +102,7 @@ def normversion():
     1.1.7: new sigma clip for spitzer
     1.1.8: added jwst filter
     '''
-    return dawgie.VERSION(1,1,8)
+    return dawgie.VERSION(1,1,9)
 
 def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
     '''
