@@ -1779,9 +1779,9 @@ def spectrum(fin, nrm, wht, out, ext, selftype,
             # propphn = np.nanmedian(dnoise)*(1e0 - whiterprs**2)
             # *np.sqrt(1e0/nit + 1e0/noot)
             # dirtypn = np.sqrt(propphn + whiterprs**2) - whiterprs
-            prwidth = 2e0*Hs
+            # prwidth = 2e0*Hs
             # PRIOR CENTER ---------------------------------------------------------------
-            prcenter = whiterprs
+            # prcenter = whiterprs
             # UPDATE GLOBALS -------------------------------------------------------------
             shapevis = 2
             if shapevis < len(visits): shapevis = len(visits)
@@ -1795,7 +1795,13 @@ def spectrum(fin, nrm, wht, out, ext, selftype,
                     upstart = whiterprs + 5e0*Hs
                     rprs = pm.Uniform('rprs', lower=lowstart, upper=upstart)
                     pass
-                else: rprs = pm.Normal('rprs', mu=prcenter, tau=1e0/(prwidth**2))
+                else:
+                    # rprs = pm.Normal('rprs', mu=prcenter, tau=1e0/(prwidth**2))
+                    lowstart = whiterprs - 5e0*Hs
+                    if lowstart < 0: lowstart = 0
+                    upstart = whiterprs + 5e0*Hs
+                    rprs = pm.Uniform('rprs', lower=lowstart, upper=upstart)
+                    pass
                 allvslope = pm.TruncatedNormal('vslope', mu=0e0, tau=tauvs,
                                                lower=-3e-2/trdura,
                                                upper=3e-2/trdura, shape=shapevis)
