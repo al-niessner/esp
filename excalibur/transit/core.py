@@ -16,6 +16,7 @@ import logging
 import lmfit as lm
 
 import dynesty
+import dynesty.plotting
 from dynesty.utils import resample_equal
 
 import pymc3 as pm
@@ -28,8 +29,6 @@ import matplotlib.pyplot as plt
 import scipy.constants as cst
 from scipy import spatial
 from scipy.signal import savgol_filter
-# from scipy.ndimage import median_filter
-# from scipy.ndimage import gaussian_filter as norm_kde
 from scipy.stats import gaussian_kde
 from scipy.optimize import least_squares
 
@@ -2895,10 +2894,10 @@ class lc_fitter:
             return (boundarray[:,0] + bounddiff*upars)
 
         dsampler = dynesty.NestedSampler(
-            loglike, prior_transform, len(freekeys),
+            loglike, prior_transform, len(freekeys), dlogz=0.05,
             sample='unif', bound='multi', nlive=1000
         )
-        dsampler.run_nested(maxiter=2e6, print_progress=False, maxcall=2e6)
+        dsampler.run_nested(maxiter=2e6, print_progress=False, dlogz=0.05, maxcall=2e6)
         self.results = dsampler.results
 
         # alloc data for best fit + error
