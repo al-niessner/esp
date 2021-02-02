@@ -7,6 +7,9 @@ import excalibur.transit as trn
 import excalibur.transit.core as trncore
 import excalibur.transit.algorithms as trnalg
 
+import excalibur.eclipse as ecl
+import excalibur.eclipse.algorithms as eclalg
+
 import excalibur.target.edit as trgedit
 
 import excalibur.system as sys
@@ -31,8 +34,11 @@ G. ROUDIER: Data collection by filters
         self._version_ = clscore.predversion()
         self.__whitelight = trnalg.whitelight()
         self.__spectrum = trnalg.spectrum()
+        self.__eclwhitelight = eclalg.whitelight()
+        self.__eclspectrum = eclalg.spectrum()
         self.__finalize = sysalg.finalize()
-        self.__out = [clsstates.PredictSV(ext) for ext in fltrs]
+        self.__out = [clsstates.PredictSV('transit-'+ext) for ext in fltrs]
+        self.__out.extend([clsstates.PredictSV('eclipse-'+ext) for ext in fltrs])
         return
 
     def name(self):
@@ -41,6 +47,8 @@ G. ROUDIER: Data collection by filters
     def previous(self):
         return [dawgie.ALG_REF(trn.task, self.__whitelight),
                 dawgie.ALG_REF(trn.task, self.__spectrum),
+                dawgie.ALG_REF(ecl.task, self.__eclwhitelight),
+                dawgie.ALG_REF(ecl.task, self.__eclspectrum),
                 dawgie.ALG_REF(sys.task, self.__finalize)]
 
     def state_vectors(self):
@@ -53,8 +61,10 @@ G. ROUDIER: Data collection by filters
             update = False
             vwl, swl = trncore.checksv(self.__whitelight.sv_as_dict()[ext])
             vsp, ssp = trncore.checksv(self.__spectrum.sv_as_dict()[ext])
+            e_vwl, e_swl = trncore.checksv(self.__eclwhitelight.sv_as_dict()[ext])
+            e_vsp, e_ssp = trncore.checksv(self.__eclspectrum.sv_as_dict()[ext])
             if vwl and vsp and vfin:
-                log.warning('--< CLASSIFICATION: %s >--', ext)
+                log.warning('--< TRANSIT CLASSIFICATION: %s >--', ext)
                 update = self._predict(self.__whitelight.sv_as_dict()[ext],
                                        self.__spectrum.sv_as_dict()[ext],
                                        self.__finalize.sv_as_dict()['parameters'],
@@ -62,6 +72,17 @@ G. ROUDIER: Data collection by filters
                 pass
             else:
                 errstr = [m for m in [swl, ssp, sfin] if m is not None]
+                self._failure(errstr[0])
+                pass
+            if e_vwl and e_vsp and vfin:
+                log.warning('--< ECLIPSE CLASSIFICATION: %s >--', ext)
+                update = self._predict(self.__eclwhitelight.sv_as_dict()[ext],
+                                       self.__eclspectrum.sv_as_dict()[ext],
+                                       self.__finalize.sv_as_dict()['parameters'],
+                                       len(fltrs)+fltrs.index(ext))
+                pass
+            else:
+                errstr = [m for m in [e_swl, e_ssp, sfin] if m is not None]
                 self._failure(errstr[0])
                 pass
             if update: svupdate.append(self.__out[fltrs.index(ext)])
