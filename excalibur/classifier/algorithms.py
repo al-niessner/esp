@@ -22,7 +22,8 @@ import excalibur.classifier.states as clsstates
 # FILTERS
 fltrs = (trgedit.activefilters.__doc__).split('\n')
 fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
-fltrs = [f for f in fltrs if 'Spitzer' not in f]
+exc_fltrs = ['Spitzer','JWST']
+fltrs = [f for f in fltrs if not any(ins in f for ins in exc_fltrs)]
 # ---------------------- ---------------------------------------------
 
 # -- ALGORITHMS -- ---------------------------------------------------
