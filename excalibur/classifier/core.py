@@ -6,7 +6,7 @@ import excalibur
 import excalibur.system.core as syscore
 
 def predversion():
-    return dawgie.VERSION(1,0,0)
+    return dawgie.VERSION(2,0,0)
 
 def predict(transit_whitelight, transit_spectrum, priors, out):
     '''

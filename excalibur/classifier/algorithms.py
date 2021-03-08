@@ -70,6 +70,7 @@ G. ROUDIER: Data collection by filters
                                        self.__spectrum.sv_as_dict()[ext],
                                        self.__finalize.sv_as_dict()['parameters'],
                                        fltrs.index(ext))
+                if update: svupdate.append(self.__out[fltrs.index(ext)])
                 pass
             else:
                 errstr = [m for m in [swl, ssp, sfin] if m is not None]
@@ -81,12 +82,12 @@ G. ROUDIER: Data collection by filters
                                        self.__eclspectrum.sv_as_dict()[ext],
                                        self.__finalize.sv_as_dict()['parameters'],
                                        len(fltrs)+fltrs.index(ext))
+                if update: svupdate.append(self.__out[len(fltrs)+fltrs.index(ext)])
                 pass
             else:
                 errstr = [m for m in [e_swl, e_ssp, sfin] if m is not None]
                 self._failure(errstr[0])
                 pass
-            if update: svupdate.append(self.__out[fltrs.index(ext)])
             pass
         self.__out = svupdate
         if self.__out: ds.update()
