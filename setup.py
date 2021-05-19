@@ -8,10 +8,11 @@ deps = ['astropy==3.0.4',
         'ldtk==1.0',
         'lmfit==0.9.11',
         'matplotlib==3.3.0',
-        'pymc3==3.8',
+        'pymc3==3.10.0',
         'scipy==1.1.0',
         'joblib==0.12.5',
-        'scikit-learn==0.20.3'
+        'scikit-learn==0.23.2',
+        'arviz==0.11.0'
         ]
 version = 'esp-git-rev'
 with open (os.path.join (os.path.dirname (__file__), excalibur)) as f: t = f.read()

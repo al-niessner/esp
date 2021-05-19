@@ -19,16 +19,17 @@ RUN set -ex && \
     apt-get clean && apt-get autoremove && \
     ln -fs /usr/share/zoneinfo/America/Los_Angeles /etc/localtime && \
     dpkg-reconfigure --frontend noninteractive tzdata && \
-    /usr/bin/pip3 install astropy==3.2.3 \
+    /usr/bin/pip3 install arviz==0.11.0 \
+                          astropy==3.2.3 \
                           dawgie==1.2.9 \
                           ldtk==1.0 \
                           lmfit==0.9.11 \
                           matplotlib==3.3.0 \
                           numpy==1.19.1 \
-                          pymc3==3.8 \
+                          pymc3==3.10.0 \
                           scipy==1.1.0 \
                           joblib==1.0.0 \
-                          scikit-learn==0.20.3 \
+                          scikit-learn==0.23.2 \
                           pillow==7.0.0 \
                           photutils==0.7.2 \
                           dynesty==1.0.1 \
