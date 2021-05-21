@@ -87,7 +87,7 @@ def predict(transit_whitelight, transit_spectrum, priors, out):
             fin_pred = pred(sp_pred, cls_pred)
             pass
         out['data'][planet] = {}
-        out['data'][planet]['prediction'] = fin_pred[0]
+        out['data'][planet]['prediction'] = fin_pred
         out['data'][planet]['allwhite'] = all_data
         out['data'][planet]['postlc'] = model
         out['data'][planet]['postsep'] = z
