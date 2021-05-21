@@ -6,7 +6,7 @@ import excalibur
 import excalibur.system.core as syscore
 
 def predversion():
-    return dawgie.VERSION(2,0,0)
+    return dawgie.VERSION(2,0,1)
 
 def predict(transit_whitelight, transit_spectrum, priors, out):
     '''
@@ -79,10 +79,10 @@ def predict(transit_whitelight, transit_spectrum, priors, out):
             cls_pred = clstrain.predict(X_test)
 
             def pred(sp_p, c_p):
-                if c_p == 1 and sp_p == 1: val = 'Scientifically Plausible'
-                elif c_p == 1 and sp_p == -1: val = 'Caution'
-                elif c_p == 0: val = 'Scientifically Implausible'
-                return list(val)
+                if c_p == 1 and sp_p == 1: val = ['Scientifically Plausible']
+                elif c_p == 1 and sp_p == -1: val = ['Caution']
+                elif c_p == 0: val = ['Scientifically Implausible']
+                return val
 
             fin_pred = pred(sp_pred, cls_pred)
             pass
