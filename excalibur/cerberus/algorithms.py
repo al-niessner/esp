@@ -18,6 +18,8 @@ import excalibur.target.edit as trgedit
 # FILTERS
 fltrs = (trgedit.activefilters.__doc__).split('\n')
 fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
+# fltrs = [f for f in fltrs if 'STIS-WFC3' in f]
+fltrs.append('STIS-WFC3')
 fltrs = [f for f in fltrs if 'Spitzer' not in f]
 # ----------------------- --------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
@@ -98,7 +100,7 @@ class atmos(dawgie.Algorithm):
                 update = self._atmos(self.__fin.sv_as_dict()['parameters'],
                                      self.__xsl.sv_as_dict()[ext],
                                      self.__spc.sv_as_dict()[ext],
-                                     fltrs.index(ext))
+                                     fltrs.index(ext), ext)
                 pass
             else:
                 errstr = [m for m in [sfin, sxsl, sspc] if m is not None]
@@ -110,10 +112,10 @@ class atmos(dawgie.Algorithm):
         if self.__out.__len__() > 0: ds.update()
         return
 
-    def _atmos(self, fin, xsl, spc, index):
-        am = crbcore.atmos(fin, xsl, spc, self.__out[index],
+    def _atmos(self, fin, xsl, spc, index, ext):
+        am = crbcore.atmos(fin, xsl, spc, self.__out[index], ext,
                            mclen=int(15e3),
-                           sphshell=True, verbose=False)
+                           sphshell=True, verbose=False)  # singlemod='TEC' after mclen
         return am
 
     @staticmethod
