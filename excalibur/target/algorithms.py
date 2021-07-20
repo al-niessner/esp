@@ -173,11 +173,13 @@ class regress(dawgie.Regression):
         return 'variations_of'
 
     def run(self, ps:int, timeline:dawgie.Timeline):
-        last = trgmonitor.regress (self.__out['planet'],
-                                   self.__out['runid'],
-                                   timeline)
+        last, outlier = trgmonitor.regress (self.__out['planet'],
+                                            self.__out['runid'],
+                                            timeline)
         self.__out['last'].clear()
         self.__out['last'].update (last)
+        self.__out['outlier'].clear()
+        self.__out['outlier'].update (outlier)
         timeline.ds().update()
         return
 

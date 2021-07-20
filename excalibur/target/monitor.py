@@ -3,6 +3,7 @@ import email.message
 import logging; log = logging.getLogger(__name__)
 import numpy
 import smtplib
+import math
 
 care_about = ['t0']
 
@@ -17,6 +18,24 @@ def _diff (vl):
         except ValueError: pass
     else: d = 0
     return d
+
+def _outlier (vl):
+    # Finds whether first element of vl is within 5 sigma of other elems
+    if 1 < len (vl):
+        if math.isnan(vl[0]):
+            is_outlier = False
+        else:
+            vl_prev = numpy.array(vl[1:])
+            vl_prev = vl_prev[~numpy.isnan(vl_prev)]  # clear all nans
+            if len(vl_prev)<=1:
+                is_outlier = False
+            else:
+                mean = numpy.mean(vl_prev)
+                std = numpy.std(vl_prev)
+                if abs(vl[0]-mean)>5*std:
+                    is_outlier = True
+    else: is_outlier = False  # only 1 or 0 elems; no outlier can exist
+    return is_outlier
 
 def alert (asp:[(str,{str:{}})], known:[], table:[])->([],[],[]):
     changes,kwn,tab = [],[],[]
@@ -78,4 +97,5 @@ def regress (planet:{},rids:[],tl:[(int,{str:{}})])->({str:float},{str:[]},[]):
             pass
         pass
     last = dict([(pp, _diff (vl)) for pp,vl in planet.items()])
-    return last
+    outliers = dict([(pp, _outlier (vl)) for pp,vl in planet.items()])
+    return last,outliers

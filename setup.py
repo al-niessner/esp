@@ -12,8 +12,8 @@ deps = ['astropy==3.0.4',
         'scipy==1.1.0',
         'joblib==0.12.5',
         'scikit-learn==0.23.2',
-        'arviz==0.11.0'
-        ]
+        'arviz==0.11.0',
+         ]
 version = 'esp-git-rev'
 with open (os.path.join (os.path.dirname (__file__), excalibur)) as f: t = f.read()
 t = t.replace ('${UNDEFINED}', version)

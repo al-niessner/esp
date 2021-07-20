@@ -194,6 +194,7 @@ class MonitorSV(dawgie.StateVector):
         self['last'] = excalibur.ValuesDict()
         self['planet'] = excalibur.ValuesDict()
         self['runid'] = excalibur.ValuesList()
+        self['outlier'] = excalibur.ValuesList()
         return
 
     def name(self):
@@ -201,13 +202,13 @@ class MonitorSV(dawgie.StateVector):
 
     def view(self, visitor:dawgie.Visitor)->None:
         for k in sorted(self['last']):
+            outlier = self['outlier']
             ks = k.split ('_')
             p = ks[0]
             value = self['last'][k]
             visitor.add_primitive ('Planet ' + p + ' parameter ' +
                                    '_'.join (ks[1:]) + ' last change: ' +
-                                   str(value))
-
+                                   str(value)+'; Outlier: '+str(outlier))
             if not numpy.isnan (value):
                 values = []
                 for v in self['planet'][k]:
