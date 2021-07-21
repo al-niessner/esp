@@ -707,8 +707,9 @@ def wlversion():
     K. PEARSON: 1.2.5 nested sampling for spitzer
     K. PEARSON: 1.2.6 jwst support
     K. PEARSON: 1.2.7 C-optimized for spitzer
+    S. KANTAMNENI: 1.3.0 added data simulation
     '''
-    return dawgie.VERSION(1,2,7)
+    return dawgie.VERSION(1,3,0)
 
 def hstwhitelight(allnrm, fin, out, allext, selftype, chainlen=int(1e4), verbose=False):
     '''
