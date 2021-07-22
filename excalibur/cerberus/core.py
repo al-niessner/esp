@@ -434,22 +434,23 @@ G. ROUDIER: Cerberus retrievial
         twav = np.array(spc['data'][p]['WB'])
         tspecerr = abs(tspc**2 - (tspc + terr)**2)
         tspectrum = tspc**2
-        filters = np.array(spc['data'][p]['Fltrs'])
+        if 'STIS-WFC3' in ext:
+            filters = np.array(spc['data'][p]['Fltrs'])
 #         cond_wav = (twav < 0.56) | (twav > 1.02)
 #         twav = twav[cond_wav]
 #         tspectrum = tspectrum[cond_wav]
 #         tspecerr = tspecerr[cond_wav]
         # FILTERING FOR OUTLIERS
-        cond_specG750 = filters == 'HST-STIS-CCD-G750L-STARE'
-        twav_G750 = twav[cond_specG750]
-        tspec_G750 = tspectrum[cond_specG750]
-        tspecerr_G750 = tspecerr[cond_specG750]
-        cond_nan = np.isfinite(tspec_G750)
-        coefs_spec_G750 = poly.polyfit(twav_G750[cond_nan], tspec_G750[cond_nan], 1)
-        slp = twav_G750*coefs_spec_G750[1] + coefs_spec_G750[0]
-        mask = abs(slp - tspec_G750) >= 7 * np.nanmedian(tspecerr_G750)
-        tspec_G750[mask] = np.nan
-        tspectrum[cond_specG750] = tspec_G750
+            cond_specG750 = filters == 'HST-STIS-CCD-G750L-STARE'
+            twav_G750 = twav[cond_specG750]
+            tspec_G750 = tspectrum[cond_specG750]
+            tspecerr_G750 = tspecerr[cond_specG750]
+            cond_nan = np.isfinite(tspec_G750)
+            coefs_spec_G750 = poly.polyfit(twav_G750[cond_nan], tspec_G750[cond_nan], 1)
+            slp = twav_G750*coefs_spec_G750[1] + coefs_spec_G750[0]
+            mask = abs(slp - tspec_G750) >= 7 * np.nanmedian(tspecerr_G750)
+            tspec_G750[mask] = np.nan
+            tspectrum[cond_specG750] = tspec_G750
 
         cleanup = np.isfinite(tspectrum) & (tspecerr < 1e0)
         solidr = orbp[p]['rp']*ssc['Rjup']  # MKS
