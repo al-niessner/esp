@@ -1357,7 +1357,7 @@ G. ROUDIER: Wrapper around Cerberus forward model, spherical shell symmetry
     fmc = fmc + np.nanmean(ctxt.tspectrum[ctxt.cleanup])
     return fmc
 
-@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
+@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
                    tt.dvector],
            otypes=[tt.dvector])
 def offcerberus(*crbinputs):

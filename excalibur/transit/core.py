@@ -1630,8 +1630,9 @@ def spectrumversion():
     R. Estrela: 1.2.0 lowing down the resolution of G430L
     N. Huber-Feely: 1.2.1 Add saving of trace to SV
     K. PEARSON: 1.2.2 JWST NIRISS
+    R ESTRELA: 1.3.0 Merged Spectra Capability
     '''
-    return dawgie.VERSION(1,2,2)
+    return dawgie.VERSION(1,3,0)
 
 def spectrum(fin, nrm, wht, out, ext, selftype,
              chainlen=int(1e4), verbose=False, lcplot=False):
@@ -1654,12 +1655,12 @@ def spectrum(fin, nrm, wht, out, ext, selftype,
         nspec = nrm['data'][p]['nspec']
         photnoise = nrm['data'][p]['photnoise']
         if 'G750' in ext:
-            wave, _trash = binnagem(wave, 150)
-            wave = np.resize(wave,(1,150))
+            wave, _trash = binnagem(wave, 105)  # 150
+            wave = np.resize(wave,(1,105))
             pass
         if 'G430' in ext:
-            wave, _trash = binnagem(wave, 182)
-            wave = np.resize(wave,(1,182))
+            wave, _trash = binnagem(wave, 121)  # 182
+            wave = np.resize(wave,(1,121))
             pass
         time = nrm['data'][p]['time']
         visits = nrm['data'][p]['visits']
@@ -1709,6 +1710,7 @@ def spectrum(fin, nrm, wht, out, ext, selftype,
         hwavec = hwavec[1:-2]
         # EXCLUDE ALL NAN CHANNELS -------------------------------------------------------
         allnanc = []
+#         for wl, wh in zip(lwavec[0:6], hwavec[0:6]):
         for wl, wh in zip(lwavec, hwavec):
             select = [(w > wl) & (w < wh) for w in allwave]
             if 'STIS' in ext:
@@ -1796,9 +1798,9 @@ def spectrum(fin, nrm, wht, out, ext, selftype,
             # propphn = np.nanmedian(dnoise)*(1e0 - whiterprs**2)
             # *np.sqrt(1e0/nit + 1e0/noot)
             # dirtypn = np.sqrt(propphn + whiterprs**2) - whiterprs
-            # prwidth = 2e0*Hs
+            prwidth = 2e0*Hs
             # PRIOR CENTER ---------------------------------------------------------------
-            # prcenter = whiterprs
+            prcenter = whiterprs
             # UPDATE GLOBALS -------------------------------------------------------------
             shapevis = 2
             if shapevis < len(visits): shapevis = len(visits)
@@ -1813,12 +1815,12 @@ def spectrum(fin, nrm, wht, out, ext, selftype,
                     rprs = pm.Uniform('rprs', lower=lowstart, upper=upstart)
                     pass
                 else:
-                    # rprs = pm.Normal('rprs', mu=prcenter, tau=1e0/(prwidth**2))
-                    lowstart = whiterprs - 5e0*Hs
-                    if lowstart < 0: lowstart = 0
-                    upstart = whiterprs + 5e0*Hs
-                    rprs = pm.Uniform('rprs', lower=lowstart, upper=upstart)
-                    pass
+                    rprs = pm.Normal('rprs', mu=prcenter, tau=1e0/(prwidth**2))
+#                     lowstart = whiterprs - 5e0*Hs
+#                     if lowstart < 0: lowstart = 0
+#                     upstart = whiterprs + 5e0*Hs
+#                     rprs = pm.Uniform('rprs', lower=lowstart, upper=upstart)
+#                     pass
                 allvslope = pm.TruncatedNormal('vslope', mu=0e0, tau=tauvs,
                                                lower=-3e-2/trdura,
                                                upper=3e-2/trdura, shape=shapevis)
@@ -4033,3 +4035,37 @@ def composite_spectrum(SV, target, p='b'):
     ax.set_xscale('log')
     ax.legend(loc='best', shadow=False, frameon=False, fontsize='20', scatterpoints=1)
     return f
+
+def hstspectrum(out, fltrs):
+    '''MERGE SPECTRUM STIS AND WFC3 AND PLACE AT THE END OF THE SPECTRUM LIST'''
+    exospec = False
+#     allnames = [SV.__name for SV in spec_list] #all names of the filters
+#     allnames = np.array(allnames)
+    allstatus = [SV['STATUS'][-1] for SV in out]  # list of True or False
+    allstatus = np.array(allstatus)
+    allwav = []
+    allwav_lw = []
+    allwav_up = []
+    allspec = []
+    allspec_err = []
+    allfltrs = []
+    checkwav = []
+    for ids,status in enumerate(allstatus[:-1]):
+        valid = 'STIS' in fltrs[ids]
+        valid = valid or 'WFC3' in fltrs[ids]
+        if status and valid:
+            for planet in out[ids]['data'].keys():
+                wav = out[ids]['data'][planet]['WB']
+                allwav.extend(out[ids]['data'][planet]['WB'])
+                allwav_lw.extend(out[ids]['data'][planet]['WBlow'])
+                allwav_up.extend(out[ids]['data'][planet]['WBup'])
+                allspec.extend(out[ids]['data'][planet]['ES'])
+                allspec_err.extend(out[ids]['data'][planet]['ESerr'])
+                for i in range(0,len(wav)):
+                    allfltrs.append(fltrs[ids])
+                    checkwav.append(wav[i])
+                # order everything using allwav before saving them
+                out[-1]['data'][planet] = {'WB': np.sort(np.array(allwav)), 'WBlow': [x for _,x in sorted(zip(allwav,allwav_lw))], 'WBup': [x for _,x in sorted(zip(allwav,allwav_up))], 'ES': [x for _,x in sorted(zip(allwav,allspec))], 'ESerr': [x for _,x in sorted(zip(allwav,allspec_err))], 'Fltrs': [x for _,x in sorted(zip(allwav,allfltrs))]}
+    exospec = True  # return if all inputs were empty
+    out[-1]['STATUS'].append(True)
+    return exospec

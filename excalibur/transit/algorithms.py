@@ -21,9 +21,8 @@ import excalibur.target.edit as trgedit
 # FILTERS
 fltrs = (trgedit.activefilters.__doc__).split('\n')
 fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
-# fltrs = [f for f in fltrs if 'Spitzer' not in f]
-fltrs = [f for f in fltrs if 'JWST' not in f]
-# fltrs = [f for f in fltrs if 'HST' not in f]
+fltrs = [f for f in fltrs if 'Spitzer' in f]
+# fltrs = [f for f in fltrs if 'HST-STIS-CCD-G430' in f]
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class normalization(dawgie.Algorithm):
@@ -206,8 +205,8 @@ class spectrum(dawgie.Algorithm):
         self._nrm = nrm
         self._wht = wht
         self.__out = [trnstates.SpectrumSV(ext) for ext in fltrs]
-        # MERGE PROTOTYPE
-        self.__out.append(trnstates.SpectrumSV('Composite'))
+        # MERGE STIS and WFC3
+        self.__out.append(trnstates.SpectrumSV('STIS-WFC3'))
         return
 
     def name(self):
@@ -242,15 +241,19 @@ class spectrum(dawgie.Algorithm):
 
             if update: svupdate.append(self.__out[index])
             pass
-
-        for index, ext in enumerate(fltrs):
-            self.__out[-1]['data'][ext] = self.__out[index]
-            if self.__out[index]['STATUS']:
-                self.__out[-1]['STATUS'] = True
-
-        self.__out = svupdate
+        # CALL TO THE MERGE SPECTRUM CODE
+        merg = trncore.hstspectrum(self.__out, fltrs)
+        # check if merg is True so you can put self.__out[-1] append to svupdate
+        if merg:
+            svupdate.append(self.__out[-1])
+        self.__out = svupdate  # it will take all the elements that are not empty
         if self.__out: ds.update()
+
         return
+
+#     def _hstspec(self, out):
+#         s = trncore.hstspectrum(self.__out, fltrs, verbose=False)
+#         return s
 
     def _spectrum(self, fin, nrm, wht, out, ext):
         if "Spitzer" in ext:
