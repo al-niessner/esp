@@ -4066,6 +4066,6 @@ def hstspectrum(out, fltrs):
                     checkwav.append(wav[i])
                 # order everything using allwav before saving them
                 out[-1]['data'][planet] = {'WB': np.sort(np.array(allwav)), 'WBlow': [x for _,x in sorted(zip(allwav,allwav_lw))], 'WBup': [x for _,x in sorted(zip(allwav,allwav_up))], 'ES': [x for _,x in sorted(zip(allwav,allspec))], 'ESerr': [x for _,x in sorted(zip(allwav,allspec_err))], 'Fltrs': [x for _,x in sorted(zip(allwav,allfltrs))]}
-    exospec = True  # return if all inputs were empty
-    out[-1]['STATUS'].append(True)
+            exospec = True  # return if all inputs were empty
+            out[-1]['STATUS'].append(True)
     return exospec
