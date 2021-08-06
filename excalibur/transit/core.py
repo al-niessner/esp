@@ -1054,9 +1054,12 @@ def hstwhitelight(allnrm, fin, out, allext, selftype, chainlen=int(1e4), verbose
             samples = random.choices(interval,fit,k=num_samples)
             return samples,interval,fit
 
-        samples,_,_ = sample_dist(residuals,len(newdata),bw_adjust=0.05)
-        simulated_raw_data = np.array(postlc)+np.array(samples)
-        out['data'][p]['simulated'] = simulated_raw_data  # certain targets the simulated data will be empty bc they're not gaussian
+        all_sims = []
+        for i in range(100):
+            samples,_,_ = sample_dist(residuals,len(newdata),bw_adjust=0.05)
+            simulated_raw_data = np.array(postlc)+np.array(samples)
+            all_sims.append(simulated_raw_data)
+        out['data'][p]['simulated'] = all_sims  # certain targets the simulated data will be empty bc they're not gaussian
     return True
 
 def whitelight(nrm, fin, out, ext, selftype, multiwl, chainlen=int(1e4),
