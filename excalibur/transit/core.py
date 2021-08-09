@@ -1042,24 +1042,6 @@ def hstwhitelight(allnrm, fin, out, allext, selftype, chainlen=int(1e4), verbose
             plt.show()
             pass
         pass
-        data = np.array(out['data'][p]['allwhite'])
-        newdata = []
-        for d in data: newdata.extend(d)
-        newdata = np.array(newdata)
-        residuals = newdata - postlc  # raw data - model
-
-        def sample_dist(distribution,num_samples,bw_adjust=.35):
-            interval = np.linspace(min(distribution),max(distribution),1000)
-            fit = gaussian_kde(distribution,bw_method=bw_adjust)(interval)
-            samples = random.choices(interval,fit,k=num_samples)
-            return samples,interval,fit
-
-        all_sims = []
-        for i in range(100):
-            samples,_,_ = sample_dist(residuals,len(newdata),bw_adjust=0.05)
-            simulated_raw_data = np.array(postlc)+np.array(samples)
-            all_sims.append(simulated_raw_data)
-        out['data'][p]['simulated'] = all_sims  # certain targets the simulated data will be empty bc they're not gaussian
     return True
 
 def whitelight(nrm, fin, out, ext, selftype, multiwl, chainlen=int(1e4),
@@ -1307,6 +1289,24 @@ def whitelight(nrm, fin, out, ext, selftype, multiwl, chainlen=int(1e4),
         out['data'][p]['mctrace'] = mctrace
         out['data'][p]['tauwhite'] = tauwhite
         out['STATUS'].append(True)
+        data = np.array(out['data'][p]['allwhite'])
+        newdata = []
+        for d in data: newdata.extend(d)
+        newdata = np.array(newdata)
+        residuals = newdata - postlc  # raw data - model
+
+        def sample_dist(distribution,num_samples,bw_adjust=.35):
+            interval = np.linspace(min(distribution),max(distribution),1000)
+            fit = gaussian_kde(distribution,bw_method=bw_adjust)(interval)
+            samples = random.choices(interval,fit,k=num_samples)
+            return samples,interval,fit
+
+        all_sims = []
+        for i in range(100):
+            samples,_,_ = sample_dist(residuals,len(newdata),bw_adjust=0.05)
+            simulated_raw_data = np.array(postlc)+np.array(samples)
+            all_sims.append(simulated_raw_data)
+        out['data'][p]['simulated'] = all_sims  # certain targets the simulated data will be empty bc they're not gaussian
         wl = True
         if verbose:
             plt.figure(figsize=(10, 6))
