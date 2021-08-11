@@ -1,0 +1,56 @@
+To be reading this file, you have already untarred the release and are ready to start and run a mausoleum. All instruction are based from being in the directory containing this file. Also for the rest of this document, the location (absolute path to) this file will be referred to as /release/path.
+
+1. have an instance of postgres available for use
+   a. requires role sdppipded that can create databases and tables and fill them
+2. need to be in the directory that contains this file: cd /release/path
+3. load the excalibur server with: docker load -i server.docker.image
+4. put the database in place with (needs .pgpass):
+    psql -h hostname -p port -U username -d ops < db/interred*.bck
+5. edit run.sh to meet local requirements -- see https://github.com/al-niessner/DAWGIE for all dawgie CLI arguments
+6. run the instance of excalibur
+7. visit the website
+
+
+Here is a concrete version of the instructions that should work on any machine that has docker.
+
+1a. docker network create masops
+1b. docker pull postgres:13.3
+1c. docker run --rm --network masops --name postgres -e POSTGRES_PASSWORD=password -e POSTGRES_USER=sdppipded --detach postgres:13.3
+2. cd /release/path # unfortunately the only part that must remain abstract
+3. docker load -i server.docker.image
+4a. docker exec -i postgres createdb -U sdppipded ops
+4b. docker exec -i postgres psql -U sdppipded -d ops < db/interred.ops.00.bck
+5. edited docker run portion of run.sh to look like this:
+    docker run --detach --rm \
+	   --env USER=$USER \
+	   --env USERNAME=$USERNAME \
+	   --name mausoleum \
+	   --network masops \
+           --publish 8080:8080 \
+	   --user $UID \
+	   -v $(realpath $(dirname $0)):/proj/data \
+           -v $(realpath $(dirname $0))/fe:/proj/src/front-end \
+	   -v ${PG_PASS}:/proj/.pgpass:ro \
+	   -v /etc/group:/etc/group:ro \
+	   -v /etc/passwd:/etc/passwd:ro \
+           -v ${HOME}/.theano:/proj/src/.theano \
+	   mausoleum:latest --context-db-host=postgres \
+                            --context-db-path=sdppipded:password \
+                            --context-db-port=5432
+
+    Notes:
+        Added -v ${HOME}/.theano:/proj/src/.theano because of error seen in
+        /release/path/logs/ops.log that prevents excalibur from moving from the
+        load state to the running state (step 7). Be sure to create the
+        directory ${HOME:/.theano before ./run.sh or root will own it.
+
+        <postgres hostname> comes from docker command at 1c. Since using
+        network masops, the hostname on that network is the container name:
+        postgres.
+
+        <pg user> is the POSTGRES_USER value from 1c.
+
+        <pg pwd> is the POSTGRES_PASSWORD value from 1c.
+
+        <postgres port> is the default value of 5432.
+6. PG_PASS=${HOME}/.pgpass ./run.sh
