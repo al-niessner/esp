@@ -3,8 +3,8 @@
 . .ci/util.sh
 
 state="pending" # "success" "pending" "failure" "error"
-description="Deploy the new AE (base, cit, devel, server, tools, worker)"
-context="continuous-integration/99/esp-deploy"
+description="Deploy the AE to the running pipeline"
+context="continuous-integration/98/esp-deploy"
 
 post_state "$context" "$description" "$state"
 

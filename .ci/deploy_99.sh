@@ -3,7 +3,7 @@
 . .ci/util.sh
 
 state="pending" # "success" "pending" "failure" "error"
-description="Deploy the new AE (base, cit, devel, server, tools, worker)"
+description="Wait for pipeline to process new AE"
 context="continuous-integration/99/esp-deploy"
 
 post_state "$context" "$description" "$state"

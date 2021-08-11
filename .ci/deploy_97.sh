@@ -39,6 +39,7 @@ then
     ssh mentor5 docker image prune -f
     # cleanup
     rm ${tempfn}
+    set +x
     state=`get_state`
 fi
 
