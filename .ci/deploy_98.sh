@@ -11,7 +11,7 @@ post_state "$context" "$description" "$state"
 if current_state
 then
     # notify the pipeline that it is ready
-    curl -XPOST "http://mentor.jpl.nasa.gov:8080/app/submit?changeset=$(git rev-parse HEAD)\&submission=now"
+    curl -XPOST "http://mentor0.jpl.nasa.gov:8080/app/submit?changeset=$(git rev-parse HEAD)\&submission=now"
     sleep 10
 fi
 
