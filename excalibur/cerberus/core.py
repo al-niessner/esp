@@ -440,20 +440,28 @@ G. ROUDIER: Cerberus retrievial
 #         twav = twav[cond_wav]
 #         tspectrum = tspectrum[cond_wav]
 #         tspecerr = tspecerr[cond_wav]
-        # FILTERING FOR OUTLIERS
-            cond_specG750 = filters == 'HST-STIS-CCD-G750L-STARE'
-            twav_G750 = twav[cond_specG750]
-            tspec_G750 = tspectrum[cond_specG750]
-            tspecerr_G750 = tspecerr[cond_specG750]
-            cond_nan = np.isfinite(tspec_G750)
-            coefs_spec_G750 = poly.polyfit(twav_G750[cond_nan], tspec_G750[cond_nan], 1)
-            slp = twav_G750*coefs_spec_G750[1] + coefs_spec_G750[0]
-            mask = abs(slp - tspec_G750) >= 7 * np.nanmedian(tspecerr_G750)
-            tspec_G750[mask] = np.nan
-            tspectrum[cond_specG750] = tspec_G750
+            if 'HST-STIS-CCD-G750L-STARE' in filters:
+                # FILTERING FOR OUTLIERS
+                cond_specG750 = filters == 'HST-STIS-CCD-G750L-STARE'
+                twav_G750 = twav[cond_specG750]
+                tspec_G750 = tspectrum[cond_specG750]
+                tspecerr_G750 = tspecerr[cond_specG750]
+                cond_nan = np.isfinite(tspec_G750)
+                coefs_spec_G750 = poly.polyfit(twav_G750[cond_nan], tspec_G750[cond_nan], 1)
+                slp = twav_G750*coefs_spec_G750[1] + coefs_spec_G750[0]
+                mask = abs(slp - tspec_G750) >= 7 * np.nanmedian(tspecerr_G750)
+                tspec_G750[mask] = np.nan
+                tspectrum[cond_specG750] = tspec_G750
+        Hs = spc['data'][p]['Hs']
+        #  Clean up
+        spechs = (np.sqrt(tspectrum) - np.sqrt(np.nanmedian(tspectrum)))/Hs
+        cleanup2 = abs(spechs) > 3e0  # excluding everything above +-3 Hs
+        tspectrum[cleanup2] = np.nan
+        tspecerr[cleanup2] = np.nan
+        twav[cleanup2] = np.nan
 
         cleanup = np.isfinite(tspectrum) & (tspecerr < 1e0)
-        solidr = orbp[p]['rp']*ssc['Rjup']  # MKS
+        solidr = orbp[p]['rp']*ssc['Rjup']  # MK
         for model in modfam:
             ctxtupdt(cleanup=cleanup, model=model, p=p, solidr=solidr, orbp=orbp,
                      tspectrum=tspectrum, xsl=xsl, spc=spc, modparlbl=modparlbl,

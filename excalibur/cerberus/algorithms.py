@@ -18,9 +18,10 @@ import excalibur.target.edit as trgedit
 # FILTERS
 fltrs = (trgedit.activefilters.__doc__).split('\n')
 fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
-# fltrs = [f for f in fltrs if 'STIS-WFC3' in f]
-fltrs = [f for f in fltrs if 'Spitzer' not in f]
 fltrs.append('STIS-WFC3')
+fltrs = [f for f in fltrs if 'STIS-WFC3' in f]
+# fltrs = [f for f in fltrs if 'HST_Merged' in f]
+fltrs = [f for f in fltrs if 'Spitzer' not in f]
 
 # ----------------------- --------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------

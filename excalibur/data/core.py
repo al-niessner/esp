@@ -1084,9 +1084,9 @@ def validrange(flttype):
     vrange = None
     if fltr in ['G141']: vrange = [1.12, 1.65]  # MICRONS
     if fltr in ['G102']: vrange = [0.80, 1.14]
-    if fltr in ['G430L']: vrange = [0.30, 0.55]
+    if fltr in ['G430L']: vrange = [0.30, 0.57]
     if fltr in ['G140M']: vrange = [0.12, 0.17]
-    if fltr in ['G750L']: vrange = [0.55, 0.95]
+    if fltr in ['G750L']: vrange = [0.53, 0.95]
     if fltr in ['3.6']: vrange = [3.1,3.92]
     if fltr in ['4.5']: vrange = [3.95,4.95]
     return vrange
@@ -2232,16 +2232,16 @@ def stiscal_G750L(_fin, clc, tim, tid, flttype, out,
                 pass
 
             # WAVELENGTH CALIBRATION - G430L
-            if 'G430' in flttype:
-                pixel = np.arange(len(spec))
-                w = (pixel + 1079.96)/0.37
-                data['WAVE'][index] = w*1e-4
-                liref = itp.interp1d(wavett*1e-4, tt, bounds_error=False, fill_value=np.nan)
-                phot2counts = liref(w*1e-4)
-                data['PHT2CNT'][index] = phot2counts
-                data['DISPERSION'][index] = 2.70
-                data['SHIFT'][index] = -1079.96
-            pass
+#             if 'G430' in flttype:
+#                 pixel = np.arange(len(spec))
+#                 w = (pixel + 1079.96)/0.37
+#                 data['WAVE'][index] = w*1e-4
+#                 liref = itp.interp1d(wavett*1e-4, tt, bounds_error=False, fill_value=np.nan)
+#                 phot2counts = liref(w*1e-4)
+#                 data['PHT2CNT'][index] = phot2counts
+#                 data['DISPERSION'][index] = 2.70
+#                 data['SHIFT'][index] = -1079.96
+#             pass
         pass
     # PLOTS ------------------------------------------------------------------------------
     if verbose and (not np.all(data['IGNORED'])):
@@ -2504,7 +2504,7 @@ def stiscal_G430L(fin, clc, tim, tid, flttype, out,
 
     def phoenix(set_wav):
         # PHOENIX MODELS
-        filters = [BoxcarFilter('a', 300, 550)]  # Define your passbands
+        filters = [BoxcarFilter('a', 300, 570)]  # Define your passbands
         feherr=np.sqrt(abs(fin['priors']['FEH*_uperr']*fin['priors']['FEH*_lowerr']))
         loggerr = np.sqrt(abs(fin['priors']['LOGG*_uperr']*
                               fin['priors']['LOGG*_lowerr']))
