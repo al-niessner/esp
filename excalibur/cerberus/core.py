@@ -12,7 +12,7 @@ pymc3log.setLevel(logging.ERROR)
 import os
 import pymc3 as pm
 import numpy as np
-import numpy.polynomial.polynomial as poly
+# import numpy.polynomial.polynomial as poly
 import matplotlib.pyplot as plt
 
 import theano.tensor as tt
@@ -404,7 +404,7 @@ def atmosversion():
     Merged Spectra Capability
     '''
     import dawgie
-    return dawgie.VERSION(1,3,1)
+    return dawgie.VERSION(1,3,2)
 
 def atmos(fin, xsl, spc, out, ext,
           hazedir=os.path.join(excalibur.context['data_dir'], 'CERBERUS/HAZE'),
@@ -436,22 +436,23 @@ G. ROUDIER: Cerberus retrievial
         tspectrum = tspc**2
         if 'STIS-WFC3' in ext:
             filters = np.array(spc['data'][p]['Fltrs'])
-#         cond_wav = (twav < 0.56) | (twav > 1.02)
-#         twav = twav[cond_wav]
-#         tspectrum = tspectrum[cond_wav]
-#         tspecerr = tspecerr[cond_wav]
-            if 'HST-STIS-CCD-G750L-STARE' in filters:
-                # FILTERING FOR OUTLIERS
-                cond_specG750 = filters == 'HST-STIS-CCD-G750L-STARE'
-                twav_G750 = twav[cond_specG750]
-                tspec_G750 = tspectrum[cond_specG750]
-                tspecerr_G750 = tspecerr[cond_specG750]
-                cond_nan = np.isfinite(tspec_G750)
-                coefs_spec_G750 = poly.polyfit(twav_G750[cond_nan], tspec_G750[cond_nan], 1)
-                slp = twav_G750*coefs_spec_G750[1] + coefs_spec_G750[0]
-                mask = abs(slp - tspec_G750) >= 7 * np.nanmedian(tspecerr_G750)
-                tspec_G750[mask] = np.nan
-                tspectrum[cond_specG750] = tspec_G750
+        cond_specG750 = filters == 'HST-STIS-CCD-G750L-STARE'
+        # MASKING G750 WAV > 0.80
+        twav_G750 = twav[cond_specG750]
+        tspec_G750 = tspectrum[cond_specG750]
+        tspecerr_G750 = tspecerr[cond_specG750]
+        mask = (twav_G750 > 0.80) & (twav_G750 < 0.95)
+        tspec_G750[mask] = np.nan
+        tspecerr_G750[mask] = np.nan
+        tspectrum[cond_specG750] = tspec_G750
+        tspecerr[cond_specG750] = tspecerr_G750
+        # CLEAN UP G750
+#         cond_nan = np.isfinite(tspec_G750)
+#         coefs_spec_G750 = poly.polyfit(twav_G750[cond_nan], tspec_G750[cond_nan], 1)
+#         slp = twav_G750*coefs_spec_G750[1] + coefs_spec_G750[0]
+#         mask = abs(slp - tspec_G750) >= 7 * np.nanmedian(tspecerr_G750)
+#         tspec_G750[mask] = np.nan
+#         tspectrum[cond_specG750] = tspec_G750
         Hs = spc['data'][p]['Hs']
         #  Clean up
         spechs = (np.sqrt(tspectrum) - np.sqrt(np.nanmedian(tspectrum)))/Hs
@@ -459,9 +460,11 @@ G. ROUDIER: Cerberus retrievial
         tspectrum[cleanup2] = np.nan
         tspecerr[cleanup2] = np.nan
         twav[cleanup2] = np.nan
-
         cleanup = np.isfinite(tspectrum) & (tspecerr < 1e0)
+        #
+        cleanup = np.isfinite(tspectrum)
         solidr = orbp[p]['rp']*ssc['Rjup']  # MK
+
         for model in modfam:
             ctxtupdt(cleanup=cleanup, model=model, p=p, solidr=solidr, orbp=orbp,
                      tspectrum=tspectrum, xsl=xsl, spc=spc, modparlbl=modparlbl,
@@ -490,9 +493,9 @@ G. ROUDIER: Cerberus retrievial
                     if 'STIS' in filters[0]:
                         if valid0:  # G430
                             if valid1 and valid2 and valid3:  # G430-G750-G102-G141
-                                off0_value = np.nanmedian(1e2*tspectrum[cond_off0])- np.nanmedian(1e2*tspectrum[cond_off1])
-                                off1_value = np.nanmedian(1e2*tspectrum[cond_off0])- np.nanmedian(1e2*tspectrum[cond_off2])
-                                off2_value = np.nanmedian(1e2*tspectrum[cond_off0])- np.nanmedian(1e2*tspectrum[cond_off3])
+                                off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off0]))
+                                off1_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off1]))
+                                off2_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off2]))
                                 off0 = pm.Uniform('OFF0', -off0_value, off0_value)
                                 nodes.append(off0)
                                 off1 = pm.Uniform('OFF1', -off1_value, off1_value)
@@ -500,51 +503,50 @@ G. ROUDIER: Cerberus retrievial
                                 off2 = pm.Uniform('OFF2', -off2_value, off2_value)
                                 nodes.append(off2)
                             if valid1 and valid2 and not valid3:
-                                off0_value = np.nanmedian(1e2*tspectrum[cond_off0])- np.nanmedian(1e2*tspectrum[cond_off1])
-                                off1_value = np.nanmedian(1e2*tspectrum[cond_off0])- np.nanmedian(1e2*tspectrum[cond_off2])
+                                off0_value = np.nanmedian(1e2*tspectrum[cond_off2])- np.nanmedian(1e2*tspectrum[cond_off0])
+                                off1_value = np.nanmedian(1e2*tspectrum[cond_off2])- np.nanmedian(1e2*tspectrum[cond_off1])
                                 off0 = pm.Uniform('OFF0', -off0_value, off0_value)
                                 nodes.append(off0)
                                 off1 = pm.Uniform('OFF1', -off1_value, off1_value)
                                 nodes.append(off1)
                             if valid1 and valid3 and not valid2:
-                                off0_value = np.nanmedian(1e2*tspectrum[cond_off0])- np.nanmedian(1e2*tspectrum[cond_off1])
-                                off1_value = np.nanmedian(1e2*tspectrum[cond_off0])- np.nanmedian(1e2*tspectrum[cond_off3])
+                                off0_value = np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off0])
+                                off1_value = np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off1])
                                 off0 = pm.Uniform('OFF0', -off0_value, off0_value)
                                 nodes.append(off0)
                                 off1 = pm.Uniform('OFF1', -off1_value, off1_value)
                                 nodes.append(off1)
                             if valid2 and valid3 and not valid1:
-                                off0_value = np.nanmedian(1e2*tspectrum[cond_off0])- np.nanmedian(1e2*tspectrum[cond_off2])
-                                off1_value = np.nanmedian(1e2*tspectrum[cond_off0])- np.nanmedian(1e2*tspectrum[cond_off3])
+                                off0_value = np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off0])
+                                off1_value = np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off2])
                                 off0 = pm.Uniform('OFF0', -off0_value, off0_value)
                                 nodes.append(off0)
                                 off1 = pm.Uniform('OFF1', -off1_value, off1_value)
                                 nodes.append(off1)
                             if valid3 and not valid1 and not valid2:
-                                off0_value = np.nanmedian(1e2*tspectrum[cond_off0])- np.nanmedian(1e2*tspectrum[cond_off3])
+                                off0_value = np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off0])
                                 off0 = pm.Uniform('OFF0', -off0_value, off0_value)
                                 nodes.append(off0)
                         if not valid0:
                             if valid1 and valid2 and valid3:
-                                off0_value = np.nanmedian(1e2*tspectrum[cond_off1])- np.nanmedian(1e2*tspectrum[cond_off2])
-                                off1_value = np.nanmedian(1e2*tspectrum[cond_off1])- np.nanmedian(1e2*tspectrum[cond_off3])
+                                off0_value = np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off1])
+                                off1_value = np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off2])
                                 off0 = pm.Uniform('OFF0', -off0_value, off0_value)
                                 nodes.append(off0)
                                 off1 = pm.Uniform('OFF1', -off1_value, off1_value)
                                 nodes.append(off1)
                             if valid1 and valid3 and not valid2:
-                                off0_value = np.nanmedian(1e2*tspectrum[cond_off1])- np.nanmedian(1e2*tspectrum[cond_off3])
+                                off0_value = np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off1])
                                 off0 = pm.Uniform('OFF0', -off0_value, off0_value)
                                 nodes.append(off0)
                             if valid1 and valid2 and not valid3:
-                                off0_value = np.nanmedian(1e2*tspectrum[cond_off1])- np.nanmedian(1e2*tspectrum[cond_off2])
+                                off0_value = np.nanmedian(1e2*tspectrum[cond_off2])- np.nanmedian(1e2*tspectrum[cond_off1])
                                 off0 = pm.Uniform('OFF0', -off0_value, off0_value)
                                 nodes.append(off0)
 
                     if 'WFC3' in filters[0]:
                         if valid2 and valid3:
-                            print('yes')
-                            off0_value = np.nanmedian(1e2*tspectrum[cond_off2])- np.nanmedian(1e2*tspectrum[cond_off3])
+                            off0_value = np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off2])
                             off0 = pm.Uniform('OFF0', -off0_value, off0_value)
                             nodes.append(off0)
                 # KILL HAZE POWER INDEX FOR SPHERICAL SHELL
@@ -653,6 +655,9 @@ G. ROUDIER: Cerberus retrievial
         out['data'][p]['WAVELENGTH'] = np.array(spc['data'][p]['WB'])
         out['data'][p]['SPECTRUM'] = np.array(spc['data'][p]['ES'])
         out['data'][p]['ERRORS'] = np.array(spc['data'][p]['ESerr'])
+#         out['data'][p]['WAVELENGTH'] = twav
+#         out['data'][p]['SPECTRUM'] = tspectrum
+#         out['data'][p]['ERRORS'] = tspecerr
         out['data'][p]['VALID'] = cleanup
         am = True
         pass
@@ -1369,11 +1374,20 @@ G. ROUDIER: Wrapper around Cerberus forward model, spherical shell symmetry
 @tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
                    tt.dvector],
            otypes=[tt.dvector])
+# @tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar],
+#             otypes=[tt.dvector])
 def offcerberus(*crbinputs):
     '''
 R.ESTRELA: ADD offsets between STIS filters and STIS and WFC3 filters
     '''
     ctp, hza, off0, off1, off2, hzloc, hzthick, tpr, mdp = crbinputs
+#     off0, off1, off2 = crbinputs
+#     ctp = -2.5744083
+#     hza = -1.425234
+#     hzloc = -0.406851
+#     hzthick = 5.58950953
+#     tpr = 1551.41137
+#     mdp = [-1.24882918, -4.08582557, -2.4664526]
     wbb = np.array(ctxt.spc['data'][ctxt.p]['WB'])
     flt = np.array(ctxt.spc['data'][ctxt.p]['Fltrs'])
     #  cond_wav = (wbb < 0.56) | (wbb > 1.02)
@@ -1404,16 +1418,21 @@ R.ESTRELA: ADD offsets between STIS filters and STIS and WFC3 filters
                        hzwscale=float(hzthick), cheq=None, pnet=ctxt.p,
                        sphshell=True, verbose=False, debug=False)
         pass
-    fmc = fmc[ctxt.cleanup] - np.nanmean(fmc[ctxt.cleanup])
-    fmc = fmc + np.nanmean(ctxt.tspectrum[ctxt.cleanup])
+    cond_G430 = flt[ctxt.cleanup] == 'HST-STIS-CCD-G430L-STARE'
+    cond_G141 = flt[ctxt.cleanup] == 'HST-WFC3-IR-G141-SCAN'
+    tspectrum_clean = ctxt.tspectrum[ctxt.cleanup]
+    fmc = fmc[ctxt.cleanup] - np.nanmean(fmc[ctxt.cleanup][cond_G141])
+    fmc = fmc + np.nanmean(tspectrum_clean[cond_G141])
+#     fmc = fmc[ctxt.cleanup] - np.nanmean(fmc[ctxt.cleanup])
+#     fmc = fmc + np.nanmean(ctxt.tspectrum[ctxt.cleanup])
     ww = wbb
     ww = ww[ctxt.cleanup]
-    cond_G750 = 'HST-STIS-CCD-G750L-STARE' in flt
-    cond_G102 = 'HST-WFC3-IR-G102-SCAN' in flt
-    cond_G141 = 'HST-WFC3-IR-G141-SCAN' in flt
-    fmc[cond_G750] = fmc[cond_G750] + 1e-2*float(off0)
-    fmc[cond_G102] = fmc[cond_G102] + 1e-2*float(off1)
-    fmc[cond_G141] = fmc[cond_G141] + 1e-2*float(off2)
+    cond_G750 = flt[ctxt.cleanup] == 'HST-STIS-CCD-G750L-STARE'
+    cond_G102 = flt[ctxt.cleanup] == 'HST-WFC3-IR-G102-SCAN'
+    fmc[cond_G430] = fmc[cond_G430] - 1e-2*float(off0)
+    fmc[cond_G750] = fmc[cond_G750] - 1e-2*float(off1)
+    fmc[cond_G102] = fmc[cond_G102] - 1e-2*float(off2)
+#     fmc[cond_G141] = fmc[cond_G141] + 1e-2*float(off2)
     return fmc
 
 @tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
@@ -1457,10 +1476,10 @@ R.ESTRELA: ADD offsets between STIS filters and STIS and WFC3 filters
     ww = wbb
     ww = ww[ctxt.cleanup]
     flt = np.array(ctxt.spc['data'][ctxt.p]['Fltrs'])
+    cond_G430 = 'HST-STIS-CCD-G430L-STARE' in flt
     cond_G750 = 'HST-STIS-CCD-G750L-STARE' in flt
-    cond_G102 = 'HST-WFC3-IR-G102-SCAN' in flt
-    fmc[cond_G750] = fmc[cond_G750] + 1e-2*float(off0)
-    fmc[cond_G102] = fmc[cond_G102] + 1e-2*float(off1)
+    fmc[cond_G430] = fmc[cond_G430] + 1e-2*float(off0)
+    fmc[cond_G750] = fmc[cond_G750] + 1e-2*float(off1)
     return fmc
 
 @tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
@@ -1504,10 +1523,10 @@ R.ESTRELA: ADD offsets between STIS filters and STIS and WFC3 filters
     ww = wbb
     ww = ww[ctxt.cleanup]
     flt = np.array(ctxt.spc['data'][ctxt.p]['Fltrs'])
+    cond_G430 = 'HST-STIS-CCD-G430-STARE' in flt
     cond_G750 = 'HST-STIS-CCD-G750-STARE' in flt
-    cond_G141 = 'HST-WFC3-IR-G141-SCAN' in flt
-    fmc[cond_G750] = fmc[cond_G750] + 1e-2*float(off0)
-    fmc[cond_G141] = fmc[cond_G141] + 1e-2*float(off1)
+    fmc[cond_G430] = fmc[cond_G430] + 1e-2*float(off0)
+    fmc[cond_G750] = fmc[cond_G750] + 1e-2*float(off1)
     return fmc
 
 @tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
@@ -1551,10 +1570,10 @@ R.ESTRELA: ADD offsets between STIS filters and STIS and WFC3 filters
     fmc = fmc + np.nanmean(ctxt.tspectrum[ctxt.cleanup])
     ww = wbb
     ww = ww[ctxt.cleanup]
+    cond_G430 = 'HST-STIS-CCD-G430-STARE' in flt
     cond_G102 = 'HST-WFC3-IR-G102-SCAN' in flt
-    cond_G141 = 'HST-WFC3-IR-G141-SCAN' in flt
-    fmc[cond_G102] = fmc[cond_G102] + 1e-2*float(off0)
-    fmc[cond_G141] = fmc[cond_G141] + 1e-2*float(off1)
+    fmc[cond_G430] = fmc[cond_G430] + 1e-2*float(off0)
+    fmc[cond_G102] = fmc[cond_G102] + 1e-2*float(off1)
     return fmc
 
 @tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
@@ -1598,8 +1617,8 @@ R.ESTRELA: ADD offsets between STIS filters and STIS and WFC3 filters
     fmc = fmc + np.nanmean(ctxt.tspectrum[ctxt.cleanup])
     ww = wbb
     ww = ww[ctxt.cleanup]
-    cond_G141 = 'HST-WFC3-IR-G141-SCAN' in flt
-    fmc[cond_G141] = fmc[cond_G141] + 1e-2*float(off0)
+    cond_G430 = 'HST-STIS-CCD-G430-STARE' in flt
+    fmc[cond_G430] = fmc[cond_G430] + 1e-2*float(off0)
     return fmc
 
 @tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
@@ -1644,9 +1663,9 @@ R.ESTRELA: ADD offsets between STIS filters and STIS and WFC3 filters
     ww = wbb
     ww = ww[ctxt.cleanup]
     cond_G102 = 'HST-WFC3-IR-G102-SCAN' in flt
-    cond_G141 = 'HST-WFC3-IR-G141-SCAN' in flt
-    fmc[cond_G102] = fmc[cond_G102] + 1e-2*float(off0)
-    fmc[cond_G141] = fmc[cond_G141] + 1e-2*float(off1)
+    cond_G750 = 'HST-STIS-CCD-G750-STARE' in flt
+    fmc[cond_G750] = fmc[cond_G750] + 1e-2*float(off0)
+    fmc[cond_G102] = fmc[cond_G102] + 1e-2*float(off1)
     return fmc
 
 @tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
@@ -1690,8 +1709,8 @@ R.ESTRELA: ADD offsets between STIS filters and STIS and WFC3 filters
     fmc = fmc + np.nanmean(ctxt.tspectrum[ctxt.cleanup])
     ww = wbb
     ww = ww[ctxt.cleanup]
-    cond_G141 = 'HST-WFC3-IR-G141-SCAN' in flt
-    fmc[cond_G141] = fmc[cond_G141] + 1e-2*float(off0)
+    cond_G750 = 'HST-STIS-CCD-G750-STARE' in flt
+    fmc[cond_G750] = fmc[cond_G750] + 1e-2*float(off0)
     return fmc
 
 @tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
@@ -1699,7 +1718,52 @@ R.ESTRELA: ADD offsets between STIS filters and STIS and WFC3 filters
            otypes=[tt.dvector])
 def offcerberus7(*crbinputs):
     '''
-R.ESTRELA: ADD offsets between STIS filters and STIS and WFC3 filters
+R.ESTRELA: ADD offsets between STIS filters and WFC3 filters
+    '''
+    ctp, hza, off0, hzloc, hzthick, tpr, mdp = crbinputs
+    wbb = np.array(ctxt.spc['data'][ctxt.p]['WB'])
+    fmc = np.zeros(ctxt.tspectrum.size)
+    flt = np.array(ctxt.spc['data'][ctxt.p]['Fltrs'])
+    if ctxt.model == 'TEC':
+        tceqdict = {}
+        tceqdict['XtoH'] = float(mdp[0])
+        tceqdict['CtoO'] = float(mdp[1])
+        tceqdict['NtoO'] = float(mdp[2])
+        fmc = crbmodel(None, float(hza), float(ctp), ctxt.solidr, ctxt.orbp,
+                       ctxt.xsl['data'][ctxt.p]['XSECS'],
+                       ctxt.xsl['data'][ctxt.p]['QTGRID'],
+                       float(tpr), wbb,
+                       hzlib=ctxt.hzlib,  hzp='AVERAGE', hztop=float(hzloc),
+                       hzwscale=float(hzthick), cheq=tceqdict, pnet=ctxt.p,
+                       sphshell=True, verbose=False, debug=False)
+        pass
+    else:
+        mixratio = {}
+        for index, key in enumerate(ctxt.modparlbl[ctxt.model]):
+            mixratio[key] = float(mdp[index])
+            pass
+        fmc = crbmodel(mixratio, float(hza), float(ctp), ctxt.solidr, ctxt.orbp,
+                       ctxt.xsl['data'][ctxt.p]['XSECS'],
+                       ctxt.xsl['data'][ctxt.p]['QTGRID'],
+                       float(tpr), np.array(ctxt.spc['data'][ctxt.p]['WB']),
+                       hzlib=ctxt.hzlib,  hzp='AVERAGE', hztop=float(hzloc),
+                       hzwscale=float(hzthick), cheq=None, pnet=ctxt.p,
+                       sphshell=True, verbose=False, debug=False)
+        pass
+    fmc = fmc[ctxt.cleanup] - np.nanmean(fmc[ctxt.cleanup])
+    fmc = fmc + np.nanmean(ctxt.tspectrum[ctxt.cleanup])
+    ww = wbb
+    ww = ww[ctxt.cleanup]
+    cond_G750 = 'HST-STIS-CCD-G750-STARE' in flt
+    fmc[cond_G750] = fmc[cond_G750] + 1e-2*float(off0)
+    return fmc
+
+@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
+                   tt.dvector],
+           otypes=[tt.dvector])
+def offcerberus8(*crbinputs):
+    '''
+R.ESTRELA: ADD offsets between WFC3 filters
     '''
     ctp, hza, off0, hzloc, hzthick, tpr, mdp = crbinputs
     wbb = np.array(ctxt.spc['data'][ctxt.p]['WB'])
@@ -1737,53 +1801,6 @@ R.ESTRELA: ADD offsets between STIS filters and STIS and WFC3 filters
     ww = ww[ctxt.cleanup]
     cond_G102 = 'HST-WFC3-IR-G102-SCAN' in flt
     fmc[cond_G102] = fmc[cond_G102] + 1e-2*float(off0)
-    return fmc
-
-@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
-                   tt.dvector],
-           otypes=[tt.dvector])
-def offcerberus8(*crbinputs):
-    '''
-R.ESTRELA: ADD offsets between STIS filters and STIS and WFC3 filters
-    '''
-    ctp, hza, off0, off1, hzloc, hzthick, tpr, mdp = crbinputs
-    wbb = np.array(ctxt.spc['data'][ctxt.p]['WB'])
-    fmc = np.zeros(ctxt.tspectrum.size)
-    flt = np.array(ctxt.spc['data'][ctxt.p]['Fltrs'])
-    if ctxt.model == 'TEC':
-        tceqdict = {}
-        tceqdict['XtoH'] = float(mdp[0])
-        tceqdict['CtoO'] = float(mdp[1])
-        tceqdict['NtoO'] = float(mdp[2])
-        fmc = crbmodel(None, float(hza), float(ctp), ctxt.solidr, ctxt.orbp,
-                       ctxt.xsl['data'][ctxt.p]['XSECS'],
-                       ctxt.xsl['data'][ctxt.p]['QTGRID'],
-                       float(tpr), wbb,
-                       hzlib=ctxt.hzlib,  hzp='AVERAGE', hztop=float(hzloc),
-                       hzwscale=float(hzthick), cheq=tceqdict, pnet=ctxt.p,
-                       sphshell=True, verbose=False, debug=False)
-        pass
-    else:
-        mixratio = {}
-        for index, key in enumerate(ctxt.modparlbl[ctxt.model]):
-            mixratio[key] = float(mdp[index])
-            pass
-        fmc = crbmodel(mixratio, float(hza), float(ctp), ctxt.solidr, ctxt.orbp,
-                       ctxt.xsl['data'][ctxt.p]['XSECS'],
-                       ctxt.xsl['data'][ctxt.p]['QTGRID'],
-                       float(tpr), np.array(ctxt.spc['data'][ctxt.p]['WB']),
-                       hzlib=ctxt.hzlib,  hzp='AVERAGE', hztop=float(hzloc),
-                       hzwscale=float(hzthick), cheq=None, pnet=ctxt.p,
-                       sphshell=True, verbose=False, debug=False)
-        pass
-    fmc = fmc[ctxt.cleanup] - np.nanmean(fmc[ctxt.cleanup])
-    fmc = fmc + np.nanmean(ctxt.tspectrum[ctxt.cleanup])
-    ww = wbb
-    ww = ww[ctxt.cleanup]
-    cond_G102 = 'HST-WFC3-IR-G102-SCAN' in flt
-    cond_G141 = 'HST-WFC3-IR-G141-SCAN' in flt
-    fmc[cond_G102] = fmc[cond_G102] + 1e-2*float(off0)
-    fmc[cond_G141] = fmc[cond_G141] + 1e-2*float(off1)
     return fmc
 
 # ----------------------------------- --------------------------------

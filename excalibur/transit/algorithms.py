@@ -22,7 +22,6 @@ import excalibur.target.edit as trgedit
 fltrs = (trgedit.activefilters.__doc__).split('\n')
 fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
 fltrs = [f for f in fltrs if 'Spitzer' not in f]
-# fltrs = [f for f in fltrs if 'HST-STIS-CCD-G430' in f]
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class normalization(dawgie.Algorithm):
