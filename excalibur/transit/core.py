@@ -1635,7 +1635,7 @@ def spectrumversion():
     K. PEARSON: 1.2.2 JWST NIRISS
     R ESTRELA: 1.3.0 Merged Spectra Capability
     '''
-    return dawgie.VERSION(1,3,0)
+    return dawgie.VERSION(1,3,1)
 
 def spectrum(fin, nrm, wht, out, ext, selftype,
              chainlen=int(1e4), verbose=False, lcplot=False):

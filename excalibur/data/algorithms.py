@@ -141,7 +141,7 @@ class calibration(dawgie.Algorithm):
     G. ROUDIER: Data re-calibration and reduction
     '''
     def __init__(self):
-        self._version_ = dawgie.VERSION(1,4,3)
+        self._version_ = dawgie.VERSION(1,4,4)
         self.__fin = sysalg.finalize()
         self.__col = collect()
         self.__tim = timing()
