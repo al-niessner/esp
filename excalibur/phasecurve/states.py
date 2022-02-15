@@ -4,9 +4,6 @@ import io
 import dawgie
 
 import excalibur
-from excalibur.transit.core import plot_posterior, plot_pixelmap
-from excalibur.phasecurve.core import plot_phasecurve
-
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -101,31 +98,12 @@ class WhiteLightSV(dawgie.StateVector):
                 elif 'Spitzer' in self.__name:
                     # for each event
                     for i in range(len(self['data'][p])):
-                        # light curve fit
-                        fig = plot_phasecurve(self['data'][p][i])
-                        buf = io.BytesIO()
-                        fig.savefig(buf, format='png')
-                        visitor.add_image('...', ' ', buf.getvalue())
-                        plt.close(fig)
-
-                        # posterior
-                        fig = plot_pixelmap(self['data'][p][i], self.__name)
-                        buf = io.BytesIO()
-                        fig.savefig(buf, format='png')
-                        visitor.add_image('...', ' ', buf.getvalue())
-                        plt.close(fig)
-
-                        # posterior
-                        fig = plot_posterior(self['data'][p][i], self.__name)
-                        buf = io.BytesIO()
-                        fig.savefig(buf, format='png')
-                        visitor.add_image('...', ' ', buf.getvalue())
-                        plt.close(fig)
-
-                pass
-            pass
-        pass
-    pass
+                        # plots are saved into sv
+                        visitor.add_image('...', ' ', self['data'][p][i]['plot_btempcurve'])
+                        visitor.add_image('...', ' ', self['data'][p][i]['plot_bestfit'])
+                        visitor.add_image('...', ' ', self['data'][p][i]['plot_posterior'])
+                        visitor.add_image('...', ' ', self['data'][p][i]['plot_pixelmap'])
+                        # another centroid timeseries plot?
 
 # class SpectrumSV(dawgie.StateVector):
 #     def __init__(self, name):

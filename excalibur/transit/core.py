@@ -8,35 +8,44 @@ import excalibur.cerberus.core as crbcore
 import excalibur.transit.core
 
 import re
-
+import io
 import copy
-import ctypes
 import requests
 import logging
 import random
 import lmfit as lm
+import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator, NullLocator
+from matplotlib.ticker import ScalarFormatter
 
-import dynesty
-import dynesty.plotting
-from dynesty.utils import resample_equal
+# pylint: disable=import-error
+from ultranest import ReactiveNestedSampler
 
 import pymc3 as pm
 log = logging.getLogger(__name__)
 pymc3log = logging.getLogger('pymc3')
 pymc3log.setLevel(logging.ERROR)
 
-import matplotlib.pyplot as plt
-
+from scipy.interpolate import griddata
+from scipy.ndimage import gaussian_filter
+from scipy.optimize import least_squares, brentq, curve_fit
 import scipy.constants as cst
 from scipy import spatial
 from scipy.signal import savgol_filter
 from scipy.stats import gaussian_kde
-from scipy.optimize import least_squares
 
 import theano.tensor as tt
 import theano.compile.ops as tco
 
 import numpy as np
+
+try:
+    import astropy.constants
+    import astropy.units
+    from astropy.modeling.models import BlackBody
+except ImportError:
+    from astropy.modeling.blackbody import blackbody_lambda as BlackBody
+
 
 from collections import namedtuple
 CONTEXT = namedtuple('CONTEXT', ['alt', 'ald', 'allz', 'orbp', 'commonoim', 'ecc',
@@ -2277,6 +2286,812 @@ def fastspec(fin, nrm, wht, ext, selftype,
     return priorspec, alpha
 # ------------------- ------------------------------------------------
 # ----------------- --------------------------------------------------
+def corner(xs, bins=20, arange=None, weights=None, color="k", hist_bin_factor=1,
+           smooth=None, smooth1d=None, levels=None,
+           labels=None, label_kwargs=None,
+           titles=None, title_kwargs=None,
+           truths=None, truth_color="#4682b4",
+           scale_hist=False, quantiles=None, verbose=False, fig=None,
+           max_n_ticks=5, top_ticks=False, use_math_text=False, reverse=False,
+           hist_kwargs=None, **hist2d_kwargs):
+    '''
+    A fork of corner.py but altered to support a scatter function when plotting
+    this allowing the data points to be color coded to a likehood or chi-square value.
+    '''
+    if quantiles is None:
+        quantiles = []
+    if title_kwargs is None:
+        title_kwargs = dict()
+    if label_kwargs is None:
+        label_kwargs = dict()
+    if titles is None:
+        titles = []
+    if levels is None:
+        levels = [1]
+    # Try filling in labels from pandas.DataFrame columns.
+    if labels is None:
+        try:
+            labels = xs.columns
+        except AttributeError:
+            pass
+
+    # Deal with 1D sample lists.
+    xs = np.atleast_1d(xs)
+    if len(xs.shape) == 1:
+        xs = np.atleast_2d(xs)
+    else:
+        assert len(xs.shape) == 2, "The input sample array must be 1- or 2-D."
+        xs = xs.T
+    assert xs.shape[0] <= xs.shape[1], "I don't believe that you want more " \
+                                       "dimensions than samples!"
+
+    # Parse the weight array.
+    if weights is not None:
+        weights = np.asarray(weights)
+        if weights.ndim != 1:
+            raise ValueError("Weights must be 1-D")
+        if xs.shape[1] != weights.shape[0]:
+            raise ValueError("Lengths of weights must match number of samples")
+
+    # Parse the parameter ranges.
+    if arange is None:
+        if "extents" in hist2d_kwargs:
+            logging.info("Deprecated keyword argument 'extents'. "
+                         "Use 'range' instead.")
+            arange = hist2d_kwargs.pop("extents")
+        else:
+            arange = [[x.min(), x.max()] for x in xs]
+            # Check for parameters that never change.
+            m = np.array([e[0] == e[1] for e in arange], dtype=bool)
+            if np.any(m):
+                raise ValueError(("It looks like the parameter(s) in "
+                                  "column(s) {0} have no dynamic range. "
+                                  "Please provide a `range` argument.")
+                                 .format(", ".join(map(
+                                     "{0}".format, np.arange(len(m))[m]))))
+
+    else:
+        # If any of the extents are percentiles, convert them to ranges.
+        # Also make sure it's a normal list.
+        arange = list(arange)
+        for i, _ in enumerate(arange):
+            try:
+                _, _ = arange[i]
+            except TypeError:
+                q = [0.5 - 0.5*arange[i], 0.5 + 0.5*arange[i]]
+                arange[i] = quantile(xs[i], q, weights=weights)
+
+    if len(arange) != xs.shape[0]:
+        raise ValueError("Dimension mismatch between samples and range")
+
+    # Parse the bin specifications.
+    try:
+        bins = [int(bins) for _ in arange]
+    except TypeError:
+        if len(bins) != len(arange):
+            raise ValueError("Dimension mismatch between bins and arange")
+    try:
+        hist_bin_factor = [float(hist_bin_factor) for _ in arange]
+    except TypeError:
+        if len(hist_bin_factor) != len(range):
+            raise ValueError("Dimension mismatch between hist_bin_factor and "
+                             "range")
+
+    # Some magic numbers for pretty axis layout.
+    K = len(xs)
+    factor = 2.0           # size of one side of one panel
+    if reverse:
+        lbdim = 0.2 * factor   # size of left/bottom margin
+        trdim = 0.5 * factor   # size of top/right margin
+    else:
+        lbdim = 0.5 * factor   # size of left/bottom margin
+        trdim = 0.2 * factor   # size of top/right margin
+    whspace = 0.05         # w/hspace size
+    plotdim = factor * K + factor * (K - 1.) * whspace
+    dim = lbdim + plotdim + trdim
+
+    # Create a new figure if one wasn't provided.
+    if fig is None:
+        fig, axes = plt.subplots(K, K, figsize=(dim, dim))
+    else:
+        try:
+            axes = np.array(fig.axes).reshape((K, K))
+        except:
+            raise ValueError("Provided figure has {0} axes, but data has "
+                             "dimensions K={1}".format(len(fig.axes), K))
+
+    # Format the figure.
+    lb = lbdim / dim
+    tr = (lbdim + plotdim) / dim
+    fig.subplots_adjust(left=lb, bottom=lb, right=tr, top=tr,
+                        wspace=whspace, hspace=whspace)
+
+    # Set up the default histogram keywords.
+    if hist_kwargs is None:
+        hist_kwargs = dict()
+    hist_kwargs["color"] = hist_kwargs.get("color", color)
+    if smooth1d is None:
+        hist_kwargs["histtype"] = hist_kwargs.get("histtype", "step")
+
+    for i, x in enumerate(xs):
+        # Deal with masked arrays.
+        if hasattr(x, "compressed"):
+            x = x.compressed()
+
+        if np.shape(xs)[0] == 1:
+            ax = axes
+        else:
+            if reverse:
+                ax = axes[K-i-1, K-i-1]
+            else:
+                ax = axes[i, i]
+        # Plot the histograms.
+        if smooth1d is None:
+            bins_1d = int(max(1, np.round(hist_bin_factor[i] * bins[i])))
+            n, _, _ = ax.hist(x, bins=bins_1d, weights=weights,
+                              range=np.sort(arange[i]), **hist_kwargs)
+        else:
+            if gaussian_filter is None:
+                raise ImportError("Please install scipy for smoothing")
+            n, b = np.histogram(x, bins=bins[i], weights=weights,
+                                range=np.sort(arange[i]))
+            n = gaussian_filter(n, smooth1d)
+            x0 = np.array(list(zip(b[:-1], b[1:]))).flatten()
+            y0 = np.array(list(zip(n, n))).flatten()
+            ax.plot(x0, y0, **hist_kwargs)
+
+        if truths is not None and truths[i] is not None:
+            ax.axvline(truths[i], color=truth_color)
+
+        # Plot quantiles if wanted.
+        qlen = len(quantiles)
+        if qlen > 0:
+            qvalues = quantile(x, quantiles, weights=weights)
+            for q in qvalues:
+                ax.axvline(q, ls="dashed", color=color)
+
+            if verbose:
+                print("Quantiles:")
+                print([item for item in zip(quantiles, qvalues)])
+
+        # pylint: disable=len-as-condition
+        if len(titles):
+            ax.set_title(titles[i], **title_kwargs)
+
+        # Set up the axes.
+        ax.set_xlim(arange[i])
+        if scale_hist:
+            maxn = np.max(n)
+            ax.set_ylim(-0.1 * maxn, 1.1 * maxn)
+        else:
+            ax.set_ylim(0, 1.1 * np.max(n))
+        ax.set_yticklabels([])
+        if max_n_ticks == 0:
+            ax.xaxis.set_major_locator(NullLocator())
+            ax.yaxis.set_major_locator(NullLocator())
+        else:
+            ax.xaxis.set_major_locator(MaxNLocator(max_n_ticks, prune="lower"))
+            ax.yaxis.set_major_locator(NullLocator())
+
+        if i < K - 1:
+            if top_ticks:
+                ax.xaxis.set_ticks_position("top")
+                _ = [l.set_rotation(45) for l in ax.get_xticklabels()]
+            else:
+                ax.set_xticklabels([])
+        else:
+            if reverse:
+                ax.xaxis.tick_top()
+            _ = [l.set_rotation(45) for l in ax.get_xticklabels()]
+            if labels is not None:
+                if reverse:
+                    ax.set_title(labels[i], y=1.25, **label_kwargs)
+                else:
+                    ax.set_xlabel(labels[i], **label_kwargs)
+
+            # use MathText for axes ticks
+            ax.xaxis.set_major_formatter(
+                ScalarFormatter(useMathText=use_math_text))
+
+        for j, y in enumerate(xs):
+            if np.shape(xs)[0] == 1:
+                ax = axes
+            else:
+                if reverse:
+                    ax = axes[K-i-1, K-j-1]
+                else:
+                    ax = axes[i, j]
+            if j > i:
+                ax.set_frame_on(False)
+                ax.set_xticks([])
+                ax.set_yticks([])
+                continue
+            elif j == i:
+                continue
+
+            # Deal with masked arrays.
+            if hasattr(y, "compressed"):
+                y = y.compressed()
+
+            # pylint: disable=unexpected-keyword-arg
+            hist2d(y, x, ax=ax, range=[arange[j], arange[i]], weights=weights,
+                   smooth=smooth, bins=[bins[j], bins[i]], levels=levels,
+                   **hist2d_kwargs)
+
+            if truths is not None:
+                if truths[i] is not None and truths[j] is not None:
+                    ax.plot(truths[j], truths[i], "s", color=truth_color)
+                if truths[j] is not None:
+                    ax.axvline(truths[j], color=truth_color)
+                if truths[i] is not None:
+                    ax.axhline(truths[i], color=truth_color)
+
+            if max_n_ticks == 0:
+                ax.xaxis.set_major_locator(NullLocator())
+                ax.yaxis.set_major_locator(NullLocator())
+            else:
+                ax.xaxis.set_major_locator(MaxNLocator(max_n_ticks,
+                                                       prune="lower"))
+                ax.yaxis.set_major_locator(MaxNLocator(max_n_ticks,
+                                                       prune="lower"))
+
+            if i < K - 1:
+                ax.set_xticklabels([])
+            else:
+                if reverse:
+                    ax.xaxis.tick_top()
+                for l in ax.get_xticklabels():
+                    l.set_rotation(45)
+                if labels is not None:
+                    ax.set_xlabel(labels[j], **label_kwargs)
+                    if reverse:
+                        ax.xaxis.set_label_coords(0.5, 1.4)
+                    else:
+                        ax.xaxis.set_label_coords(0.5, -0.3)
+
+                # use MathText for axes ticks
+                ax.xaxis.set_major_formatter(
+                    ScalarFormatter(useMathText=use_math_text))
+
+            if j > 0:
+                ax.set_yticklabels([])
+            else:
+                if reverse:
+                    ax.yaxis.tick_right()
+                for l in ax.get_yticklabels():
+                    l.set_rotation(45)
+                if labels is not None:
+                    if reverse:
+                        ax.set_ylabel(labels[i], rotation=-90, **label_kwargs)
+                        ax.yaxis.set_label_coords(1.3, 0.5)
+                    else:
+                        ax.set_ylabel(labels[i], **label_kwargs)
+                        ax.yaxis.set_label_coords(-0.3, 0.5)
+
+                # use MathText for axes ticks
+                ax.yaxis.set_major_formatter(
+                    ScalarFormatter(useMathText=use_math_text))
+
+    return fig
+
+def quantile(x, q, weights=None):
+    """
+    Compute sample quantiles with support for weighted samples.
+
+    Note
+    ----
+    When ``weights`` is ``None``, this method simply calls numpy's percentile
+    function with the values of ``q`` multiplied by 100.
+
+    Parameters
+    ----------
+    x : array_like[nsamples,]
+       The samples.
+
+    q : array_like[nquantiles,]
+       The list of quantiles to compute. These should all be in the range
+       ``[0, 1]``.
+
+    weights : Optional[array_like[nsamples,]]
+        An optional weight corresponding to each sample. These
+
+    Returns
+    -------
+    quantiles : array_like[nquantiles,]
+        The sample quantiles computed at ``q``.
+
+    Raises
+    ------
+    ValueError
+        For invalid quantiles; ``q`` not in ``[0, 1]`` or dimension mismatch
+        between ``x`` and ``weights``.
+
+    """
+    x = np.atleast_1d(x)
+    q = np.atleast_1d(q)
+
+    if np.any(q < 0.0) or np.any(q > 1.0):
+        raise ValueError("Quantiles must be between 0 and 1")
+
+    if weights is None:
+        return np.percentile(x, list(100.0 * q))
+    else:
+        weights = np.atleast_1d(weights)
+        if len(x) != len(weights):
+            raise ValueError("Dimension mismatch: len(weights) != len(x)")
+        idx = np.argsort(x)
+        sw = weights[idx]
+        cdf = np.cumsum(sw)[:-1]
+        cdf /= cdf[-1]
+        cdf = np.append(0, cdf)
+        return np.interp(q, cdf, x[idx]).tolist()
+
+# pylint: disable=unused-argument
+def hist2d(x, y, arange=None, levels=(2,),
+           ax=None, plot_datapoints=True, plot_contours=True,
+           contour_kwargs=None, data_kwargs=None, **kwargs):
+    if ax is None:
+        ax = plt.gca()
+
+    if plot_datapoints:
+        if data_kwargs is None:
+            data_kwargs = dict()
+        data_kwargs["s"] = data_kwargs.get("s", 2.0)
+        data_kwargs["alpha"] = data_kwargs.get("alpha", 0.2)
+        ax.scatter(x, y, marker="o", zorder=-1, rasterized=True, **data_kwargs)
+
+    # Plot the contour edge colors.
+    if plot_contours:
+        if contour_kwargs is None:
+            contour_kwargs = dict()
+
+        # mask data in range + chi2
+        maskx = (x > arange[0][0]) & (x < arange[0][1])
+        masky = (y > arange[1][0]) & (y < arange[1][1])
+        mask = maskx & masky & (data_kwargs['c'] < data_kwargs['vmax']*1.2)
+
+        # approx posterior + smooth
+        xg, yg = np.meshgrid(np.linspace(x[mask].min(),x[mask].max(),50), np.linspace(y[mask].min(),y[mask].max(),50))
+        cg = griddata(np.vstack([x[mask],y[mask]]).T, data_kwargs['c'][mask], (xg,yg), method='nearest', rescale=True)
+        scg = gaussian_filter(cg,sigma=2)
+
+        # plot
+        ax.contour(xg, yg, scg*np.nanmin(cg)/np.nanmin(scg), levels, **contour_kwargs, vmin=data_kwargs['vmin'], vmax=data_kwargs['vmax'])
+    ax.set_xlim(arange[0])
+    ax.set_ylim(arange[1])
+
+#######################################################
+def eclipse(times, values):
+    tme = eclipse_mid_time(values['per'], values['ars'], values['ecc'], values['inc'], values['omega'], values['tmid'])
+    model = pytransit([0,0,0,0],
+                      values['rprs']*values['fpfs']**0.5, values['per'], values['ars'],
+                      values['ecc'], values['inc'], values['omega']+180,
+                      tme, times, method='claret', precision=3)
+    return model
+
+def brightness(time, values):
+    # compute mid-eclipse time
+    tme = eclipse_mid_time(values['per'], values['ars'], values['ecc'], values['inc'], values['omega'], values['tmid'])
+
+    # compute phase based on mid-eclipse
+    phase = (time - tme)/values['per']
+
+    # brightness amplitude variation
+    bdata = values['c1']*np.cos(2*np.pi*phase) + values['c2']*np.sin(2*np.pi*phase) + values['c3']*np.cos(4*np.pi*phase) + values['c4']*np.sin(4*np.pi*phase)
+
+    # offset so eclipse is around 1 in norm flux
+    c0 = values['fpfs']*values['rprs']**2 - (values['c1'] + values['c3'])
+    return 1+c0+bdata
+
+def phasecurve(time, values):
+    # transit time series
+    tdata = transit(time, values)
+
+    # eclipse (similar to transit but with 0 Ld and 180+omega)
+    edata = eclipse(time, values)
+
+    # brightness variation
+    bdata = brightness(time, values)
+
+    # combine models
+    pdata = tdata*bdata*edata
+
+    # mask in-eclipse data
+    emask = ~np.floor(edata).astype(bool)
+
+    # offset data to be at 1 (TODO inspect this line)
+    pdata[emask] = edata[emask]+values['fpfs']*values['rprs']**2
+    return pdata
+
+# average data into bins of dt from start to finish
+def time_bin(time, flux, dt=1./(60*24)):
+    bins = int(np.floor((max(time) - min(time))/dt))
+    bflux = np.zeros(bins)
+    btime = np.zeros(bins)
+    bstds = np.zeros(bins)
+    for i in range(bins):
+        mask = (time >= (min(time)+i*dt)) & (time < (min(time)+(i+1)*dt))
+        if mask.sum() > 0:
+            bflux[i] = np.nanmean(flux[mask])
+            btime[i] = np.nanmean(time[mask])
+            bstds[i] = np.nanstd(flux[mask])/(1+mask.sum())**0.5
+    zmask = (bflux==0) | (btime==0) | np.isnan(bflux) | np.isnan(btime)
+    return btime[~zmask], bflux[~zmask], bstds[~zmask]
+
+##########################################################
+# phasecurve, eclipse, and transit fitting algorithm with
+# nearest neighbor detrending
+class pc_fitter():
+    # pylint: disable=too-many-instance-attributes
+    def __init__(self, time, data, dataerr, prior, bounds, syspars, neighbors=100, mode='ns', verbose=False):
+        self.time = time
+        self.data = data
+        self.dataerr = dataerr
+        self.prior = copy.deepcopy(prior)
+        self.bounds = bounds
+        self.syspars = syspars
+        self.neighbors = neighbors
+        self.verbose = verbose
+
+        if mode == 'ns':
+            self.fit_nested()
+        else:
+            self.fit_lm()
+
+    def fit_lm(self):
+
+        freekeys = list(self.bounds.keys())
+        boundarray = np.array([self.bounds[k] for k in freekeys])
+
+        # trim data around predicted transit/eclipse time
+        self.gw, self.nearest = gaussian_weights(self.syspars, neighbors=self.neighbors)
+
+        def lc2min(pars):
+            # pylint: disable=invalid-unary-operand-type
+            for i, _ in enumerate(pars):
+                self.prior[freekeys[i]] = pars[i]
+            lightcurve = phasecurve(self.time, self.prior)
+            detrended = self.data/lightcurve
+            wf = weightedflux(detrended, self.gw, self.nearest)
+            model = lightcurve*wf
+            return ((self.data-model)/self.dataerr)**2
+
+        res = least_squares(lc2min, x0=[self.prior[k] for k in freekeys],
+                            bounds=[boundarray[:,0], boundarray[:,1]], jac='3-point',
+                            loss='linear', method='dogbox', xtol=None, ftol=1e-5,
+                            tr_options='exact', verbose=True)
+
+        self.parameters = copy.deepcopy(self.prior)
+        self.errors = {}
+
+        for i,k in enumerate(freekeys):
+            self.parameters[k] = res.x[i]
+            self.errors[k] = 0
+
+        self.create_fit_variables()
+
+    def fit_nested(self):
+        freekeys = list(self.bounds.keys())
+        boundarray = np.array([self.bounds[k] for k in freekeys])
+        bounddiff = np.diff(boundarray,1).reshape(-1)
+
+        # trim data around predicted transit/eclipse time
+        self.gw, self.nearest = gaussian_weights(self.syspars, neighbors=self.neighbors)
+
+        def lc2min_transit(pars):
+            # pylint: disable=invalid-unary-operand-type
+            for i, _ in enumerate(pars):
+                self.prior[freekeys[i]] = pars[i]
+            lightcurve = transit(self.time, self.prior)
+            detrended = self.data/lightcurve
+            wf = weightedflux(detrended, self.gw, self.nearest)
+            model = lightcurve*wf
+            return -np.sum(((self.data-model)/self.dataerr)**2)
+
+        def lc2min_phasecurve(pars):
+            # pylint: disable=invalid-unary-operand-type
+            for i, _ in enumerate(pars):
+                self.prior[freekeys[i]] = pars[i]
+            lightcurve = phasecurve(self.time, self.prior)
+            detrended = self.data/lightcurve
+            wf = weightedflux(detrended, self.gw, self.nearest)
+            model = lightcurve*wf
+            return -np.sum(((self.data-model)/self.dataerr)**2)
+
+        def prior_transform_basic(upars):
+            return (boundarray[:,0] + bounddiff*upars)
+
+        def prior_transform_phasecurve(upars):
+            vals = (boundarray[:,0] + bounddiff*upars)
+
+            # set limits of phase amplitude to be less than eclipse depth or user bound
+            edepth = vals[freekeys.index('rprs')]**2 * vals[freekeys.index('fpfs')]
+            for k in ['c1','c2']:
+                if k in freekeys:
+                    # conditional prior needed to conserve energy
+                    if k == 'c1':
+                        ki = freekeys.index(k)
+                        vals[ki] = upars[ki]*0.4*edepth+0.1*edepth
+                    if k == 'c2':
+                        ki = freekeys.index(k)
+                        vals[ki] = upars[ki]*0.25*edepth - 0.125*edepth
+            return vals
+
+        if self.verbose:
+            if 'fpfs' in freekeys:
+                self.results = ReactiveNestedSampler(freekeys, lc2min_phasecurve, prior_transform_phasecurve).run(max_ncalls=5e5)
+            else:
+                self.results = ReactiveNestedSampler(freekeys, lc2min_transit, prior_transform_basic).run(max_ncalls=5e5)
+        else:
+            if 'fpfs' in freekeys:
+                self.results = ReactiveNestedSampler(freekeys, lc2min_phasecurve, prior_transform_phasecurve).run(max_ncalls=5e5, show_status=self.verbose, viz_callback=self.verbose)
+            else:
+                self.results = ReactiveNestedSampler(freekeys, lc2min_transit, prior_transform_basic).run(max_ncalls=5e5, show_status=self.verbose, viz_callback=self.verbose)
+
+        self.errors = {}
+        self.quantiles = {}
+        self.parameters = copy.deepcopy(self.prior)
+
+        for i, key in enumerate(freekeys):
+
+            self.parameters[key] = self.results['maximum_likelihood']['point'][i]
+            self.errors[key] = self.results['posterior']['stdev'][i]
+            self.quantiles[key] = [
+                self.results['posterior']['errlo'][i],
+                self.results['posterior']['errup'][i]]
+
+        # self.results['maximum_likelihood']
+        self.create_fit_variables()
+
+    def create_fit_variables(self):
+        # pylint: disable=attribute-defined-outside-init
+        self.phase = (self.time - self.parameters['tmid']) / self.parameters['per']
+        self.transit = phasecurve(self.time, self.parameters)
+        detrended = self.data / self.transit
+        self.wf = weightedflux(detrended, self.gw, self.nearest)
+        self.model = self.transit*self.wf
+        self.detrended = self.data/self.wf
+        self.detrendederr = self.dataerr
+        self.residuals = self.data - self.model
+        self.chi2 = np.sum(self.residuals**2/self.dataerr**2)
+        self.bic = len(self.bounds) * np.log(len(self.time)) - 2*np.log(self.chi2)
+
+    def plot_bestfit(self, bin_dt=10./(60*24), zoom=False, phase=True):
+        f = plt.figure(figsize=(12,7))
+        # f.subplots_adjust(top=0.94,bottom=0.08,left=0.07,right=0.96)
+        ax_lc = plt.subplot2grid((4,5), (0,0), colspan=5,rowspan=3)
+        ax_res = plt.subplot2grid((4,5), (3,0), colspan=5, rowspan=1)
+        axs = [ax_lc, ax_res]
+
+        bt, bf, _ = time_bin(self.time, self.detrended, bin_dt)
+        bp = (bt-self.parameters['tmid'])/self.parameters['per']
+
+        if phase:
+            axs[0].plot(bp,bf,'co',alpha=0.5,zorder=2)
+            axs[0].plot(self.phase, self.transit, 'r-', zorder=3)
+            axs[0].set_xlim([min(self.phase), max(self.phase)])
+            axs[0].set_xlabel("Phase ")
+        else:
+            axs[0].plot(bt,bf,'co',alpha=0.5,zorder=2)
+            axs[0].plot(self.time, self.transit, 'r-', zorder=3)
+            axs[0].set_xlim([min(self.time), max(self.time)])
+            axs[0].set_xlabel("Time [day]")
+
+        axs[0].set_ylabel("Relative Flux")
+        axs[0].grid(True,ls='--')
+
+        if zoom:
+            axs[0].set_ylim([1-1.25*self.parameters['rprs']**2, 1+0.5*self.parameters['rprs']**2])
+        else:
+            if phase:
+                axs[0].errorbar(self.phase, self.detrended, yerr=np.std(self.residuals)/np.median(self.data), ls='none', marker='.', color='black', zorder=1, alpha=0.025)
+            else:
+                axs[0].errorbar(self.time, self.detrended, yerr=np.std(self.residuals)/np.median(self.data), ls='none', marker='.', color='black', zorder=1, alpha=0.025)
+
+        bt, br, _ = time_bin(self.time, self.residuals/np.median(self.data)*1e6, bin_dt)
+        bp = (bt-self.parameters['tmid'])/self.parameters['per']
+
+        if phase:
+            axs[1].plot(self.phase, self.residuals/np.median(self.data)*1e6, 'k.', alpha=0.15, label=r'$\sigma$ = {:.0f} ppm'.format(np.std(self.residuals/np.median(self.data)*1e6)))
+            axs[1].plot(bp,br,'c.',alpha=0.5,zorder=2,label=r'$\sigma$ = {:.0f} ppm'.format(np.std(br)))
+            axs[1].set_xlim([min(self.phase), max(self.phase)])
+            axs[1].set_xlabel("Phase")
+        else:
+            axs[1].plot(self.time, self.residuals/np.median(self.data)*1e6, 'k.', alpha=0.15, label=r'$\sigma$ = {:.0f} ppm'.format(np.std(self.residuals/np.median(self.data)*1e6)))
+            axs[1].plot(bt,br,'c.',alpha=0.5,zorder=2,label=r'$\sigma$ = {:.0f} ppm'.format(np.std(br)))
+            axs[1].set_xlim([min(self.time), max(self.time)])
+            axs[1].set_xlabel("Time [day]")
+
+        axs[1].legend(loc='best')
+        axs[1].set_ylabel("Residuals [ppm]")
+        axs[1].grid(True,ls='--')
+        plt.tight_layout()
+        return f,axs
+
+    def plot_posterior(self):
+        ranges = []
+        mask1 = np.ones(len(self.results['weighted_samples']['logl']),dtype=bool)
+        mask2 = np.ones(len(self.results['weighted_samples']['logl']),dtype=bool)
+        mask3 = np.ones(len(self.results['weighted_samples']['logl']),dtype=bool)
+        titles = []
+        labels= []
+        flabels = {
+            'rprs':r'R$_{p}$/R$_{s}$',
+            'tmid':r'T$_{mid}$',
+            'ars':r'a/R$_{s}$',
+            'inc':r'I',
+            'u1':r'u$_1$',
+            'fpfs':r'F$_{p}$/F$_{s}$',
+            'omega':r'$\omega$',
+            'ecc':r'$e$',
+            'c0':r'$c_0$',
+            'c1':r'$c_1$',
+            'c2':r'$c_2$',
+            'c3':r'$c_3$',
+            'c4':r'$c_4$',
+            'a0':r'$a_0$',
+            'a1':r'$a_1$',
+            'a2':r'$a_2$'
+        }
+        # constrain plots to +/- 4 sigma and estimate sigma levels
+        for i, key in enumerate(self.quantiles):
+            titles.append(f"{self.parameters[key]:.5f} +- {self.errors[key]:.5f}")
+
+            if key == 'fpfs':
+                ranges.append([
+                    self.parameters[key] - 3*self.errors[key],
+                    self.parameters[key] + 3*self.errors[key]
+                ])
+            else:
+                ranges.append([
+                    self.parameters[key] - 4*self.errors[key],
+                    self.parameters[key] + 4*self.errors[key]
+                ])
+
+            mask3 = mask3 & (self.results['weighted_samples']['points'][:,i] > (self.parameters[key] - 3*self.errors[key])) & \
+                (self.results['weighted_samples']['points'][:,i] < (self.parameters[key] + 3*self.errors[key]))
+
+            mask1 = mask1 & (self.results['weighted_samples']['points'][:,i] > (self.parameters[key] - self.errors[key])) & \
+                (self.results['weighted_samples']['points'][:,i] < (self.parameters[key] + self.errors[key]))
+
+            mask2 = mask2 & (self.results['weighted_samples']['points'][:,i] > (self.parameters[key] - 2*self.errors[key])) & \
+                (self.results['weighted_samples']['points'][:,i] < (self.parameters[key] + 2*self.errors[key]))
+
+            labels.append(flabels.get(key, key))
+
+        chi2 = self.results['weighted_samples']['logl']*-2
+        fig = corner(self.results['weighted_samples']['points'],
+                     labels=labels,
+                     bins=int(np.sqrt(self.results['samples'].shape[0])),
+                     range=ranges,
+                     plot_contours=True,
+                     levels=[chi2[mask1].max(), chi2[mask2].max(), chi2[mask3].max()],
+                     plot_density=False,
+                     titles=titles,
+                     data_kwargs={
+                         'c':chi2,
+                         'vmin':np.percentile(chi2[mask3],1),
+                         'vmax':np.percentile(chi2[mask3],99),
+                         'cmap':'viridis'
+                     },
+                     label_kwargs={
+                         'labelpad':15,
+                     },
+                     hist_kwargs={
+                         'color':'black',
+                     })
+        return fig, None
+
+    def plot_btempcurve(self, bandpass='IRAC 3.6um'):
+
+        fig = plt.figure(figsize=(13,7))
+        ax_lc = plt.subplot2grid((4,5), (0,0), colspan=5,rowspan=3)
+        ax_res = plt.subplot2grid((4,5), (3,0), colspan=5, rowspan=1)
+        axs = [ax_lc, ax_res]
+
+        phase = (self.time-self.parameters['tmid'])/self.parameters['per']
+        bin_dt = 10./24./60.
+        bt, bf, _ = time_bin(self.time, self.detrended, bin_dt)
+        bp = (bt-self.parameters['tmid'])/self.parameters['per']
+        bt, br, _ = time_bin(self.time, self.residuals, bin_dt)
+
+        bcurve = brightness(bt,self.parameters)
+        ogfpfs = self.parameters['fpfs']
+        tbcurve = np.ones(bcurve.shape)
+        for i,bc in enumerate(bcurve):
+            self.parameters['fpfs'] = max((bc-1)/self.parameters['rprs']**2, 0.00001)
+            tbcurve[i] = brightnessTemp(self.parameters,bandpass)
+        self.parameters['fpfs'] = ogfpfs
+
+        # residuals
+        axs[1].plot(phase, self.residuals/np.median(self.data)*1e6, 'k.', alpha=0.15, label=r'$\sigma$ = {:.0f} ppm'.format(np.std(self.residuals/np.median(self.data)*1e6)))
+
+        axs[1].plot(bp,1e6*br/np.median(self.data),'w.',zorder=2,label=r'$\sigma$ = {:.0f} ppm'.format(np.std(1e6*br/np.median(self.data))))
+
+        axs[1].set_xlim([min(phase), max(phase)])
+        axs[1].set_xlabel("Phase")
+        axs[1].legend(loc='best')
+        axs[1].set_ylabel("Residuals [ppm]")
+        axs[1].grid(True,ls='--')
+
+        axs[0].errorbar(phase, self.detrended, yerr=np.std(self.residuals)/np.median(self.data), ls='none', marker='.', color='black',alpha=0.1, zorder=1)
+
+        # map color to equilibrium temperature
+        im = axs[0].scatter(bp,bf,marker='o',c=tbcurve,vmin=500,vmax=2750,cmap='jet', zorder=2, s=20)
+        cbar = plt.colorbar(im)
+        cbar.ax.set_xlabel("B. Temp. [K]")
+
+        axs[0].plot(phase, self.transit, 'w--', zorder=3)
+        axs[0].set_xlim([min(phase), max(phase)])
+        axs[0].set_xlabel("Phase ")
+
+        axs[0].set_ylabel("Relative Flux")
+        axs[0].grid(True,ls='--')
+        axs[0].set_ylim([0.955,1.03])
+
+        plt.tight_layout()
+        return fig,axs
+
+    def plot_pixelmap(self, title='', savedir=None):
+        fig,ax = plt.subplots(1,figsize=(8.5,7))
+        xcent = self.syspars[:,0]  # weighted flux x-cntroid
+        ycent = self.syspars[:,1]  # weighted flux y-centroid
+        npp = self.syspars[:,2]  # noise pixel parameter
+        normpp = (npp-npp.min())/(npp.max() - npp.min())  # norm btwn 0-1
+        normpp *= 20
+        normpp += 20
+        im = ax.scatter(
+            xcent,
+            ycent,
+            c=self.wf/np.median(self.wf),
+            marker='.',
+            vmin=0.99,
+            vmax=1.01,
+            alpha=0.5,
+            cmap='jet',
+            s=normpp
+        )
+        ax.set_xlim([
+            np.median(xcent)-3*np.std(xcent),
+            np.median(xcent)+3*np.std(xcent)
+        ])
+        ax.set_ylim([
+            np.median(ycent)-3*np.std(ycent),
+            np.median(ycent)+3*np.std(ycent)
+        ])
+
+        ax.set_title(title,fontsize=14)
+        ax.set_xlabel('X-Centroid [px]',fontsize=14)
+        ax.set_ylabel('Y-Centroid [px]',fontsize=14)
+        cbar = fig.colorbar(im)
+        cbar.set_label('Relative Pixel Response',fontsize=14,rotation=270,labelpad=15)
+
+        plt.tight_layout()
+        if savedir:
+            plt.savefig(savedir+title+".png")
+            plt.close()
+        else:
+            return fig,ax
+
+def brightnessTemp(priors,f='IRAC 3.6um'):
+    # Solve for Tb using Fp/Fs, Ts and a filter bandpass
+    if '3.6' in f or '36' in f:
+        waveset = np.linspace(3.15, 3.9, 1000) * astropy.units.micron
+    else:
+        waveset = np.linspace(4,5,1000) * astropy.units.micron
+
+    def f2min(T, *args):
+        fpfs,tstar,waveset = args
+        fstar = BlackBody(waveset, tstar * astropy.units.K)
+        fplanet = BlackBody(waveset, T * astropy.units.K)
+        fp = np.trapz(fplanet, waveset)
+        fs = np.trapz(fstar, waveset)
+        return (fp/fs) - fpfs
+
+    tb = brentq(f2min, 1,3500, args=(priors['fpfs'],priors['T*'],waveset))
+    return tb
+
+# --------------------------------------------------------------------
 # -- NORMALIZATION -- ------------------------------------------------
 def norm_jwst_niriss(cal, tme, fin, out, selftype, _debug=False):
     '''
@@ -2402,8 +3217,9 @@ def norm_spitzer(cal, tme, fin, out, selftype, debug=False):
             xmask = np.isnan(sigma_clip(out['data'][p]['WX'][omask], ndt))
             ymask = np.isnan(sigma_clip(out['data'][p]['WY'][omask], ndt))
             nmask = np.isnan(sigma_clip(out['data'][p]['NOISEPIXEL'][omask], ndt))
+            zmask = out['data'][p]['PHOT'][omask] == 0
 
-            badmask[omask] = photmask | xmask | ymask | nmask
+            badmask[omask] = photmask | xmask | ymask | nmask | zmask
 
         # remove outliers
         for k in out['data'][p].keys():
@@ -2462,246 +3278,6 @@ def sigma_clip(ogdata,dt):
     data[mask] = np.nan
     return data
 
-# Computes Hasting's polynomial approximation for the complete
-# elliptic integral of the first (ek) and second (kk) kind
-def ellke(k):
-    m1=1.-k**2
-    np.logm1 = np.log(m1)
-
-    a1=0.44325141463
-    a2=0.06260601220
-    a3=0.04757383546
-    a4=0.01736506451
-    b1=0.24998368310
-    b2=0.09200180037
-    b3=0.04069697526
-    b4=0.00526449639
-    ee1=1.+m1*(a1+m1*(a2+m1*(a3+m1*a4)))
-    ee2=m1*(b1+m1*(b2+m1*(b3+m1*b4)))*(-np.logm1)
-    ek = ee1+ee2
-
-    a0=1.38629436112
-    a1=0.09666344259
-    a2=0.03590092383
-    a3=0.03742563713
-    a4=0.01451196212
-    b0=0.5
-    b1=0.12498593597
-    b2=0.06880248576
-    b3=0.03328355346
-    b4=0.00441787012
-    ek1=a0+m1*(a1+m1*(a2+m1*(a3+m1*a4)))
-    ek2=(b0+m1*(b1+m1*(b2+m1*(b3+m1*b4))))*np.logm1
-    kk = ek1-ek2
-
-    return [ek,kk]
-
-# Computes the complete elliptical integral of the third kind using
-# the algorithm of Bulirsch (1965):
-def ellpic_bulirsch(n,k):
-    kc=np.sqrt(1.-k**2); la=n+1.
-    if min(la) < 0.:
-        # print('Negative l')
-        pass
-    m0=1.; c=1.; la=np.sqrt(la); d=1./la; e=kc
-    while 1:
-        f = c; c = d/la+c; g = e/la; d = 2.*(f*g+d)
-        la = g + la; g = m0; m0 = kc + m0
-        if max(abs(1.-kc/g)) > 1.e-8:
-            kc = 2*np.sqrt(e); e=kc*m0
-        else: return 0.5*np.pi*(c*m0+d)/(m0*(m0+la))
-        pass
-    pass
-
-#   Python translation of IDL code.
-#   This routine computes the lightcurve for occultation of a
-#   quadratically limb-darkened source without microlensing.  Please
-#   cite Mandel & Agol (2002) and Eastman & Agol (2008) if you make use
-#   of this routine in your research.  Please report errors or bugs to
-#   jdeast@astronomy.ohio-state.edu
-
-# GMR: This thing was put in excalibur but never ran right,
-# there are syntax errors everywhere
-
-# Yo Eastman use pylint next time
-def occultquad(z,u1,u2,p0):  # pylint: disable=too-many-return-statements
-    nz = np.size(z)
-    lambdad = np.zeros(nz)
-    etad = np.zeros(nz)
-    lambdae = np.zeros(nz)
-    omega=1.-u1/3.-u2/6.
-
-    # tolerance for double precision equalities
-    # special case integrations
-    tol = 1e-14
-
-    p = abs(p0)
-
-    z = np.where(abs(p-z) < tol,p,z)
-    z = np.where(abs((p-1)-z) < tol,p-1.,z)
-    z = np.where(abs((1-p)-z) < tol,1.-p,z)
-    z = np.where(z < tol,0.,z)
-
-    x1=(p-z)**2.
-    x2=(p+z)**2.
-    x3=p**2.-z**2.
-
-    # trivial case of no planet
-    if p <= 0.:
-        muo1 = np.zeros(nz) + 1.
-        mu0 = np.zeros(nz) + 1.
-        return [muo1,mu0]
-
-    # Case 1 - the star is unocculted:
-    # only consider points with z lt 1+p
-    notusedyet = np.where(z < (1. + p))
-    notusedyet = notusedyet[0]
-    if np.size(notusedyet) == 0:
-        muo1 =1.-((1.-u1-2.*u2)*lambdae+(u1+2.*u2)*(lambdad+2./3.*(p > z))+u2*etad)/omega
-        mu0=1.-lambdae
-        return [muo1,mu0]
-
-    # Case 11 - the  source is completely occulted:
-    if p >= 1.:
-        occulted = np.where(z[notusedyet]<=p-1)  # ,complement=notused2)
-        if np.size(occulted) != 0:
-            ndxuse = notusedyet[occulted]
-            etad[ndxuse] = 0.5  # corrected typo in paper
-            lambdae[ndxuse] = 1.
-            # lambdad = 0 already
-            notused2 = np.where(z[notusedyet] > p-1)
-            if np.size(notused2) == 0:
-                muo1 =1.-((1.-u1-2.*u2)*lambdae+(u1+2.*u2)*(lambdad+2./3.*(p > z))+u2*etad)/omega
-                mu0=1.-lambdae
-                return [muo1,mu0]
-            notusedyet = notusedyet[notused2]
-
-    # Case 2, 7, 8 - ingress/egress (uniform disk only)
-    inegressuni = np.where((z[notusedyet] >= abs(1.-p)) & (z[notusedyet] < 1.+p))
-    if np.size(inegressuni) != 0:
-        ndxuse = notusedyet[inegressuni]
-        tmp = (1.-p**2.+z[ndxuse]**2.)/2./z[ndxuse]
-        tmp = np.where(tmp > 1.,1.,tmp)
-        tmp = np.where(tmp < -1.,-1.,tmp)
-        kap1 = np.arccos(tmp)
-        tmp = (p**2.+z[ndxuse]**2-1.)/2./p/z[ndxuse]
-        tmp = np.where(tmp > 1.,1.,tmp)
-        tmp = np.where(tmp < -1.,-1.,tmp)
-        kap0 = np.arccos(tmp)
-        tmp = 4.*z[ndxuse]**2-(1.+z[ndxuse]**2-p**2)**2
-        tmp = np.where(tmp < 0,0,tmp)
-        lambdae[ndxuse] = (p**2*kap0+kap1 - 0.5*np.sqrt(tmp))/np.pi
-        # eta_1
-        etad[ndxuse] = 1./2./np.pi*(kap1+p**2*(p**2+2.*z[ndxuse]**2)*kap0-(1.+5.*p**2+z[ndxuse]**2)/4.*np.sqrt((1.-x1[ndxuse])*(x2[ndxuse]-1.)))
-
-    # Case 5, 6, 7 - the edge of planet lies at origin of star
-    ocltor = np.where(z[notusedyet] == p)  # complement=notused3)
-    _t = np.where(z[notusedyet] == p)
-    if np.size(ocltor) != 0:
-        ndxuse = notusedyet[ocltor]
-        if p < 0.5:
-            # Case 5
-            q=2.*p  # corrected typo in paper (2k -> 2p)
-            Ek,Kk = ellke(q)
-            # lambda_4
-            lambdad[ndxuse] = 1./3.+2./9./np.pi*(4.*(2.*p**2-1.)*Ek+(1.-4.*p**2)*Kk)
-            # eta_2
-            etad[ndxuse] = p**2/2.*(p**2+2.*z[ndxuse]**2)
-            lambdae[ndxuse] = p**2  # uniform disk
-        elif p > 0.5:
-            # Case 7
-            q=0.5/p  # corrected typo in paper (1/2k -> 1/2p)
-            Ek,Kk = ellke(q)
-            # lambda_3
-            lambdad[ndxuse] = 1./3.+16.*p/9./np.pi*(2.*p**2-1.)*Ek-(32.*p**4-20.*p**2+3.)/9./np.pi/p*Kk
-            # etad = eta_1 already
-        else:
-            # Case 6
-            lambdad[ndxuse] = 1./3.-4./np.pi/9.
-            etad[ndxuse] = 3./32.
-        notused3 = np.where(z[notusedyet] != p)
-        if np.size(notused3) == 0:
-            muo1 =1.-((1.-u1-2.*u2)*lambdae+(u1+2.*u2)*(lambdad+2./3.*(p > z))+u2*etad)/omega
-            mu0=1.-lambdae
-            return [muo1,mu0]
-        notusedyet = notusedyet[notused3]
-
-    # Case 2, Case 8 - ingress/egress (with limb darkening)
-    inegress = np.where(((z[notusedyet] > 0.5+abs(p-0.5)) & (z[notusedyet] < 1.+p)) | ((p > 0.5) & (z[notusedyet] > abs(1.-p)) & (z[notusedyet] < p)))  # complement=notused4)
-    if np.size(inegress) != 0:
-
-        ndxuse = notusedyet[inegress]
-        q=np.sqrt((1.-x1[ndxuse])/(x2[ndxuse]-x1[ndxuse]))
-        Ek,Kk = ellke(q)
-        n=1./x1[ndxuse]-1.
-
-        # lambda_1:
-        lambdad[ndxuse]=2./9./np.pi/np.sqrt(x2[ndxuse]-x1[ndxuse])*(((1.-x2[ndxuse])*(2.*x2[ndxuse]+x1[ndxuse]-3.)-3.*x3[ndxuse]*(x2[ndxuse]-2.))*Kk+(x2[ndxuse]-x1[ndxuse])*(z[ndxuse]**2+7.*p**2-4.)*Ek-3.*x3[ndxuse]/x1[ndxuse]*ellpic_bulirsch(n,q))
-
-        notused4 = np.where(((z[notusedyet] <= 0.5+abs(p-0.5)) | (z[notusedyet] >= 1.+p)) & ((p <= 0.5) | (z[notusedyet] <= abs(1.-p)) | (z[notusedyet] >= p)))
-        if np.size(notused4) == 0:
-            muo1 =1.-((1.-u1-2.*u2)*lambdae+(u1+2.*u2)*(lambdad+2./3.*(p > z))+u2*etad)/omega
-            mu0=1.-lambdae
-            return [muo1,mu0]
-        notusedyet = notusedyet[notused4]
-
-    # Case 3, 4, 9, 10 - planet completely inside star
-    if p < 1.:
-        inside = np.where(z[notusedyet] <= (1.-p))  # complement=notused5)
-        if np.size(inside) != 0:
-            ndxuse = notusedyet[inside]
-
-            # eta_2
-            etad[ndxuse] = p**2/2.*(p**2+2.*z[ndxuse]**2)
-
-            # uniform disk
-            lambdae[ndxuse] = p**2
-
-            # Case 4 - edge of planet hits edge of star
-            edge = np.where(z[ndxuse] == 1.-p)  # complement=notused6)
-            if np.size(edge[0]) != 0:
-                # lambda_5
-                lambdad[ndxuse[edge]] = 2./3./np.pi*np.arccos(1.-2.*p)-4./9./np.pi*np.sqrt(p*(1.-p))*(3.+2.*p-8.*p**2)
-                if p > 0.5:
-                    lambdad[ndxuse[edge]] -= 2./3.
-                notused6 = np.where(z[ndxuse] != 1.-p)
-                if np.size(notused6) == 0:
-                    muo1 =1.-((1.-u1-2.*u2)*lambdae+(u1+2.*u2)*(lambdad+2./3.*(p > z))+u2*etad)/omega
-                    mu0=1.-lambdae
-                    return [muo1,mu0]
-                ndxuse = ndxuse[notused6[0]]
-
-            # Case 10 - origin of planet hits origin of star
-            origin = np.where(z[ndxuse] == 0)  # complement=notused7)
-            if np.size(origin) != 0:
-                # lambda_6
-                lambdad[ndxuse[origin]] = -2./3.*(1.-p**2)**1.5
-                notused7 = np.where(z[ndxuse] != 0)
-                if np.size(notused7) == 0:
-                    muo1 =1.-((1.-u1-2.*u2)*lambdae+(u1+2.*u2)*(lambdad+2./3.*(p > z))+u2*etad)/omega
-                    mu0=1.-lambdae
-                    return [muo1,mu0]
-                ndxuse = ndxuse[notused7[0]]
-
-            q=np.sqrt((x2[ndxuse]-x1[ndxuse])/(1.-x1[ndxuse]))
-            n=x2[ndxuse]/x1[ndxuse]-1.
-            Ek,Kk = ellke(q)
-
-            # Case 3, Case 9 - anynp.where in between
-            # lambda_2
-            lambdad[ndxuse] = 2./9./np.pi/np.sqrt(1.-x1[ndxuse])*((1.-5.*z[ndxuse]**2+p**2+x3[ndxuse]**2)*Kk+(1.-x1[ndxuse])*(z[ndxuse]**2+7.*p**2-4.)*Ek-3.*x3[ndxuse]/x1[ndxuse]*ellpic_bulirsch(n,q))
-
-        # if there are still unused elements, there's a bug in the code
-        # (please report it)
-        notused5 = np.where(z[notusedyet] > (1-p))
-        if notused5[0].shape[0] != 0:
-            print("ERROR: the following values of z didn't fit into a case:")
-            return [-1,-1]
-
-        muo1 =1.-((1.-u1-2.*u2)*lambdae+(u1+2.*u2)*(lambdad+2./3.*(p > z))+u2*etad)/omega
-        mu0=1.-lambdae
-        return [muo1,mu0]
-
 def time2z(time, ipct, tknot, sma, orbperiod, ecc, tperi=None, epsilon=1e-5):
     '''
     G. ROUDIER: Time samples in [Days] to separation in [R*]
@@ -2759,56 +3335,592 @@ def solveme(M, e, eps):
     return E
 
 ################################################
-# Try to load C code
-try:
+# PyLightcurve "mini" - https://github.com/ucl-exoplanets/pylightcurve
 
-    try:
-        # main pipeline
-        lib_trans = np.ctypeslib.load_library('lib_transit.so','/lib')
-    except OSError:
-        # local pipeline:
-        lib_trans = np.ctypeslib.load_library('lib_transit.so','/proj/sdp/lib')
+# coefficients from https://pomax.github.io/bezierinfo/legendre-gauss.html
 
-    # load fn from library and define inputs
-    occultquadC = lib_trans.occultquad
+gauss0 = [
+    [1.0000000000000000, -0.5773502691896257],
+    [1.0000000000000000, 0.5773502691896257]
+]
 
-    # define 1d array pointer in python
-    array_1d_double = np.ctypeslib.ndpointer(dtype=ctypes.c_double,ndim=1,flags=['C_CONTIGUOUS','aligned'])
+gauss10 = [
+    [0.2955242247147529, -0.1488743389816312],
+    [0.2955242247147529, 0.1488743389816312],
+    [0.2692667193099963, -0.4333953941292472],
+    [0.2692667193099963, 0.4333953941292472],
+    [0.2190863625159820, -0.6794095682990244],
+    [0.2190863625159820, 0.6794095682990244],
+    [0.1494513491505806, -0.8650633666889845],
+    [0.1494513491505806, 0.8650633666889845],
+    [0.0666713443086881, -0.9739065285171717],
+    [0.0666713443086881, 0.9739065285171717]
+]
 
-    # inputs
-    occultquadC.argtypes = [array_1d_double, ctypes.c_double, ctypes.c_double,
-                            ctypes.c_double, ctypes.c_double, ctypes.c_double,
-                            ctypes.c_double, ctypes.c_double, ctypes.c_double,
-                            ctypes.c_double, ctypes.c_double, array_1d_double]
+gauss20 = [
+    [0.1527533871307258, -0.0765265211334973],
+    [0.1527533871307258, 0.0765265211334973],
+    [0.1491729864726037, -0.2277858511416451],
+    [0.1491729864726037, 0.2277858511416451],
+    [0.1420961093183820, -0.3737060887154195],
+    [0.1420961093183820, 0.3737060887154195],
+    [0.1316886384491766, -0.5108670019508271],
+    [0.1316886384491766, 0.5108670019508271],
+    [0.1181945319615184, -0.6360536807265150],
+    [0.1181945319615184, 0.6360536807265150],
+    [0.1019301198172404, -0.7463319064601508],
+    [0.1019301198172404, 0.7463319064601508],
+    [0.0832767415767048, -0.8391169718222188],
+    [0.0832767415767048, 0.8391169718222188],
+    [0.0626720483341091, -0.9122344282513259],
+    [0.0626720483341091, 0.9122344282513259],
+    [0.0406014298003869, -0.9639719272779138],
+    [0.0406014298003869, 0.9639719272779138],
+    [0.0176140071391521, -0.9931285991850949],
+    [0.0176140071391521, 0.9931285991850949],
+]
 
-    # no outputs, last *double input is saved over in C
-    occultquadC.restype = None
+gauss30 = [
+    [0.1028526528935588, -0.0514718425553177],
+    [0.1028526528935588, 0.0514718425553177],
+    [0.1017623897484055, -0.1538699136085835],
+    [0.1017623897484055, 0.1538699136085835],
+    [0.0995934205867953, -0.2546369261678899],
+    [0.0995934205867953, 0.2546369261678899],
+    [0.0963687371746443, -0.3527047255308781],
+    [0.0963687371746443, 0.3527047255308781],
+    [0.0921225222377861, -0.4470337695380892],
+    [0.0921225222377861, 0.4470337695380892],
+    [0.0868997872010830, -0.5366241481420199],
+    [0.0868997872010830, 0.5366241481420199],
+    [0.0807558952294202, -0.6205261829892429],
+    [0.0807558952294202, 0.6205261829892429],
+    [0.0737559747377052, -0.6978504947933158],
+    [0.0737559747377052, 0.6978504947933158],
+    [0.0659742298821805, -0.7677774321048262],
+    [0.0659742298821805, 0.7677774321048262],
+    [0.0574931562176191, -0.8295657623827684],
+    [0.0574931562176191, 0.8295657623827684],
+    [0.0484026728305941, -0.8825605357920527],
+    [0.0484026728305941, 0.8825605357920527],
+    [0.0387991925696271, -0.9262000474292743],
+    [0.0387991925696271, 0.9262000474292743],
+    [0.0287847078833234, -0.9600218649683075],
+    [0.0287847078833234, 0.9600218649683075],
+    [0.0184664683110910, -0.9836681232797472],
+    [0.0184664683110910, 0.9836681232797472],
+    [0.0079681924961666, -0.9968934840746495],
+    [0.0079681924961666, 0.9968934840746495]
+]
 
-    def transit_occultquad(t, values):
-        time = np.require(t,dtype=ctypes.c_double,requirements='C')
-        model = np.zeros(len(t),dtype=ctypes.c_double)
-        model = np.require(model,dtype=ctypes.c_double,requirements='C')
-        keys = ['rprs','ars','per','inc','u1','u2','ecc','omega','tmid']
-        vals = [values[k] for k in keys]
-        occultquadC(time, *vals, len(time), model)
-        return model
+gauss40 = [
+    [0.0775059479784248, -0.0387724175060508],
+    [0.0775059479784248, 0.0387724175060508],
+    [0.0770398181642480, -0.1160840706752552],
+    [0.0770398181642480, 0.1160840706752552],
+    [0.0761103619006262, -0.1926975807013711],
+    [0.0761103619006262, 0.1926975807013711],
+    [0.0747231690579683, -0.2681521850072537],
+    [0.0747231690579683, 0.2681521850072537],
+    [0.0728865823958041, -0.3419940908257585],
+    [0.0728865823958041, 0.3419940908257585],
+    [0.0706116473912868, -0.4137792043716050],
+    [0.0706116473912868, 0.4137792043716050],
+    [0.0679120458152339, -0.4830758016861787],
+    [0.0679120458152339, 0.4830758016861787],
+    [0.0648040134566010, -0.5494671250951282],
+    [0.0648040134566010, 0.5494671250951282],
+    [0.0613062424929289, -0.6125538896679802],
+    [0.0613062424929289, 0.6125538896679802],
+    [0.0574397690993916, -0.6719566846141796],
+    [0.0574397690993916, 0.6719566846141796],
+    [0.0532278469839368, -0.7273182551899271],
+    [0.0532278469839368, 0.7273182551899271],
+    [0.0486958076350722, -0.7783056514265194],
+    [0.0486958076350722, 0.7783056514265194],
+    [0.0438709081856733, -0.8246122308333117],
+    [0.0438709081856733, 0.8246122308333117],
+    [0.0387821679744720, -0.8659595032122595],
+    [0.0387821679744720, 0.8659595032122595],
+    [0.0334601952825478, -0.9020988069688743],
+    [0.0334601952825478, 0.9020988069688743],
+    [0.0279370069800234, -0.9328128082786765],
+    [0.0279370069800234, 0.9328128082786765],
+    [0.0222458491941670, -0.9579168192137917],
+    [0.0222458491941670, 0.9579168192137917],
+    [0.0164210583819079, -0.9772599499837743],
+    [0.0164210583819079, 0.9772599499837743],
+    [0.0104982845311528, -0.9907262386994570],
+    [0.0104982845311528, 0.9907262386994570],
+    [0.0045212770985332, -0.9982377097105593],
+    [0.0045212770985332, 0.9982377097105593],
+]
 
-except OSError:
-    print("please load the docker image: esp_devel:C_LIB to use this feature")
+gauss50 = [
+    [0.0621766166553473, -0.0310983383271889],
+    [0.0621766166553473, 0.0310983383271889],
+    [0.0619360674206832, -0.0931747015600861],
+    [0.0619360674206832, 0.0931747015600861],
+    [0.0614558995903167, -0.1548905899981459],
+    [0.0614558995903167, 0.1548905899981459],
+    [0.0607379708417702, -0.2160072368760418],
+    [0.0607379708417702, 0.2160072368760418],
+    [0.0597850587042655, -0.2762881937795320],
+    [0.0597850587042655, 0.2762881937795320],
+    [0.0586008498132224, -0.3355002454194373],
+    [0.0586008498132224, 0.3355002454194373],
+    [0.0571899256477284, -0.3934143118975651],
+    [0.0571899256477284, 0.3934143118975651],
+    [0.0555577448062125, -0.4498063349740388],
+    [0.0555577448062125, 0.4498063349740388],
+    [0.0537106218889962, -0.5044581449074642],
+    [0.0537106218889962, 0.5044581449074642],
+    [0.0516557030695811, -0.5571583045146501],
+    [0.0516557030695811, 0.5571583045146501],
+    [0.0494009384494663, -0.6077029271849502],
+    [0.0494009384494663, 0.6077029271849502],
+    [0.0469550513039484, -0.6558964656854394],
+    [0.0469550513039484, 0.6558964656854394],
+    [0.0443275043388033, -0.7015524687068222],
+    [0.0443275043388033, 0.7015524687068222],
+    [0.0415284630901477, -0.7444943022260685],
+    [0.0415284630901477, 0.7444943022260685],
+    [0.0385687566125877, -0.7845558329003993],
+    [0.0385687566125877, 0.7845558329003993],
+    [0.0354598356151462, -0.8215820708593360],
+    [0.0354598356151462, 0.8215820708593360],
+    [0.0322137282235780, -0.8554297694299461],
+    [0.0322137282235780, 0.8554297694299461],
+    [0.0288429935805352, -0.8859679795236131],
+    [0.0288429935805352, 0.8859679795236131],
+    [0.0253606735700124, -0.9130785566557919],
+    [0.0253606735700124, 0.9130785566557919],
+    [0.0217802431701248, -0.9366566189448780],
+    [0.0217802431701248, 0.9366566189448780],
+    [0.0181155607134894, -0.9566109552428079],
+    [0.0181155607134894, 0.9566109552428079],
+    [0.0143808227614856, -0.9728643851066920],
+    [0.0143808227614856, 0.9728643851066920],
+    [0.0105905483836510, -0.9853540840480058],
+    [0.0105905483836510, 0.9853540840480058],
+    [0.0067597991957454, -0.9940319694320907],
+    [0.0067597991957454, 0.9940319694320907],
+    [0.0029086225531551, -0.9988664044200710],
+    [0.0029086225531551, 0.9988664044200710]
+]
 
-    def transit_occultquad(time, values):
-        '''
-        K. PEARSON: use occultquad model for Spitzer b.c it's fast + data is noisy
-        '''
-        sep, _ = time2z(time, values['inc'], values['tmid'], values['ars'], values['per'], values['ecc'])
-        model, _ = occultquad(abs(sep), values['u1'], values['u2'], values['rprs'])
-        return model
+gauss60 = [
+    [0.0519078776312206, -0.0259597723012478],
+    [0.0519078776312206, 0.0259597723012478],
+    [0.0517679431749102, -0.0778093339495366],
+    [0.0517679431749102, 0.0778093339495366],
+    [0.0514884515009809, -0.1294491353969450],
+    [0.0514884515009809, 0.1294491353969450],
+    [0.0510701560698556, -0.1807399648734254],
+    [0.0510701560698556, 0.1807399648734254],
+    [0.0505141845325094, -0.2315435513760293],
+    [0.0505141845325094, 0.2315435513760293],
+    [0.0498220356905502, -0.2817229374232617],
+    [0.0498220356905502, 0.2817229374232617],
+    [0.0489955754557568, -0.3311428482684482],
+    [0.0489955754557568, 0.3311428482684482],
+    [0.0480370318199712, -0.3796700565767980],
+    [0.0480370318199712, 0.3796700565767980],
+    [0.0469489888489122, -0.4271737415830784],
+    [0.0469489888489122, 0.4271737415830784],
+    [0.0457343797161145, -0.4735258417617071],
+    [0.0457343797161145, 0.4735258417617071],
+    [0.0443964787957871, -0.5186014000585697],
+    [0.0443964787957871, 0.5186014000585697],
+    [0.0429388928359356, -0.5622789007539445],
+    [0.0429388928359356, 0.5622789007539445],
+    [0.0413655512355848, -0.6044405970485104],
+    [0.0413655512355848, 0.6044405970485104],
+    [0.0396806954523808, -0.6449728284894770],
+    [0.0396806954523808, 0.6449728284894770],
+    [0.0378888675692434, -0.6837663273813555],
+    [0.0378888675692434, 0.6837663273813555],
+    [0.0359948980510845, -0.7207165133557304],
+    [0.0359948980510845, 0.7207165133557304],
+    [0.0340038927249464, -0.7557237753065856],
+    [0.0340038927249464, 0.7557237753065856],
+    [0.0319212190192963, -0.7886937399322641],
+    [0.0319212190192963, 0.7886937399322641],
+    [0.0297524915007889, -0.8195375261621458],
+    [0.0297524915007889, 0.8195375261621458],
+    [0.0275035567499248, -0.8481719847859296],
+    [0.0275035567499248, 0.8481719847859296],
+    [0.0251804776215212, -0.8745199226468983],
+    [0.0251804776215212, 0.8745199226468983],
+    [0.0227895169439978, -0.8985103108100460],
+    [0.0227895169439978, 0.8985103108100460],
+    [0.0203371207294573, -0.9200784761776275],
+    [0.0203371207294573, 0.9200784761776275],
+    [0.0178299010142077, -0.9391662761164232],
+    [0.0178299010142077, 0.9391662761164232],
+    [0.0152746185967848, -0.9557222558399961],
+    [0.0152746185967848, 0.9557222558399961],
+    [0.0126781664768160, -0.9697017887650528],
+    [0.0126781664768160, 0.9697017887650528],
+    [0.0100475571822880, -0.9810672017525982],
+    [0.0100475571822880, 0.9810672017525982],
+    [0.0073899311633455, -0.9897878952222218],
+    [0.0073899311633455, 0.9897878952222218],
+    [0.0047127299269536, -0.9958405251188381],
+    [0.0047127299269536, 0.9958405251188381],
+    [0.0020268119688738, -0.9992101232274361],
+    [0.0020268119688738, 0.9992101232274361],
+]
+
+gauss_table = [np.swapaxes(gauss0, 0, 1), np.swapaxes(gauss10, 0, 1), np.swapaxes(gauss20, 0, 1),
+               np.swapaxes(gauss30, 0, 1), np.swapaxes(gauss40, 0, 1), np.swapaxes(gauss50, 0, 1),
+               np.swapaxes(gauss60, 0, 1)]
 
 
-def transit(time, values):
-    sep,_ = time2z(time, values['inc'], values['tmid'], values['ars'], values['per'], values['ecc'])
-    model = tldlc(abs(sep), values['rprs'], values['u0'], values['u1'], values['u2'], values['u3'])
-    return model
+def gauss_numerical_integration(f, x1, x2, precision, *f_args):
+
+    x1, x2 = (x2 - x1) / 2, (x2 + x1) / 2
+
+    return x1 * np.sum(gauss_table[precision][0][:, None] *
+                       f(x1[None, :] * gauss_table[precision][1][:, None] + x2[None, :], *f_args), 0)
+
+
+def sample_function(f, precision=3):
+
+    def sampled_function(x12_array, *args):
+
+        x1_array, x2_array = x12_array
+
+        return gauss_numerical_integration(f, x1_array, x2_array, precision, *list(args))
+
+    return sampled_function
+
+
+# orbit
+def planet_orbit(period, sma_over_rs, eccentricity, inclination, periastron, mid_time, time_array, ww=0):
+    # pylint: disable=no-member
+    inclination = inclination * np.pi / 180.0
+    periastron = periastron * np.pi / 180.0
+    ww = ww * np.pi / 180.0
+
+    if eccentricity == 0 and ww == 0:
+        vv = 2 * np.pi * (time_array - mid_time) / period
+        bb = sma_over_rs * np.cos(vv)
+        return [bb * np.sin(inclination), sma_over_rs * np.sin(vv), - bb * np.cos(inclination)]
+
+    if periastron < np.pi / 2:
+        aa = 1.0 * np.pi / 2 - periastron
+    else:
+        aa = 5.0 * np.pi / 2 - periastron
+    bb = 2 * np.arctan(np.sqrt((1 - eccentricity) / (1 + eccentricity)) * np.tan(aa / 2))
+    if bb < 0:
+        bb += 2 * np.pi
+    mid_time = float(mid_time) - (period / 2.0 / np.pi) * (bb - eccentricity * np.sin(bb))
+    m = (time_array - mid_time - np.int_((time_array - mid_time) / period) * period) * 2.0 * np.pi / period
+    u0 = m
+    stop = False
+    u1 = 0
+    for _ in range(10000):  # setting a limit of 1k iterations - arbitrary limit
+        u1 = u0 - (u0 - eccentricity * np.sin(u0) - m) / (1 - eccentricity * np.cos(u0))
+        stop = (np.abs(u1 - u0) < 10 ** (-7)).all()
+        if stop:
+            break
+        else:
+            u0 = u1
+    if not stop:
+        raise RuntimeError('Failed to find a solution in 10000 loops')
+
+    vv = 2 * np.arctan(np.sqrt((1 + eccentricity) / (1 - eccentricity)) * np.tan(u1 / 2))
+    #
+    rr = sma_over_rs * (1 - (eccentricity ** 2)) / (np.ones_like(vv) + eccentricity * np.cos(vv))
+    aa = np.cos(vv + periastron)
+    bb = np.sin(vv + periastron)
+    x = rr * bb * np.sin(inclination)
+    y = rr * (-aa * np.cos(ww) + bb * np.sin(ww) * np.cos(inclination))
+    z = rr * (-aa * np.sin(ww) - bb * np.cos(ww) * np.cos(inclination))
+
+    return [x, y, z]
+
+
+def planet_star_projected_distance(period, sma_over_rs, eccentricity, inclination, periastron, mid_time, time_array):
+
+    position_vector = planet_orbit(period, sma_over_rs, eccentricity, inclination, periastron, mid_time, time_array)
+
+    return np.sqrt(position_vector[1] * position_vector[1] + position_vector[2] * position_vector[2])
+
+
+def planet_phase(period, mid_time, time_array):
+    return (time_array - mid_time)/period
+
+
+# flux drop
+
+
+def integral_r_claret(limb_darkening_coefficients, r):
+    a1, a2, a3, a4 = limb_darkening_coefficients
+    mu44 = 1.0 - r * r
+    mu24 = np.sqrt(mu44)
+    mu14 = np.sqrt(mu24)
+    return - (2.0 * (1.0 - a1 - a2 - a3 - a4) / 4) * mu44 \
+           - (2.0 * a1 / 5) * mu44 * mu14 \
+           - (2.0 * a2 / 6) * mu44 * mu24 \
+           - (2.0 * a3 / 7) * mu44 * mu24 * mu14 \
+           - (2.0 * a4 / 8) * mu44 * mu44
+
+
+def num_claret(r, limb_darkening_coefficients, rprs, z):
+    # pylint: disable=no-member
+    a1, a2, a3, a4 = limb_darkening_coefficients
+    rsq = r * r
+    mu44 = 1.0 - rsq
+    mu24 = np.sqrt(mu44)
+    mu14 = np.sqrt(mu24)
+    return ((1.0 - a1 - a2 - a3 - a4) + a1 * mu14 + a2 * mu24 + a3 * mu24 * mu14 + a4 * mu44) \
+        * r * np.arccos(np.minimum((-rprs ** 2 + z * z + rsq) / (2.0 * z * r), 1.0))
+
+
+def integral_r_f_claret(limb_darkening_coefficients, rprs, z, r1, r2, precision=3):
+    return gauss_numerical_integration(num_claret, r1, r2, precision, limb_darkening_coefficients, rprs, z)
+
+
+# integral definitions for zero method
+def integral_r_zero(_, r):
+    musq = 1 - r * r
+    return (-1.0 / 6) * musq * 3.0
+
+
+def num_zero(r, _, rprs, z):
+    # pylint: disable=no-member
+    rsq = r * r
+    return r * np.arccos(np.minimum((-rprs ** 2 + z * z + rsq) / (2.0 * z * r), 1.0))
+
+
+def integral_r_f_zero(limb_darkening_coefficients, rprs, z, r1, r2, precision=3):
+    return gauss_numerical_integration(num_zero, r1, r2, precision, limb_darkening_coefficients, rprs, z)
+
+
+# integral definitions for linear method
+def integral_r_linear(limb_darkening_coefficients, r):
+    a1 = limb_darkening_coefficients[0]
+    musq = 1 - r * r
+    return (-1.0 / 6) * musq * (3.0 + a1 * (-3.0 + 2.0 * np.sqrt(musq)))
+
+
+def num_linear(r, limb_darkening_coefficients, rprs, z):
+    # pylint: disable=no-member
+    a1 = limb_darkening_coefficients[0]
+    rsq = r * r
+    return (1.0 - a1 * (1.0 - np.sqrt(1.0 - rsq))) \
+        * r * np.arccos(np.minimum((-rprs ** 2 + z * z + rsq) / (2.0 * z * r), 1.0))
+
+
+def integral_r_f_linear(limb_darkening_coefficients, rprs, z, r1, r2, precision=3):
+    return gauss_numerical_integration(num_linear, r1, r2, precision, limb_darkening_coefficients, rprs, z)
+
+
+# integral definitions for quadratic method
+
+
+def integral_r_quad(limb_darkening_coefficients, r):
+    a1, a2 = limb_darkening_coefficients[:2]
+    musq = 1 - r * r
+    mu = np.sqrt(musq)
+    return (1.0 / 12) * (-4.0 * (a1 + 2.0 * a2) * mu * musq + 6.0 * (-1 + a1 + a2) * musq + 3.0 * a2 * musq * musq)
+
+
+def num_quad(r, limb_darkening_coefficients, rprs, z):
+    # pylint: disable=no-member
+    a1, a2 = limb_darkening_coefficients[:2]
+    rsq = r * r
+    cc = 1.0 - np.sqrt(1.0 - rsq)
+    return (1.0 - a1 * cc - a2 * cc * cc) \
+        * r * np.arccos(np.minimum((-rprs ** 2 + z * z + rsq) / (2.0 * z * r), 1.0))
+
+
+def integral_r_f_quad(limb_darkening_coefficients, rprs, z, r1, r2, precision=3):
+    return gauss_numerical_integration(num_quad, r1, r2, precision, limb_darkening_coefficients, rprs, z)
+
+
+# integral definitions for square root method
+
+
+def integral_r_sqrt(limb_darkening_coefficients, r):
+    a1, a2 = limb_darkening_coefficients[:2]
+    musq = 1 - r * r
+    mu = np.sqrt(musq)
+    return ((-2.0 / 5) * a2 * np.sqrt(mu) - (1.0 / 3) * a1 * mu + (1.0 / 2) * (-1 + a1 + a2)) * musq
+
+
+def num_sqrt(r, limb_darkening_coefficients, rprs, z):
+    # pylint: disable=no-member
+    a1, a2 = limb_darkening_coefficients[:2]
+    rsq = r * r
+    mu = np.sqrt(1.0 - rsq)
+    return (1.0 - a1 * (1 - mu) - a2 * (1.0 - np.sqrt(mu))) \
+        * r * np.arccos(np.minimum((-rprs ** 2 + z * z + rsq) / (2.0 * z * r), 1.0))
+
+
+def integral_r_f_sqrt(limb_darkening_coefficients, rprs, z, r1, r2, precision=3):
+    return gauss_numerical_integration(num_sqrt, r1, r2, precision, limb_darkening_coefficients, rprs, z)
+
+
+# dictionaries containing the different methods,
+# if you define a new method, include the functions in the dictionary as well
+
+integral_r = {
+    'claret': integral_r_claret,
+    'linear': integral_r_linear,
+    'quad': integral_r_quad,
+    'sqrt': integral_r_sqrt,
+    'zero': integral_r_zero
+}
+
+integral_r_f = {
+    'claret': integral_r_f_claret,
+    'linear': integral_r_f_linear,
+    'quad': integral_r_f_quad,
+    'sqrt': integral_r_f_sqrt,
+    'zero': integral_r_f_zero,
+}
+
+def integral_centred(method, limb_darkening_coefficients, rprs, ww1, ww2):
+    return (integral_r[method](limb_darkening_coefficients, rprs) - integral_r[method](limb_darkening_coefficients, 0.0)) * np.abs(ww2 - ww1)
+
+def integral_plus_core(method, limb_darkening_coefficients, rprs, z, ww1, ww2, precision=3):
+    # pylint: disable=len-as-condition,no-member
+    if len(z) == 0:
+        return z
+    rr1 = z * np.cos(ww1) + np.sqrt(np.maximum(rprs ** 2 - (z * np.sin(ww1)) ** 2, 0))
+    rr1 = np.clip(rr1, 0, 1)
+    rr2 = z * np.cos(ww2) + np.sqrt(np.maximum(rprs ** 2 - (z * np.sin(ww2)) ** 2, 0))
+    rr2 = np.clip(rr2, 0, 1)
+    w1 = np.minimum(ww1, ww2)
+    r1 = np.minimum(rr1, rr2)
+    w2 = np.maximum(ww1, ww2)
+    r2 = np.maximum(rr1, rr2)
+    parta = integral_r[method](limb_darkening_coefficients, 0.0) * (w1 - w2)
+    partb = integral_r[method](limb_darkening_coefficients, r1) * w2
+    partc = integral_r[method](limb_darkening_coefficients, r2) * (-w1)
+    partd = integral_r_f[method](limb_darkening_coefficients, rprs, z, r1, r2, precision=precision)
+    return parta + partb + partc + partd
+
+def integral_minus_core(method, limb_darkening_coefficients, rprs, z, ww1, ww2, precision=3):
+    # pylint: disable=len-as-condition,no-member
+    if len(z) == 0:
+        return z
+    rr1 = z * np.cos(ww1) - np.sqrt(np.maximum(rprs ** 2 - (z * np.sin(ww1)) ** 2, 0))
+    rr1 = np.clip(rr1, 0, 1)
+    rr2 = z * np.cos(ww2) - np.sqrt(np.maximum(rprs ** 2 - (z * np.sin(ww2)) ** 2, 0))
+    rr2 = np.clip(rr2, 0, 1)
+    w1 = np.minimum(ww1, ww2)
+    r1 = np.minimum(rr1, rr2)
+    w2 = np.maximum(ww1, ww2)
+    r2 = np.maximum(rr1, rr2)
+    parta = integral_r[method](limb_darkening_coefficients, 0.0) * (w1 - w2)
+    partb = integral_r[method](limb_darkening_coefficients, r1) * (-w1)
+    partc = integral_r[method](limb_darkening_coefficients, r2) * w2
+    partd = integral_r_f[method](limb_darkening_coefficients, rprs, z, r1, r2, precision=precision)
+    return parta + partb + partc - partd
+
+
+def transit_flux_drop(limb_darkening_coefficients, rp_over_rs, z_over_rs, method='claret', precision=3):
+    # pylint: disable=len-as-condition,no-member
+    z_over_rs = np.where(z_over_rs < 0, 1.0 + 100.0 * rp_over_rs, z_over_rs)
+    z_over_rs = np.maximum(z_over_rs, 10**(-10))
+
+    # cases
+    zsq = z_over_rs * z_over_rs
+    sum_z_rprs = z_over_rs + rp_over_rs
+    dif_z_rprs = rp_over_rs - z_over_rs
+    sqr_dif_z_rprs = zsq - rp_over_rs ** 2
+    case0 = np.where((z_over_rs == 0) & (rp_over_rs <= 1))
+    case1 = np.where((z_over_rs < rp_over_rs) & (sum_z_rprs <= 1))
+    casea = np.where((z_over_rs < rp_over_rs) & (sum_z_rprs > 1) & (dif_z_rprs < 1))
+    caseb = np.where((z_over_rs < rp_over_rs) & (sum_z_rprs > 1) & (dif_z_rprs > 1))
+    case2 = np.where((z_over_rs == rp_over_rs) & (sum_z_rprs <= 1))
+    casec = np.where((z_over_rs == rp_over_rs) & (sum_z_rprs > 1))
+    case3 = np.where((z_over_rs > rp_over_rs) & (sum_z_rprs < 1))
+    case4 = np.where((z_over_rs > rp_over_rs) & (sum_z_rprs == 1))
+    case5 = np.where((z_over_rs > rp_over_rs) & (sum_z_rprs > 1) & (sqr_dif_z_rprs < 1))
+    case6 = np.where((z_over_rs > rp_over_rs) & (sum_z_rprs > 1) & (sqr_dif_z_rprs == 1))
+    case7 = np.where((z_over_rs > rp_over_rs) & (sum_z_rprs > 1) & (sqr_dif_z_rprs > 1) & (-1 < dif_z_rprs))
+    plus_case = np.concatenate((case1[0], case2[0], case3[0], case4[0], case5[0], casea[0], casec[0]))
+    minus_case = np.concatenate((case3[0], case4[0], case5[0], case6[0], case7[0]))
+    star_case = np.concatenate((case5[0], case6[0], case7[0], casea[0], casec[0]))
+
+    # cross points
+    ph = np.arccos(np.clip((1.0 - rp_over_rs ** 2 + zsq) / (2.0 * z_over_rs), -1, 1))
+    theta_1 = np.zeros(len(z_over_rs))
+    ph_case = np.concatenate((case5[0], casea[0], casec[0]))
+    theta_1[ph_case] = ph[ph_case]
+    theta_2 = np.arcsin(np.minimum(rp_over_rs / z_over_rs, 1))
+    theta_2[case1] = np.pi
+    theta_2[case2] = np.pi / 2.0
+    theta_2[casea] = np.pi
+    theta_2[casec] = np.pi / 2.0
+    theta_2[case7] = ph[case7]
+
+    # flux_upper
+    plusflux = np.zeros(len(z_over_rs))
+    plusflux[plus_case] = integral_plus_core(method, limb_darkening_coefficients, rp_over_rs, z_over_rs[plus_case],
+                                             theta_1[plus_case], theta_2[plus_case], precision=precision)
+    if len(case0[0]) > 0:
+        plusflux[case0] = integral_centred(method, limb_darkening_coefficients, rp_over_rs, 0.0, np.pi)
+    if len(caseb[0]) > 0:
+        plusflux[caseb] = integral_centred(method, limb_darkening_coefficients, 1, 0.0, np.pi)
+
+    # flux_lower
+    minsflux = np.zeros(len(z_over_rs))
+    minsflux[minus_case] = integral_minus_core(method, limb_darkening_coefficients, rp_over_rs,
+                                               z_over_rs[minus_case], 0.0, theta_2[minus_case], precision=precision)
+
+    # flux_star
+    starflux = np.zeros(len(z_over_rs))
+    starflux[star_case] = integral_centred(method, limb_darkening_coefficients, 1, 0.0, ph[star_case])
+
+    # flux_total
+    total_flux = integral_centred(method, limb_darkening_coefficients, 1, 0.0, 2.0 * np.pi)
+
+    return 1 - (2.0 / total_flux) * (plusflux + starflux - minsflux)
+
+# transit
+def pytransit(limb_darkening_coefficients, rp_over_rs, period, sma_over_rs, eccentricity, inclination, periastron,
+              mid_time, time_array, method='claret', precision=3):
+
+    position_vector = planet_orbit(period, sma_over_rs, eccentricity, inclination, periastron, mid_time, time_array)
+
+    projected_distance = np.where(position_vector[0] < 0, 1.0 + 5.0 * rp_over_rs,
+                                  np.sqrt(position_vector[1] * position_vector[1] + position_vector[2] * position_vector[2]))
+
+    return transit_flux_drop(limb_darkening_coefficients, rp_over_rs, projected_distance,
+                             method=method, precision=precision)
+
+def eclipse_mid_time(period, sma_over_rs, eccentricity, inclination, periastron, mid_time):
+    test_array = np.arange(0, period, 0.001)
+    xx, yy, _ = planet_orbit(period, sma_over_rs, eccentricity, inclination, periastron, mid_time,
+                             test_array + mid_time)
+
+    test1 = np.where(xx < 0)
+    yy = yy[test1]
+    test_array = test_array[test1]
+
+    aprox = test_array[np.argmin(np.abs(yy))]
+
+    def function_to_fit(x, t):
+        _, yy, _ = planet_orbit(period, sma_over_rs, eccentricity, inclination, periastron, mid_time,
+                                np.array(mid_time + t))
+        return yy
+
+    popt, _ = curve_fit(function_to_fit, [0], [0], p0=[aprox])
+
+    return mid_time + popt[0]
+
+def transit(times, values):
+    return pytransit([values['u0'], values['u1'], values['u2'], values['u3']],
+                     values['rprs'], values['per'], values['ars'],
+                     values['ecc'], values['inc'], values['omega'],
+                     values['tmid'], times, method='claret', precision=3)
+################################################
 
 def weightedflux(flux,gw,nearest):
     return np.sum(flux[nearest]*gw,axis=-1)
@@ -2830,376 +3942,51 @@ def gaussian_weights(X, w=None, neighbors=50, feature_scale=1000):
     gw[np.isnan(gw)] = 0.01
     return gw, nearest.astype(int)
 
-class lc_fitter:
-    '''
-    K. PEARSON
-    transit fitting with quadratic detrend for JWST
-    '''
-    # pylint: disable=too-many-instance-attributes
+def eclipse_ratio(priors,p='b',f='IRAC 3.6um', verbose=True):
 
-    def __init__(self, time, data, dataerr, prior, bounds, mode='ns'):
-        self.time = time
-        self.data = data
-        self.dataerr = dataerr
-        self.prior = prior
-        self.bounds = bounds
-        if mode == "lm":
-            self.fit_LM()
-        elif mode == "ns":
-            self.fit_nested()
-            return
+    Te = priors['T*']*(1-0.1)**0.25 * np.sqrt(0.5/priors[p]['ars'])
 
-    def fit_LM(self):
-        freekeys = list(self.bounds.keys())
-        boundarray = np.array([self.bounds[k] for k in freekeys])
+    rprs = priors[p]['rp'] * astropy.constants.R_jup / (priors['R*'] * astropy.constants.R_sun)
+    tdepth = rprs.value**2
 
-        def lc2min(pars):
-            for i,par in enumerate(pars):
-                self.prior[freekeys[i]] = par
-            quad_model = self.prior['a0'] + self.prior['a1']*self.time + self.prior['a2']*self.time**2
-            model = transit(self.time, self.prior)*quad_model
-            return ((self.data-model)/self.dataerr)**2
+    # bandpass integrated flux for planet
+    wave36 = np.linspace(3.15,3.95,1000) * astropy.units.micron
+    wave45 = np.linspace(4,5,1000) * astropy.units.micron
 
-        try:
-            res = least_squares(
-                lc2min, x0=[self.prior[k] for k in freekeys],
-                bounds=[boundarray[:,0], boundarray[:,1]], jac='3-point',
-                loss='linear', method='dogbox', xtol=None, ftol=1e-4, tr_options='exact')
-        except ValueError:
-            print("bounded  light curve fitting failed...check priors (e.g. estimated mid-transit time + orbital period)")
+    try:
+        fplanet = BlackBody(Te*astropy.units.K)(wave36)
+        fstar = BlackBody(priors['T*']*astropy.units.K)(wave36)
+    except TypeError:
+        fplanet = BlackBody(wave36, Te*astropy.units.K)
+        fstar = BlackBody(wave36, priors['T*']*astropy.units.K)
 
-            for i,k in enumerate(freekeys):
-                print(f"bound: [{boundarray[i,0]}, {boundarray[i,1]}] prior: {self.prior[k]}")
+    fp36 = np.trapz(fplanet, wave36)
+    fs36 = np.trapz(fstar, wave36)
 
-            print("removing bounds and trying again...")
-            res = least_squares(lc2min, x0=[self.prior[k] for k in freekeys], method='lm', jac='3-point', loss='linear')
+    try:
+        fplanet = BlackBody(Te*astropy.units.K)(wave45)
+        fstar = BlackBody(priors['T*']*astropy.units.K)(wave45)
+    except TypeError:
+        fplanet = BlackBody(wave45, Te*astropy.units.K)
+        fstar = BlackBody(wave45, priors['T*']*astropy.units.K)
 
-        self.parameters = copy.deepcopy(self.prior)
-        self.errors = {}
+    fp45 = np.trapz(fplanet, wave45)
+    fs45 = np.trapz(fstar, wave45)
 
-        J = res.jac
-        cov = np.linalg.inv(J.T.dot(J))
-        std = np.sqrt(np.diagonal(cov))
+    if verbose:
+        print(" Stellar temp: {:.1f} K".format(priors['T*']))
+        print(" Transit Depth: {:.4f} %".format(tdepth*100))
 
-        for i,k in enumerate(freekeys):
-            self.parameters[k] = res.x[i]
-            self.errors[k] = std[i]
-
-        self.create_fit_variables()
-
-    def create_fit_variables(self):
-        # pylint: disable=attribute-defined-outside-init
-        self.phase = (self.time-self.parameters['tmid'])/self.parameters['per']
-        self.transit = transit(self.time, self.parameters)
-        self.quad_model = self.parameters['a0'] + self.parameters['a1']*self.time + self.parameters['a2']*self.time**2
-        self.model = self.transit * self.quad_model
-        self.detrended = self.data / self.quad_model
-        self.detrendederr = self.dataerr / self.quad_model
-        self.residuals = self.data - self.model
-        self.chi2 = np.sum(self.residuals**2/self.dataerr**2)
-        self.bic = len(self.bounds) * np.log(len(self.time)) - 2*np.log(self.chi2)
-
-    def fit_nested(self):
-        freekeys = list(self.bounds.keys())
-        boundarray = np.array([self.bounds[k] for k in freekeys])
-        bounddiff = np.diff(boundarray,1).reshape(-1)
-
-        def loglike(pars):
-            # chi-squared
-            for i,par in enumerate(pars):
-                self.prior[freekeys[i]] = par
-            quad_model = self.prior['a0'] + self.prior['a1']*self.time + self.prior['a2']*self.time**2
-            model = transit(self.time, self.prior)*quad_model
-            return -0.5 * np.sum(((self.data-model)/self.dataerr)**2)
-
-        def prior_transform(upars):
-            # transform unit cube to prior volume
-            return (boundarray[:,0] + bounddiff*upars)
-
-        dsampler = dynesty.NestedSampler(
-            loglike, prior_transform, len(freekeys), dlogz=0.05,
-            sample='unif', bound='multi', nlive=1000
-        )
-        dsampler.run_nested(maxiter=2e6, print_progress=False, dlogz=0.05, maxcall=2e6)
-        self.results = dsampler.results
-
-        # alloc data for best fit + error
-        self.errors = {}
-        self.quantiles = {}
-        self.parameters = copy.deepcopy(self.prior)
-
-        tests = [copy.deepcopy(self.prior) for i in range(6)]
-
-        # Derive kernel density estimate for best fit
-        weights = np.exp(self.results.logwt - self.results.logz[-1])
-        samples = self.results['samples']
-        logvol = self.results['logvol']
-        wt_kde = gaussian_kde(resample_equal(-logvol, weights))  # KDE
-        logvol_grid = np.linspace(logvol[0], logvol[-1], 1000)  # resample
-        wt_grid = wt_kde.pdf(-1*logvol_grid)  # evaluate KDE PDF
-        self.weights = np.interp(-1*logvol, -1*logvol_grid, wt_grid)  # interpolate
-
-        # errors + final values
-        mean, cov = dynesty.utils.mean_and_cov(self.results.samples, weights)
-        mean2, _cov2 = dynesty.utils.mean_and_cov(self.results.samples, self.weights)
-        for i,fkey in enumerate(freekeys):
-            self.errors[freekeys[i]] = cov[i,i]**0.5
-            tests[0][freekeys[i]] = mean[i]
-            tests[1][freekeys[i]] = mean2[i]
-
-            counts, bins = np.histogram(samples[:,i], bins=100, weights=weights)
-            mi = np.argmax(counts)
-            tests[5][freekeys[i]] = bins[mi] + 0.5*np.mean(np.diff(bins))
-
-            # finds median and +- 2sigma, will vary from mode if non-gaussian
-            self.quantiles[freekeys[i]] = dynesty.utils.quantile(self.results.samples[:,i], [0.025, 0.5, 0.975], weights=weights)
-            tests[2][freekeys[i]] = self.quantiles[freekeys[i]][1]
-
-        # find minimum near weighted mean
-        mask = (samples[:,0] < self.parameters[freekeys[0]]+2*self.errors[freekeys[0]]) & (samples[:,0] > self.parameters[freekeys[0]]-2*self.errors[freekeys[0]])
-        bi = np.argmin(self.weights[mask])
-
-        for i,fkey in enumerate(freekeys):
-            tests[3][fkey] = samples[mask][bi,i]
-            tests[4][fkey] = np.average(samples[mask][:,i],weights=self.weights[mask],axis=0)
-
-        # find best fit
-        chis = []
-        for i,test in enumerate(tests):
-            lightcurve = transit(self.time, test)
-            quad_model = test['a0'] + test['a1']*self.time + test['a2']*self.time**2
-            residuals = self.data - (lightcurve*quad_model)
-            chis.append(np.sum(residuals**2))
-
-        mi = np.argmin(chis)
-        self.parameters = copy.deepcopy(tests[mi])
-
-        # final model
-        self.create_fit_variables()
-
-    def plot_bestfit(self, phase=True):
-        f = plt.figure(figsize=(12,7))
-        # f.subplots_adjust(top=0.94,bottom=0.08,left=0.07,right=0.96)
-        ax_lc = plt.subplot2grid((4,5), (0,0), colspan=5,rowspan=3)
-        ax_res = plt.subplot2grid((4,5), (3,0), colspan=5, rowspan=1)
-        axs = [ax_lc, ax_res]
-
-        if phase:
-
-            axs[0].errorbar(self.phase, self.detrended, yerr=np.std(self.residuals)/np.median(self.data), ls='none', marker='.', color='black', zorder=1, alpha=0.5)
-            bt, bf = time_bin(self.time, self.detrended)
-            # bp = (bt-self.parameters['tmid'])/self.parameters['per']
-            # axs[0].plot(bp,bf,'c.',alpha=0.5,zorder=2)
-            axs[0].plot(self.phase, self.transit, 'r-', zorder=3)
-            axs[0].set_xlabel("Phase")
-
-            # residuals
-            axs[1].plot(self.phase, self.residuals/np.median(self.data)*1e6, 'k.', alpha=0.5)
-            bt, br = time_bin(self.time, self.residuals/np.median(self.data)*1e6)
-            # bp = (bt-self.parameters['tmid'])/self.parameters['per']
-
-            # axs[1].plot(bp,br,'c.',alpha=0.5,zorder=2)
-            axs[1].set_xlabel("Phase")
-        else:
-
-            axs[0].errorbar(self.time, self.detrended, yerr=np.std(self.residuals)/np.median(self.data), ls='none', marker='.', color='black', zorder=1, alpha=0.5)
-            bt, bf = time_bin(self.time, self.detrended)
-            axs[0].plot(bt,bf,'c.',alpha=0.5,zorder=2)
-            axs[0].plot(self.time, self.transit, 'r-', zorder=3)
-            axs[0].set_xlabel("Time [day]")
-
-            # residuals
-            axs[1].plot(self.time, self.residuals/np.median(self.data)*1e6, 'k.', alpha=0.5)
-            bt, br = time_bin(self.time, self.residuals/np.median(self.data)*1e6)
-            axs[1].plot(bt,br,'c.',alpha=0.5,zorder=2)
-            axs[1].set_xlabel("Time [day]")
-
-        axs[1].set_ylabel("Residuals [ppm]")
-        axs[0].set_ylabel("Relative Flux")
-        axs[0].grid(True,ls='--')
-        axs[1].grid(True,ls='--')
-        plt.tight_layout()
-
-        return f,axs
-
-    def plot_triangle(self):
-        fig,axs = dynesty.plotting.cornerplot(self.results, labels=list(self.bounds.keys()), quantiles_2d=[0.4,0.85], smooth=0.015, show_titles=True,use_math_text=True, title_fmt='.2e',hist2d_kwargs={'alpha':1,'zorder':2,'fill_contours':False})
-        dynesty.plotting.cornerpoints(self.results, labels=list(self.bounds.keys()), fig=[fig,axs[1:,:-1]],plot_kwargs={'alpha':0.1,'zorder':1,})
-        return fig, axs
-
-
-class lc_fitter_spitzer:
-    '''
-    K. PEARSON
-    Transit fitting with Gaussian Kernel regression for position dependent detrending
-    uses occult quad
-    '''
-    # pylint: disable=too-many-instance-attributes
-    def __init__(self, time, data, dataerr, prior, bounds, syspars, neighbors=50,verbose=False, eclipse=False):
-        self.time = time
-        self.data = data
-        self.dataerr = dataerr
-        self.prior = prior
-        self.bounds = bounds
-        self.syspars = syspars
-        self.verbose = verbose
-        self.eclipse = eclipse
-        self.gw, self.nearest = gaussian_weights(syspars, neighbors=neighbors)
-        self.fit_nested()
-
-    def fit_nested(self):
-        freekeys = list(self.bounds.keys())
-        boundarray = np.array([self.bounds[k] for k in freekeys])
-        bounddiff = np.diff(boundarray,1).reshape(-1)
-
-        # alloc arrays for C
-        time = np.require(self.time,dtype=ctypes.c_double,requirements='C')
-        self.lightcurve = np.zeros(len(self.time),dtype=ctypes.c_double)
-        self.lightcurve = np.require(self.lightcurve,dtype=ctypes.c_double,requirements='C')
-
-        def loglike(pars):
-            # update free parameters
-            for i,par in enumerate(pars):
-                self.prior[freekeys[i]] = par
-
-            # call C function
-            keys = ['rprs','ars','per','inc','u1','u2','ecc','omega','tmid']
-            vals = [self.prior[k] for k in keys]
-            occultquadC(time, *vals, len(time), self.lightcurve)
-            self.lightcurve += self.eclipse*(1-np.min(self.lightcurve))
-            detrended = self.data/self.lightcurve
-            wf = weightedflux(detrended, self.gw, self.nearest)
-            model = self.lightcurve*wf
-            return -0.5 * np.sum(((self.data-model)**2/self.dataerr**2))
-
-        def prior_transform(upars):
-            # transform unit cube to prior volume
-            return (boundarray[:,0] + bounddiff*upars)
-
-        dsampler = dynesty.NestedSampler(loglike, prior_transform, len(freekeys), sample='unif', bound='multi', nlive=1000)
-
-        # dsampler = dynesty.DynamicNestedSampler(
-        #    loglike, prior_transform,
-        #    ndim=len(freekeys), bound='multi', sample='unif',
-        #    maxiter_init=5000, dlogz_init=1, dlogz=0.05,
-        #    maxiter_batch=1000, maxbatch=10, nlive_batch=100
-        # )
-
-        dsampler.run_nested(maxiter=1e6, maxcall=1e6, print_progress=False)
-        self.results = dsampler.results
-
-        # alloc data for best fit + error
-        self.errors = {}
-        self.quantiles = {}
-        self.parameters = copy.deepcopy(self.prior)
-
-        tests = [copy.deepcopy(self.prior) for i in range(6)]
-
-        # Derive kernel density estimate for best fit
-        weights = np.exp(self.results.logwt - self.results.logz[-1])
-        samples = self.results['samples']
-        logvol = self.results['logvol']
-        wt_kde = gaussian_kde(resample_equal(-logvol, weights))  # KDE
-        logvol_grid = np.linspace(logvol[0], logvol[-1], 1000)  # resample
-        wt_grid = wt_kde.pdf(-1*logvol_grid)  # evaluate KDE PDF
-        self.weights = np.interp(-1*logvol, -1*logvol_grid, wt_grid)  # interpolate
-
-        # errors + final values
-        mean, cov = dynesty.utils.mean_and_cov(self.results.samples, weights)
-        mean2, _cov2 = dynesty.utils.mean_and_cov(self.results.samples, self.weights)
-        for i,fkey in enumerate(freekeys):
-            self.errors[fkey] = cov[i,i]**0.5
-            tests[0][fkey] = mean[i]
-            tests[1][fkey] = mean2[i]
-
-            counts, bins = np.histogram(samples[:,i], bins=100, weights=weights)
-            mi = np.argmax(counts)
-            tests[5][freekeys[i]] = bins[mi] + 0.5*np.mean(np.diff(bins))
-
-            # finds median and +- 2sigma, will vary from mode if non-gaussian
-            self.quantiles[freekeys[i]] = dynesty.utils.quantile(self.results.samples[:,i], [0.025, 0.5, 0.975], weights=weights)
-            tests[2][freekeys[i]] = self.quantiles[freekeys[i]][1]
-
-        # find minimum near weighted mean
-        mask = (samples[:,0] < self.parameters[freekeys[0]]+2*self.errors[freekeys[0]]) & (samples[:,0] > self.parameters[freekeys[0]]-2*self.errors[freekeys[0]])
-        bi = np.argmin(self.weights[mask])
-
-        for i,fkey in enumerate(freekeys):
-            tests[3][fkey] = samples[mask][bi,i]
-            tests[4][fkey] = np.average(samples[mask][:,i],weights=self.weights[mask],axis=0)
-
-        # find best fit
-        chis = []
-        res = []
-        for i,test in enumerate(tests):
-            lightcurve = transit_occultquad(self.time, test)
-            lightcurve += self.eclipse*(1-np.min(lightcurve))
-            detrended = self.data / lightcurve
-            wf = weightedflux(detrended, self.gw, self.nearest)
-            model = lightcurve*wf
-            residuals = self.data - model
-            res.append(residuals)
-            btime, br = time_bin(self.time, residuals)
-            blc = transit_occultquad(btime, tests[i])
-            mask = blc < 1
-            if mask.shape[0] == 0:
-                mask = np.ones(blc.shape,dtype=bool)
-            if mask.sum() == 0:
-                mask = np.ones(blc.shape,dtype=bool)
-            duration = btime[mask].max() - btime[mask].min()
-            tmask = ((btime - tests[i]['tmid']) < duration) & ((btime - tests[i]['tmid']) > -1*duration)
-            chis.append(np.mean(br[tmask]**2))
-
-        mi = np.argmin(chis)
-        self.parameters = copy.deepcopy(tests[mi])
-        # plt.scatter(samples[mask,0], samples[mask,1], c=weights[mask]); plt.show()
-
-        # best fit model
-        self.transit = transit_occultquad(self.time, self.parameters)
-        self.transit += self.eclipse*(1-np.min(self.transit))
-        detrended = self.data / self.transit
-        self.wf = weightedflux(detrended, self.gw, self.nearest)
-        self.model = self.transit*self.wf
-        self.residuals = self.data - self.model
-        self.detrended = self.data/self.wf
-
-    def plot_bestfit(self):
-        f = plt.figure(figsize=(12,7))
-        # f.subplots_adjust(top=0.94,bottom=0.08,left=0.07,right=0.96)
-        ax_lc = plt.subplot2grid((4,5), (0,0), colspan=5,rowspan=3)
-        ax_res = plt.subplot2grid((4,5), (3,0), colspan=5, rowspan=1)
-        axs = [ax_lc, ax_res]
-
-        bt, bf = time_bin(self.time, self.detrended)
-
-        axs[0].errorbar(self.time, self.detrended, yerr=np.std(self.residuals)/np.median(self.data), ls='none', marker='.', color='black', zorder=1, alpha=0.5)
-        axs[0].plot(bt,bf,'c.',alpha=0.5,zorder=2)
-        axs[0].plot(self.time, self.transit, 'r-', zorder=3)
-        axs[0].set_xlabel("Time [day]")
-        axs[0].set_ylabel("Relative Flux")
-        axs[0].grid(True,ls='--')
-
-        axs[1].plot(self.time, self.residuals/np.median(self.data)*1e6, 'k.', alpha=0.5)
-        bt, br = time_bin(self.time, self.residuals/np.median(self.data)*1e6)
-        axs[1].plot(bt,br,'c.',alpha=0.5,zorder=2)
-        axs[1].set_xlabel("Time [day]")
-        axs[1].set_ylabel("Residuals [ppm]")
-        axs[1].grid(True,ls='--')
-        plt.tight_layout()
-
-        return f,axs
-
-def time_bin(time, flux, dt=1./(60*24)):
-    bins = int(np.floor((max(time) - min(time))/dt))
-    bflux = np.zeros(bins)
-    btime = np.zeros(bins)
-    for i in range(bins):
-        mask = (time >= (min(time)+i*dt)) & (time < (min(time)+(i+1)*dt))
-        if mask.sum() > 0:
-            bflux[i] = np.nanmean(flux[mask])
-            btime[i] = np.nanmean(time[mask])
-    zmask = (bflux==0) | (btime==0) | np.isnan(bflux) | np.isnan(btime)
-    return btime[~zmask], bflux[~zmask]
+    if '3.6' in f or '36' in f:
+        if verbose:
+            print(" Eclipse Depth @ IRAC 1 (3.6um): ~{:.0f} ppm".format(tdepth*fp36/fs36*1e6))
+            print("         Fp/Fs @ IRAC 1 (3.6um): ~{:.4f}".format(fp36/fs36))
+        return float(fp36/fs36)
+    else:
+        if verbose:
+            print(" Eclipse Depth @ IRAC 2 (4.5um): ~{:.0f} ppm".format(tdepth*fp45/fs45*1e6))
+            print("         Fp/Fs @ IRAC 2 (4.5um): ~{:.4f}".format(fp45/fs45))
+        return float(fp45/fs45)
 
 def lightcurve_jwst_niriss(nrm, fin, out, selftype, _fltr, hstwhitelight_sv, method='ns'):
     '''
@@ -3326,7 +4113,8 @@ def lightcurve_jwst_niriss(nrm, fin, out, selftype, _fltr, hstwhitelight_sv, met
                     'a0':[min(aper), max(aper)]
                 }
 
-            myfit = lc_fitter(subt, aper, aper_err, tpars, mybounds, mode=method)
+            # switch later
+            myfit = pc_fitter(subt, aper, aper_err, tpars, mybounds, [], mode=method)
 
             # write fit to state vector
             terrs = {}
@@ -3342,7 +4130,6 @@ def lightcurve_jwst_niriss(nrm, fin, out, selftype, _fltr, hstwhitelight_sv, met
             try:
                 # keys specific to nested sampling
                 del myfit.results['bound']
-                out['data'][p][ec]['weights'] = myfit.weights
                 out['data'][p][ec]['results'] = myfit.results
                 out['data'][p][ec]['quantiles'] = myfit.quantiles
             except KeyError:
@@ -3508,7 +4295,7 @@ def jwst_niriss_spectrum(nrm, fin, out, selftype, wht, method='lm'):
                         'a0':[min(aper), max(aper)]
                     }
 
-                myfit = lc_fitter(subtt, aper, aper_err, tpars, mybounds, mode=method)
+                myfit = pc_fitter(subtt, aper, aper_err, tpars, mybounds,[], mode=method)
 
                 # write to SV
                 out['data'][p][ec]['wave'].append(0.5*(wmin+wmax))
@@ -3570,8 +4357,9 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                 # https://arxiv.org/pdf/1001.2010.pdf eq 16
                 tdur = priors[p]['period']/(np.pi)/smaors
                 rprs = (priors[p]['rp']*7.1492e7) / (priors['R*']*6.955e8)
-                inc_lim = 90 - np.rad2deg(np.arctan((priors[p]['rp'] * ssc['Rjup/Rsun'] + priors['R*']) / (priors[p]['sma']/ssc['Rsun/AU'])))
+                # inc_lim = 90 - np.rad2deg(np.arctan((priors[p]['rp'] * ssc['Rjup/Rsun'] + priors['R*']) / (priors[p]['sma']/ssc['Rsun/AU'])))
                 w = priors[p].get('omega',0)
+                tmid = priors[p]['period']*event + priors[p]['t0']
 
                 # mask out data by event type
                 pmask = (phase > event-1.5*tdur/priors[p]['period']) & (phase < event+1.5*tdur/priors[p]['period'])
@@ -3581,58 +4369,66 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                 aper = nrm['data'][p]['PHOT'][pmask]
                 aper_err = np.sqrt(aper)
 
-                try:
-                    if '36' in fltr:
-                        lin,quad = get_ld(priors,'Spit36')
-                    elif '45' in fltr:
-                        lin,quad = get_ld(priors,'Spit45')
-                except ValueError:
-                    lin,quad = 0,0
-
-                # can't solve for wavelengths greater than below
-                # whiteld = createldgrid([2.5],[2.6], priors, segmentation=int(10), verbose=verbose)
-                # whiteld = createldgrid([wmin],[wmax], priors, segmentation=int(1), verbose=verbose)
-
-                # LDTK breaks for Spitzer https://github.com/hpparvi/ldtk/issues/11
-                # filters = [BoxcarFilter('a', 3150, 3950)]
-                # tstar = priors['T*']
-                # terr = np.sqrt(abs(priors['T*_uperr']*priors['T*_lowerr']))
-                # fehstar = priors['FEH*']
-                # feherr = np.sqrt(abs(priors['FEH*_uperr']*priors['FEH*_lowerr']))
-                # loggstar = priors['LOGG*']
-                # loggerr = np.sqrt(abs(priors['LOGG*_uperr']*priors['LOGG*_lowerr']))
-                # sc = LDPSetCreator(teff=(tstar, terr), logg=(loggstar, loggerr), z=(fehstar, feherr), filters=filters)
-                # ps = sc.create_profiles(nsamples=int(1e4))
-                # cq,eq = ps.coeffs_qd(do_mc=True)
+                priors[p]['ars'] = smaors
+                fpfs = eclipse_ratio(priors, p, fltr)
 
                 tpars = {
+                    # Star
+                    'T*':priors['T*'],
+
+                    # transit
                     'rprs': rprs,
-                    'tmid':np.median(subt),
+                    'ars': smaors,
+                    'tmid':tmid,
+                    'per': priors[p]['period'],
+                    'inc': priors[p]['inc'],
 
-                    'inc':priors[p]['inc'],
-                    'inc_lowerr': max(priors[p]['inc']-3*abs(priors[p]['inc_lowerr']),inc_lim),
-                    'inc_uperr': min(priors[p]['inc']+3*abs(priors[p]['inc_uperr']),90),
+                    # eclipse
+                    'fpfs': fpfs,
+                    'omega': priors['b'].get('omega',0),
+                    'ecc': priors['b']['ecc'],
 
-                    'ars':smaors,
-                    'ars_lowerr':smaors_lo,
-                    'ars_uperr':smaors_up,
+                    # limb darkening (nonlinear - exotethys - pylightcurve)
+                    'u0':priors[p].get('u0',0),
+                    'u1':priors[p].get('u1',0),
+                    'u2':priors[p].get('u2',0),
+                    'u3':priors[p].get('u3',0),
 
-                    'per':priors[p]['period'],
-                    'u1':lin, 'u2': quad,
-                    'ecc':priors[p]['ecc'],
-                    'omega': priors[p].get('omega',0),
+                    # phase curve amplitudes
+                    'c0':0, 'c1':0, 'c2':0, 'c3':0, 'c4':0
                 }
 
-                try:
-                    tpars['inc'] = hstwhitelight_sv['data'][p]['mcpost']['mean']['inc']
-                except KeyError:
-                    tpars['inc'] = priors[p]['inc']
+                # remove first 30 min of data after any big gaps, ramp
+                tmask = np.ones(subt.shape).astype(bool)
+
+                smask = np.argsort(subt)
+                dts = np.diff(subt[smask])
+                dmask = dts > (2./(24*60))
+                ndt = int(15./(24*60*dts.mean()))*2+1
+                tmask[0:int(2*ndt)] = False  # mask first 30 minutes of data
+
+                # feature engineer a ramp correction
+                ramp = np.exp(-np.arange(len(tmask))*dts.mean()/((subt.max()-subt.min())/20))
+                # reset ramp after big gap
+                for idx in np.argwhere(dmask).flatten():
+                    ramp[idx-1:] = np.exp(-np.arange(len(ramp[idx-1:]))*dts.mean())
 
                 # gather detrending parameters
                 wxa = nrm['data'][p]['WX'][pmask]
                 wya = nrm['data'][p]['WY'][pmask]
                 npp = nrm['data'][p]['NOISEPIXEL'][pmask]
-                syspars = np.array([wxa,wya,npp]).T
+
+                # remove zeros
+                zmask = aper != 0
+                aper = aper[zmask]
+                aper_err = aper_err[zmask]
+                subt = subt[zmask]
+                wxa = wxa[zmask]
+                wya = wya[zmask]
+                npp = npp[zmask]
+                ramp = ramp[zmask]
+
+                syspars = np.array([wxa,wya,npp,ramp]).T
 
                 # 10 minute time scale
                 nneighbors = int(10./24./60./np.mean(np.diff(subt)))
@@ -3643,48 +4439,50 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                 if selftype == 'transit':
                     mybounds = {
                         'rprs':[0,1.25*tpars['rprs']],
-                        'tmid':[min(subt),max(subt)],
-                        'ars':[tpars['ars_lowerr'], tpars['ars_uperr']]
+                        'tmid':[tmid-0.01,tmid+0.01],
+                        'ars':[smaors_lo,smaors_up]
                     }
-                    myfit = lc_fitter_spitzer(subt, aper, aper_err, tpars, mybounds, syspars, neighbors=nneighbors)
+                    myfit = pc_fitter(subt, aper, aper_err, tpars, mybounds, syspars, neighbors=nneighbors)
                 elif selftype == 'eclipse':
                     mybounds = {
                         'rprs':[0,0.5*tpars['rprs']],
-                        'tmid':[min(subt),max(subt)],
-                        'ars':[tpars['ars_lowerr'], tpars['ars_uperr']]
+                        'tmid':[tme-0.01,tme+0.01],
+                        'ars':[smaors_lo,smaors_up]
                     }
-                    myfit = lc_fitter_spitzer(subt, aper, aper_err, tpars, mybounds, syspars, neighbors=nneighbors, eclipse=1)
+                    myfit = pc_fitter(subt, aper, aper_err, tpars, mybounds, syspars, neighbors=nneighbors)
 
-                terrs = {}
+                # copy best fit parameters and uncertainties
                 for k in myfit.bounds.keys():
-                    tpars[k] = myfit.parameters[k]
-                    terrs[k] = myfit.errors[k]
+                    print(" {} = {:.6f} +/- {:.6f}".format(k, myfit.parameters[k], myfit.errors[k]))
 
                 out['data'][p].append({})
-                out['data'][p][ec]['aper_time'] = subt
-                out['data'][p][ec]['aper_flux'] = aper
-                out['data'][p][ec]['aper_err'] = aper_err
-                out['data'][p][ec]['aper_xcent'] = wxa
-                out['data'][p][ec]['aper_ycent'] = wya
-                out['data'][p][ec]['aper_npp'] = npp
-                del myfit.results['bound']
-                out['data'][p][ec]['aper_weights'] = myfit.weights
-                out['data'][p][ec]['aper_results'] = myfit.results
-                out['data'][p][ec]['aper_quantiles'] = myfit.quantiles
-                out['data'][p][ec]['aper_wf'] = myfit.wf
-                out['data'][p][ec]['aper_model'] = myfit.model
-                out['data'][p][ec]['aper_transit'] = myfit.transit
-                out['data'][p][ec]['aper_residuals'] = myfit.residuals
-                out['data'][p][ec]['aper_detrended'] = myfit.detrended
+                out['data'][p][ec]['time'] = subt
+                out['data'][p][ec]['flux'] = aper
+                out['data'][p][ec]['err'] = aper_err
+                out['data'][p][ec]['xcent'] = wxa
+                out['data'][p][ec]['ycent'] = wya
+                out['data'][p][ec]['npp'] = npp
+                out['data'][p][ec]['wf'] = myfit.wf
+                out['data'][p][ec]['model'] = myfit.model
+                out['data'][p][ec]['transit'] = myfit.transit
+                out['data'][p][ec]['residuals'] = myfit.residuals
+                out['data'][p][ec]['detrended'] = myfit.detrended
+                out['data'][p][ec]['filter'] = fltr
+                out['data'][p][ec]['final_pars'] = copy.deepcopy(myfit.parameters)
+                out['data'][p][ec]['final_errs'] = copy.deepcopy(myfit.errors)
 
-                out['data'][p][ec]['aper_pars'] = copy.deepcopy(tpars)
-                out['data'][p][ec]['aper_errs'] = copy.deepcopy(terrs)
+                # extract plot data for states.py
+                def save_plot(plotfn):
+                    fig,_ = plotfn()
+                    buf = io.BytesIO()
+                    fig.savefig(buf, format='png')
+                    plt.close(fig)
+                    return buf.getvalue()
 
-                # state vectors for classifer
-                z, _phase = datcore.time2z(subt, tpars['inc'], tpars['tmid'], tpars['ars'], tpars['per'], tpars['ecc'])
-                out['data'][p][ec]['postsep'] = z
-                out['data'][p][ec]['allwhite'] = myfit.detrended
-                out['data'][p][ec]['postlc'] = myfit.transit
+                out['data'][p][ec]['plot_bestfit'] = save_plot(myfit.plot_bestfit)
+                out['data'][p][ec]['plot_posterior'] = save_plot(myfit.plot_posterior)
+                out['data'][p][ec]['plot_pixelmap'] = save_plot(myfit.plot_pixelmap)
+
                 ec += 1
                 out['STATUS'].append(True)
                 wl = True
@@ -3732,100 +4530,11 @@ def spitzer_spectrum(wht, out, ext):
             else:
                 continue
 
-            out['data'][p]['ES'].append(wht['data'][p][i]['aper_pars']['rprs'])  # rp/rs
-            out['data'][p]['ESerr'].append(wht['data'][p][i]['aper_errs']['rprs'])  # upper bound
+            out['data'][p]['ES'].append(wht['data'][p][i]['final_pars']['rprs'])  # rp/rs
+            out['data'][p]['ESerr'].append(wht['data'][p][i]['final_errs']['rprs'])  # upper bound
 
             update = True
     return update
-
-def plot_posterior(SV, fltr, title='', savedir=None):
-    fancy_labels = {
-        'rprs':r'R$_{p}$/R$_{s}$',
-        'tmid':r'T$_{mid}$',
-        'ars':r'a/R$_{s}$',
-        'inc':r'I',
-        'u1':r'u$_1$',
-        'fpfs':r'F$_{p}$/F$_{s}$',
-        'omega':r'$\omega$',
-        'ecc':r'$e$',
-        'c0':r'$c_0$',
-        'c1':r'$c_1$',
-        'c2':r'$c_2$',
-        'c3':r'$c_3$',
-        'c4':r'$c_4$'
-    }
-
-    if "Spitzer" in fltr:
-        results = SV['aper_results']
-        flabels = [fancy_labels[k] for k in SV['aper_errs'].keys()]
-    elif "JWST" in fltr:
-        results = SV['results']
-        flabels = [fancy_labels[k] for k in SV['errs'].keys()]
-
-    # histogram + contours
-    fig,axs = dynesty.plotting.cornerplot(
-        results,
-        labels=flabels,
-        quantiles_2d=[0.4,0.85],
-        smooth=0.015,
-        show_titles=True,
-        use_math_text=True,
-        title_fmt='.2e',
-        hist2d_kwargs={'alpha':1,'zorder':2,'fill_contours':False}
-    )
-
-    # colorful dots
-    dynesty.plotting.cornerpoints(
-        results,
-        labels=flabels,
-        fig=[fig,axs[1:,:-1]],
-        plot_kwargs={'alpha':0.1,'zorder':1}
-    )
-
-    plt.tight_layout()
-
-    if savedir:
-        plt.savefig(savedir+title+".png")
-        plt.close()
-    else:
-        return fig
-
-def plot_pixelmap(sv, title='', savedir=None):
-    '''
-    K. PEARSON plot
-    '''
-    f,ax = plt.subplots(1,figsize=(8.5,7))
-    im = ax.scatter(
-        sv['aper_xcent'],
-        sv['aper_ycent'],
-        c=sv['aper_wf']/np.median(sv['aper_wf']),
-        marker='.',
-        vmin=0.99,
-        vmax=1.01,
-        alpha=0.25,
-        cmap='jet',
-    )
-    ax.set_xlim([
-        np.median(sv['aper_xcent'])-3*np.std(sv['aper_xcent']),
-        np.median(sv['aper_xcent'])+3*np.std(sv['aper_xcent'])
-    ])
-    ax.set_ylim([
-        np.median(sv['aper_ycent'])-3*np.std(sv['aper_ycent']),
-        np.median(sv['aper_ycent'])+3*np.std(sv['aper_ycent'])
-    ])
-
-    ax.set_title(title,fontsize=14)
-    ax.set_xlabel('X-Centroid [px]',fontsize=14)
-    ax.set_ylabel('Y-Centroid [px]',fontsize=14)
-    cbar = f.colorbar(im)
-    cbar.set_label('Relative Pixel Response',fontsize=14,rotation=270,labelpad=15)
-
-    plt.tight_layout()
-    if savedir:
-        plt.savefig(savedir+title+".png")
-        plt.close()
-    else:
-        return f
 
 def jwst_lightcurve(sv, savedir=None, suptitle=''):
     f = plt.figure(figsize=(12,7))
@@ -3834,7 +4543,7 @@ def jwst_lightcurve(sv, savedir=None, suptitle=''):
     ax_res = plt.subplot2grid((4,5), (3,0), colspan=5, rowspan=1)
     axs = [ax_lc, ax_res]
 
-    bt, bf = time_bin(sv['time'], sv['detrended'])
+    bt, bf, _ = time_bin(sv['time'], sv['detrended'])
 
     axs[0].errorbar(sv['time'],  sv['detrended'], yerr=np.std(sv['residuals'])/np.median(sv['flux']), ls='none', marker='.', color='black', zorder=1, alpha=0.5)
     axs[0].plot(bt,bf,'c.',alpha=0.5,zorder=2)
@@ -3844,7 +4553,7 @@ def jwst_lightcurve(sv, savedir=None, suptitle=''):
     axs[0].grid(True,ls='--')
 
     axs[1].plot(sv['time'], sv['residuals']/np.median(sv['flux'])*1e6, 'k.', alpha=0.5)
-    bt, br = time_bin(sv['time'], sv['residuals']/np.median(sv['flux'])*1e6)
+    bt, br, _ = time_bin(sv['time'], sv['residuals']/np.median(sv['flux'])*1e6)
     axs[1].plot(bt,br,'c.',alpha=0.5,zorder=2)
     axs[1].set_xlabel("Time [day]")
     axs[1].set_ylabel("Residuals [ppm]")
@@ -3856,107 +4565,6 @@ def jwst_lightcurve(sv, savedir=None, suptitle=''):
         plt.close()
     else:
         return f
-
-def spitzer_lightcurve(sv, savedir=None, suptitle=''):
-    '''
-    K. PEARSON plot of light curve fit
-    '''
-    f,ax = plt.subplots(3,2,figsize=(12,12))
-    f.suptitle(suptitle,y=0.99)
-    res = sv['aper_residuals']/np.median(sv['aper_flux'])
-    detrend = sv['aper_detrended']
-
-    # #################### RAW FLUX ################
-    ax[0,0].errorbar(
-        sv['aper_time'], sv['aper_flux']/np.median(sv['aper_flux']),
-        yerr=0,
-        marker='.', ls='none', color='black',alpha=0.5)
-    ax[0,0].set_xlim([min(sv['aper_time']), max(sv['aper_time'])])
-    ax[0,0].set_xlabel('Time [JD]')
-    ax[0,0].set_ylabel('Raw Relative Flux')
-    ax[0,0].set_ylim([
-        np.nanmean(detrend)-4*np.nanstd(detrend),
-        np.nanmean(detrend)+4*np.nanstd(detrend)])
-
-    # ################# DETRENDED FLUX ##################
-    ax[1,0].errorbar(
-        sv['aper_time'], sv['aper_detrended'],
-        yerr=0,
-        marker='.', ls='none', color='black',alpha=0.15,
-    )
-    ax[1,0].plot(sv['aper_time'], sv['aper_transit'],'r-',zorder=4)
-    bta,bfa = time_bin(sv['aper_time'], detrend)
-    ax[1,0].plot(bta, bfa, 'co', zorder=3, alpha=0.75)
-    ax[1,0].set_xlim([min(sv['aper_time']), max(sv['aper_time'])])
-    ax[1,0].set_xlabel('Time [JD]')
-    ax[1,0].set_ylabel('Relative Flux')
-    ax[1,0].set_ylim([
-        np.nanmean(detrend)-4*np.nanstd(detrend),
-        np.nanmean(detrend)+4*np.nanstd(detrend)])
-
-    # ################ RESIDUALS ###############
-    bta,bfa = time_bin(sv['aper_time'], res)
-    bstd = np.nanstd(bfa)*1e6
-    std = np.nanstd(res)*1e6
-    ax[2,0].plot(
-        bta, bfa*1e6, 'co', zorder=3, alpha=0.75,
-        label=r'$\sigma$ = {:.0f} ppm'.format(bstd)
-    )
-    ax[2,0].errorbar(
-        sv['aper_time'], res*1e6,
-        yerr=0,
-        marker='.', ls='none', color='black',alpha=0.15,
-        label=r'$\sigma$ = {:.0f} ppm'.format(std)
-    )
-    ax[2,0].legend(loc='best')
-    ax[2,0].set_xlim([min(sv['aper_time']), max(sv['aper_time'])])
-    ax[2,0].set_xlabel('Time [JD]')
-    ax[2,0].set_ylabel('Residuals [ppm]')
-    ax[2,0].set_ylim([
-        np.nanmean(res*1e6)-3*np.nanstd(res*1e6),
-        np.nanmean(res*1e6)+3*np.nanstd(res*1e6)])
-
-    # ######## # # # # CENTROID X # # # #########
-    ax[0,1].plot(
-        sv['aper_time'], sv['aper_xcent'],
-        marker='.', ls='none', color='black',alpha=0.5,
-    )
-    ax[0,1].set_xlim([min(sv['aper_time']), max(sv['aper_time'])])
-    ax[0,1].set_xlabel('Time [JD]')
-    ax[0,1].set_ylabel('X-Centroid [px]')
-    ax[0,1].set_ylim([
-        np.nanmean(sv['aper_xcent'])-3*np.nanstd(sv['aper_xcent']),
-        np.nanmean(sv['aper_xcent'])+3*np.nanstd(sv['aper_xcent'])])
-
-    ax[1,1].plot(
-        sv['aper_time'], sv['aper_ycent'],
-        marker='.', ls='none', color='black',alpha=0.5,
-    )
-    ax[1,1].set_xlim([min(sv['aper_time']), max(sv['aper_time'])])
-    ax[1,1].set_xlabel('Time [JD]')
-    ax[1,1].set_ylabel('Y-Centroid [px]')
-    ax[1,1].set_ylim([
-        np.nanmean(sv['aper_ycent'])-3*np.nanstd(sv['aper_ycent']),
-        np.nanmean(sv['aper_ycent'])+3*np.nanstd(sv['aper_ycent'])])
-
-    ax[2,1].plot(
-        sv['aper_time'], sv['aper_npp'],
-        marker='.', ls='none', color='black',alpha=0.5,
-    )
-    ax[2,1].set_xlim([min(sv['aper_time']), max(sv['aper_time'])])
-    ax[2,1].set_xlabel('Time [JD]')
-    ax[2,1].set_ylabel('Noise Pixel')
-    ax[2,1].set_ylim([
-        np.nanmean(sv['aper_npp'])-3*np.nanstd(sv['aper_npp']),
-        np.nanmean(sv['aper_npp'])+3*np.nanstd(sv['aper_npp'])])
-
-    plt.tight_layout(rect=[0, 0.03, 1, 0.98])
-    if savedir:
-        plt.savefig(savedir+suptitle+".png")
-        plt.close()
-    else:
-        return f
-
 
 def composite_spectrum(SV, target, p='b'):
     '''

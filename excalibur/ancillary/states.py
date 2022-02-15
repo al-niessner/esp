@@ -10,7 +10,8 @@ from collections import Counter
 # -- SV -- -----------------------------------------------------------
 class EstimateSV(dawgie.StateVector):
     def __init__(self, name):
-        self._version_ = dawgie.VERSION(1,0,0)
+        # version 2.0.0 adds Zellem figure-of-merit, mass-loss from wind, etc
+        self._version_ = dawgie.VERSION(2,0,0)
         self.__name = name
         self['STATUS'] = excalibur.ValuesList()
         self['data'] = excalibur.ValuesDict()
@@ -38,7 +39,7 @@ class EstimateSV(dawgie.StateVector):
 
 class PopulationSV(dawgie.StateVector):
     def __init__(self, name):
-        self._version_ = dawgie.VERSION(1,0,0)
+        self._version_ = dawgie.VERSION(2,0,0)
         self.__name = name
         self['STATUS'] = excalibur.ValuesList()
         self['data'] = excalibur.ValuesDict()

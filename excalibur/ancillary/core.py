@@ -17,18 +17,59 @@ def getestimators():
     # defined as function so it can reference functions defined
     # later in file
     st_estimators = [
+        StEstimator(name='luminosity', units='L_sun', descr='Stellar luminosity',
+                    method=ancestor.st_luminosity,
+                    ref='from R_star & T_star'),
         ancestor.StellarTypeEstimator(),
-        StEstimator(name='luminosity', units='L sun', descr='Stellar luminosity',
-                    method=ancestor.st_luminosity)
+        StEstimator(name='spTyp', units='', descr='Spectral type',
+                    method=ancestor.st_spTyp,
+                    ref='Exoplanet Archive'),
+        StEstimator(name='CO*', units='log', descr='Stellar [C/O]',
+                    method=ancestor.st_COratio,
+                    ref='Nissen 2013; Eq.2'),
+        StEstimator(name='P_rot', units='days', descr='Stellar rotation period',
+                    method=ancestor.st_rotationPeriod, ref='Engle & Guinan 2018'),
+        StEstimator(name='T_corona', units='K', descr='Stellar corona temperature',
+                    method=ancestor.st_coronalTemp, ref='')
         ]
     pl_estimators = [
-        ancestor.TeqEstimator(),
         PlEstimator(name='density', units='g/cm^3', descr='Density of planet',
-                    method=ancestor.pl_density),
+                    method=ancestor.pl_density, ref='Mr. Fisher'),
         PlEstimator(name='insolation', units='Earth insolation',
                     descr='Incident stellar flux', method=ancestor.pl_insolation,
-                    ref='Weiss & Marcy 2014')
-        ]
+                    ref='Weiss & Marcy 2014'),
+        ancestor.TeqEstimator(),
+        PlEstimator(name='metallicity', units='logarithmic',
+                    descr='metallicity', method=ancestor.pl_metals,
+                    ref='Fortney et al 2013'),
+        PlEstimator(name='mmw', units='AMU',
+                    descr='mean molecular weight (CBE)', method=ancestor.pl_mmw,
+                    ref='CEA (T=1000K;C/O=solar)'),
+        PlEstimator(name='mmw_min', units='AMU',
+                    descr='mean molecular weight (min)', method=ancestor.pl_mmwmin,
+                    ref='CEA (T=1000K;C/O=solar)'),
+        ancestor.HEstimator(),
+        ancestor.HmaxEstimator(),
+        PlEstimator(name='ZFOM', units='10^-10',
+                    descr='Zellem Figure-of-Merit (CBE)', method=ancestor.pl_ZFOM,
+                    ref='Zellem et al 2017'),
+        PlEstimator(name='ZFOM_max', units='10^-10',
+                    descr='Zellem Figure-of-Merit (max)', method=ancestor.pl_ZFOMmax,
+                    ref='Zellem et al 2017'),
+        PlEstimator(name='v_wind', units='km/s',
+                    descr='Stellar wind velocity', method=ancestor.pl_windVelocity,
+                    ref='Parker solution'),
+        PlEstimator(name='rho_wind', units='g/cm^3',
+                    descr='Stellar wind density', method=ancestor.pl_windDensity,
+                    ref='Leblanc et al 1998'),
+        PlEstimator(name='M_loss_rate_wind', units='M_Jup/Gyr',
+                    descr='Wind-driven mass loss rate', method=ancestor.pl_windMassLoss,
+                    ref='Canto et al 1991')]
+#        PlEstimator(name='M_loss_rate_evap', units='M_Jup/Gyr',
+#                    descr='EUV-driven mass loss rate', method=ancestor.pl_evapMassLoss,
+#                    ref='Estrela et al 2020')
+#           ]
+
     return st_estimators, pl_estimators
 
 # ------------- ------------------------------------------------------
@@ -44,7 +85,7 @@ def checksv(sv):
     return valid, errstring
 
 def estimateversion():
-    return dawgie.VERSION(1,0,1)
+    return dawgie.VERSION(2,0,0)
 
 # ----------------- --------------------------------------------------
 # -- ESTIMATOR EVALUATOR ---------------------------------------------

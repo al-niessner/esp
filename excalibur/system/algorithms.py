@@ -14,7 +14,7 @@ import excalibur.target.algorithms as trgalg
 # -- ALGORITHMS -- ---------------------------------------------------
 class validate(dawgie.Algorithm):
     def __init__(self):
-        self._version_ = dawgie.VERSION(1,1,0)
+        self._version_ = dawgie.VERSION(1,1,4)  # typos fixed in core/ssconstants
         self.__autofill = trgalg.autofill()
         self.__out = sysstates.PriorsSV('parameters')
         return
@@ -50,7 +50,7 @@ class validate(dawgie.Algorithm):
 
 class finalize(dawgie.Algorithm):
     def __init__(self):
-        self._version_ = dawgie.VERSION(1,1,3)
+        self._version_ = dawgie.VERSION(1,1,4)
         self.__val = validate()
         self.__out = sysstates.PriorsSV('parameters')
         return
@@ -77,6 +77,10 @@ class finalize(dawgie.Algorithm):
                 pass
             elif not self.__out['PP'][-1]: update = True
             else:
+                # *** IS THIS OK? ***   (this allows age to work when blank)
+                update = True
+                # *** IS THIS OK? ***
+
                 log.warning('>-- MISSING DICT INFO')
                 log.warning('>-- ADD KEY TO TARGET/EDIT.PY PPAR()')
                 pass

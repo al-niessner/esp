@@ -16,7 +16,7 @@ import excalibur.target.states as trgstates
 # GENERATE DATABASE IDs
 genIDs = True
 # NEXSCI QUERY
-web = 'https://exoplanetarchive.ipac.caltech.edu/cgi-bin/nstedAPI/nph-nstedAPI?'
+web = 'https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query='
 # DATA ON DISK
 diskloc = os.path.join(excalibur.context['data_dir'], 'sci')
 # MAST MIRRORS
@@ -28,7 +28,8 @@ mirror2 = 'http://archives.esac.esa.int/ehst-sl-server/servlet/data-action?ARTIF
 
 class alert(dawgie.Analyzer):
     def __init__(self):
-        self._version_ = dawgie.VERSION(1,0,1)
+        # version 1.2.0 has new 'web' url for Exoplanet Archive queries
+        self._version_ = dawgie.VERSION(1,2,0)
         self.__out = trgstates.AlertSV()
         return
 
@@ -122,7 +123,7 @@ class autofill(dawgie.Algorithm):
 
 class scrape(dawgie.Algorithm):
     def __init__(self):
-        self._version_ = dawgie.VERSION(1,1,1)
+        self._version_ = dawgie.VERSION(1,2,0)
         self.__autofill = autofill()
         self.__out = trgstates.DatabaseSV('databases')
         return

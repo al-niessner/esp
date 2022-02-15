@@ -35,7 +35,7 @@ class pcnormalization(dawgie.Algorithm):
     G. ROUDIER: Light curve normalization by Out Of Transit data
     '''
     def __init__(self):
-        self._version_ = dawgie.VERSION(1,1,2)
+        self._version_ = dawgie.VERSION(1,1,3)
         self._type = 'phasecurve'
         self.__cal = datalg.calibration()
         self.__tme = datalg.timing()
@@ -56,7 +56,6 @@ class pcnormalization(dawgie.Algorithm):
 
     def run(self, ds, ps):
         svupdate = []
-
         vfin, sfin = trncore.checksv(self.__fin.sv_as_dict()['parameters'])
         for ext in fltrs:
             update = False
@@ -96,7 +95,7 @@ class pcwhitelight(dawgie.Algorithm):
     G. ROUDIER: See inheritance and CI5 thread with A NIESSNER for __init__() method and class attributes https://github-fn.jpl.nasa.gov/EXCALIBUR/esp/pull/86
     '''
     def __init__(self, nrm=pcnormalization()):
-        self._version_ = dawgie.VERSION(1,1,1)
+        self._version_ = dawgie.VERSION(1,1,2)
         self._type = 'phasecurve'
         self._nrm = nrm
         self.__fin = sysalg.finalize()
@@ -138,7 +137,7 @@ class pcwhitelight(dawgie.Algorithm):
 
     def _whitelight(self, nrm, fin, out, index):
         if 'Spitzer' in fltrs[index]:
-            wl = phccore.phasecurve_spitzer(nrm, fin, out, self._type, fltrs[index], mode='ns')
+            wl = phccore.phasecurve_spitzer(nrm, fin, out, self._type, fltrs[index])
         else:
             return True
         return wl

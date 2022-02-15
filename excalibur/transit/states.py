@@ -4,7 +4,7 @@ import io
 import dawgie
 
 import excalibur
-from excalibur.transit.core import spitzer_lightcurve, composite_spectrum, plot_posterior, jwst_lightcurve
+from excalibur.transit.core import composite_spectrum, jwst_lightcurve
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -114,23 +114,12 @@ class WhiteLightSV(dawgie.StateVector):
                     visitor.add_image('...', ' ', buf.getvalue())
                     plt.close(myfig)
             elif 'Spitzer' in self.__name:
-                # for each planet
-                for p in self['data'].keys():
-                    # for each event
-                    for i in range(len(self['data'][p])):
-                        # light curve fit
-                        fig = spitzer_lightcurve(self['data'][p][i])
-                        buf = io.BytesIO()
-                        fig.savefig(buf, format='png')
-                        visitor.add_image('...', ' ', buf.getvalue())
-                        plt.close(fig)
-
-                        # posterior
-                        fig = plot_posterior(self['data'][p][i], self.__name)
-                        buf = io.BytesIO()
-                        fig.savefig(buf, format='png')
-                        visitor.add_image('...', ' ', buf.getvalue())
-                        plt.close(fig)
+                # for each event
+                for i in range(len(self['data'][p])):
+                    # plots are saved into sv
+                    visitor.add_image('...', ' ', self['data'][p][i]['plot_bestfit'])
+                    visitor.add_image('...', ' ', self['data'][p][i]['plot_posterior'])
+                    visitor.add_image('...', ' ', self['data'][p][i]['plot_pixelmap'])
             elif 'JWST' in self.__name:
                 # for each planet
                 for p in self['data'].keys():
@@ -138,13 +127,6 @@ class WhiteLightSV(dawgie.StateVector):
                     for i in range(len(self['data'][p])):
                         # light curve fit
                         fig = jwst_lightcurve(self['data'][p][i])
-                        buf = io.BytesIO()
-                        fig.savefig(buf, format='png')
-                        visitor.add_image('...', ' ', buf.getvalue())
-                        plt.close(fig)
-
-                        # posterior
-                        fig = plot_posterior(self['data'][p][i], self.__name)
                         buf = io.BytesIO()
                         fig.savefig(buf, format='png')
                         visitor.add_image('...', ' ', buf.getvalue())
