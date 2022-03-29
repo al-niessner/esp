@@ -26,6 +26,7 @@ RUN set -ex && \
     /usr/bin/pip3 install arviz==0.11.0 \
                           astropy==3.2.3 \
                           dawgie==1.2.9 \
+                          dynesty==1.0.1 \
                           importlib_metadata==4.6.0 \
                           joblib==1.0.0 \
                           ldtk==1.0 \
