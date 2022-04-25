@@ -503,50 +503,54 @@ G. ROUDIER: Cerberus retrievial
                                 off2 = pm.Uniform('OFF2', -off2_value, off2_value)
                                 nodes.append(off2)
                             if valid1 and valid2 and not valid3:
-                                off0_value = np.nanmedian(1e2*tspectrum[cond_off2])- np.nanmedian(1e2*tspectrum[cond_off0])
-                                off1_value = np.nanmedian(1e2*tspectrum[cond_off2])- np.nanmedian(1e2*tspectrum[cond_off1])
+                                off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off2])- np.nanmedian(1e2*tspectrum[cond_off0]))
+                                off1_value = abs(np.nanmedian(1e2*tspectrum[cond_off2])- np.nanmedian(1e2*tspectrum[cond_off1]))
                                 off0 = pm.Uniform('OFF0', -off0_value, off0_value)
                                 nodes.append(off0)
                                 off1 = pm.Uniform('OFF1', -off1_value, off1_value)
                                 nodes.append(off1)
                             if valid1 and valid3 and not valid2:
-                                off0_value = np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off0])
-                                off1_value = np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off1])
+                                off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off0]))
+                                off1_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off1]))
                                 off0 = pm.Uniform('OFF0', -off0_value, off0_value)
                                 nodes.append(off0)
                                 off1 = pm.Uniform('OFF1', -off1_value, off1_value)
                                 nodes.append(off1)
                             if valid2 and valid3 and not valid1:
-                                off0_value = np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off0])
-                                off1_value = np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off2])
+                                off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off0]))
+                                off1_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off2]))
                                 off0 = pm.Uniform('OFF0', -off0_value, off0_value)
                                 nodes.append(off0)
                                 off1 = pm.Uniform('OFF1', -off1_value, off1_value)
                                 nodes.append(off1)
                             if valid3 and not valid1 and not valid2:
-                                off0_value = np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off0])
+                                off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off0]))
                                 off0 = pm.Uniform('OFF0', -off0_value, off0_value)
                                 nodes.append(off0)
                         if not valid0:
                             if valid1 and valid2 and valid3:
-                                off0_value = np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off1])
-                                off1_value = np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off2])
+                                off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off1]))
+                                off1_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off2]))
                                 off0 = pm.Uniform('OFF0', -off0_value, off0_value)
                                 nodes.append(off0)
                                 off1 = pm.Uniform('OFF1', -off1_value, off1_value)
                                 nodes.append(off1)
                             if valid1 and valid3 and not valid2:
-                                off0_value = np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off1])
+                                off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off1]))
                                 off0 = pm.Uniform('OFF0', -off0_value, off0_value)
                                 nodes.append(off0)
                             if valid1 and valid2 and not valid3:
-                                off0_value = np.nanmedian(1e2*tspectrum[cond_off2])- np.nanmedian(1e2*tspectrum[cond_off1])
+                                off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off2])- np.nanmedian(1e2*tspectrum[cond_off1]))
+                                off0 = pm.Uniform('OFF0', -off0_value, off0_value)
+                                nodes.append(off0)
+                            if valid1 and valid2 and not valid3:
+                                off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off2])- np.nanmedian(1e2*tspectrum[cond_off1]))
                                 off0 = pm.Uniform('OFF0', -off0_value, off0_value)
                                 nodes.append(off0)
 
                     if 'WFC3' in filters[0]:
                         if valid2 and valid3:
-                            off0_value = np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off2])
+                            off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off2]))
                             off0 = pm.Uniform('OFF0', -off0_value, off0_value)
                             nodes.append(off0)
                 # KILL HAZE POWER INDEX FOR SPHERICAL SHELL
@@ -1432,7 +1436,6 @@ R.ESTRELA: ADD offsets between STIS filters and STIS and WFC3 filters
     fmc[cond_G430] = fmc[cond_G430] - 1e-2*float(off0)
     fmc[cond_G750] = fmc[cond_G750] - 1e-2*float(off1)
     fmc[cond_G102] = fmc[cond_G102] - 1e-2*float(off2)
-#     fmc[cond_G141] = fmc[cond_G141] + 1e-2*float(off2)
     return fmc
 
 @tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,

@@ -22,6 +22,7 @@ import excalibur.target.edit as trgedit
 fltrs = (trgedit.activefilters.__doc__).split('\n')
 fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
 # fltrs = [f for f in fltrs if 'HST' not in f]
+fltrs = [f for f in fltrs if 'HST' in f]
 # fltrs = [f for f in fltrs if 'HST-STIS-CCD-G430' in f]
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
@@ -205,8 +206,11 @@ class spectrum(dawgie.Algorithm):
         self._nrm = nrm
         self._wht = wht
         self.__out = [trnstates.SpectrumSV(ext) for ext in fltrs]
-        # MERGE STIS and WFC3
-        self.__out.append(trnstates.SpectrumSV('STIS-WFC3'))
+        if sum(['HST' in ext for ext in fltrs]) > 1:
+            self.__out.append(trnstates.SpectrumSV('STIS-WFC3'))
+#         else:
+#             raise NoValidInputData()
+
         return
 
     def name(self):
@@ -242,6 +246,7 @@ class spectrum(dawgie.Algorithm):
             if update: svupdate.append(self.__out[index])
             pass
         # CALL TO THE MERGE SPECTRUM CODE
+        log.warning('--< %s MERGED SPECTRUM: %s >--')
         merg = trncore.hstspectrum(self.__out, fltrs)
         # check if merg is True so you can put self.__out[-1] append to svupdate
         if merg:
