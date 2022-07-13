@@ -1,3 +1,4 @@
+'''phasecurve algorithms ds'''
 # -- IMPORTS -- ------------------------------------------------------
 import dawgie
 import dawgie.context

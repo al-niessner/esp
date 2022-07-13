@@ -1,5 +1,11 @@
+'''eclipse __init__ ds'''
+
 ignore = False
 
-def task (prefix, ps_hint=0, runid=-1, target='__none__'):
-    import excalibur.eclipse.bot as eclbot
+# -- IMPORTS -- ------------------------------------------------------
+import excalibur.eclipse.bot as eclbot
+# ------------- ------------------------------------------------------
+
+def task (prefix:str, ps_hint:int=0, runid:int=-1, target:str='__none__'):
+    '''task ds'''
     return eclbot.Actor(prefix, ps_hint, runid, target)

@@ -1,3 +1,4 @@
+'''target core ds'''
 # -- IMPORTS -- ------------------------------------------------------
 import os
 import shutil
@@ -18,6 +19,7 @@ import urllib.request as urlrequest
 # ------------- ------------------------------------------------------
 # -- SV VALIDITY -- --------------------------------------------------
 def checksv(sv):
+    '''Checks for empty SV'''
     valid = False
     errstring = None
     if sv['STATUS'][-1]: valid = True
@@ -26,23 +28,25 @@ def checksv(sv):
 # ----------------- --------------------------------------------------
 # -- TAP QUERY --  ---------------------------------------------------
 def tap_query(base_url, query):
-    # table access protocol query
-
+    '''table access protocol query'''
     # build url
     uri_full = base_url
     for k in query:
-        if k != "format":
-            uri_full+= "{} {} ".format(k, query[k])
-
-    uri_full = uri_full[:-1] + "&format={}".format(query.get("format","csv"))
+        if k != "format": uri_full+= f"{k} {query[k]} "
+        pass
+    uri_full = uri_full[:-1] + f"&format={query.get('format','csv')}"
     uri_full = uri_full.replace(' ','+')
 
-    response = (urlrequest.urlopen(uri_full)).read().decode('utf-8')
+    response = None
+    with (urlrequest.urlopen(uri_full)).read() as test:
+        response = test.decode('utf-8')
+        pass
 
     return response
 # ----------------- --------------------------------------------------
 # -- SCRAPE IDS -- ---------------------------------------------------
 def scrapeids(ds:dawgie.Dataset, out, web, genIDs=True):
+    '''Parses table from ipac exoplanetarchive'''
     targets = trgedit.targetlist.__doc__
     targets = targets.split('\n')
     targets = [t.strip() for t in targets if t.replace(' ', '').__len__() > 0]
@@ -97,6 +101,7 @@ def scrapeids(ds:dawgie.Dataset, out, web, genIDs=True):
 # ---------------- ---------------------------------------------------
 # -- CREATE FILTERS -- -----------------------------------------------
 def createfltrs(out):
+    '''Create filter name'''
     created = False
     filters = trgedit.activefilters.__doc__
     filters = filters.split('\n')
@@ -123,11 +128,13 @@ def autofillversion():
     1.2.0: new Exoplanet Archive tables and TAP protocol
     '''
     return dawgie.VERSION(1,2,0)
+
 def autofill(ident, thistarget, out,
              queryurl="https://archive.stsci.edu/hst/search.php?target=",
              action="&action=Search&resolver=SIMBAD&radius=3.0",
              outfmt="&outputformat=CSV&max_records=100000",
              opt="&sci_aec=S"):
+    '''autofill ds'''
     out['starID'][thistarget] = ident['starID'][thistarget]
     targetID = [thistarget]
 
@@ -136,7 +143,9 @@ def autofill(ident, thistarget, out,
     querytarget = thistarget.replace(' ', '+')
     queryform = queryurl+querytarget+action+outfmt+opt
     failure = ['target not resolved, continue\n\n', 'no rows found\n\n']
-    framelist = urlrequest.urlopen(queryform).read().decode('utf-8')
+    with urlrequest.urlopen(queryform).read() as temp:
+        framelist = temp.decode('utf-8')
+        pass
     if framelist not in failure:
         framelist = framelist.split('\n')
         header = framelist[0].split(',')
@@ -149,8 +158,8 @@ def autofill(ident, thistarget, out,
             pidlist.append(row[pidindex])
             aliaslist.append(row[aliasindex])
             pass
-        pidlist = [pid for pid in set(pidlist)]
-        aliaslist = [alias for alias in set(aliaslist)]
+        pidlist = list(set(pidlist))
+        aliaslist = list(set(aliaslist))
         out['starID'][thistarget]['aliases'].extend(aliaslist)
         out['starID'][thistarget]['PID'].extend(pidlist)
         solved = True
@@ -460,7 +469,7 @@ def autofill(ident, thistarget, out,
     return status
 
 def clean_elem(elem):
-    # remove formatting on a single element from TAP API
+    '''remove formatting on a single element from TAP API'''
     if not elem:
         return elem
     if elem[0] == '"' and elem[-1] == '"':
@@ -468,7 +477,7 @@ def clean_elem(elem):
     return elem
 
 def clean_elems(elems):
-    # removes formatting symbols and prepares values for saving
+    '''removes formatting symbols and prepares values for saving'''
     return [clean_elem(elem) for elem in elems]
 
 # -------------- -----------------------------------------------------
@@ -478,14 +487,16 @@ def mast(selfstart, out, dbs, queryurl, mirror,
          action='&action=Search&resolver=SIMBAD&radius=3.0',
          outfmt='&outputformat=CSV&max_records=100000',
          opt='&sci_aec=S'):
+    '''Query and download from MAST'''
     found = False
     temploc = dawgie.context.data_stg
-    targetID = [t for t in selfstart['starID'].keys()]
+    targetID = list(selfstart['starID'].keys())
     querytarget = targetID[0].replace(' ', '+')
     targetID.extend(selfstart['starID'][targetID[0]]['aliases'])
     queryform = queryurl + querytarget + action + outfmt + opt
-    framelist = urlrequest.urlopen(queryform)
-    framelist = framelist.read().decode('utf-8').split('\n')
+    with urlrequest.urlopen(queryform) as temp:
+        framelist = temp.read().decode('utf-8').split('\n')
+        pass
     namelist = []
     instlist = []
     for frame in framelist:
@@ -527,8 +538,9 @@ def mast(selfstart, out, dbs, queryurl, mirror,
 # ---------- ---------------------------------------------------------
 # -- DISK -- ---------------------------------------------------------
 def disk(selfstart, out, diskloc, dbs):
+    '''Query on disk data'''
     merge = False
-    targetID = [t for t in selfstart['starID'].keys()]
+    targetID = list(selfstart['starID'].keys())
     targets = trgedit.targetondisk.__doc__
     targets = targets.split('\n')
     targets = [t.strip() for t in targets if t.replace(' ', '')]
@@ -549,7 +561,7 @@ def disk(selfstart, out, diskloc, dbs):
 # ---------- ---------------------------------------------------------
 # -- DBS COPY -- -----------------------------------------------------
 def dbscp(locations, dbs, out):
-
+    '''Format data into SV'''
     copied = False
     imalist = None
     for loc in locations:
@@ -580,7 +592,7 @@ def dbscp(locations, dbs, out):
             # HST
             if 'SCI' in mainheader.get('FILETYPE',''):
                 keys = [k for k in mainheader.keys() if k != '']
-                keys = [k for k in set(keys)]
+                keys = list(set(keys))
 
                 if 'TELESCOP' in keys: filedict['observatory'] = mainheader['TELESCOP']
                 if 'INSTRUME' in keys: filedict['instrument'] = mainheader['INSTRUME']

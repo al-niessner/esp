@@ -1,3 +1,4 @@
+'''cerberus algorithms ds'''
 # -- IMPORTS -- ------------------------------------------------------
 import dawgie
 import dawgie.context
@@ -21,26 +22,31 @@ fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
 fltrs.append('STIS-WFC3')
 fltrs = [f for f in fltrs if 'STIS-WFC3' in f]
 fltrs = [f for f in fltrs if 'Spitzer' not in f]
-
 # ----------------------- --------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class xslib(dawgie.Algorithm):
+    '''Cross Section Library'''
     def __init__(self):
+        '''__init__ ds'''
         self._version_ = crbcore.myxsecsversion()
         self.__spc = trnalg.spectrum()
         self.__out = [crbstates.xslibSV(ext) for ext in fltrs]
         return
 
     def name(self):
+        '''Database name for subtask extension'''
         return 'xslib'
 
     def previous(self):
+        '''Input State Vectors: transit.spectrum'''
         return [dawgie.ALG_REF(trn.task, self.__spc)]
 
     def state_vectors(self):
+        '''Output State Vectors: cerberus.xslib'''
         return self.__out
 
     def run(self, ds, ps):
+        '''Top level algorithm call'''
         svupdate = []
         for ext in fltrs:
             update = False
@@ -60,17 +66,21 @@ class xslib(dawgie.Algorithm):
         return
 
     def _xslib(self, spc, index):
+        '''Core code call'''
         cs = crbcore.myxsecs(spc, self.__out[index], verbose=False)
         return cs
 
     @staticmethod
     def _failure(errstr):
+        '''Failure log'''
         log.warning('--< CERBERUS XSLIB: %s >--', errstr)
         return
     pass
 
 class atmos(dawgie.Algorithm):
+    '''Atmospheric retrievial'''
     def __init__(self):
+        '''__init__ ds'''
         self._version_ = crbcore.atmosversion()
         self.__spc = trnalg.spectrum()
         self.__fin = sysalg.finalize()
@@ -79,17 +89,21 @@ class atmos(dawgie.Algorithm):
         return
 
     def name(self):
+        '''Database name for subtask extension'''
         return 'atmos'
 
     def previous(self):
+        '''Input State Vectors: transit.spectrum, system.finalize, cerberus.xslib'''
         return [dawgie.ALG_REF(trn.task, self.__spc),
                 dawgie.ALG_REF(sys.task, self.__fin),
                 dawgie.ALG_REF(crb.task, self.__xsl)]
 
     def state_vectors(self):
+        '''Output State Vectors: cerberus.atmos'''
         return self.__out
 
     def run(self, ds, ps):
+        '''Top level algorithm call'''
         svupdate = []
         vfin, sfin = crbcore.checksv(self.__fin.sv_as_dict()['parameters'])
         for ext in fltrs:
@@ -114,6 +128,7 @@ class atmos(dawgie.Algorithm):
         return
 
     def _atmos(self, fin, xsl, spc, index, ext):
+        '''Core code call'''
         am = crbcore.atmos(fin, xsl, spc, self.__out[index], ext,
                            mclen=int(15e3),
                            sphshell=True, verbose=False)  # singlemod='TEC' after mclen
@@ -121,6 +136,7 @@ class atmos(dawgie.Algorithm):
 
     @staticmethod
     def _failure(errstr):
+        '''Failure log'''
         log.warning('--< CERBERUS ATMOS: %s >--', errstr)
         return
     pass

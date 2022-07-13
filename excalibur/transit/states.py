@@ -1,3 +1,4 @@
+'''Transit Database Products View'''
 # -- IMPORTS -- ------------------------------------------------------
 import io
 
@@ -12,7 +13,9 @@ from scipy.stats import cauchy, norm, t
 # ------------- ------------------------------------------------------
 # -- SV -- -----------------------------------------------------------
 class NormSV(dawgie.StateVector):
+    '''transit.normalization view'''
     def __init__(self, name):
+        '''__init__ ds'''
         self._version_ = dawgie.VERSION(1,1,1)
         self.__name = name
         self['STATUS'] = excalibur.ValuesList()
@@ -21,9 +24,11 @@ class NormSV(dawgie.StateVector):
         return
 
     def name(self):
+        '''name ds'''
         return self.__name
 
     def view(self, visitor:dawgie.Visitor)->None:
+        '''view ds'''
         if self['STATUS'][-1]:
             for p in self['data'].keys():
                 visitor.add_declaration('PLANET: ' + p)
@@ -55,7 +60,9 @@ class NormSV(dawgie.StateVector):
     pass
 
 class WhiteLightSV(dawgie.StateVector):
+    '''transit.whitelight view'''
     def __init__(self, name):
+        '''__init__ ds'''
         self._version_ = dawgie.VERSION(1,1,3)
         self.__name = name
         self['STATUS'] = excalibur.ValuesList()
@@ -64,9 +71,11 @@ class WhiteLightSV(dawgie.StateVector):
         return
 
     def name(self):
+        '''name ds'''
         return self.__name
 
     def view(self, visitor:dawgie.Visitor)->None:
+        '''view ds'''
         if self['STATUS'][-1]:
             if 'HST' in self.__name:
                 mergesv = bool(self.__name == 'HST')
@@ -133,7 +142,9 @@ class WhiteLightSV(dawgie.StateVector):
                         plt.close(fig)
 
 class SpectrumSV(dawgie.StateVector):
+    '''transit.spectrum view'''
     def __init__(self, name):
+        '''__init__ ds'''
         self._version_ = dawgie.VERSION(1,1,0)
         self.__name = name
         self['STATUS'] = excalibur.ValuesList()
@@ -142,9 +153,11 @@ class SpectrumSV(dawgie.StateVector):
         return
 
     def name(self):
+        '''name ds'''
         return self.__name
 
     def view(self, visitor:dawgie.Visitor)->None:
+        '''view ds'''
         if self['STATUS'][-1]:
             if self.__name == "Composite":
                 plist = []
@@ -288,7 +301,7 @@ class SpectrumSV(dawgie.StateVector):
                         myfig, ax = plt.subplots(figsize=(8,6))
                         perc_rejected = len([i for i in vspectrum if np.isnan(i)]) / \
                                             len(vspectrum)*100
-                        plt.title('Cumulative Spectrum Distribution in Hs ({:.1f}% rejected)'.format(perc_rejected))
+                        plt.title(f'Cumulative Spectrum Distribution in Hs ({perc_rejected:.1f}% rejected)')
                         ax.plot(sorted_Hs, percent)
                         ax.axvline(4,0,c='black')
                         plt.xlabel(str('Absolute Modulation [Hs]'))
@@ -303,7 +316,7 @@ class SpectrumSV(dawgie.StateVector):
                                       for i in self['data'][p]['LCFIT']]
                         avg_rsdpn = np.nanmean(spec_rsdpn)
                         rsdm_msg = 'RSDM is the standard deviation of the light curve residuals normalized to units of theoretical shot noise.'
-                        visitor.add_primitive('Average RSDM: {} ({})'.format(avg_rsdpn, rsdm_msg))
+                        visitor.add_primitive(f'Average RSDM: {avg_rsdpn} ({rsdm_msg})')
                         myfig, ax = plt.subplots(figsize=(8,6))
                         plt.title('RSDM by Wavelength')
                         ax.plot(self['data'][p]['WB'], spec_rsdpn, 'o')
@@ -353,7 +366,9 @@ class SpectrumSV(dawgie.StateVector):
     pass
 
 class PopulationSV(dawgie.StateVector):
+    '''transit.population view'''
     def __init__(self, name):
+        '''__init__ ds'''
         self._version_ = dawgie.VERSION(1,0,0)
         self.__name = name
         self['STATUS'] = excalibur.ValuesList()
@@ -362,9 +377,11 @@ class PopulationSV(dawgie.StateVector):
         return
 
     def name(self):
+        '''name ds'''
         return self.__name
 
     def view(self, visitor:dawgie.Visitor)->None:
+        '''view ds'''
         if 'IMPARAMS' in self['data']:
             visitor.add_primitive('Spectrum Instrument Model Distribution')
             for key in self['data']['IMPARAMS']:
@@ -378,6 +395,7 @@ class PopulationSV(dawgie.StateVector):
 # ------------- ------------------------------------------------------
 # -- HELPER FUNCTIONS ------------------------------------------------
 def merge_mean(data, depth=0):
+    '''merge_mean ds'''
     # base cases
     if depth == 0 or len(data) < 2:
         return [data]
@@ -390,57 +408,62 @@ def merge_mean(data, depth=0):
     return [data] + merge_mean(modified_data, depth-1)
 
 def mad(data):
+    '''mad ds'''
     median = np.median(data)
     diff = np.abs(data - median)
     mad_est = np.median(diff)
     return mad_est
 
 def calculate_bounds(data, z_thresh=3.5):
-    # computes outlier cutoffs
+    '''computes outlier cutoffs'''
     MAD = mad(data)
     median = np.median(data)
     const = z_thresh * MAD / 0.6745  # convert to z-val under Normality assumption
     return (median - const, median + const)
 
 def upper_outlier_mask(data):
+    '''upper_outlier_mask ds'''
     _, upbound = calculate_bounds(data)
-    return np.array([True if i > upbound else False for i in data])
+    return np.array(data) > upbound
 
 def outlier_aware_hist(data, lower=None, upper=None, bins='auto'):
-    # note: code is taken with little modification from https://stackoverflow.com/questions/15837810/making-pyplot-hist-first-and-last-bins-include-outliers
+    '''
+    code is taken with little modification from https://stackoverflow.com/questions/15837810/making-pyplot-hist-first-and-last-bins-include-outliers
+    GMR: added use of f-strings
+    '''
     if not lower or lower < data.min():
         lower = data.min()
         lower_outliers = False
-    else:
-        lower_outliers = True
+        pass
+    else: lower_outliers = True
     if not upper or upper > data.max():
         upper = data.max()
         upper_outliers = False
-    else:
-        upper_outliers = True
+        pass
+    else: upper_outliers = True
     _, _, patches = plt.hist(data, range=(lower, upper), bins=bins, density=True)
     if lower_outliers:
         n_lower_outliers = (data < lower).sum()
         patches[0].set_height(patches[0].get_height() + n_lower_outliers)
         patches[0].set_facecolor('c')
-        patches[0].set_label('Lower outliers: ({:.2f}, {:.2f})'.format(data.min(), lower))
+        patches[0].set_label(f'Lower outliers: ({data.min():.2f}, {lower:.2f})')
+        pass
     if upper_outliers:
         n_upper_outliers = (data > upper).sum()
         patches[-1].set_height(patches[-1].get_height() + n_upper_outliers)
         patches[-1].set_facecolor('m')
-        patches[-1].set_label('Upper outliers: ({:.2f}, {:.2f})'.format(upper, data.max()))
-    if lower_outliers or upper_outliers:
-        plt.legend()
+        patches[-1].set_label(f'Upper outliers: ({upper:.2f}, {data.max():.2f})')
+    if lower_outliers or upper_outliers: plt.legend()
+    return
 
 def distrplot(title, values, visitor, units=None, fit_t=False, bins='auto'):
+    '''distrplot ds'''
     myfig = plt.figure()
     plt.title(title)
     outlier_aware_hist(np.array(values), *calculate_bounds(values), bins)
     plt.ylabel('Density')
-    if units is None:
-        plt.xlabel('Estimate')
-    else:
-        plt.xlabel('Estimate [{}]'.format(units))
+    if units is None: plt.xlabel('Estimate')
+    else: plt.xlabel(f'Estimate [{units}]')
     if fit_t:
         cauchy_fit = cauchy.fit(values)
         t_fit = t.fit(values)
@@ -450,16 +473,16 @@ def distrplot(title, values, visitor, units=None, fit_t=False, bins='auto'):
         plt.plot(x, cauchy.pdf(x, loc=cauchy_fit[0], scale=cauchy_fit[1]),
                  label='fit Lorentzian')
         plt.plot(x, t.pdf(x, df=t_fit[0], loc=t_fit[1], scale=t_fit[2]),
-                 label='fit T ({:.1f} DF)'.format(t_fit[0]))
+                 label=f'fit T ({t_fit[0]:.1f} DF)')
         plt.plot(x, norm.pdf(x, loc=norm_fit[0], scale=norm_fit[1]),
                  label='fit Gaussian')
-        fit_msg = '{} t fit: df={:.5f}, loc={:.6f}, scale={:.6f}'
-        visitor.add_primitive(fit_msg.format(title, t_fit[0], t_fit[1], t_fit[2]))
-        fit_msg = '{} Gaussian fit: loc={:.6f}, scale={:.6f}'
-        visitor.add_primitive(fit_msg.format(title, norm_fit[0], norm_fit[1]))
+        visitor.add_primitive(f'{title} t fit: df={t_fit[0]:.5f}, loc={t_fit[1]:.6f}, scale={t_fit[2]:.6f}')
+        visitor.add_primitive(f'{title} Gaussian fit: loc={norm_fit[0]:.6f}, scale={norm_fit[1]:.6f}')
+        pass
     plt.legend()
     buf = io.BytesIO()
     myfig.savefig(buf, format='png')
     visitor.add_image('...', ' ', buf.getvalue())
     plt.close(myfig)
+    return
 # -------- -----------------------------------------------------------

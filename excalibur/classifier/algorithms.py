@@ -1,3 +1,5 @@
+'''classifier algoithms dc'''
+# -- IMPORTS -- ------------------------------------------------------
 import logging; log = logging.getLogger(__name__)
 
 import dawgie
@@ -18,6 +20,7 @@ import excalibur.system.algorithms as sysalg
 
 import excalibur.classifier.core as clscore
 import excalibur.classifier.states as clsstates
+# ------------- ------------------------------------------------------
 # -- ALGO RUN OPTIONS -- ---------------------------------------------
 # FILTERS
 fltrs = (trgedit.activefilters.__doc__).split('\n')
@@ -25,13 +28,11 @@ fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
 exc_fltrs = ['Spitzer','JWST']
 fltrs = [f for f in fltrs if not any(ins in f for ins in exc_fltrs)]
 # ---------------------- ---------------------------------------------
-
 # -- ALGORITHMS -- ---------------------------------------------------
 class inference(dawgie.Algorithm):
-    '''
-G. ROUDIER: Data collection by filters
-    '''
+    '''G. ROUDIER: Data collection by filters'''
     def __init__(self):
+        '''__init__ ds'''
         self._version_ = clscore.predversion()
         self.__whitelight = trnalg.whitelight()
         self.__spectrum = trnalg.spectrum()
@@ -43,9 +44,11 @@ G. ROUDIER: Data collection by filters
         return
 
     def name(self):
+        '''name ds'''
         return 'inference'
 
     def previous(self):
+        '''previous ds'''
         return [dawgie.ALG_REF(trn.task, self.__whitelight),
                 dawgie.ALG_REF(trn.task, self.__spectrum),
                 dawgie.ALG_REF(ecl.task, self.__eclwhitelight),
@@ -53,9 +56,11 @@ G. ROUDIER: Data collection by filters
                 dawgie.ALG_REF(sys.task, self.__finalize)]
 
     def state_vectors(self):
+        '''state_vectors ds'''
         return self.__out
 
     def run(self, ds, ps):
+        '''run ds'''
         svupdate = []
         vfin, sfin = trncore.checksv(self.__finalize.sv_as_dict()['parameters'])
         for ext in fltrs:
@@ -94,11 +99,13 @@ G. ROUDIER: Data collection by filters
         return
 
     def _predict(self, wl, sp, fin, index):
+        '''_predict ds'''
         status = clscore.predict(wl, sp, fin['priors'], self.__out[index])
         return status
 
     @staticmethod
     def _failure(errstr):
+        '''_failure ds'''
         log.warning('--< CLASSIFICATION: %s >--', errstr)
         return
     pass

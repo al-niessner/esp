@@ -5,7 +5,10 @@ SYSTEM manages the astrophysical parameters of the target observed
 '''
 ignore = False
 
-def task (prefix, ps_hint=0, runid=-1, target='__none__'):
+# -- IMPORTS -- ------------------------------------------------------
+import excalibur.system.bot as sysbot
+# ------------- ------------------------------------------------------
+
+def task (prefix:str, ps_hint:int=0, runid:int=-1, target:str='__none__'):
     '''Factory'''
-    import excalibur.system.bot as sysbot
     return sysbot.Actor(prefix, ps_hint, runid, target)

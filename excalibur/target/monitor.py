@@ -1,13 +1,17 @@
+'''target.monitor ds'''
 
+# -- IMPORTS -- ------------------------------------------------------
 import email.message
 import logging; log = logging.getLogger(__name__)
 import numpy
 import smtplib
 import math
+# ------------- ------------------------------------------------------
 
 care_about = ['t0']
 
 def _diff (vl):
+    '''_diff ds'''
     if 1 < len (vl):
         try:
             d = numpy.nan
@@ -20,7 +24,7 @@ def _diff (vl):
     return d
 
 def _outlier (vl):
-    # Finds whether first element of vl is within 5 sigma of other elems
+    '''Finds whether first element of vl is within 5 sigma of other elems'''
     if 1 < len (vl):
         if math.isnan(vl[0]):
             is_outlier = False
@@ -38,6 +42,7 @@ def _outlier (vl):
     return is_outlier
 
 def alert (asp:[(str,{str:{}})], known:[], table:[])->([],[],[]):
+    '''alert ds'''
     changes,kwn,tab = [],[],[]
     for target,svs in sorted (asp, key=lambda t:t[0]):
         kwn.append (target)
@@ -83,11 +88,13 @@ def alert (asp:[(str,{str:{}})], known:[], table:[])->([],[],[]):
     return changes, kwn, tab
 
 def regress (planet:{},rids:[],tl:[(int,{str:{}})])->({str:float},{str:[]},[]):
+    '''regress ds'''
     for i,(rid,svs) in enumerate (tl):
         if rid in rids: break
 
         rids.insert (i,rid)
-        svv = [t for t in svs['target.autofill.parameters']['starID'].values()][0]
+        svv = list(svs['target.autofill.parameters']['starID'].values())
+        svv = svv[0]
         for p in svv['planets']:
             for ca in care_about:
                 k = '_'.join ([p,ca])
@@ -96,6 +103,8 @@ def regress (planet:{},rids:[],tl:[(int,{str:{}})])->({str:float},{str:[]},[]):
                 pass
             pass
         pass
-    last = dict([(pp, _diff (vl)) for pp,vl in planet.items()])
-    outliers = dict([(pp, _outlier (vl)) for pp,vl in planet.items()])
+    # last = dict([(pp, _diff (vl)) for pp,vl in planet.items()])
+    last = {pp:_diff (vl) for pp, vl in planet.items()}
+    # outliers = dict([(pp, _outlier (vl)) for pp,vl in planet.items()])
+    outliers = {pp:_outlier (vl) for pp, vl in planet.items()}
     return last,outliers

@@ -1,3 +1,4 @@
+'''Cerberus Database Products View'''
 # -- IMPORTS -- ------------------------------------------------------
 import io
 
@@ -12,7 +13,9 @@ import os
 # ------------- ------------------------------------------------------
 # -- SV -- -----------------------------------------------------------
 class xslibSV(dawgie.StateVector):
+    '''cerberus.xslib view'''
     def __init__(self, name):
+        '''__init__ ds'''
         self._version_ = dawgie.VERSION(1,2,0)
         self.__name = name
         self['STATUS'] = excalibur.ValuesList()
@@ -21,9 +24,11 @@ class xslibSV(dawgie.StateVector):
         return
 
     def name(self):
+        '''name ds'''
         return self.__name
 
     def view(self, visitor:dawgie.Visitor)->None:
+        '''view ds'''
         if self['STATUS'][-1]:
             myfig = plt.figure()
             crblogo = img.imread(os.path.join (excalibur.context['data_dir'],
@@ -39,7 +44,9 @@ class xslibSV(dawgie.StateVector):
     pass
 
 class atmosSV(dawgie.StateVector):
+    '''cerberus.atmos view'''
     def __init__(self, name):
+        '''__init__ ds'''
         self._version_ = dawgie.VERSION(1,1,0)
         self.__name = name
         self['STATUS'] = excalibur.ValuesList()
@@ -48,9 +55,11 @@ class atmosSV(dawgie.StateVector):
         return
 
     def name(self):
+        '''name ds'''
         return self.__name
 
     def view(self, visitor:dawgie.Visitor)->None:
+        '''view ds'''
         if self['STATUS'][-1]:
             myfig = plt.figure()
             crblogo = img.imread(os.path.join (excalibur.context['data_dir'],

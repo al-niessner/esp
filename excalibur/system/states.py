@@ -1,3 +1,4 @@
+'''System Database Products View'''
 # -- IMPORTS -- ------------------------------------------------------
 import dawgie
 
@@ -5,6 +6,7 @@ import excalibur
 # ------------- ------------------------------------------------------
 # -- SV -- -----------------------------------------------------------
 class PriorsSV(dawgie.StateVector):
+    '''General format for system State Vector view'''
     def __init__(self, name):
         self._version_ = dawgie.VERSION(1,1,4)
         self.__name = name
@@ -27,17 +29,18 @@ class PriorsSV(dawgie.StateVector):
         return
 
     def name(self):
+        '''name ds'''
         return self.__name
 
     def view(self, visitor:dawgie.Visitor)->None:
+        '''view ds'''
         if self['STATUS'][-1]:
             vlabels = ['FORCE PARAMETER',
                        'MISSING MANDATORY PARAMETERS',
                        'MISSING PLANET PARAMETERS',
                        'PLANETS IGNORED', 'AUTOFILL']
             hlabels = ['/', 'VALUE']
-            table = visitor.add_table(clabels=hlabels,
-                                      rows=len(vlabels))
+            table = visitor.add_table(clabels=hlabels, rows=len(vlabels))
             table.get_cell(0, 0).add_primitive(vlabels[0])
             table.get_cell(0, 1).add_primitive(self['PP'][-1])
             table.get_cell(1, 0).add_primitive(vlabels[1])
@@ -66,8 +69,7 @@ class PriorsSV(dawgie.StateVector):
                 pass
             labels = ['STAR', 'UPPER ERR', 'LOWER ERR',
                       'UNITS', 'REF']
-            table = visitor.add_table(clabels=labels,
-                                      rows=len(allstar))
+            table = visitor.add_table(clabels=labels, rows=len(allstar))
             for starlabels in allstar:
                 i = allstar.index(starlabels)
                 for l in starlabels:

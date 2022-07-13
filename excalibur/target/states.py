@@ -1,3 +1,4 @@
+'''Target Database Products View'''
 # -- IMPORTS -- ------------------------------------------------------
 import bokeh.embed
 import bokeh.plotting  # the awesome plotting engine
@@ -8,7 +9,9 @@ import excalibur
 # ------------- ------------------------------------------------------
 # -- TARGET -- -------------------------------------------------------
 class TargetSV(dawgie.StateVector):
+    '''target view'''
     def __init__(self, name):
+        '''__init__ ds'''
         self._version_ = dawgie.VERSION(1,1,1)
         self.__name = name
         self['STATUS'] = excalibur.ValuesList()
@@ -24,11 +27,13 @@ class TargetSV(dawgie.StateVector):
         return
 
     def name(self):
+        '''name ds'''
         return self.__name
 
     def view(self, visitor:dawgie.Visitor)->None:
+        '''view ds'''
         if self['STATUS'][-1]:
-            targetlist = [target for target in self['starID'].keys()]
+            targetlist = list(self['starID'].keys())
             targetlist = sorted(targetlist)
             ntarget = len(targetlist)
             labels = ['Star', 'Aliases', 'Planet', 'Proposal']
@@ -109,7 +114,9 @@ class TargetSV(dawgie.StateVector):
 # ------------ -------------------------------------------------------
 # -- FILTER -- -------------------------------------------------------
 class FilterSV(dawgie.StateVector):
+    '''filter view'''
     def __init__(self, name):
+        '''__init__ ds'''
         self._version_ = dawgie.VERSION(1,1,1)
         self.__name = name
         self['STATUS'] = excalibur.ValuesList()
@@ -118,9 +125,11 @@ class FilterSV(dawgie.StateVector):
         return
 
     def name(self):
+        '''name ds'''
         return self.__name
 
     def view(self, visitor:dawgie.Visitor)->None:
+        '''view ds'''
         if self['STATUS'][-1]:
             if len(self['STATUS']) < 3:
                 labels = ['Active Filters']
@@ -151,6 +160,7 @@ class FilterSV(dawgie.StateVector):
 # ------------ -------------------------------------------------------
 # -- DATABASE -- -----------------------------------------------------
 class DatabaseSV(dawgie.StateVector):
+    '''target.scrape view'''
     def __init__(self, name):
         self._version_ = dawgie.VERSION(1,1,1)
         self.__name = name
@@ -160,9 +170,11 @@ class DatabaseSV(dawgie.StateVector):
         return
 
     def name(self):
+        '''__init__ ds'''
         return self.__name
 
     def view(self, visitor:dawgie.Visitor)->None:
+        '''view ds'''
         if self['STATUS'][-1]:
             ordlab = ['observatory', 'instrument', 'detector', 'filter', 'mode']
             table = visitor.add_table(clabels=ordlab, rows=1)
@@ -189,7 +201,9 @@ class DatabaseSV(dawgie.StateVector):
 # -------------- -----------------------------------------------------
 # -- MONITOR -- -------------------------------------------------------
 class MonitorSV(dawgie.StateVector):
+    '''MonitorSV ds'''
     def __init__(self):
+        '''__init__ ds'''
         self._version_ = dawgie.VERSION(1,1,1)
         self['last'] = excalibur.ValuesDict()
         self['planet'] = excalibur.ValuesDict()
@@ -198,9 +212,11 @@ class MonitorSV(dawgie.StateVector):
         return
 
     def name(self):
+        '''name ds'''
         return 'parameters'
 
     def view(self, visitor:dawgie.Visitor)->None:
+        '''view ds'''
         for k in sorted(self['last']):
             outlier = self['outlier']
             ks = k.split ('_')
@@ -231,7 +247,9 @@ class MonitorSV(dawgie.StateVector):
 # -------------- -----------------------------------------------------
 # -- ALERT --- -------------------------------------------------------
 class AlertSV(dawgie.StateVector):
+    '''AlertSV ds'''
     def __init__(self):
+        '''__init__ ds'''
         self._version_ = dawgie.VERSION(1,1,1)
         self['changes'] = excalibur.ValuesList()
         self['known'] = excalibur.ValuesList()
@@ -239,9 +257,11 @@ class AlertSV(dawgie.StateVector):
         return
 
     def name(self):
+        '''name ds'''
         return 'parameters'
 
     def view(self, visitor:dawgie.Visitor)->None:
+        '''view ds'''
         visitor.add_declaration ('Last deltas', tag='h4')
 
         if self['changes']:
@@ -251,13 +271,15 @@ class AlertSV(dawgie.StateVector):
         else: visitor.add_primitive ('No change since last run')
 
         params = set()
-        for te in self['table']: params.update (set (['_'.join(k.split ('_')[1:])
-                                                      for k in te.keys()]))
-        params = [p for p in sorted (params)]
+        for te in self['table']:
+            # params.update (set (['_'.join(k.split ('_')[1:]) for k in te.keys()]))
+            params.update ({'_'.join(k.split ('_')[1:]) for k in te.keys()})
+            pass
+        params = list(sorted (params))
         row = -1
         table = visitor.add_table(clabels=['target', 'planet'] + params, rows=1)
-        for trg,pp in zip (self['known'], self['table']):
-            planets = [p for p in sorted (set([k.split('_')[0] for k in pp.keys()]))]
+        for trg, pp in zip (self['known'], self['table']):
+            planets = list(sorted({k.split('_')[0] for k in pp.keys()}))
             for planet in planets:
                 row += 1
                 table.get_cell (row, 0).add_primitive (trg)

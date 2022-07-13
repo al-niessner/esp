@@ -1,3 +1,4 @@
+'''transit algorithms ds'''
 # -- IMPORTS -- ------------------------------------------------------
 import dawgie
 import dawgie.context
@@ -40,17 +41,21 @@ class normalization(dawgie.Algorithm):
         return
 
     def name(self):
+        '''Database name for subtask extension'''
         return 'normalization'
 
     def previous(self):
+        '''Input State Vectors: data.calibration, data.timing, system.finalize'''
         return [dawgie.ALG_REF(dat.task, self.__cal),
                 dawgie.ALG_REF(dat.task, self.__tme),
                 dawgie.ALG_REF(sys.task, self.__fin)]
 
     def state_vectors(self):
+        '''Output State Vectors: transit.normalization'''
         return self.__out
 
     def run(self, ds, ps):
+        '''Top level algorithm call'''
         svupdate = []
         vfin, sfin = trncore.checksv(self.__fin.sv_as_dict()['parameters'])
         for ext in fltrs:
@@ -75,6 +80,7 @@ class normalization(dawgie.Algorithm):
         return
 
     def _norm(self, cal, tme, fin, index):
+        '''Core code call'''
         if 'Spitzer' in fltrs[index]:
             normed = trncore.norm_spitzer(cal, tme, fin, self.__out[index], self._type)
             pass
@@ -87,6 +93,7 @@ class normalization(dawgie.Algorithm):
         return normed
 
     def _failure(self, errstr):
+        '''Failure log'''
         log.warning('--< %s NORMALIZATION: %s >--', self._type.upper(), errstr)
         return
     pass
@@ -98,6 +105,7 @@ class whitelight(dawgie.Algorithm):
     https://github-fn.jpl.nasa.gov/EXCALIBUR/esp/pull/86
     '''
     def __init__(self, nrm=normalization()):
+        '''__init__ ds'''
         self._version_ = trncore.wlversion()
         self._type = 'transit'
         self._nrm = nrm
@@ -107,16 +115,20 @@ class whitelight(dawgie.Algorithm):
         return
 
     def name(self):
+        '''Database name for subtask extension'''
         return 'whitelight'
 
     def previous(self):
+        '''Input State Vectors: transit.normalization, system.finalize'''
         return [dawgie.ALG_REF(trn.task, self._nrm),
                 dawgie.ALG_REF(sys.task, self.__fin)]
 
     def state_vectors(self):
+        '''Output State Vectors: transit.whitelight'''
         return self.__out
 
     def run(self, ds, ps):
+        '''Top level algorithm call'''
         svupdate = []
         fin = self.__fin.sv_as_dict()['parameters']
         vfin, sfin = trncore.checksv(fin)
@@ -173,16 +185,19 @@ class whitelight(dawgie.Algorithm):
         return
 
     def _hstwhitelight(self, nrm, fin, out, ext):
+        '''Core code call for merged HST data'''
         wl = trncore.hstwhitelight(nrm, fin, out, ext, self._type,
                                    chainlen=int(1e4), verbose=False)
         return wl
 
     def _whitelight(self, nrm, fin, out, ext):
+        '''Core code call'''
         if 'Spitzer' in ext:
             wl = trncore.lightcurve_spitzer(nrm, fin, out, self._type, ext,
                                             self.__out[-1])
         elif 'JWST' in ext:
-            wl = trncore.lightcurve_jwst_niriss(nrm, fin, out, self._type, ext, self.__out[-1], method='ns')
+            wl = trncore.lightcurve_jwst_niriss(nrm, fin, out, self._type, ext,
+                                                self.__out[-1], method='ns')
         else:
             wl = trncore.whitelight(nrm, fin, out, ext, self._type,
                                     self.__out[-1], chainlen=int(1e4), verbose=False,
@@ -191,6 +206,7 @@ class whitelight(dawgie.Algorithm):
         return wl
 
     def _failure(self, errstr):
+        '''Failure log'''
         log.warning('--< %s WHITE LIGHT: %s >--', self._type.upper(), errstr)
         return
     pass
@@ -200,6 +216,7 @@ class spectrum(dawgie.Algorithm):
     G. ROUDIER: See inheritance and CI5 thread with A NIESSNER for __init__() method and class attributes https://github-fn.jpl.nasa.gov/EXCALIBUR/esp/pull/86
     '''
     def __init__(self, nrm=normalization(), wht=whitelight()):
+        '''__init__ ds'''
         self._version_ = trncore.spectrumversion()
         self._type = 'transit'
         self.__fin = sysalg.finalize()
@@ -208,23 +225,26 @@ class spectrum(dawgie.Algorithm):
         self.__out = [trnstates.SpectrumSV(ext) for ext in fltrs]
         if sum(['HST' in ext for ext in fltrs]) > 1:
             self.__out.append(trnstates.SpectrumSV('STIS-WFC3'))
-#         else:
-#             raise NoValidInputData()
-
+            pass
         return
 
     def name(self):
+        '''Database name for subtask extension'''
         return 'spectrum'
 
     def previous(self):
+        '''Input State Vectors: system.finalize, transit.normalization,
+        transit.whitelight'''
         return [dawgie.ALG_REF(sys.task, self.__fin),
                 dawgie.ALG_REF(trn.task, self._nrm),
                 dawgie.ALG_REF(trn.task, self._wht)]
 
     def state_vectors(self):
+        '''Output State Vectors: transit.spectrum'''
         return self.__out
 
     def run(self, ds, ps):
+        '''Top level algorithm call'''
         svupdate = []
         vfin, sfin = trncore.checksv(self.__fin.sv_as_dict()['parameters'])
         for index, ext in enumerate(fltrs):
@@ -249,11 +269,9 @@ class spectrum(dawgie.Algorithm):
         log.warning('--< %s MERGED SPECTRUM: %s >--')
         merg = trncore.hstspectrum(self.__out, fltrs)
         # check if merg is True so you can put self.__out[-1] append to svupdate
-        if merg:
-            svupdate.append(self.__out[-1])
+        if merg: svupdate.append(self.__out[-1])
         self.__out = svupdate  # it will take all the elements that are not empty
         if self.__out: ds.update()
-
         return
 
 #     def _hstspec(self, out):
@@ -261,6 +279,7 @@ class spectrum(dawgie.Algorithm):
 #         return s
 
     def _spectrum(self, fin, nrm, wht, out, ext):
+        '''Core code call'''
         if "Spitzer" in ext:
             s = trncore.spitzer_spectrum(wht, out, ext)
         elif "JWST" in ext:
@@ -272,32 +291,40 @@ class spectrum(dawgie.Algorithm):
         return s
 
     def _failure(self, errstr):
+        '''Failure log'''
         log.warning('--< %s SPECTRUM: %s >--', self._type.upper(), errstr)
         return
     pass
 
 class population(dawgie.Analyzer):
+    '''population ds'''
     def __init__(self):
+        '''__init__ ds'''
         self._version_ = dawgie.VERSION(1,0,2)
         self.__out = [trnstates.PopulationSV(ext) for ext in fltrs]
         return
 
     def feedback(self):
+        '''feedback ds'''
         return []
 
     def name(self):
+        '''Database name for subtask extension'''
         return 'population'
 
     def traits(self)->[dawgie.SV_REF, dawgie.V_REF]:
+        '''Input State Vectors'''
         return [*[dawgie.SV_REF(trn.task, spectrum(), spectrum().state_vectors()[i])
                   for i in range(len(spectrum().state_vectors()))],
                 *[dawgie.SV_REF(trn.task, whitelight(), whitelight().state_vectors()[i])
                   for i in range(len(whitelight().state_vectors()))]]
 
     def state_vectors(self):
+        '''Output State Vectors: transit.population'''
         return self.__out
 
     def run(self, aspects:dawgie.Aspect):
+        '''Top level algorithm call'''
         data = aspects
         if 'as_dict' in dir(aspects):  # temporary workaround for dawgie discrepancy
             data = aspects.as_dict()
@@ -308,9 +335,15 @@ class population(dawgie.Analyzer):
                         if tgn not in temp: temp[tgn] = {}
                         if svn not in temp[tgn]: temp[tgn][svn] = {}
                         temp[tgn][svn][vn] = data[svn][tgn][vn]
+                        pass
+                    pass
+                pass
             data = temp
+            pass
         elif 'keys' not in dir(aspects):
-            data = dict([i for i in aspects])
+            # data = dict([i for i in aspects])
+            data = dict(aspects)
+            pass
         targets = data
 
         # now handle IM parameter distribution
@@ -374,7 +407,7 @@ class population(dawgie.Analyzer):
                                 param_val = np.nanmedian(trace[key])
                                 wl_im_bins[param_name]['values'].append(param_val)
             self.__out[idx]['data']['IMPARAMS'] = dict(im_bins)
-            self.__out[idx]['data']['wl'] = dict()
+            self.__out[idx]['data']['wl'] = {}
             self.__out[idx]['data']['wl']['imparams'] = dict(wl_im_bins)
             self.__out[idx]['STATUS'].append(True)
 

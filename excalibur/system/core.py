@@ -1,3 +1,4 @@
+'''system core ds'''
 # -- IMPORTS -- ------------------------------------------------------
 import logging; log = logging.getLogger(__name__)
 
@@ -57,7 +58,7 @@ def buildsp(autofill, out):
     '''
 G. ROUDIER: Surjection from target.autofill.parameters to dictionary output
     '''
-    target = [t for t in autofill['starID'].keys()]
+    target = list(autofill['starID'].keys())
     target = target[0]
     for p in autofill['starID'][target]['planets']: out['priors'][p] = {}
     out['priors']['planets'] = autofill['starID'][target]['planets'].copy()

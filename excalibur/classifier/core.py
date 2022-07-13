@@ -1,11 +1,15 @@
+'''classifier core ds'''
+# -- IMPORTS -- ------------------------------------------------------
 import os
 import dawgie
 import joblib
 import numpy as np
+
 import excalibur
 import excalibur.system.core as syscore
-
+# ------------- ------------------------------------------------------
 def predversion():
+    '''predversion ds'''
     return dawgie.VERSION(2,0,2)
 
 def predict(transit_whitelight, transit_spectrum, priors, out):

@@ -22,7 +22,7 @@ with open ('pylint.rpt.txt', 'rt') as f:
 
         if l.startswith ('***'): mn = l.split()[2]
         if len (l) < 2: continue
-        if l[0] not in 'CEFIRW' or l[1] != ':': continue
+        if not l.startswith ('excalibur/'): continue
         if 0 < l.find ('(missing-docstring)'): continue
         if 0 < l.find ('(locally-disabled)'): continue
         count += 1

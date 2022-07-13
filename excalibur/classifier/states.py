@@ -1,3 +1,4 @@
+'''Classifier Database Products View'''
 # -- IMPORTS -- ------------------------------------------------------
 import dawgie
 import excalibur
@@ -8,7 +9,9 @@ import excalibur
 
 # -- SV -- -----------------------------------------------------------
 class PredictSV(dawgie.StateVector):
+    '''PredictSV ds'''
     def __init__(self, name):
+        '''__init__ ds'''
         self._version_ = dawgie.VERSION(1,1,0)
         self.__name = name
         self['STATUS'] = excalibur.ValuesList()
@@ -17,9 +20,11 @@ class PredictSV(dawgie.StateVector):
         return
 
     def name(self):
+        '''name ds'''
         return self.__name
 
     def view(self, visitor:dawgie.Visitor)->None:
+        '''view ds'''
         if self['STATUS'][-1]:
             for p in self['data'].keys():
                 visitor.add_declaration('PLANET: ' + p)

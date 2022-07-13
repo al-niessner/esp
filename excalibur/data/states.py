@@ -1,3 +1,4 @@
+'''Data Database Products View'''
 # -- IMPORTS -- ------------------------------------------------------
 import io
 
@@ -10,7 +11,9 @@ import matplotlib.pyplot as plt
 # ------------- ------------------------------------------------------
 # -- CALIBRATE -- ----------------------------------------------------
 class CalibrateSV(dawgie.StateVector):
+    '''data.calibration view'''
     def __init__(self, name):
+        '''__init__ ds'''
         self.__name = name
         self._version_ = dawgie.VERSION(1,1,2)
         self['data'] = excalibur.ValuesDict()
@@ -19,9 +22,11 @@ class CalibrateSV(dawgie.StateVector):
         return
 
     def name(self):
+        '''name ds'''
         return self.__name
 
     def view(self, visitor:dawgie.Visitor)->None:
+        '''view ds'''
         if len(self['STATUS']) == 2:
             if 'Spitzer' in self.__name:
                 pass
@@ -29,15 +34,18 @@ class CalibrateSV(dawgie.StateVector):
                 pass
             else:
                 data = self['data']
-                timing = np.array([d for d,i in zip(data['TIME'], data['IGNORED']) if not i])
-                dispersion = np.array([d for d,i in zip(data['DISPERSION'], data['IGNORED'])
-                                       if not i])
-                shift = np.array([d for d,i in zip(data['SHIFT'], data['IGNORED']) if not i])
+                timing = np.array([d for d,i in zip(data['TIME'],
+                                                    data['IGNORED']) if not i])
+                dispersion = np.array([d for d,i in zip(data['DISPERSION'],
+                                                        data['IGNORED']) if not i])
+                shift = np.array([d for d,i in zip(data['SHIFT'],
+                                                   data['IGNORED']) if not i])
                 spec = np.array([d for d,i in zip(data['SPECTRUM'], data['IGNORED'])
                                  if not i])
                 photoc = np.array([d for d,i in zip(data['PHT2CNT'], data['IGNORED'])
                                    if not i])
-                wave = np.array([d for d,i in zip(data['WAVE'], data['IGNORED']) if not i])
+                wave = np.array([d for d,i in zip(data['WAVE'],
+                                                  data['IGNORED']) if not i])
                 errspec = np.array([d for d,i in zip(data['SPECERR'], data['IGNORED'])
                                     if not i])
                 allignore = np.array(data['IGNORED'])
@@ -131,12 +139,15 @@ class CalibrateSV(dawgie.StateVector):
                 visitor.add_image('...', ' ', buf.getvalue())
                 plt.close(myfig)
                 pass
+            pass
         return
     pass
 # -------------- -----------------------------------------------------
 # -- TIMING -- -------------------------------------------------------
 class TimingSV(dawgie.StateVector):
+    '''data.timing view'''
     def __init__(self, name):
+        '''__init__ ds'''
         self._version_ = dawgie.VERSION(1,1,1)
         self.__name = name
         self['STATUS'] = excalibur.ValuesList()
@@ -148,9 +159,11 @@ class TimingSV(dawgie.StateVector):
         return
 
     def name(self):
+        '''name ds'''
         return self.__name
 
     def view(self, visitor:dawgie.Visitor)->None:
+        '''view ds'''
         if self['STATUS'][-1]:
             for p in self['data'].keys():
                 if 'Spitzer' in self.__name or 'JWST' in self.__name:
@@ -227,6 +240,7 @@ class TimingSV(dawgie.StateVector):
                         plt.close(myfig)
                         pass
                     pass
+                pass
             pass
         return
     pass

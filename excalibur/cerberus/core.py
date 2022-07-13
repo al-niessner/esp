@@ -1,4 +1,6 @@
+'''cerberus core ds'''
 # -- IMPORTS -- ------------------------------------------------------
+import dawgie
 import excalibur
 # pylint: disable=import-self
 import excalibur.cerberus.core
@@ -58,7 +60,6 @@ def myxsecsversion():
     shifting effects (like exomol)
     Done to speed up processing of CH4 HITEMP line list
     '''
-    import dawgie
     return dawgie.VERSION(1,1,3)
 
 def myxsecs(spc, out,
@@ -91,7 +92,7 @@ G. ROUDIER: Builds Cerberus cross section library
             myfiles = [f for f in os.listdir(thisxmdir) if f.endswith('K')]
             for mf in myfiles:
                 xmtemp = float(mf.split('K')[0])
-                with open(os.path.join(thisxmdir, mf), 'r') as fp:
+                with open(os.path.join(thisxmdir, mf), 'r', encoding="utf-8") as fp:
                     data = fp.readlines()
                     fp.close()
                     for line in data:
@@ -137,7 +138,7 @@ G. ROUDIER: Builds Cerberus cross section library
             if verbose:
                 fts = 20
                 plt.figure(figsize=(16,12))
-                haha = [huhu for huhu in set(library[myexomol]['T'])]
+                haha = list(set(library[myexomol]['T']))
                 haha = np.sort(np.array(haha))
                 haha = haha[::-1]
                 for temp in haha:
@@ -165,7 +166,7 @@ G. ROUDIER: Builds Cerberus cross section library
             library[mycia] = {'I':[], 'nu':[], 'T':[],
                               'Itemp':[], 'nutemp':[], 'Ttemp':[],
                               'SPL':[], 'SPLNU':[]}
-            with open(myfile, 'r') as fp:
+            with open(myfile, 'r', encoding="utf-8") as fp:
                 data = fp.readlines()
                 fp.close()
                 # Richard et Al. 2012
@@ -244,7 +245,8 @@ G. ROUDIER: Builds Cerberus cross section library
                     if minweq > (np.max(wgrid)+dwmax): readit = False
                     pass
                 if readit:
-                    with open(os.path.join(hitemp, ks, fdata), 'r') as fp:
+                    with open(os.path.join(hitemp, ks, fdata), 'r',
+                              encoding="utf-8") as fp:
                         data = fp.readlines()
                         fp.close()
                         # Rothman et Al. 2010
@@ -333,7 +335,7 @@ G. ROUDIER: Builds Cerberus cross section library
             if verbose:
                 fts = 20
                 plt.figure(figsize=(16,12))
-                haha = [huhu for huhu in set(library[ks]['T'])]
+                haha = list(set(library[ks]['T']))
                 haha = np.sort(np.array(haha))
                 haha = haha[::-1]
                 for temp in haha:
@@ -372,7 +374,7 @@ G. ROUDIER: Wrapper around HITRAN partition functions (Gamache et al. 2011)
     tempgrid = list(np.arange(60., 3035., 25.))
     for ks in knownspecies:
         grid[ks] = {'T':tempgrid, 'Q':[], 'SPL':[]}
-        with open(os.path.join(tips, ks)) as fp:
+        with open(os.path.join(tips, ks), 'r', encoding="utf-8") as fp:
             data = fp.readlines()
             fp.close()
             for line in data:
@@ -403,7 +405,6 @@ def atmosversion():
     R ESTRELA:131
     Merged Spectra Capability
     '''
-    import dawgie
     return dawgie.VERSION(1,3,2)
 
 def atmos(fin, xsl, spc, out, ext,
@@ -644,7 +645,9 @@ G. ROUDIER: Cerberus retrievial
                 trace = pm.sample(mclen, cores=4, tune=int(mclen/4),
                                   compute_convergence_checks=False, step=pm.Metropolis(),
                                   progressbar=verbose)
-                mcpost = pm.summary(trace)
+                # GMR: Should be able to find it... Joker
+                # pylint: disable=no-member
+                mcpost = pm.stats.summary(trace)
                 pass
             mctrace = {}
             for key in mcpost['mean'].keys():
@@ -1263,10 +1266,10 @@ G. ROUDIER: BURROWS AND SHARP 1998 + ANDERS & GREVESSE 1989
             nHe = nH*solar['nHe']/solar['nH']
             pass
         pass
-    if C2Or < -10.: C2Or = -10.
-    if C2Or > 10.: C2Or = 10.
-    if N2Or < -10.: N2Or = -10.
-    if N2Or > 10.: N2Or = 10.
+    C2Or = max(C2Or, -10.0)
+    C2Or = min(C2Or, 10.0)
+    N2Or = max(N2Or, -10.0)
+    N2Or = min(N2Or, 10.0)
     pH2 = nH2*p
     K1 = np.exp((a1/temp + b1 + c1*temp + d1*temp**2 + e1*temp**3)/(RcalpmolpK*temp))
     AH2 = (pH2**2.)/(2.*K1)
@@ -1812,9 +1815,12 @@ def hazelib(sv,
             hazedir=os.path.join(excalibur.context['data_dir'], 'CERBERUS/HAZE'),
             datafile='Jup-ISS-aerosol.dat', verbose=False,
             fromjupiter=True, narrow=True):
+    '''Haze density profiles'''
     vdensity = {'PRESSURE':[], 'CONSTANT':[], 'JMAX':[], 'MAX':[],
                 'JMEDIAN':[], 'MEDIAN':[], 'JAVERAGE':[], 'AVERAGE':[]}
-    with open(os.path.join(hazedir, datafile), 'r') as fp: data = fp.readlines()
+    with open(os.path.join(hazedir, datafile), 'r', encoding="utf-8") as fp:
+        data = fp.readlines()
+        pass
     # LATITUDE GRID
     latitude = data[0]
     latitude = np.array(latitude.split(' '))
