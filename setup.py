@@ -4,16 +4,15 @@ import os
 import setuptools
 
 excalibur = os.path.join ('excalibur', '__init__.py')
-deps = ['astropy==3.0.4',
-        'ldtk==1.0',
-        'lmfit==0.9.11',
-        'matplotlib==3.3.0',
-        'pymc3==3.10.0',
-        'scipy==1.1.0',
-        'joblib==0.12.5',
-        'scikit-learn==0.23.2',
-        'arviz==0.11.0',
-         ]
+deps =['arviz==0.12.0',
+       'astropy==5.0.4',
+       'joblib==1.1.0',
+       'ldtk==1.7.0',
+       'lmfit==1.0.3',
+       'pymc3==3.11.5',
+       'scipy>=1.7.3',
+       'scikit-learn==1.1.0',
+       ]
 version = 'esp-git-rev'
 with open (os.path.join (os.path.dirname (__file__), excalibur)) as f: t = f.read()
 t = t.replace ('${UNDEFINED}', version)
