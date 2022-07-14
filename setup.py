@@ -10,7 +10,7 @@ deps =['arviz==0.12.0',
        'ldtk==1.7.0',
        'lmfit==1.0.3',
        'pymc3==3.11.5',
-       'scipy>=1.7.3',
+       'scipy==1.7.3',
        'scikit-learn==1.1.0',
        ]
 version = 'esp-git-rev'
