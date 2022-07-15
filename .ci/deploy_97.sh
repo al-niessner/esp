@@ -20,6 +20,8 @@ then
     docker save -o ${tempfn} esp_cit:${cit_version} esp_devel:${base_version} esp_base:${base_version} esp_server:${base_version} esp_tools:${base_version} esp_worker:latest
     # install all of the new images
     ssh mentor0 docker load -i ${tempfn}
+    ssh mentor0 docker rmi -f esp_server:latest
+    ssh mentor0 docker tag esp_server:${base_version} esp_server:latest
     #ssh mentor1 docker load -i ${tempfn}
     ssh mentor2 docker load -i ${tempfn}
     ssh mentor3 docker load -i ${tempfn}
