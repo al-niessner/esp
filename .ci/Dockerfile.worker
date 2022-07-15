@@ -8,7 +8,8 @@ RUN set -ex && \
     /bin/dcp.py --port DCP_PORT_NUMBER -r setup.py excalibur /tmp/esp/ && \
     cd /tmp/esp && \
     mkdir -p /usr/local/lib/python && \
-    python3 setup.py install --home=/usr/local && \
+    python3 setup.py sdist bdist_wheel && \
+    python3 -m pip install dist/*.whl && \
     cd /tmp && rm -rf esp
 ENTRYPOINT ["python3", "-m", "dawgie.pl.worker", \
             "-a", "/proj/src/ae", \
