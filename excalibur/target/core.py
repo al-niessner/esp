@@ -36,12 +36,33 @@ def tap_query(base_url, query):
         pass
     uri_full = uri_full[:-1] + f"&format={query.get('format','csv')}"
     uri_full = uri_full.replace(' ','+')
-
     response = None
-    with (urlrequest.urlopen(uri_full)).read() as test:
-        response = test.decode('utf-8')
+
+    class urltrick():
+        '''
+        # GMR: with statement generates an attribute __enter__ error
+        # without the with statement it doesnt pass CI checks
+        # pulling out dirty tricks
+        '''
+
+        def __init__(self, thisurl):
+            '''__init__ ds'''
+            self.thisurl = thisurl
+            self.req = None
+            return
+
+        def __enter__(self):
+            '''__enter__ ds'''
+            self.req = urlrequest.urlopen(self.thisurl)
+            return self.req.read()
+
+        def __exit__(self, exc_type, exc_value, traceback):
+            '''__exit__ ds'''
+            self.req.close()
+            return
         pass
 
+    with urltrick(uri_full) as test: response = test.decode('utf-8')
     return response
 # ----------------- --------------------------------------------------
 # -- SCRAPE IDS -- ---------------------------------------------------
