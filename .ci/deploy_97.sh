@@ -27,6 +27,8 @@ then
     ssh mentor3 docker load -i ${tempfn}
     ssh mentor4 docker load -i ${tempfn}
     ssh mentor5 docker load -i ${tempfn}
+    ssh mentor6 docker load -i ${tempfn}
+    ssh mentor7 docker load -i ${tempfn}
     ssh mentor0 docker container prune -f
     ssh mentor0 docker image prune -f
     #ssh mentor1 docker container prune -f
@@ -39,6 +41,10 @@ then
     ssh mentor4 docker image prune -f
     ssh mentor5 docker container prune -f
     ssh mentor5 docker image prune -f
+    ssh mentor6 docker container prune -f
+    ssh mentor6 docker image prune -f
+    ssh mentor7 docker container prune -f
+    ssh mentor7 docker image prune -f
     # cleanup
     rm ${tempfn}
     set +x
