@@ -17,6 +17,30 @@ import astropy.io.fits as pyfits
 import urllib.error
 import urllib.request as urlrequest
 # ------------- ------------------------------------------------------
+# -- URLTRICK -- -----------------------------------------------------
+class urltrick():
+    '''
+    # GMR: with statement generates an attribute __enter__ error
+    # without the with statement it doesnt pass CI checks
+    # pulling out dirty tricks
+    '''
+    def __init__(self, thisurl):
+        '''__init__ ds'''
+        self.thisurl = thisurl
+        self.req = None
+        return
+
+    def __enter__(self):
+        '''__enter__ ds'''
+        self.req = urlrequest.urlopen(self.thisurl)
+        return self.req.read()
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        '''__exit__ ds'''
+        self.req.close()
+        return
+    pass
+# -------------- -----------------------------------------------------
 # -- SV VALIDITY -- --------------------------------------------------
 def checksv(sv):
     '''Checks for empty SV'''
@@ -37,30 +61,6 @@ def tap_query(base_url, query):
     uri_full = uri_full[:-1] + f"&format={query.get('format','csv')}"
     uri_full = uri_full.replace(' ','+')
     response = None
-
-    class urltrick():
-        '''
-        # GMR: with statement generates an attribute __enter__ error
-        # without the with statement it doesnt pass CI checks
-        # pulling out dirty tricks
-        '''
-
-        def __init__(self, thisurl):
-            '''__init__ ds'''
-            self.thisurl = thisurl
-            self.req = None
-            return
-
-        def __enter__(self):
-            '''__enter__ ds'''
-            self.req = urlrequest.urlopen(self.thisurl)
-            return self.req.read()
-
-        def __exit__(self, exc_type, exc_value, traceback):
-            '''__exit__ ds'''
-            self.req.close()
-            return
-        pass
 
     with urltrick(uri_full) as test: response = test.decode('utf-8')
     return response
@@ -164,9 +164,7 @@ def autofill(ident, thistarget, out,
     querytarget = thistarget.replace(' ', '+')
     queryform = queryurl+querytarget+action+outfmt+opt
     failure = ['target not resolved, continue\n\n', 'no rows found\n\n']
-    with urlrequest.urlopen(queryform).read() as temp:
-        framelist = temp.decode('utf-8')
-        pass
+    with urltrick(queryform) as temp: framelist = temp.decode('utf-8')
     if framelist not in failure:
         framelist = framelist.split('\n')
         header = framelist[0].split(',')
@@ -187,6 +185,7 @@ def autofill(ident, thistarget, out,
         out['STATUS'].append(True)
         pass
     solved = True  # target list autofill KP
+
     # AUTOFILL WITH NEXSCI EXOPLANET TABLE ---------------------------
     merged = False
     targetID.extend(ident['starID'][thistarget]['aliases'])
@@ -205,7 +204,7 @@ def autofill(ident, thistarget, out,
                  ('t0', ['err']), ('impact', ['err']),
                  ('T*', ['err']), ('M*', ['err']),
                  ('R*', ['err']), ('L*', ['err']),
-                 ('LOGG*', ['err']),('RHO*', ['err']),
+                 ('LOGG*', ['err']), ('RHO*', ['err']),
                  ('FEH*', ['err']),
                  ('Hmag', ['err'])]
     banlist = ['star', 'planet', 'update', 'ref', 'np']
@@ -263,6 +262,7 @@ def autofill(ident, thistarget, out,
                     out['starID'][thistarget]['AGE*_lowerr'] = ['']
                     out['starID'][thistarget]['AGE*_units'] = ['']
                     out['starID'][thistarget]['AGE*_ref'] = ['']
+                    out['starID'][thistarget]['Hmag'] = []
                     out['starID'][thistarget]['Hmag_units'] = ['mag']
                     out['starID'][thistarget]['Hmag_ref'] = []
                     pass
@@ -272,45 +272,59 @@ def autofill(ident, thistarget, out,
                 ref = ref.strip()
                 pass
             idx = 0
+            keyinfoin = True
             for keymatch in matchlist:
                 key = keymatch[0]
                 match = keymatch[1]
-                if key not in banlist:
-                    if key in plist:
-                        out_ref = out['starID'][thistarget][elem[1]]
-                        pass
-                    else:
-                        out_ref = out['starID'][thistarget]
-                        pass
-                    pass
+                if idx > len(elem): keyinfoin = False
+                if (key not in banlist) and keyinfoin:
+                    if key in plist: out_ref = out['starID'][thistarget][elem[1]]
+                    else: out_ref = out['starID'][thistarget]
                     # initialize array if not already defined
-                    keys = [key] + ([key+'_lowerr', key+'_uperr'] if 'err' in match else []) + \
-                            ([key+'_units'] if 'units' in match else [])
+                    keys = [key] + ([key+'_lowerr', key+'_uperr'] if 'err' in match
+                                    else []) + ([key+'_units'] if 'units' in match
+                                                else [])
                     for _key in keys:
-                        if _key not in out_ref.keys():
-                            out_ref[_key] = []
+                        if _key not in out_ref.keys(): out_ref[_key] = []
+                        pass
                     already_added = False
                     if out_ref[key] and out_ref[key][0]:
                         # ensure only first default value is added
                         already_added = True
+                        pass
                     # now add values in proper order
                     if not already_added:
                         out_ref[key].append(elem[idx])
                         if 'err' in match:
                             # ensure that system.validate will give +/-10% err
                             null_val = '' if key in plist else '0.0'
-                            if elem[idx+1] or not elem[idx]:
-                                out_ref[key+'_uperr'].append(elem[idx+1])
-                            else: out_ref[key+'_uperr'].append(null_val)
-                            if elem[idx+2] or not elem[idx]:
-                                out_ref[key+'_lowerr'].append(elem[idx+2])
-                            else: out_ref[key+'_lowerr'].append(null_val)
+                            # GMR: Try except is an overkill given the addition of
+                            # keyinfoin. Leaving it there just in case
+                            try:
+                                if elem[idx+1] or not elem[idx]:
+                                    out_ref[key+'_uperr'].append(elem[idx+1])
+                                    pass
+                            except IndexError: out_ref[key+'_uperr'].append(null_val)
+                            try:
+                                if elem[idx+2] or not elem[idx]:
+                                    out_ref[key+'_lowerr'].append(elem[idx+2])
+                                    pass
+                                pass
+                            except IndexError: out_ref[key+'_lowerr'].append(null_val)
                         if 'units' in match:
                             units_idx = idx + (2 if 'err' in match else 0) + 1
                             out_ref[key+'_units'].append(elem[units_idx])
-                pass
+                            pass
+                        pass
+                    pass
                 # update to start of next key segment
-                idx += 1 + (2 if 'err' in match else 0) + (1 if 'units' in match else 0)
+                if (idx + 3) == header.index('st_metratio'): idx += 3
+                else:
+                    idx += (1 +
+                            (2 if 'err' in match else 0) +
+                            (1 if 'units' in match else 0))
+                    pass
+                pass
             out['starID'][thistarget][elem[1]]['period_units'].append('[days]')
             out['starID'][thistarget][elem[1]]['sma_units'].append('[AU]')
             out['starID'][thistarget][elem[1]]['ecc_units'].append('[]')
@@ -330,13 +344,11 @@ def autofill(ident, thistarget, out,
             skeys = [sk[0] for sk in matchlist
                      if sk[0] not in banlist and sk[0] not in plist]
             for sk in skeys:
-                if out['starID'][thistarget][sk][-1]: addme = ref
+                if out['starID'][thistarget][sk]: addme = ref
                 else: addme = ''
-                if out['starID'][thistarget][sk+'_ref'] and \
-                        out['starID'][thistarget][sk+'_ref'][0]:
-                    # ensure only first defined row is added
-                    continue
-                out['starID'][thistarget][sk+'_ref'].append(addme)
+                if not out['starID'][thistarget][sk+'_ref']:
+                    out['starID'][thistarget][sk+'_ref'].append(addme)
+                    pass
                 pass
             out['starID'][thistarget]['R*_units'].append('[Rsun]')
             out['starID'][thistarget]['M*_units'].append('[Msun]')
@@ -349,6 +361,7 @@ def autofill(ident, thistarget, out,
             merged = True
             pass
         pass
+
     # AUTOFILL WITH NEXSCI EXTENDED TABLE ----------------------------
     response = ident['nexscix']
     header = response[0].split(',')
@@ -405,6 +418,7 @@ def autofill(ident, thistarget, out,
             merged = True
             pass
         pass
+
     # AUTOFILL WITH NEXSCI COMPOSITE TABLE ---------------------------
     response = ident['nexscic']
     header = response[0].split(',')
@@ -491,10 +505,8 @@ def autofill(ident, thistarget, out,
 
 def clean_elem(elem):
     '''remove formatting on a single element from TAP API'''
-    if not elem:
-        return elem
-    if elem[0] == '"' and elem[-1] == '"':
-        return elem[1:-1]
+    if not elem: return elem
+    if elem[0] == '"' and elem[-1] == '"': return elem[1:-1]
     return elem
 
 def clean_elems(elems):
