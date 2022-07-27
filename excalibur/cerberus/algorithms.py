@@ -20,7 +20,7 @@ import excalibur.target.edit as trgedit
 fltrs = (trgedit.activefilters.__doc__).split('\n')
 fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
 fltrs.append('STIS-WFC3')
-fltrs = [f for f in fltrs if 'STIS-WFC3' in f]
+# fltrs = [f for f in fltrs if 'STIS-WFC3' in f]
 fltrs = [f for f in fltrs if 'Spitzer' not in f]
 # ----------------------- --------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
@@ -138,6 +138,63 @@ class atmos(dawgie.Algorithm):
     def _failure(errstr):
         '''Failure log'''
         log.warning('--< CERBERUS ATMOS: %s >--', errstr)
+        return
+    pass
+
+class release(dawgie.Algorithm):
+    '''Format release products Roudier et al. 2021'''
+    def __init__(self):
+        '''__init__ ds'''
+        self._version_ = crbcore.rlsversion()
+        self.__fin = sysalg.finalize()
+        self.__atmos = atmos()
+        self.__out = [crbstates.rlsSV(ext) for ext in fltrs]
+        return
+
+    def name(self):
+        '''Database name for subtask extension'''
+        return 'release'
+
+    def previous(self):
+        '''Input State Vectors: cerberus.atmos'''
+        return [dawgie.ALG_REF(sys.task, self.__fin),
+                dawgie.ALG_REF(crb.task, self.__atmos)]
+
+    def state_vectors(self):
+        '''Output State Vectors: cerberus.release'''
+        return self.__out
+
+    def run(self, ds, ps):
+        '''Top level algorithm call'''
+        svupdate = []
+        vfin, sfin = crbcore.checksv(self.__fin.sv_as_dict()['parameters'])
+        ext = 'HST-WFC3-IR-G141-SCAN'
+        update = False
+        if vfin:
+            log.warning('--< CERBERUS RELEASE: %s >--', ext)
+            # pylint: disable=protected-access
+            update = self._release(ds._tn(),
+                                   self.__fin.sv_as_dict()['parameters'],
+                                   fltrs.index(ext))
+            pass
+        else:
+            errstr = [m for m in [sfin] if m is not None]
+            self._failure(errstr[0])
+            pass
+        if update: svupdate.append(self.__out[fltrs.index(ext)])
+        self.__out = svupdate
+        if self.__out.__len__() > 0: ds.update()
+        return
+
+    def _release(self, trgt, fin, index):
+        '''Core code call'''
+        rlsout = crbcore.release(trgt, fin, self.__out[index], verbose=False)
+        return rlsout
+
+    @staticmethod
+    def _failure(errstr):
+        '''Failure log'''
+        log.warning('--< CERBERUS RELEASE: %s >--', errstr)
         return
     pass
 # ---------------- ---------------------------------------------------

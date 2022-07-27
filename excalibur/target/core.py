@@ -196,8 +196,8 @@ def autofill(ident, thistarget, out,
     # and then b are the other types of columns for that key
     # that are included
     # GMR: They are continuously changing the format: creating translatekeys()
-    # GMR: I dont see Age nor Hmag in any of the reponses given ny NEXSCI
     matchlist = translatekeys(header)
+    # NESXCI has a typo for Hmag upper error header label
     banlist = ['star', 'planet', 'update', 'ref', 'np']
     plist = ['period', 'period_uperr', 'period_lowerr', 'period_ref',
              'sma', 'sma_uperr', 'sma_lowerr', 'sma_ref',
@@ -212,9 +212,9 @@ def autofill(ident, thistarget, out,
     for line in response:
         elem = line.split(',')
         elem = clean_elems(elem)  # remove things such as bounding quotation marks
-        trgt = elem[header.index('pl_hostname')]
+        trgt = elem[header.index('hostname')]
         if trgt in targetID:
-            out['starID'][thistarget]['PLANETS #'] = elem[header.index('pl_pnum')]
+            out['starID'][thistarget]['PLANETS #'] = elem[header.index('sy_pnum')]
             thisplanet = elem[header.index('pl_letter')]
             if thisplanet not in out['starID'][thistarget].keys():
                 # GMR: Init planet dict
@@ -265,11 +265,10 @@ def autofill(ident, thistarget, out,
                     out['starID'][thistarget]['AGE*_lowerr'] = []
                     out['starID'][thistarget]['AGE*_units'] = []
                     out['starID'][thistarget]['AGE*_ref'] = []
-                    out['starID'][thistarget]['Hmag'] = []
                     out['starID'][thistarget]['Hmag_units'] = []
                     out['starID'][thistarget]['Hmag_ref'] = []
                     pass
-                ref = elem[header.index('pl_def_refname')]
+                ref = elem[header.index('pl_refname')]
                 ref = ref.split('</a>')[0]
                 ref = ref.split('target=ref>')[-1]
                 ref = ref.strip()
@@ -337,11 +336,11 @@ def autofill(ident, thistarget, out,
             thisplanet = 'CARPEDIEM'
             pass
         else:
-            trgt = elem[header.index('mpl_hostname')]
-            thisplanet = elem[header.index('mpl_letter')]
+            trgt = elem[header.index('hostname')]
+            thisplanet = elem[header.index('pl_letter')]
             pass
         if trgt in targetID:
-            ref = elem[header.index('mpl_reflink')]
+            ref = elem[header.index('pl_refname')]
             ref = ref.split('</a>')[0]
             ref = ref.split('target=ref>')[-1]
             ref = ref.strip()
@@ -360,7 +359,7 @@ def autofill(ident, thistarget, out,
                             lupdt = out['starID'][thistarget][thisplanet][key+'updt']
                             if numdate > lupdt: test.append('')
                             pass
-                        if len(test[-1]) < 1 and not test[0]:
+                        if not test:
                             test.append(addme)
                             tref.append(ref)
                             out['starID'][thistarget][thisplanet][key+'updt'] = numdate
@@ -375,7 +374,7 @@ def autofill(ident, thistarget, out,
                             lupdt = out['starID'][thistarget][key+'updt']
                             if numdate > lupdt: test.append('')
                             pass
-                        if len(test[-1]) < 1 and not test[0]:
+                        if not test:
                             test.append(addme)
                             tref.append(ref)
                             out['starID'][thistarget][key+'updt'] = numdate
@@ -415,7 +414,7 @@ def autofill(ident, thistarget, out,
                             lupdt = out['starID'][thistarget][elem[1]][key+'updt']
                             if numdate > lupdt: test.append('')
                             pass
-                        if len(test[-1]) < 1 and not test[0]:
+                        if not test:
                             test.append(addme)
                             out['starID'][thistarget][elem[1]][key+'updt'] = numdate
                             pass
@@ -427,7 +426,7 @@ def autofill(ident, thistarget, out,
                             lupdt = out['starID'][thistarget][key+'updt']
                             if numdate > lupdt: test.append('')
                             pass
-                        if len(test[-1]) < 1 and not test[0]:
+                        if not test:
                             test.append(addme)
                             out['starID'][thistarget][key+'updt'] = numdate
                             pass
@@ -473,17 +472,21 @@ def translatekeys(header, src='nexscie'):
     matchlist = []
     for key in header:
         if src in ['nexscix', 'nexscic']:
+            # Obsolete with the format change from NEXSCI
             if key.startswith('m'): thiskey = key[1:]
             elif key.startswith('f'): thiskey = key[1:]
             else: thiskey = key
             pass
         else: thiskey = key
         if 'pl_hostname' == thiskey: xclbrkey = 'star'
+        elif 'hostname' == thiskey: xclbrkey = 'star'
         elif 'pl_letter' == thiskey: xclbrkey = 'planet'
         elif 'pl_reflink' == thiskey: xclbrkey = 'ref'
         elif 'rowupdate' == thiskey: xclbrkey = 'update'
         elif 'pl_def_refname' == thiskey: xclbrkey = 'ref'
+        elif 'pl_refname' == thiskey: xclbrkey = 'ref'
         elif 'pl_pnum' == thiskey: xclbrkey = 'np'
+        elif 'sy_pnum' == thiskey: xclbrkey = 'np'
         elif 'pl_orbper' == thiskey: xclbrkey = 'period'
         elif 'pl_orbpererr1' == thiskey: xclbrkey = 'period_uperr'
         elif 'pl_orbpererr2' == thiskey: xclbrkey = 'period_lowerr'
@@ -529,6 +532,7 @@ def translatekeys(header, src='nexscie'):
         elif 'st_tefferr1' == thiskey: xclbrkey = 'T*_uperr'
         elif 'st_tefferr2' == thiskey: xclbrkey = 'T*_lowerr'
         elif 'st_teffreflink' == thiskey: xclbrkey = 'T*_ref'
+        elif 'st_refname' == thiskey: xclbrkey = 'ref'
         elif 'st_mass' == thiskey: xclbrkey = 'M*'
         elif 'st_masserr1' == thiskey: xclbrkey = 'M*_uperr'
         elif 'st_masserr2' == thiskey: xclbrkey = 'M*_lowerr'
@@ -536,6 +540,9 @@ def translatekeys(header, src='nexscie'):
         elif 'st_raderr1' == thiskey: xclbrkey = 'R*_uperr'
         elif 'st_raderr2' == thiskey: xclbrkey = 'R*_lowerr'
         elif 'st_radreflink' == thiskey: xclbrkey = 'R*_ref'
+        elif 'st_lum' == thiskey: xclbrkey = 'L*'
+        elif 'st_lumerr1' == thiskey: xclbrkey = 'L*_uperr'
+        elif 'st_lumerr2' == thiskey: xclbrkey = 'L*_lowerr'
         elif 'st_logg' == thiskey: xclbrkey = 'LOGG*'
         elif 'st_loggerr1' == thiskey: xclbrkey = 'LOGG*_uperr'
         elif 'st_loggerr2' == thiskey: xclbrkey = 'LOGG*_lowerr'
@@ -551,11 +558,18 @@ def translatekeys(header, src='nexscie'):
         elif 'st_meterr2' == thiskey: xclbrkey = 'FEH*_lowerr'
         elif 'st_metratio' == thiskey: xclbrkey = 'FEH*_units'
         elif 'st_metreflink' == thiskey: xclbrkey = 'FEH*_ref'
+        elif 'sy_hmag' == thiskey: xclbrkey = 'Hmag'
+        elif 'sy_hmagerr1' == thiskey: xclbrkey = 'Hmag_uperr'
+        elif 'sy_hmagerr2' == thiskey: xclbrkey = 'Hmag_lowerr'
+        elif 'st_age' == thiskey: xclbrkey = 'AGE*'
+        elif 'st_ageerr1' == thiskey: xclbrkey = 'AGE*_uperr'
+        elif 'st_ageerr2' == thiskey: xclbrkey = 'AGE*_lowerr'
         else: xclbrkey = None
         if xclbrkey is not None: matchlist.append(xclbrkey)
         pass
     if len(matchlist) != len(header):
-        # import pdb; pdb.set_trace()
+        errstr = 'MISSING NEXSCI KEY MAPPING'
+        log.warning('--< TARGET AUTOFILL: %s >--', errstr)
         pass
     return matchlist
 # -------------- -----------------------------------------------------

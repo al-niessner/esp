@@ -1,3 +1,4 @@
+
 '''cerberus bot ds'''
 # -- IMPORTS -- ------------------------------------------------------
 import dawgie
@@ -11,7 +12,8 @@ class Actor(dawgie.Task):
         '''Subtasks top level ordered call'''
         return [
             crbalg.xslib(),
-            crbalg.atmos()
+            crbalg.atmos(),
+            crbalg.release()
         ]
     pass
 # ---------- ---------------------------------------------------------

@@ -15,6 +15,7 @@ import os
 import pymc3 as pm
 import numpy as np
 # import numpy.polynomial.polynomial as poly
+import matplotlib.image as img
 import matplotlib.pyplot as plt
 
 import theano.tensor as tt
@@ -1958,3 +1959,50 @@ def hazelib(sv,
     sv['PROFILE'].append(vdensity)
     return
 # ---------------------------------- ---------------------------------
+# -- ROUDIER ET AL. 2021 RELEASE -- ----------------------------------
+def rlsversion():
+    '''
+    GMR:110 Initial release to IPAC
+    '''
+    return dawgie.VERSION(1,1,0)
+
+def release(trgt, fin, out, verbose=False):
+    '''
+    GMR: Format Cerberus SV products release to IPAC
+    fin INPUT: system.finalize.parameters
+    atm IMPUT: cerberus.atmos.HST-WFC3-IR-G141-SCAN
+    out INPUT/OUTPUT
+    ext INPUT: 'HST-WFC3-IR-G141-SCAN'
+    verbose OPTIONAL: verbosity
+    '''
+    rlsed = False
+    plist = fin['priors']['planets']
+    thispath = os.path.join(excalibur.context['data_dir'], 'CERBERUS')
+    for p in plist:
+        intxtf = os.path.join(thispath, 'P.CERBERUS.atmos', trgt+p+'.txt')
+        incorrpng = os.path.join(thispath, 'P.CERBERUS.atmos', trgt+p+'_atmos_corr.png')
+        intxtpng = os.path.join(thispath, 'P.CERBERUS.atmos', trgt+p+'_atmos.png')
+        out['data'][p] = {}
+        try:
+            atm = np.loadtxt(intxtf)
+            out['data'][p]['atmos'] = atm
+            out['STATUS'].append(True)
+            pass
+        except FileNotFoundError: pass
+        try:
+            corrplot = img.imread(incorrpng)
+            out['data'][p]['corrplot'] = corrplot
+            out['STATUS'].append(True)
+            pass
+        except FileNotFoundError: pass
+        try:
+            modelplot = img.imread(intxtpng)
+            out['data'][p]['modelplot'] = modelplot
+            out['STATUS'].append(True)
+            pass
+        except FileNotFoundError: pass
+        pass
+    rlsed = out['STATUS'][-1]
+    if verbose: log.warning('--< %s', out['STATUS'])
+    return rlsed
+# --------------------------------- ----------------------------------
