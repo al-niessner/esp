@@ -56,7 +56,7 @@ G. ROUDIER: Tests for empty SV shell
 # -- BUILD SYSTEM PRIORS -- ------------------------------------------
 def buildsp(autofill, out):
     '''
-G. ROUDIER: Surjection from target.autofill.parameters to dictionary output
+    G. ROUDIER: Surjection from target.autofill.parameters to dictionary output
     '''
     target = list(autofill['starID'].keys())
     target = target[0]
@@ -70,8 +70,12 @@ G. ROUDIER: Surjection from target.autofill.parameters to dictionary output
     out['planetmdt'].extend(['inc', 'period', 'ecc', 'rp', 't0', 'sma', 'mass'])
     out['extsmdt'].extend(['_lowerr', '_uperr'])
     for lbl in out['starmdt']:
-        value = autofill['starID'][target][lbl].copy()
-        value = value[-1]
+        # Retrocompatibility
+        try:
+            value = autofill['starID'][target][lbl].copy()
+            value = value[-1]
+            pass
+        except KeyError: value = ''
         if value.__len__() > 0:
             if lbl=='spTyp':
                 out['priors'][lbl] = value

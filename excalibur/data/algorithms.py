@@ -9,8 +9,6 @@ import excalibur.data as dat
 import excalibur.data.core as datcore
 import excalibur.data.states as datstates
 
-import excalibur.transit.core as trncore
-
 import excalibur.target as trg
 import excalibur.target.edit as trgedit
 import excalibur.target.states as trgstates
@@ -183,7 +181,7 @@ class calibration(dawgie.Algorithm):
         cll = self.__col.sv_as_dict()['frames']
         vcll, ecll = datcore.checksv(cll)
         fin = self.__fin.sv_as_dict()['parameters']
-        vfin, sfin = trncore.checksv(fin)
+        vfin, sfin = datcore.checksv(fin)
         validtype = []
         for test in cll['activefilters'].keys():
             if test in fltrs: validtype.append(test)

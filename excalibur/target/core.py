@@ -260,6 +260,7 @@ def autofill(ident, thistarget, out,
                     out['starID'][thistarget]['RHO*_units'] = []
                     out['starID'][thistarget]['RHO*_ref'] = []
                     out['starID'][thistarget]['FEH*_ref'] = []
+                    out['starID'][thistarget]['FEH*_units'] = ['[]']
                     out['starID'][thistarget]['AGE*'] = []
                     out['starID'][thistarget]['AGE*_uperr'] = []
                     out['starID'][thistarget]['AGE*_lowerr'] = []

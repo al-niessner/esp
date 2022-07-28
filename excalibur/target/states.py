@@ -69,10 +69,8 @@ class TargetSV(dawgie.StateVector):
                     listkeys.extend([key+x for x in exts])
                     allplanet.append(listkeys)
                     pass
-                labels = [targetlist[0],
-                          'UPPER ERR', 'LOWER ERR', 'UNITS', 'REF']
-                table = visitor.add_table(clabels=labels,
-                                          rows=len(allstar))
+                labels = [targetlist[0], 'UPPER ERR', 'LOWER ERR', 'UNITS', 'REF']
+                table = visitor.add_table(clabels=labels, rows=len(allstar))
                 for starlabels in allstar:
                     i = allstar.index(starlabels)
                     for l in starlabels:
@@ -90,8 +88,7 @@ class TargetSV(dawgie.StateVector):
                 for c in self['starID'][targetlist[0]]['planets']:
                     labels = ['PLANET '+c, 'UPPER ERR',
                               'LOWER ERR', 'UNITS', 'REF']
-                    table = visitor.add_table(clabels=labels,
-                                              rows=len(allplanet))
+                    table = visitor.add_table(clabels=labels, rows=len(allplanet))
                     for starlabels in allplanet:
                         i = allplanet.index(starlabels)
                         for l in starlabels:
