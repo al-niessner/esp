@@ -1,5 +1,5 @@
 FROM esp_base:ghrVersion
-ENV DOCKER_GIT_REVISION esp-git-rev
+ENV DAWGIE_DOCKERIZED_GIT_REVISION esp-git-rev
 ENV GNUPGHOME /proj/gnupg
 ENV HOME /tmp
 ENV PYTHONPATH /proj/src/ae:/usr/local/lib/python
