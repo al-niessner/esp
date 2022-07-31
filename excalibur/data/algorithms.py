@@ -63,6 +63,7 @@ class collect(dawgie.Algorithm):
                 update = update or ok
                 pass
             if update: ds.update()
+            else: raise dawgie.NoValidOutputDataError(f'No output created for DATA.{self.name()}')
             pass
         else: self._failure(errstring)
         return
@@ -131,7 +132,8 @@ class timing(dawgie.Algorithm):
             pass
         self.__out = svupdate
         if self.__out.__len__() > 0: ds.update()
-        else: self._failure('NO DATA')
+        else: raise dawgie.NoValidOutputDataError(
+                f'No output created for DATA.{self.name()}')
         return
 
     @staticmethod
@@ -204,7 +206,8 @@ class calibration(dawgie.Algorithm):
             pass
         self.__out = svupdate
         if self.__out.__len__() > 0: ds.update()
-        else: self._failure('NO DATA')
+        else: raise dawgie.NoValidOutputDataError(
+                f'No output created for DATA.{self.name()}')
         return
 
     @staticmethod

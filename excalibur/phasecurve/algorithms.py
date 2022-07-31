@@ -77,6 +77,8 @@ class pcnormalization(dawgie.Algorithm):
             pass
         self.__out = svupdate
         if self.__out: ds.update()
+        else: raise dawgie.NoValidOutputDataError(
+                f'No output created for PHASECURVE.{self.name()}')
         return
 
     def _norm(self, cal, tme, fin, index):
@@ -134,6 +136,8 @@ class pcwhitelight(dawgie.Algorithm):
             pass
         self.__out = svupdate
         if self.__out: ds.update()
+        else: raise dawgie.NoValidOutputDataError(
+                f'No output created for PHASECURVE.{self.name()}')
         return
 
     def _whitelight(self, nrm, fin, out, index):

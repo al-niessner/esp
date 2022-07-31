@@ -52,6 +52,9 @@ class estimate(dawgie.Algorithm):
                                       self.__out[0])
             pass
         if update: ds.update()
+        else: raise dawgie.NoValidOutputDataError(
+                f'No output created for ANCILLARY.{self.name()}')
+        return
 
 class population(dawgie.Analyzer):
     '''population ds'''

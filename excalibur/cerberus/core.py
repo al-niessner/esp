@@ -1963,17 +1963,18 @@ def hazelib(sv,
 def rlsversion():
     '''
     GMR:110 Initial release to IPAC
+    GMR:111 Removed empty keys
     '''
-    return dawgie.VERSION(1,1,0)
+    return dawgie.VERSION(1,1,1)
 
 def release(trgt, fin, out, verbose=False):
     '''
-    GMR: Format Cerberus SV products release to IPAC
-    fin INPUT: system.finalize.parameters
-    atm IMPUT: cerberus.atmos.HST-WFC3-IR-G141-SCAN
-    out INPUT/OUTPUT
-    ext INPUT: 'HST-WFC3-IR-G141-SCAN'
-    verbose OPTIONAL: verbosity
+    GMR: Format Cerberus SV products to be released to IPAC
+    trgt [INPUT]: target name
+    fin [INPUT]: system.finalize.parameters
+    out [INPUT/OUTPUT]
+    ext [INPUT]: 'HST-WFC3-IR-G141-SCAN'
+    verbose [OPTIONAL]: verbosity
     '''
     rlsed = False
     plist = fin['priors']['planets']
@@ -2001,6 +2002,10 @@ def release(trgt, fin, out, verbose=False):
             out['STATUS'].append(True)
             pass
         except FileNotFoundError: pass
+        if not out['data'][p]:
+            if verbose: log.warning('--< No data found for %s', p)
+            out['data'].pop(p)
+            pass
         pass
     rlsed = out['STATUS'][-1]
     if verbose: log.warning('--< %s', out['STATUS'])

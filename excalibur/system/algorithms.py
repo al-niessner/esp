@@ -42,6 +42,8 @@ class validate(dawgie.Algorithm):
         if valid: update = self._validate(autofill, self.__out)
         else: self._failure(errstring)
         if update: ds.update()
+        else: raise dawgie.NoValidOutputDataError(
+                f'No output created for SYSTEM.{self.name()}')
         return
 
     @staticmethod
@@ -102,6 +104,8 @@ class finalize(dawgie.Algorithm):
             pass
         else: self._failure(errstring)
         if update: ds.update()
+        else: raise dawgie.NoValidOutputDataError(
+                f'No output created for SYSTEM.{self.name()}')
         return
 
     @staticmethod

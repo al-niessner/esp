@@ -95,7 +95,7 @@ class rlsSV(dawgie.StateVector):
         '''view ds'''
         if self['STATUS'][-1]:
             for p in self['data']:
-                myfig = plt.figure()
+                myfig = plt.figure(figsize=(10, 6))
                 plt.imshow(self['data'][p]['modelplot'])
                 plt.axis('off')
                 buf = io.BytesIO()
@@ -103,7 +103,7 @@ class rlsSV(dawgie.StateVector):
                 visitor.add_image('...', p+': Atmos results', buf.getvalue())
                 plt.close(myfig)
 
-                myfig = plt.figure()
+                myfig = plt.figure(figsize=(10, 6))
                 plt.imshow(self['data'][p]['corrplot'])
                 plt.axis('off')
                 buf = io.BytesIO()
@@ -113,7 +113,7 @@ class rlsSV(dawgie.StateVector):
                 pass
             pass
         else:
-            myfig = plt.figure()
+            myfig = plt.figure(figsize=(10, 6))
             crblogo = img.imread(os.path.join (excalibur.context['data_dir'],
                                                'CERBERUS/cerberus.png'))
             plt.imshow(crblogo)

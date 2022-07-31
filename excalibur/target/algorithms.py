@@ -90,6 +90,8 @@ class create(dawgie.Analyzer):
         trgcore.scrapeids(aspects.ds(), self.__out[0], web, genIDs=genIDs)
         update = trgcore.createfltrs(self.__out[1])
         if update: aspects.ds().update()
+        else: raise dawgie.NoValidOutputDataError(
+                f'No output created for TARGET.{self.name()}')
         return
     pass
 
@@ -126,6 +128,8 @@ class autofill(dawgie.Algorithm):
         else: self._failure(errstring)
 
         if update: ds.update()
+        else: raise dawgie.NoValidOutputDataError(
+                f'No output created for TARGET.{self.name()}')
         return
 
     def _autofill(self, crt, thistarget):
@@ -170,6 +174,8 @@ class scrape(dawgie.Algorithm):
         if valid: update = self._scrape(var_autofill, self.__out)
         else: self._failure(errstring)
         if update: ds.update()
+        else: raise dawgie.NoValidOutputDataError(
+                f'No output created for TARGET.{self.name()}')
         return
 
     @staticmethod

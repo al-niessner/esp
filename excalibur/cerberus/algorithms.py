@@ -63,6 +63,8 @@ class xslib(dawgie.Algorithm):
             pass
         self.__out = svupdate
         if self.__out: ds.update()
+        else: raise dawgie.NoValidOutputDataError(
+                f'No output created for CERBERUS.{self.name()}')
         return
 
     def _xslib(self, spc, index):
@@ -125,6 +127,8 @@ class atmos(dawgie.Algorithm):
             pass
         self.__out = svupdate
         if self.__out.__len__() > 0: ds.update()
+        else: raise dawgie.NoValidOutputDataError(
+                f'No output created for CERBERUS.{self.name()}')
         return
 
     def _atmos(self, fin, xsl, spc, index, ext):
@@ -184,6 +188,8 @@ class release(dawgie.Algorithm):
         if update: svupdate.append(self.__out[fltrs.index(ext)])
         self.__out = svupdate
         if self.__out.__len__() > 0: ds.update()
+        else: raise dawgie.NoValidOutputDataError(
+                f'No output created for CERBERUS.{self.name()}')
         return
 
     def _release(self, trgt, fin, index):

@@ -96,6 +96,8 @@ class inference(dawgie.Algorithm):
             pass
         self.__out = svupdate
         if self.__out: ds.update()
+        else: raise dawgie.NoValidOutputDataError(
+                f'No output created for CLASSIFIER.{self.name()}')
         return
 
     def _predict(self, wl, sp, fin, index):

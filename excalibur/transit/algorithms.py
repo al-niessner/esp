@@ -77,6 +77,8 @@ class normalization(dawgie.Algorithm):
             pass
         self.__out = svupdate
         if self.__out: ds.update()
+        else: raise dawgie.NoValidOutputDataError(
+                f'No output created for {self._type.upper()}.{self.name()}')
         return
 
     def _norm(self, cal, tme, fin, index):
@@ -182,6 +184,8 @@ class whitelight(dawgie.Algorithm):
             pass
         self.__out = svupdate
         if self.__out: ds.update()
+        else: raise dawgie.NoValidOutputDataError(
+                f'No output created for {self._type.upper()}.{self.name()}')
         return
 
     def _hstwhitelight(self, nrm, fin, out, ext):
@@ -272,6 +276,8 @@ class spectrum(dawgie.Algorithm):
         if merg: svupdate.append(self.__out[-1])
         self.__out = svupdate  # it will take all the elements that are not empty
         if self.__out: ds.update()
+        else: raise dawgie.NoValidOutputDataError(
+                f'No output created for {self._type.upper()}.{self.name()}')
         return
 
 #     def _hstspec(self, out):
