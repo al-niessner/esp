@@ -61,13 +61,14 @@ def tap_query(base_url, query):
     uri_full = uri_full[:-1] + f"&format={query.get('format','csv')}"
     uri_full = uri_full.replace(' ','+')
     response = None
-
     with urltrick(uri_full) as test: response = test.decode('utf-8')
     return response
 # ----------------- --------------------------------------------------
 # -- SCRAPE IDS -- ---------------------------------------------------
 def scrapeids(ds:dawgie.Dataset, out, web, genIDs=True):
-    '''Parses table from ipac exoplanetarchive'''
+    '''
+    Parses table from ipac exoplanetarchive
+    '''
     targets = trgedit.targetlist.__doc__
     targets = targets.split('\n')
     targets = [t.strip() for t in targets if t.replace(' ', '').__len__() > 0]
@@ -75,14 +76,15 @@ def scrapeids(ds:dawgie.Dataset, out, web, genIDs=True):
     if tn is not None:
         found_target_list = None
         for target in targets:
-            if tn in target:
-                found_target_list = target
+            if tn == target.split(':')[0].strip(): found_target_list = target
+            pass
         if found_target_list is None:
             # this is an ERROR.  the selected target should be in the target list
             # exit('ERROR: are you sure about that target?  it is not in the list')
-            pass
-        else:
-            targets = [found_target_list]
+            mssg = f'Obsolete target / Error in target name: {tn}'
+            raise dawgie.NoValidOutputDataError(mssg)
+        targets = [found_target_list]
+        pass
     for target in targets:
         parsedstr = target.split(':')
         parsedstr = [t.strip() for t in parsedstr]
@@ -122,7 +124,9 @@ def scrapeids(ds:dawgie.Dataset, out, web, genIDs=True):
 # ---------------- ---------------------------------------------------
 # -- CREATE FILTERS -- -----------------------------------------------
 def createfltrs(out):
-    '''Create filter name'''
+    '''
+    Create filter name
+    '''
     created = False
     filters = trgedit.activefilters.__doc__
     filters = filters.split('\n')

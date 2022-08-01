@@ -119,14 +119,11 @@ class autofill(dawgie.Algorithm):
     def run(self, ds, ps):
         '''Top level algorithm call'''
         update = False
-        var_create = self.__create.sv_as_dict()['starIDs']
-        valid, errstring = trgcore.checksv(var_create)
+        crt = self.__create.sv_as_dict()['starIDs']
+        valid, errstring = trgcore.checksv(crt)
         # pylint: disable=protected-access
-        if valid and ds._tn() in var_create['starID']:
-            update = self._autofill(var_create, ds._tn())
-            pass
+        if valid and ds._tn() in crt['starID']: update = self._autofill(crt, ds._tn())
         else: self._failure(errstring)
-
         if update: ds.update()
         else: raise dawgie.NoValidOutputDataError(
                 f'No output created for TARGET.{self.name()}')

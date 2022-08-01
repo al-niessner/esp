@@ -103,7 +103,7 @@ class rlsSV(dawgie.StateVector):
                 visitor.add_image('...', p+': Atmos results', buf.getvalue())
                 plt.close(myfig)
 
-                myfig = plt.figure(figsize=(10, 6))
+                myfig = plt.figure(figsize=(20, 15))
                 plt.imshow(self['data'][p]['corrplot'])
                 plt.axis('off')
                 buf = io.BytesIO()
