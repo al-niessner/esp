@@ -79,7 +79,6 @@ G. ROUDIER: Builds Cerberus cross section library
     for p in spc['data'].keys():
         out['data'][p] = {}
         wgrid = np.array(spc['data'][p]['WB'])
-#         cond_grid = (wgrid < 0.56) | (wgrid > 1.02)
         qtgrid = gettpf(tips, knownspecies)
         library = {}
         nugrid = (1e4/np.copy(wgrid))[::-1]
@@ -418,7 +417,7 @@ G. ROUDIER: Cerberus retrievial
     orbp = fin['priors'].copy()
     ssc = syscore.ssconstants(mks=True)
     crbhzlib = {'PROFILE':[]}
-    hazelib(crbhzlib, hazedir=hazedir, verbose=verbose)
+    hazelib(crbhzlib, hazedir=hazedir, verbose=False)
     # MODELS
     modfam = ['TEC', 'PHOTOCHEM']
     modparlbl = {'TEC':['XtoH', 'CtoO', 'NtoO'],
@@ -438,16 +437,17 @@ G. ROUDIER: Cerberus retrievial
         tspectrum = tspc**2
         if 'STIS-WFC3' in ext:
             filters = np.array(spc['data'][p]['Fltrs'])
-        cond_specG750 = filters == 'HST-STIS-CCD-G750L-STARE'
-        # MASKING G750 WAV > 0.80
-        twav_G750 = twav[cond_specG750]
-        tspec_G750 = tspectrum[cond_specG750]
-        tspecerr_G750 = tspecerr[cond_specG750]
-        mask = (twav_G750 > 0.80) & (twav_G750 < 0.95)
-        tspec_G750[mask] = np.nan
-        tspecerr_G750[mask] = np.nan
-        tspectrum[cond_specG750] = tspec_G750
-        tspecerr[cond_specG750] = tspecerr_G750
+            cond_specG750 = filters == 'HST-STIS-CCD-G750L-STARE'
+            # MASKING G750 WAV > 0.80
+            twav_G750 = twav[cond_specG750]
+            tspec_G750 = tspectrum[cond_specG750]
+            tspecerr_G750 = tspecerr[cond_specG750]
+            mask = (twav_G750 > 0.80) & (twav_G750 < 0.95)
+            tspec_G750[mask] = np.nan
+            tspecerr_G750[mask] = np.nan
+            tspectrum[cond_specG750] = tspec_G750
+            tspecerr[cond_specG750] = tspecerr_G750
+            pass
         # CLEAN UP G750
 #         cond_nan = np.isfinite(tspec_G750)
 #         coefs_spec_G750 = poly.polyfit(twav_G750[cond_nan], tspec_G750[cond_nan], 1)
@@ -663,9 +663,6 @@ G. ROUDIER: Cerberus retrievial
         out['data'][p]['WAVELENGTH'] = np.array(spc['data'][p]['WB'])
         out['data'][p]['SPECTRUM'] = np.array(spc['data'][p]['ES'])
         out['data'][p]['ERRORS'] = np.array(spc['data'][p]['ESerr'])
-#         out['data'][p]['WAVELENGTH'] = twav
-#         out['data'][p]['SPECTRUM'] = tspectrum
-#         out['data'][p]['ERRORS'] = tspecerr
         out['data'][p]['VALID'] = cleanup
         am = True
         pass
@@ -681,7 +678,8 @@ def crbmodel(mixratio, rayleigh, cloudtp, rp0, orbp, xsecs, qtgrid,
              cheq=None, h2rs=True, logx=False, pnet='b', sphshell=False,
              verbose=False, debug=False):
     '''
-G. ROUDIER: Cerberus forward model probing up to 'Hsmax' scale heights from solid radius solrad evenly log divided amongst nlevels steps
+    G. ROUDIER: Cerberus forward model probing up to 'Hsmax' scale heights from solid
+    radius solrad evenly log divided amongst nlevels steps
     '''
     ssc = syscore.ssconstants(mks=True)
     pgrid = np.arange(np.log(solrad)-Hsmax, np.log(solrad)+Hsmax/nlevels,
@@ -822,8 +820,9 @@ G. ROUDIER: Builds optical depth matrix
         for elem in mixratio:
             mmr = 10.**(mixratio[elem]-6.)
             # Fake use of xmollist due to changes in xslib v112
-            # if elem not in xmollist:
-            if not xmollist:
+            # THIS HAS TO BE FIXED
+            # if not xmollist:
+            if elem not in xmollist:
                 # HITEMP/HITRAN ROTHMAN ET AL. 2010 --------------------------------------
                 sigma, lsig = absorb(xsecs[elem], qtgrid[elem], temp, p, mmr,
                                      lbroadening, lshifting, wgrid, debug=False)
@@ -1306,9 +1305,8 @@ G. ROUDIER: BURROWS AND SHARP 1998 + ANDERS & GREVESSE 1989
            otypes=[tt.dvector])
 def fmcerberus(*crbinputs):
     '''
-G. ROUDIER: Wrapper around Cerberus forward model
+    G. ROUDIER: Wrapper around Cerberus forward model
     '''
-    # ctp, hza, hzi, tpr, mdp = crbinputs
     ctp, hza, hzi, tpr, mdp = crbinputs
     fmc = np.zeros(ctxt.tspectrum.size)
     if ctxt.model == 'TEC':
@@ -1344,7 +1342,7 @@ G. ROUDIER: Wrapper around Cerberus forward model
            otypes=[tt.dvector])
 def spshfmcerberus(*crbinputs):
     '''
-G. ROUDIER: Wrapper around Cerberus forward model, spherical shell symmetry
+    G. ROUDIER: Wrapper around Cerberus forward model, spherical shell symmetry
     '''
     ctp, hza, hzloc, hzthick, tpr, mdp = crbinputs
     # ctp, hza, hzloc, hzthick, tpr, mdp = crbinputs
@@ -1379,8 +1377,8 @@ G. ROUDIER: Wrapper around Cerberus forward model, spherical shell symmetry
     fmc = fmc + np.nanmean(ctxt.tspectrum[ctxt.cleanup])
     return fmc
 
-@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
-                   tt.dvector],
+@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
+                   tt.dscalar, tt.dscalar, tt.dscalar, tt.dvector],
            otypes=[tt.dvector])
 # @tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar],
 #             otypes=[tt.dvector])
@@ -1442,8 +1440,8 @@ R.ESTRELA: ADD offsets between STIS filters and STIS and WFC3 filters
     fmc[cond_G102] = fmc[cond_G102] - 1e-2*float(off2)
     return fmc
 
-@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
-                   tt.dvector],
+@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
+                   tt.dscalar, tt.dscalar, tt.dvector],
            otypes=[tt.dvector])
 def offcerberus1(*crbinputs):
     '''
@@ -1489,8 +1487,8 @@ R.ESTRELA: ADD offsets between STIS filters and STIS and WFC3 filters
     fmc[cond_G750] = fmc[cond_G750] + 1e-2*float(off1)
     return fmc
 
-@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
-                   tt.dvector],
+@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
+                   tt.dscalar, tt.dscalar, tt.dvector],
            otypes=[tt.dvector])
 def offcerberus2(*crbinputs):
     '''
@@ -1536,8 +1534,8 @@ R.ESTRELA: ADD offsets between STIS filters and STIS and WFC3 filters
     fmc[cond_G750] = fmc[cond_G750] + 1e-2*float(off1)
     return fmc
 
-@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
-                   tt.dvector],
+@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
+                   tt.dscalar, tt.dscalar, tt.dvector],
            otypes=[tt.dvector])
 def offcerberus3(*crbinputs):
     '''
@@ -1628,8 +1626,8 @@ R.ESTRELA: ADD offsets between STIS filters and STIS and WFC3 filters
     fmc[cond_G430] = fmc[cond_G430] + 1e-2*float(off0)
     return fmc
 
-@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
-                   tt.dvector],
+@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
+                   tt.dscalar, tt.dscalar, tt.dvector],
            otypes=[tt.dvector])
 def offcerberus5(*crbinputs):
     '''
@@ -1765,8 +1763,8 @@ R.ESTRELA: ADD offsets between STIS filters and WFC3 filters
     fmc[cond_G750] = fmc[cond_G750] + 1e-2*float(off0)
     return fmc
 
-@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
-                   tt.dvector],
+@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
+                   tt.dscalar, tt.dscalar, tt.dvector],
            otypes=[tt.dvector])
 def offcerberus8(*crbinputs):
     '''
@@ -1809,7 +1807,6 @@ R.ESTRELA: ADD offsets between WFC3 filters
     cond_G102 = 'HST-WFC3-IR-G102-SCAN' in flt
     fmc[cond_G102] = fmc[cond_G102] + 1e-2*float(off0)
     return fmc
-
 # ----------------------------------- --------------------------------
 # -- HAZE DENSITY PROFILE LIBRARY -- ---------------------------------
 def hazelib(sv,
