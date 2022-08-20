@@ -821,8 +821,8 @@ G. ROUDIER: Builds optical depth matrix
             mmr = 10.**(mixratio[elem]-6.)
             # Fake use of xmollist due to changes in xslib v112
             # THIS HAS TO BE FIXED
-            # if not xmollist:
-            if elem not in xmollist:
+            # if elem not in xmollist:
+            if not xmollist:
                 # HITEMP/HITRAN ROTHMAN ET AL. 2010 --------------------------------------
                 sigma, lsig = absorb(xsecs[elem], qtgrid[elem], temp, p, mmr,
                                      lbroadening, lshifting, wgrid, debug=False)
