@@ -195,7 +195,7 @@ class regress(dawgie.Regression):
     '''regress ds'''
     def __init__(self):
         '''__init__ ds'''
-        self._version_ = dawgie.VERSION(1,0,1)
+        self._version_ = dawgie.VERSION(1,0,2)
         self.__out = trgstates.MonitorSV()
         return
 
