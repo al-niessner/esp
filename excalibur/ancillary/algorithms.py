@@ -83,36 +83,12 @@ class population(dawgie.Analyzer):
 
     def run(self, aspects:dawgie.Aspect):
         '''run ds'''
-        data = aspects
-        if 'as_dict' in dir(aspects):  # temporary workaround for dawgie discrepancy
-            data = aspects.as_dict()
-            temp = {}
-            for svn in data:
-                for tgn in data[svn]:
-                    for vn in data[svn][tgn]:
-                        if tgn not in temp: temp[tgn] = {}
-                        if svn not in temp[tgn]: temp[tgn][svn] = {}
-                        temp[tgn][svn][vn] = data[svn][tgn][vn]
-                        pass
-                    pass
-                pass
-            data = temp
-            pass
-        elif 'keys' not in dir(aspects):
-            # data = dict([i for i in aspects])
-            # GMR: Dict comprehension because CI2
-            # Not sure how it worked before, how could this list be casted into a dict
-            # If aspects has an iterable (,) this will work but I m not sure
-            data = dict(aspects)
-            pass
-        targets = data
-
         # now group together values by attribute
         svname = 'ancillary.estimate.parameters'
         st_attrs = defaultdict(list)
         pl_attrs = defaultdict(list)
-        for trgt in targets:
-            tr_data = data[trgt][svname]
+        for trgt in aspects:
+            tr_data = aspects[trgt][svname]
             # verify SV succeeded for target
             if tr_data['STATUS'][-1] or 'planets' in tr_data['data']:
                 # get stellar attributes

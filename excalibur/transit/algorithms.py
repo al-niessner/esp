@@ -331,27 +331,6 @@ class population(dawgie.Analyzer):
 
     def run(self, aspects:dawgie.Aspect):
         '''Top level algorithm call'''
-        data = aspects
-        if 'as_dict' in dir(aspects):  # temporary workaround for dawgie discrepancy
-            data = aspects.as_dict()
-            temp = {}
-            for svn in data:
-                for tgn in data[svn]:
-                    for vn in data[svn][tgn]:
-                        if tgn not in temp: temp[tgn] = {}
-                        if svn not in temp[tgn]: temp[tgn][svn] = {}
-                        temp[tgn][svn][vn] = data[svn][tgn][vn]
-                        pass
-                    pass
-                pass
-            data = temp
-            pass
-        elif 'keys' not in dir(aspects):
-            # data = dict([i for i in aspects])
-            data = dict(aspects)
-            pass
-        targets = data
-
         # now handle IM parameter distribution
         banned_params = ['rprs']
         sv_prefix = 'transit.spectrum.'
@@ -359,13 +338,13 @@ class population(dawgie.Analyzer):
         for idx, fltr in enumerate(fltrs):
             im_bins = defaultdict(lambda: defaultdict(list))
             wl_im_bins = defaultdict(lambda: defaultdict(list))
-            for trgt in targets:
+            for trgt in aspects:
                 svname = sv_prefix + fltr
                 wlname = wl_prefix + fltr
-                if svname not in data[trgt] or wlname not in data[trgt]:
+                if svname not in aspects[trgt] or wlname not in aspects[trgt]:
                     continue
-                tr_data = data[trgt][svname]
-                wl_data = data[trgt][wlname]
+                tr_data = aspects[trgt][svname]
+                wl_data = aspects[trgt][wlname]
                 for pl in tr_data['data']:
                     # verify SV succeeded for target
                     if tr_data['STATUS'][-1] or 'MCTRACE' in tr_data['data'][pl]:

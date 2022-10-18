@@ -41,12 +41,12 @@ def _outlier (vl):
     else: is_outlier = False  # only 1 or 0 elems; no outlier can exist
     return is_outlier
 
-def alert (asp:[(str,{str:{}})], known:[], table:[])->([],[],[]):
+def alert (asp:{str:{str:{str:object}}}, known:[], table:[])->([],[],[]):
     '''alert ds'''
     changes,kwn,tab = [],[],[]
-    for target,svs in sorted (asp, key=lambda t:t[0]):
+    for target in sorted (asp, key=lambda t:t[0]):
         kwn.append (target)
-        tab.append (svs['target.variations_of.parameters']['last'])
+        tab.append (asp[target]['target.variations_of.parameters']['last'])
 
         if target in known:
             index = known.index (target)
@@ -87,13 +87,13 @@ def alert (asp:[(str,{str:{}})], known:[], table:[])->([],[],[]):
         pass
     return changes, kwn, tab
 
-def regress (planet:{},rids:[],tl:[(int,{str:{}})])->({str:float},{str:[]},[]):
+def regress (planet:{},rids:[],tl:{str:{str:{str:object}}})->({str:float},{str:[]},[]):
     '''regress ds'''
-    for i,(rid,svs) in enumerate (tl):
+    for i,rid in enumerate (tl):
         if rid in rids: break
 
         rids.insert (i,rid)
-        svv = list(svs['target.autofill.parameters']['starID'].values())
+        svv = list(tl[rid]['target.autofill.parameters']['starID'].values())
         svv = svv[0]
         for p in svv['planets']:
             for ca in care_about:
