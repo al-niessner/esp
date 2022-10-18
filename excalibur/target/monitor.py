@@ -26,18 +26,18 @@ def _diff (vl):
 def _outlier (vl):
     '''Finds whether first element of vl is within 5 sigma of other elems'''
     if 1 < len (vl):
+        vl = [float(v) for v in vl]
+
         if math.isnan(vl[0]):
             is_outlier = False
         else:
             vl_prev = numpy.array(vl[1:])
             vl_prev = vl_prev[~numpy.isnan(vl_prev)]  # clear all nans
-            if len(vl_prev)<=1:
-                is_outlier = False
-            else:
+            if len(vl_prev) > 1:
                 mean = numpy.mean(vl_prev)
                 std = numpy.std(vl_prev)
-                if abs(vl[0]-mean)>5*std:
-                    is_outlier = True
+                is_outlier = abs(vl[0]-mean)>5*std
+            else: is_outlier = False
     else: is_outlier = False  # only 1 or 0 elems; no outlier can exist
     return is_outlier
 
@@ -104,6 +104,7 @@ def regress (planet:{},rids:[],tl:{str:{str:{str:object}}})->({str:float},{str:[
             pass
         pass
     # last = dict([(pp, _diff (vl)) for pp,vl in planet.items()])
+    print (planet.items())
     last = {pp:_diff (vl) for pp, vl in planet.items()}
     # outliers = dict([(pp, _outlier (vl)) for pp,vl in planet.items()])
     outliers = {pp:_outlier (vl) for pp, vl in planet.items()}

@@ -216,7 +216,7 @@ class regress(dawgie.Regression):
         self.__out['last'].clear()
         self.__out['last'].update (last)
         self.__out['outlier'].clear()
-        self.__out['outlier'].update (outlier)
+        self.__out['outlier'].extend (outlier)
         timeline.ds().update()
         return
 
