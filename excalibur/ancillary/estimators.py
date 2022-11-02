@@ -83,8 +83,12 @@ class StellarTypeEstimator(StEstimator):
         prior stellar temperature from NExSci
         Temperature ranges taken from
         https://en.wikipedia.org/wiki/Stellar_classification'''
-        st_type = 'unknown'  # default value
+
+        if 'T*' not in priors.keys(): return 'unknown'
+        if isinstance(priors['T*'],str): return 'unknown'
+
         st_temp = priors['T*']
+
         if st_temp >= 30e3: st_type = 'O'
         elif st_temp >= 10e3: st_type = 'B'
         elif st_temp >= 7.5e3: st_type = 'A'
@@ -92,6 +96,8 @@ class StellarTypeEstimator(StEstimator):
         elif st_temp >= 5.2e3: st_type = 'G'
         elif st_temp >= 3.7e3: st_type = 'K'
         elif st_temp >= 2.4e3: st_type = 'M'
+        else: st_type = 'unknown'
+
         return st_type
 
 class TeqEstimator(PlEstimator):
@@ -104,9 +110,14 @@ class TeqEstimator(PlEstimator):
     def run(self, priors, ests, pl):
         '''run ds'''
         sscmks = syscore.ssconstants(mks=True)
+
         if 'sma' not in priors[pl].keys(): return 'missing semi-major axis'
         if priors[pl]['sma']=='': return 'missing semi-major axis'
-        eqtemp = priors['T*']*np.sqrt(priors['R*']*sscmks['Rsun/AU']/(2.*priors[pl]['sma']))
+        if priors['R*']=='': return 'missing R*'
+        if priors['T*']=='': return 'missing T*'
+
+        eqtemp = priors['T*'] * np.sqrt(priors['R*'] * sscmks['Rsun/AU'] / (2.*priors[pl]['sma']))
+
         return eqtemp
 
 class HEstimator(PlEstimator):
@@ -122,8 +133,11 @@ class HEstimator(PlEstimator):
 
         if 'sma' not in priors[pl].keys(): return 'missing semi-major axis'
         if priors[pl]['sma']=='': return 'missing semi-major axis'
-        eqtemp = priors['T*']*np.sqrt(priors['R*']*sscmks['Rsun/AU']/
-                                      (2.*priors[pl]['sma']))
+        if priors['R*']=='': return 'missing R*'
+        if priors['T*']=='': return 'missing T*'
+
+        eqtemp = priors['T*'] * np.sqrt(priors['R*'] * sscmks['Rsun/AU']/
+                                        (2.*priors[pl]['sma']))
 
         if priors[pl]['mass'] == '':  # abort for targets without mass estimates
             return None
@@ -152,6 +166,9 @@ class HmaxEstimator(PlEstimator):
 
         if 'sma' not in priors[pl].keys(): return 'missing semi-major axis'
         if priors[pl]['sma']=='': return 'missing semi-major axis'
+        if priors['R*']=='': return 'missing R*'
+        if priors['T*']=='': return 'missing T*'
+
         eqtemp = priors['T*']*np.sqrt(priors['R*']*sscmks['Rsun/AU']/
                                       (2.*priors[pl]['sma']))
 
@@ -174,7 +191,6 @@ def pl_metals(priors, _ests, pl):
     '''pl_metals ds'''
     if priors[pl]['mass'] == '':  # abort for targets without mass estimates
         # print('no mass for this planet')
-        # log.warning('>-- MISSING PLANET MASS')
         return None
 
     # 318 Earth masses per Jupiter mass
@@ -197,19 +213,19 @@ def pl_mmwmin(_priors, _ests, _pl):
     '''pl_mmwmin ds'''
     return 2.274
 
-def pl_ZFOM(priors, _ests, pl):
-    '''pl_ZFOM'''
-    if priors[pl]['mass'] == '':  # abort for targets without mass estimates
-        # log.warning('>-- MISSING PLANET MASS')
-        # print('no mass for this planet2')
-        return None
+def pl_modulation(priors, _ests, pl):
+    ''' spectral modulation (2 H R_p / R_*^2); assumed mass-metal relation '''
 
     sscmks = syscore.ssconstants(cgs=True)
 
-    if 'sma' not in priors[pl].keys():
-        return 'missing semi-major axis'
-    if priors[pl]['sma']=='':
-        return 'missing semi-major axis'
+    # abort for targets without mass or semi-major axis values
+    if priors[pl]['mass'] == '': return 'missing planet mass'
+    if 'sma' not in priors[pl].keys(): return 'missing semi-major axis'
+    if priors[pl]['sma']=='': return 'missing semi-major axis'
+    # abort if there's no stellar radius or temperature
+    if priors['R*']=='': return 'missing R*'
+    if priors['T*']=='': return 'missing T*'
+
     eqtemp = priors['T*']*np.sqrt(priors['R*']*sscmks['Rsun/AU']/
                                   (2.*priors[pl]['sma']))
 
@@ -217,43 +233,31 @@ def pl_ZFOM(priors, _ests, pl):
     #             (priors[pl]['rp']*sscmks['Rjup'])**2
     g = 10.**priors[pl]['logg']
 
-    # metallicity = pl_metals(priors, _ests, pl)
-
     mmw = pl_mmw(priors, _ests, pl)
 
     H = sscmks['Rgas'] * eqtemp / mmw / g
 
-    if 'Hmag' in priors.keys():
-        if priors['Hmag']=='':
-            # log.warning('>-- MISSING HMAG')
-            # print('missing Hmag1',priors['Hmag'])
-            return 'blank Hmag'
-        Hmag = priors['Hmag']
-        pass
-    else:
-        # print('missing Hmag2')
-        # log.warning('>-- MISSING HMAG')
-        return 'no Hmag'
+    # Spectral modulation is a dimensionless estimate for changes in the transit depth
+    #  It is defined as the change in transit depth when increasing the planet size by 1 scale height
+    #   = 2 H R_p / R_*^2
+    spectral_modulation = 2 * H * priors[pl]['rp'] / priors['R*']**2 \
+        *sscmks['Rjup'] /sscmks['Rsun']**2
+    # print('spectral modulation',spectral_modulation)
+    return spectral_modulation
 
-    # calculate Zellem Figure-of-Merit (Zellem 2017, Eq.10)
-    ZFOM = 2 * H * priors[pl]['rp'] / priors['R*']**2 / 10**(Hmag/5) \
-           *sscmks['Rjup'] /sscmks['Rsun']**2
-    # print('Mplanet,metals,mmw,H,ZFOM', pl,',',
-    #       priors[pl]['mass'],',',metallicity,',',mmw,',',H,',',ZFOM*1.e6)
-    # normalization to make it easier to read
-    return ZFOM * 1.e6
-
-def pl_ZFOMmax(priors, _ests, pl):
-    '''pl_ZFOMmax ds'''
-    if priors[pl]['mass'] == '':  # abort for targets without mass estimates
-        # log.warning('>-- MISSING PLANET MASS')
-        # print('no mass for this planet3')
-        return None
+def pl_modulationmax(priors, _ests, pl):
+    ''' spectral modulation (2 H R_p / R_*^2); solar composition '''
 
     sscmks = syscore.ssconstants(cgs=True)
 
+    # abort for targets without mass or semi-major axis values
+    if priors[pl]['mass'] == '': return 'missing planet mass'
     if 'sma' not in priors[pl].keys(): return 'missing semi-major axis'
     if priors[pl]['sma']=='': return 'missing semi-major axis'
+    # abort if there's no stellar radius or temperature
+    if priors['R*']=='': return 'missing R*'
+    if priors['T*']=='': return 'missing T*'
+
     eqtemp = priors['T*']*np.sqrt(priors['R*']*sscmks['Rsun/AU']/
                                   (2.*priors[pl]['sma']))
 
@@ -262,29 +266,76 @@ def pl_ZFOMmax(priors, _ests, pl):
     g = 10.**priors[pl]['logg']
 
     # H/He-dominant atmosphere (for minimum mmw case)
-    mmw = pl_mmwmin(priors, _ests, pl)
+    mmw_min = pl_mmwmin(priors, _ests, pl)
 
-    H = sscmks['Rgas'] * eqtemp / mmw / g
+    H_max = sscmks['Rgas'] * eqtemp / mmw_min / g
+
+    # Spectral modulation is a dimensionless estimate for changes in the transit depth
+    #  It is defined as the change in transit depth when increasing the planet size by 1 scale height
+    #   = 2 H R_p / R_*^2
+    spectral_modulation_max = 2 * H_max * priors[pl]['rp'] / priors['R*']**2 \
+        *sscmks['Rjup'] /sscmks['Rsun']**2
+    # print('spectral modulation max',spectral_modulation_max)
+    return spectral_modulation_max
+
+def pl_ZFOM(priors, _ests, pl):
+    '''pl_ZFOM'''
+
+    error_message = ''
+    if priors[pl]['mass'] == '': error_message = 'missing planet mass'
+    if 'sma' not in priors[pl].keys(): error_message = 'missing semi-major axis'
+    if priors[pl]['sma']=='': error_message = 'missing semi-major axis'
+    if priors['R*']=='': error_message = 'missing R*'
+    if priors['T*']=='': error_message = 'missing T*'
+    if not error_message=='': return error_message
 
     if 'Hmag' in priors.keys():
         Hmag = priors['Hmag']
+
+        if Hmag=='': return 'blank Hmag'
     else:
-        # log.warning('>-- MISSING HMAG')
-        # print('Hmag missing for ZFOM2')
         return 'no Hmag'
 
     # calculate Zellem Figure-of-Merit (Zellem 2017, Eq.10)
-    ZFOM = 2 * H * priors[pl]['rp'] / priors['R*']**2 / 10**(Hmag/5) \
-           *sscmks['Rjup'] /sscmks['Rsun']**2
+    modulation = pl_modulation(priors, _ests, pl)
+    ZFOM = modulation / 10**(Hmag/5)
+
+    # normalization to make it easier to read
+    return ZFOM * 1.e6
+
+def pl_ZFOMmax(priors, _ests, pl):
+    '''pl_ZFOMmax ds'''
+
+    error_message = ''
+    if priors[pl]['mass'] == '': error_message = 'missing planet mass'
+    if 'sma' not in priors[pl].keys(): error_message = 'missing semi-major axis'
+    if priors[pl]['sma']=='': error_message = 'missing semi-major axis'
+    if priors['R*']=='': error_message = 'missing R*'
+    if priors['T*']=='': error_message = 'missing T*'
+    if not error_message=='': return error_message
+
+    if 'Hmag' in priors.keys():
+        Hmag = priors['Hmag']
+
+        if Hmag=='': return 'blank Hmag'
+    else:
+        return 'no Hmag'
+
+    # calculate Zellem Figure-of-Merit (Zellem 2017, Eq.10)
+    modulation = pl_modulationmax(priors, _ests, pl)
+    ZFOM = modulation / 10**(Hmag/5)
+
     # normalization to make it easier to read
     return ZFOM * 1.e6
 
 def pl_density(priors, _ests, pl):
     '''pl_density ds'''
+    # abort for targets without mass estimates
+    if priors[pl]['mass'] == '': return 'missing planet mass'
+    if priors[pl]['rp'] == '': return 'missing planet radius'
+
     sscmks = syscore.ssconstants(cgs=True)
     volume = (4.0/3)*math.pi*priors[pl]['rp']**3
-    if priors[pl]['mass'] == '':  # abort for targets without mass estimates
-        return None
     density = priors[pl]['mass']/volume
     # now convert from Jupiter masses per Jupiter radii to g/cm^3
     conversion = sscmks['Mjup']/(sscmks['Rjup']**3)
@@ -304,9 +355,9 @@ def st_luminosity(priors, _ests):
             pass
     else:
         if priors['R*']=='':
-            est = ' R_star missing'
+            est = 'missing R*'
         elif priors['T*']=='':
-            est = 'T_star missing'
+            est = 'missing T*'
         else:
             est = priors['R*']**2*(priors['T*']/Tsun)**4
     return est
@@ -323,10 +374,14 @@ def pl_insolation(priors, ests, pl):
     '''pl_insolation ds'''
     if 'sma' not in priors[pl].keys(): return 'missing semi-major axis'
     if priors[pl]['sma']=='': return 'missing semi-major axis'
-    insolation = ests['luminosity']*(priors[pl]['sma']**-2)
+
+    # if there's an error message for luminosity, just pass it along (e.g. 'missing R_*')
+    if isinstance(ests['luminosity'],str): return ests['luminosity']
+
+    insolation = ests['luminosity'] * (priors[pl]['sma']**-2)
 
     # apply eccentricity correction
-    insolation *= math.sqrt(1/(1-priors[pl]['ecc']**2))
+    insolation *= math.sqrt(1 / (1 - priors[pl]['ecc']**2))
 
     return insolation
 
@@ -339,6 +394,9 @@ def st_rotationPeriod(priors, _ests):
         # *** important assumption - arbitrary guess for the age if it's blank ***
     if Age=='':
         Age = 5  # Gyr
+
+    if 'T*' not in priors.keys(): return 'missing T*'
+    if priors['T*']=='': return 'missing T*'
 
     if priors['T*'] < 3500:
         # rotation period for M2.5-6.0 V stars
@@ -365,6 +423,8 @@ def st_coronalTemp(priors, _ests):
     '''st_coronalTemp ds'''
     Prot = st_rotationPeriod(priors, _ests)
 
+    if isinstance(Prot,str): return 'missing P_rot'
+
     # this formula needs work; it is not continuous at the 18.9-day break
     if Prot > 18.9:
         Tcorona = 1.5e6 * (27 / Prot)**1.2
@@ -385,8 +445,6 @@ def pl_windVelocity(priors, ests, pl):
 
     if priors['M*'] == '':
         if priors['LOGG*'] == '':
-            # log.warning('>-- MISSING STELLAR MASS')
-            # print('no stellar mass')
             return None
         priors['M*'] = 10.**priors['LOGG*'] / sscmks['G'] /sscmks['Msun'] \
             * (priors['R*']*sscmks['Rsun'])**2
@@ -395,6 +453,9 @@ def pl_windVelocity(priors, ests, pl):
     mmw = 0.67
 
     Tcorona = st_coronalTemp(priors, ests)
+
+    # Tcorona can be undefined, e.g. 'missing P_rot'
+    if isinstance(Tcorona,str): return Tcorona
 
     v_crit = np.sqrt(sscmks['Rgas'] * Tcorona / mmw)
 
@@ -435,6 +496,8 @@ def pl_windDensity(priors, ests, pl):
 
     # adjustment based on rotation.  fast spin fives higher density
     Prot = st_rotationPeriod(priors, ests)
+    if isinstance(Prot,str): return 'missing P_rot'
+
     windDensity *= (18.9/Prot)**0.6
 
     return windDensity
@@ -446,8 +509,10 @@ def pl_windMassLoss(priors, ests, pl):
     entrainmentEfficiency = 0.3
 
     windVelocity = pl_windVelocity(priors, ests, pl)
+    if isinstance(windVelocity, str): return 'missing wind velocity'
+    if windVelocity is None: return 'missing wind velocity'
+
     # convert velocity from km/s to cm/s
-    if isinstance(windVelocity, str): return 'undefined wind velocity'
     windVelocity *= 1.e5
     windDensity = pl_windDensity(priors, ests, pl)
 
@@ -469,12 +534,11 @@ def Lxray(priors):
     if Age=='':
         Age = 5  # Gyr
     logAge = np.log10(Age * 1.e9)
-    # print('stellar age        ',Age)
-    # print('stellar log-age    ',logAge)
 
     # these approx formulae are from by-eye fits to from Raissa's notebook figures
     st_temp = priors['T*']
-    # print('stellar temperature',st_temp)
+    if st_temp in ('',0): return 'missing T*'
+
     if st_temp < 3900:    # M stars
         L_X = 10.**(26.5 + 1.3 * (10. - logAge))
     elif st_temp < 5300:  # K stars
@@ -492,32 +556,22 @@ def pl_evapMassLoss(priors, _ests, pl):
 
     # X-ray flux based on stellar age and spectral type (T_* actually)
     L_X = Lxray(priors)
+    if isinstance(L_X,str): return 'missing L_X'
 
     # assumed relationship between X-ray and EUV fluxes
     #  (from Raissa email 7/9/21: 'logFeuv = 2.63 + 0.58*logFx)
-    #
-    # this is wrong. don't use luminosity; use surface flux
-    #   L_EUV = 426.6 * (L_X/sscmks['Lsun'])**0.58 * sscmks['Lsun']
+
     # need to convert luminosity to a surface flux
-    # print('stellar radius (solar)',priors['R*'])
-    # print('stellar radius (cm)',priors['R*']*sscmks['Rsun'])
     stellar_surface_area = 4 * np.pi * (priors['R*']*sscmks['Rsun'])**2  # cm2
     surfaceFlux_X = L_X / stellar_surface_area  # erg/s/cm2 = mW/m2
-    # print()
-    # print('surfaceFlux Xray (mW/m2)',surfaceFlux_X)
+
     surfaceFlux_EUV = 426.6 * (surfaceFlux_X)**0.58
-    # print('surfaceFlux EUV  (mW/m2)',surfaceFlux_EUV)
-    # print()
+
     L_EUV = surfaceFlux_EUV * stellar_surface_area
-    # print('luminosity Xray (solar)',L_X/sscmks['Lsun'])
-    # print('luminosity EUV  (solar)',L_EUV/sscmks['Lsun'])
-    # print()
-    # print('solar lum unit',sscmks['Lsun'])
-    # print('luminosity Xray (solar)',L_X)
-    # print()
 
     if 'sma' not in priors[pl].keys(): return 'missing semi-major axis'
     if priors[pl]['sma']=='': return 'missing semi-major axis'
+
     # F_X = L_X / (4 * np.pi * (priors[pl]['sma']*sscmks['AU'])**2)
     F_EUV = L_EUV / (4 * np.pi * (priors[pl]['sma']*sscmks['AU'])**2)
 
@@ -526,9 +580,6 @@ def pl_evapMassLoss(priors, _ests, pl):
 
     massLossRate = np.pi * heatingEfficiency * F_EUV * R_base**3 / \
                    (sscmks['G'] * priors[pl]['mass'] * sscmks['Mjup'])
-
-    # print('radiative mass loss (Jup/Gyr)',massLossRate / sscmks['Mjup'] * 3.16e7*1.e9)
-    # exit('test mass loss')
 
     # convert to Jupiter masses per gigayear
     return massLossRate / sscmks['Mjup'] * 3.16e7*1.e9
@@ -541,4 +592,43 @@ def st_COratio(priors, _ests):
     else:
         est = 'N/A'
     return est
+
+def pl_beta_rad(priors, _ests, pl):
+    ''' Beta = radiation pressure / gravity '''
+    sscmks = syscore.ssconstants(cgs=True)
+
+    # (this is actually acceleration, not force)
+    Fgrav = sscmks['G'] * priors[pl]['mass'] * sscmks['Mjup'] \
+        / (priors[pl]['rp'] * sscmks['Rjup'])**2
+
+    Qrad = 1          # assume perfect absorbtion
+    rho_grain = 1     # assume density of water
+    grainsize_um = 0.1
+    grainsize_cm = grainsize_um / 1.e4
+    mass2area = 4 / 3 * rho_grain * grainsize_cm
+
+    Lstar = st_luminosity(priors, _ests)
+
+    if isinstance(Lstar,str): return Lstar
+    if 'sma' not in priors[pl].keys(): return 'missing semi-major axis'
+    if priors[pl]['sma']=='': return 'missing semi-major axis'
+
+    # (and this is actually pressure (force per area))
+    Frad = Qrad * Lstar*sscmks['Lsun'] / sscmks['c'] \
+        / (4 * np.pi * (priors[pl]['sma'] * sscmks['AU'])**2)
+
+    # (include the grain mass-to-area ratio here)
+    Beta = Frad / Fgrav / mass2area
+    # print('Beta = ',Beta)
+
+    # there was a detailed comparison here against the Owens formula
+    # but apparently a commented out block of code isn't kosher
+    # it won't pass the moronic PEP3/dawgie review,
+    # even after several changes to accomodate the requirements
+    # so instead there's some comments here talking about stupid PEP3/dawgie crap
+
+    # and don't forget the delete the whitespace on the blank lines here!
+
+    return Beta
+
 # --------------------------- ----------------------------------------

@@ -52,6 +52,12 @@ def getestimators():
                     ref='CEA (T=1000K;C/O=solar)'),
         ancestor.HEstimator(),
         ancestor.HmaxEstimator(),
+        PlEstimator(name='modulation', units='dimensionless',
+                    descr='spectral modulation (CBE)', method=ancestor.pl_modulation,
+                    ref='Zellem et al 2017'),
+        PlEstimator(name='modulation_max', units='dimensionless',
+                    descr='spectral modulation (max)', method=ancestor.pl_modulationmax,
+                    ref='Zellem et al 2017'),
         PlEstimator(name='ZFOM', units='ppm',
                     descr='Zellem Figure-of-Merit (CBE)', method=ancestor.pl_ZFOM,
                     ref='Zellem et al 2017'),
@@ -69,7 +75,11 @@ def getestimators():
                     ref='Canto et al 1991'),
         PlEstimator(name='M_loss_rate_evap', units='M_Jup/Gyr',
                     descr='EUV-driven mass loss rate', method=ancestor.pl_evapMassLoss,
-                    ref='Estrela et al 2020')
+                    ref='Estrela et al 2020'),
+        PlEstimator(name='Beta_rad', units='dimensionless',
+                    descr='radiation pressure/gravity',
+                    method=ancestor.pl_beta_rad,
+                    ref='Owens et al 2023')
     ]
 
     return st_estimators, pl_estimators

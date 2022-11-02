@@ -22,6 +22,7 @@ G. ROUDIER: IAU 2012
                'Mjup':1.8985233541508517e27,
                'AU':1.495978707e11,
                'G':6.67428e-11,
+               'c':2.99792e8,
                'Rgas':8.314462e3,
                'Rjup/Rsun':1.0276268506540176e-1,
                'Rsun/AU':4.650467260962158e-3,
@@ -35,6 +36,7 @@ G. ROUDIER: IAU 2012
                'Mjup':1.8985233541508517e30,
                'AU':1.495978707e13,
                'G':6.67428e-8,
+               'c':2.99792e10,
                'Rgas':8.314462e7,
                'Rjup/Rsun':1.0276268506540176e-1,
                'Rsun/AU':4.650467260962158e-3,
@@ -66,7 +68,8 @@ def buildsp(autofill, out):
     out['planetkeys'].extend(autofill['planetkeys'])
     out['exts'].extend(autofill['exts'])
     # out['starmdt'].extend(['R*', 'T*', 'FEH*', 'LOGG*'])
-    out['starmdt'].extend(['R*', 'T*', 'FEH*', 'LOGG*', 'M*', 'L*', 'RHO*','AGE*','Hmag'])
+    # out['starmdt'].extend(['R*', 'T*', 'FEH*', 'LOGG*', 'M*', 'L*', 'RHO*','AGE*','Hmag'])
+    out['starmdt'].extend(['R*', 'T*', 'FEH*', 'LOGG*', 'M*', 'RHO*','Hmag'])
     out['planetmdt'].extend(['inc', 'period', 'ecc', 'rp', 't0', 'sma', 'mass'])
     out['extsmdt'].extend(['_lowerr', '_uperr'])
     for lbl in out['starmdt']:
