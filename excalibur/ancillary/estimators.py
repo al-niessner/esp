@@ -597,6 +597,9 @@ def pl_beta_rad(priors, _ests, pl):
     ''' Beta = radiation pressure / gravity '''
     sscmks = syscore.ssconstants(cgs=True)
 
+    # K2-3 doesn't have a planet radius! (for all 3 planets)
+    if isinstance(priors[pl]['rp'],str): return 'missing planet radius'
+
     # (this is actually acceleration, not force)
     Fgrav = sscmks['G'] * priors[pl]['mass'] * sscmks['Mjup'] \
         / (priors[pl]['rp'] * sscmks['Rjup'])**2

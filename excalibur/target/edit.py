@@ -9,8 +9,9 @@ def createversion():
     1.3.0: Added JWST-NIRISS-NIS-CLEAR-G700XD
     1.4.0: Added more targets (242 total)
     1.5.0: New limb darkening coefficients for spitzer targest
+    1.6.0: Added a few FEH* values and one Hmag; removed some redundant settings
     '''
-    return dawgie.VERSION(1,5,0)
+    return dawgie.VERSION(1,6,0)
 # ------------ -------------------------------------------------------
 # -- TARGET LIST -- --------------------------------------------------
 # FIRST COL HAS TO BE SOLVABLE BY
@@ -1604,20 +1605,6 @@ overwrite[starID] =
             'omega_ref':"Mann et al. 2016"
         }
     }
-    overwrite['LHS 3844'] = {
-        'FEH*':0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
-        'FEH*_units':'[Fe/H]', 'FEH*_ref':"Kyle's best guess",
-        'b':{
-            'mass':0.0118,
-            'mass_uperr':0.0051,
-            'mass_lowerr':-0.0036,
-            'mass_ref':'Pearson 2019',
-            'mass_units':'Jupiter mass',
-            'logg':3.323,
-            'logg_lowerr':-0.15, 'logg_uperr':0.16,
-            'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
-        }
-    }
     overwrite['K2-124'] = {
         'b':{
             'mass':0.0259,
@@ -1920,9 +1907,6 @@ overwrite[starID] =
             'logg_ref':'System Prior Auto Fill', 'logg_units':'log10[cm.s-2]'
         },
     }
-    overwrite['K2-33'] = {
-        'FEH*':0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
-        'FEH*_units':'[Fe/H]', 'FEH*_ref':"Kyle's best guess"}
     overwrite['K2-52'] = {
         'b':{
             'mass':1.0821,
@@ -2230,7 +2214,11 @@ overwrite[starID] =
         }
     }
 
+    # this one (WASP-33) has FEH* in the Exoplanet Archive, but no error bars
+    #  there's three values in the table: 0.0,0.1,0.1 (no error bars for any of them)
     overwrite["WASP-33"] = {
+        'FEH*':0.1, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+        'FEH*_units':'[Fe/H]', 'FEH*_ref':"Zhang et al. 2018",
         "b": {
             "Spitzer_IRAC1_subarray": [
                 0.3360838105569875,
@@ -2643,6 +2631,16 @@ overwrite[starID] =
             ]
         }
     }
+
+    overwrite['WASP-87'] = {
+        'FEH*':0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+        'FEH*_units':'[Fe/H]', 'FEH*_ref':"Default to solar metallicity"}
+
+    # only one system (this one) is missing an H_mag
+    #  make a guess at it based on V=16.56,I=15.30
+    overwrite['OGLE-TR-056'] = {
+        'Hmag':14, 'Hmag_uperr':1, 'Hmag_lowerr':-1,
+        'Hmag_units':'[mag]', 'Hmag_ref':'Geoff guess'}
 
     return overwrite
 # -------------------------------------------------------------------

@@ -43,6 +43,28 @@ G. ROUDIER: IAU 2012
                'Tsun': 5772}
         pass
     return ssc
+# ----------------- --------------------------------------------------
+# -- SELECT THE BEST PARAMETER VALUE ---------------------------------
+def bestValue(values):
+    '''
+    From a list of parameter values, determine the most trustworthy value
+    '''
+
+    if values[0] != '':
+        # step 1: if there is a default value at the start of the list, use that
+        bestvalue = values[0]
+
+    else:
+        # step 2: iterate from the end of the list inward, until getting a non-blank value
+        #   (this assumes that the non-default values have been ordered by publish date,
+        #    such that the end of the list is the most recently published value)
+        bestvalue = ''
+        for value in values:
+            if value != '':
+                bestvalue = value
+
+    return bestvalue
+
 # ---------------------------- ---------------------------------------
 # -- SV VALIDITY -- --------------------------------------------------
 def checksv(sv):
@@ -67,16 +89,24 @@ def buildsp(autofill, out):
     out['starkeys'].extend(autofill['starkeys'])
     out['planetkeys'].extend(autofill['planetkeys'])
     out['exts'].extend(autofill['exts'])
-    # out['starmdt'].extend(['R*', 'T*', 'FEH*', 'LOGG*'])
-    # out['starmdt'].extend(['R*', 'T*', 'FEH*', 'LOGG*', 'M*', 'L*', 'RHO*','AGE*','Hmag'])
-    out['starmdt'].extend(['R*', 'T*', 'FEH*', 'LOGG*', 'M*', 'RHO*','Hmag'])
+
+    # REMOVED FROM MANDATORY LIST:  L*, AGE*
+    #  we could add L* back into the list, if desired (can derive it from R*,T*)
+    out['starmdt'].extend(['R*', 'T*', 'FEH*', 'LOGG*', 'M*', 'RHO*', 'Hmag'])
     out['planetmdt'].extend(['inc', 'period', 'ecc', 'rp', 't0', 'sma', 'mass'])
     out['extsmdt'].extend(['_lowerr', '_uperr'])
     for lbl in out['starmdt']:
         # Retrocompatibility
         try:
-            value = autofill['starID'][target][lbl].copy()
-            value = value[-1]
+            values = autofill['starID'][target][lbl].copy()
+            # old version would just take the last of the values
+            #  (when filling in with non-default values, they are ordered by timestamp)
+            # new selection takes the first value, if non-blank; otherwise from the end
+            newValue = bestValue(values)
+            # oldValue = values[-1]
+            # if oldValue!=newValue:
+            #    print('bestValue() results in a changed value',lbl,oldValue,newValue)
+            value = newValue
             pass
         except KeyError: value = ''
         if value.__len__() > 0:
@@ -87,8 +117,9 @@ def buildsp(autofill, out):
             else:
                 out['priors'][lbl] = float(value)
                 for ext in out['extsmdt']:
-                    value = autofill['starID'][target][lbl+ext].copy()
-                    value = value[-1]
+                    values = autofill['starID'][target][lbl+ext].copy()
+                    value = bestValue(values)
+
                     if value.__len__() > 0:
                         fillvalue = float(value)
                         if ('lowerr' in ext) and (fillvalue == 0):
@@ -119,8 +150,8 @@ def buildsp(autofill, out):
     ssc = ssconstants(cgs=True)
     if ('LOGG*' in out['needed']) and ('R*' not in out['needed']):
         radstar = (out['priors']['R*'])*(ssc['Rsun'])
-        value = autofill['starID'][target]['RHO*'].copy()
-        value = value[-1]
+        values = autofill['starID'][target]['RHO*'].copy()
+        value = bestValue(values)
         if value.__len__() > 0:
             rho = float(value)
             g = 4e0*np.pi*(ssc['G'])*rho*radstar/3e0
@@ -137,8 +168,8 @@ def buildsp(autofill, out):
             out['priors']['LOGG*_units'] = strval
             out['priors']['LOGG*_ref'] = 'System Prior Auto Fill'
             pass
-        value = autofill['starID'][target]['M*'].copy()
-        value = value[-1]
+        values = autofill['starID'][target]['M*'].copy()
+        value = bestValue(values)
         if (value.__len__() > 0) and ('LOGG*' in out['needed']):
             mass = float(value)*ssc['Msun']
             g = (ssc['G'])*mass/(radstar**2)
@@ -158,13 +189,13 @@ def buildsp(autofill, out):
         pass
     for p in out['priors']['planets']:
         for lbl in out['planetmdt']:
-            value = autofill['starID'][target][p][lbl].copy()
-            value = value[-1]
+            values = autofill['starID'][target][p][lbl].copy()
+            value = bestValue(values)
             if value.__len__() > 0:
                 out['priors'][p][lbl] = float(value)
                 for ext in out['extsmdt']:
-                    value = autofill['starID'][target][p][lbl+ext].copy()
-                    value = value[-1]
+                    values = autofill['starID'][target][p][lbl+ext].copy()
+                    value = bestValue(values)
                     if value.__len__() > 0: out['priors'][p][lbl+ext] = float(value)
                     else:
                         err = out['priors'][p][lbl]/1e1
@@ -204,8 +235,8 @@ def buildsp(autofill, out):
         psmain = (p+':sma') not in out['needed']
         rstarin = 'R*' not in out['needed']
         if pincnd and psmain and rstarin:
-            value = autofill['starID'][target][p]['impact'].copy()
-            value = value[-1]
+            values = autofill['starID'][target][p]['impact'].copy()
+            value = bestValue(values)
             if value.__len__() > 0:
                 sininc = float(value)*(out['priors']['R*'])*ssc['Rsun/AU']/(out['priors'][p]['sma'])
                 inc = 9e1 - np.arcsin(sininc)*18e1/np.pi

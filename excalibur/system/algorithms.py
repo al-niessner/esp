@@ -17,7 +17,8 @@ class validate(dawgie.Algorithm):
     '''Pulls out formatted info from NEXSCI and checks what is missing'''
     def __init__(self):
         '''__init__ ds'''
-        self._version_ = dawgie.VERSION(1,1,4)  # typos fixed in core/ssconstants
+        # self._version_ = dawgie.VERSION(1,1,4)  # typos fixed in core/ssconstants
+        self._version_ = dawgie.VERSION(1,2,0)  # new bestValue() parameter selection
         self.__autofill = trgalg.autofill()
         self.__out = sysstates.PriorsSV('parameters')
         return
@@ -94,10 +95,6 @@ class finalize(dawgie.Algorithm):
                 pass
             elif not self.__out['PP'][-1]: update = True
             else:
-                # *** IS THIS OK? ***   (this allows age to work when blank)
-                update = True
-                # *** IS THIS OK? ***
-
                 log.warning('>-- MISSING DICT INFO')
                 log.warning('>-- ADD KEY TO TARGET/EDIT.PY PPAR()')
                 pass

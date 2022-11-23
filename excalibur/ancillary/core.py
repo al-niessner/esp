@@ -96,7 +96,8 @@ def checksv(sv):
 
 def estimateversion():
     '''estimateversion ds'''
-    return dawgie.VERSION(2,0,0)
+    # return dawgie.VERSION(2,0,0)
+    return dawgie.VERSION(2,1,0)  # checks for blank values; betaRad included
 # ----------------- --------------------------------------------------
 # -- ESTIMATOR EVALUATOR ---------------------------------------------
 def estimate(fin, out):

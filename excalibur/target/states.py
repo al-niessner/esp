@@ -16,9 +16,8 @@ class TargetSV(dawgie.StateVector):
         self.__name = name
         self['STATUS'] = excalibur.ValuesList()
         self['starID'] = excalibur.ValuesDict()
-        self['nexscie'] = excalibur.ValuesList()
-        self['nexscic'] = excalibur.ValuesList()
-        self['nexscix'] = excalibur.ValuesList()
+        self['nexsciDefaults'] = excalibur.ValuesList()
+        self['nexsciFulltable'] = excalibur.ValuesList()
         self['candidates'] = excalibur.ValuesList()
         self['starkeys'] = excalibur.ValuesList()
         self['planetkeys'] = excalibur.ValuesList()

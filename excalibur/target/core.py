@@ -1,6 +1,7 @@
 '''target core ds'''
 # -- IMPORTS -- ------------------------------------------------------
 import os
+import numpy
 import shutil
 import re
 import tempfile
@@ -12,6 +13,7 @@ import dawgie.db
 
 import excalibur.target as trg
 import excalibur.target.edit as trgedit
+import excalibur.system.core as syscore
 
 import astropy.io.fits as pyfits
 import urllib.error
@@ -107,17 +109,16 @@ def scrapeids(ds:dawgie.Dataset, out, web, genIDs=True):
         "order by": "pl_name",
         "format": "csv"
     }
-    # First retrieval just gets default row for each target from table
+    # First Exoplanet Archive query gets default row for each target
+    uri_ipac_query['where'] = 'tran_flag = 1 and default_flag = 1'
     response = tap_query(web, uri_ipac_query)
-    for line in response.split('\n'): out['nexscie'].append(line)
-    # Second and third retrieval grab all rows for respective columns
-    uri_ipac_query['select'] = "hostname,pl_letter,rowupdate,pl_orbper,pl_orbpererr1,pl_orbpererr2,pl_refname,pl_orbsmax,pl_orbsmaxerr1,pl_orbsmaxerr2,pl_refname,pl_orbeccen,pl_orbeccenerr1,pl_orbeccenerr2,pl_refname,pl_radj,pl_radjerr1,pl_radjerr2,pl_refname,pl_eqt,pl_eqterr1,pl_eqterr2,pl_refname,st_teff,st_tefferr1,st_tefferr2,st_refname,st_rad,st_raderr1,st_raderr2,st_refname,st_lum,st_lumerr1,st_lumerr2,st_refname,st_logg,st_loggerr1,st_loggerr2,st_refname,st_met,st_meterr1,st_meterr2,st_refname,st_age,st_ageerr1,st_ageerr2,st_refname"
+    for line in response.split('\n'): out['nexsciDefaults'].append(line)
+
+    # Second Exoplanet Archive query gets all rows, not just the defaults
     uri_ipac_query['where'] = 'tran_flag = 1'
     response = tap_query(web, uri_ipac_query)
-    for line in response.split('\n'): out['nexscic'].append(line)
-    uri_ipac_query['select'] = "hostname,pl_letter,pl_refname,rowupdate,pl_orbincl,pl_orbinclerr1,pl_orbinclerr2,pl_tranmid,pl_tranmiderr1,pl_tranmiderr2,st_logg,st_loggerr1,st_loggerr2,st_met,st_meterr1,st_meterr2"
-    response = tap_query(web, uri_ipac_query)
-    for line in response.split('\n'): out['nexscix'].append(line)
+    for line in response.split('\n'): out['nexsciFulltable'].append(line)
+
     out['STATUS'].append(True)
     ds.update()
     return
@@ -151,8 +152,9 @@ def autofillversion():
     1.1.4: add stellar age integration
     1.1.5: added Hmag, L*; fixed FEH* problems
     1.2.0: new Exoplanet Archive tables and TAP protocol
+    1.2.1: non-default parameters included; only two Exoplanet Archive queries; RHO* filled in by R*,M*
     '''
-    return dawgie.VERSION(1,2,0)
+    return dawgie.VERSION(1,2,1)
 
 def autofill(ident, thistarget, out,
              queryurl="https://archive.stsci.edu/hst/search.php?target=",
@@ -160,6 +162,10 @@ def autofill(ident, thistarget, out,
              outfmt="&outputformat=CSV&max_records=100000",
              opt="&sci_aec=S"):
     '''autofill ds'''
+
+    # get Msun and Rsun definitions, for calculating stellar density from M*,R*
+    sscmks = syscore.ssconstants(cgs=True)
+
     out['starID'][thistarget] = ident['starID'][thistarget]
     targetID = [thistarget]
 
@@ -190,10 +196,10 @@ def autofill(ident, thistarget, out,
         pass
     solved = True  # target list autofill KP
 
-    # AUTOFILL WITH NEXSCI EXOPLANET TABLE ---------------------------
+    # AUTOFILL WITH NEXSCI EXOPLANET TABLE, DEFAULTS ONLY ---------------------------
     merged = False
     targetID.extend(ident['starID'][thistarget]['aliases'])
-    response = ident['nexscie']
+    response = ident['nexsciDefaults']
     header = response[0].split(',')
     # list all keys contained in csv
     # using tuples of form (a, b) where a is the key name
@@ -329,10 +335,10 @@ def autofill(ident, thistarget, out,
             merged = True
             pass
         pass
-    # AUTOFILL WITH NEXSCI EXTENDED TABLE ----------------------------
-    response = ident['nexscix']
+    # AUTOFILL WITH NEXSCI FULL TABLE, INCLUDING NON-DEFAULTS ----------------------------
+    response = ident['nexsciFulltable']
     header = response[0].split(',')
-    matchkey = translatekeys(header, src='nexscix')
+    matchkey = translatekeys(header)
     for line in response:
         elem = line.split(',')
         elem = clean_elems(elem)
@@ -354,93 +360,71 @@ def autofill(ident, thistarget, out,
             for n in re.split('-|:| ', numdate): strnum = strnum+n.strip()
             numdate = float(strnum)
             for addme, key in zip(elem, matchkey):
-                if key not in banlist and addme:
+                if key not in banlist:
                     if key in plist:
                         test = out['starID'][thistarget][thisplanet][key]
                         refkey = key.split('_')[0]
                         tref = out['starID'][thistarget][thisplanet][refkey+'_ref']
-                        updt = (key+'updt') in out['starID'][thistarget][thisplanet]
-                        if updt:
-                            lupdt = out['starID'][thistarget][thisplanet][key+'updt']
-                            if numdate > lupdt: test.append('')
-                            pass
-                        if not test:
-                            test.append(addme)
-                            tref.append(ref)
-                            out['starID'][thistarget][thisplanet][key+'updt'] = numdate
-                            pass
+                        test.append(addme)
+                        tref.append(ref)
                         pass
                     else:
                         test = out['starID'][thistarget][key]
                         refkey = key.split('_')[0]
                         tref = out['starID'][thistarget][refkey+'_ref']
-                        updt = (key+'updt') in out['starID'][thistarget]
-                        if updt:
-                            lupdt = out['starID'][thistarget][key+'updt']
-                            if numdate > lupdt: test.append('')
-                            pass
-                        if not test:
-                            test.append(addme)
-                            tref.append(ref)
-                            out['starID'][thistarget][key+'updt'] = numdate
-                            pass
+                        test.append(addme)
+                        tref.append(ref)
                         pass
                     pass
                 pass
             merged = True
             pass
         pass
-    # AUTOFILL WITH NEXSCI COMPOSITE TABLE ---------------------------
-    response = ident['nexscic']
-    header = response[0].split(',')
-    matchkey = translatekeys(header, src='nexscic')
-    for line in response:
-        elem = line.split(',')
-        elem = clean_elems(elem)
-        if elem[0] in targetID:
-            numdate = elem[2]
-            strnum = ''
-            for n in re.split('-|:| ', numdate): strnum = strnum+n.strip()
-            numdate = float(strnum)
-            for addme, key in zip(elem, matchkey):
-                if '_ref' in key and addme:
-                    addme = addme.split('</a>')[0]
-                    addme = addme.split('target=ref>')[-1]
-                    addme = addme.strip()
-                    pass
-                if 'target=_blank>Calculated Value' in addme:
-                    addme = 'NEXSCI'
-                    pass
-                if key not in banlist and addme:
-                    if key in plist:
-                        test = out['starID'][thistarget][elem[1]][key]
-                        updt = (key+'updt') in out['starID'][thistarget][elem[1]].keys()
-                        if updt:
-                            lupdt = out['starID'][thistarget][elem[1]][key+'updt']
-                            if numdate > lupdt: test.append('')
-                            pass
-                        if not test:
-                            test.append(addme)
-                            out['starID'][thistarget][elem[1]][key+'updt'] = numdate
-                            pass
-                        pass
-                    else:
-                        test = out['starID'][thistarget][key]
-                        updt = (key+'updt') in out['starID'][thistarget]
-                        if updt:
-                            lupdt = out['starID'][thistarget][key+'updt']
-                            if numdate > lupdt: test.append('')
-                            pass
-                        if not test:
-                            test.append(addme)
-                            out['starID'][thistarget][key+'updt'] = numdate
-                            pass
-                        pass
-                    pass
-                pass
-            merged = True
-            pass
-        pass
+
+    # RHO* is a mandatory field
+    # if stellar density is blank, fill it in based on R* and M*
+    RHO_calculated_here = []
+    RHO_lowerr_calculated_here = []
+    RHO_uperr_calculated_here = []
+    for R,Rerr1,Rerr2, M,Merr1,Merr2, RHO,RHOerr1,RHOerr2 in zip(
+            out['starID'][thistarget]['R*'],
+            out['starID'][thistarget]['R*_lowerr'],
+            out['starID'][thistarget]['R*_uperr'],
+            out['starID'][thistarget]['M*'],
+            out['starID'][thistarget]['M*_lowerr'],
+            out['starID'][thistarget]['M*_uperr'],
+            out['starID'][thistarget]['RHO*'],
+            out['starID'][thistarget]['RHO*_lowerr'],
+            out['starID'][thistarget]['RHO*_uperr']):
+        # check for blank stellar density
+        #  (but only update it if M* and R* are both defined)
+        if RHO=='' and R!='' and M!='':
+            newRHO = float(M)*sscmks['Msun'] / \
+                (4.*numpy.pi/3. * (float(R)*sscmks['Rsun'])**3)
+            RHO_calculated_here.append(str(newRHO))
+
+            # also fill in the uncertainty on RHO, based on R,M uncertainties
+            if Rerr1=='' or Merr1=='':
+                RHO_lowerr_calculated_here.append('')
+            else:
+                newRHOfractionalError1 = -numpy.sqrt((3.*float(Rerr1)/float(R))**2 +
+                                                     (float(Merr1)/float(M))**2)
+                RHO_lowerr_calculated_here.append(str(newRHO * newRHOfractionalError1))
+            if Rerr2=='' or Merr2=='':
+                RHO_uperr_calculated_here.append('')
+            else:
+                newRHOfractionalError2 = numpy.sqrt((3.*float(Rerr2)/float(R))**2 +
+                                                    (float(Merr2)/float(M))**2)
+                RHO_uperr_calculated_here.append(str(newRHO * newRHOfractionalError2))
+        else:
+            RHO_calculated_here.append(RHO)
+            RHO_lowerr_calculated_here.append(RHOerr1)
+            RHO_uperr_calculated_here.append(RHOerr2)
+
+    if out['starID'][thistarget]['RHO*'] != RHO_calculated_here:
+        out['starID'][thistarget]['RHO*'] = RHO_calculated_here
+        out['starID'][thistarget]['RHO*_lowerr'] = RHO_lowerr_calculated_here
+        out['starID'][thistarget]['RHO*_uperr'] = RHO_uperr_calculated_here
 
     # FINALIZE OUTPUT ------------------------------------------------
     if merged:
@@ -473,17 +457,11 @@ def clean_elems(elems):
     '''removes formatting symbols and prepares values for saving'''
     return [clean_elem(elem) for elem in elems]
 
-def translatekeys(header, src='nexscie'):
+def translatekeys(header):
     '''GMR: Translate NEXSCI keywords into Excalibur ones'''
     matchlist = []
     for key in header:
-        if src in ['nexscix', 'nexscic']:
-            # Obsolete with the format change from NEXSCI
-            if key.startswith('m'): thiskey = key[1:]
-            elif key.startswith('f'): thiskey = key[1:]
-            else: thiskey = key
-            pass
-        else: thiskey = key
+        thiskey = key
         if 'pl_hostname' == thiskey: xclbrkey = 'star'
         elif 'hostname' == thiskey: xclbrkey = 'star'
         elif 'pl_letter' == thiskey: xclbrkey = 'planet'
