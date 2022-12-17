@@ -59,7 +59,7 @@ class TransitSpectrumInjection(dawgie.Algorithm):
             excalibur.taurex.core.tsi (spectrum,
                                        self.__fin.sv_as_dict()['parameters'])
             spectrum['STATUS'][-1] = target_name in INJECT_TARGETS
-            self.__out[spectrum.name].update (spectrum)
+            self.sv_as_dict()[spectrum.name()].update (spectrum)
             pass
         ds.retarget('taurex transit.spectrum injection',
                     [dawgie.ALG_REF(sys.task, self.__fin)]).update()
