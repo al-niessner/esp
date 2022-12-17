@@ -24,7 +24,7 @@ RUN set -ex && \
     /usr/bin/pip3 install cython && \
     /usr/bin/pip3 install arviz==0.12.0 \
                           astropy==5.0.4 \
-                          dawgie==1.4.0-rc5 \
+                          dawgie==1.4.0-rc6 \
                           dynesty==1.2.2 \
                           importlib_metadata==4.11.3 \
                           joblib==1.1.0 \
