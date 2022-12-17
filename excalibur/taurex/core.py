@@ -6,6 +6,7 @@ import taurex
 import taurex.log
 taurex.log.disableLogging()
 
+from taurex.cache import OpacityCache,CIACache
 from taurex.chemistry import TaurexChemistry
 from taurex.chemistry import ConstantGas
 from taurex.contributions import AbsorptionContribution
@@ -15,6 +16,10 @@ from taurex.model import TransmissionModel
 from taurex.planet import Planet
 from taurex.stellar import BlackbodyStar
 from taurex.temperature import Guillot2010
+
+OpacityCache().clear_cache()
+OpacityCache().set_opacity_path("/proj/data/taurex/xsec/xsec_sampled_R15000_0.3-50")
+CIACache().set_cia_path("/proj/data/taurex/cia/HITRAN")
 
 def tsi(spectrums:{}, parameters:{}):
     '''actually inject data into transit.spectrum data'''
@@ -59,4 +64,4 @@ def tsi(spectrums:{}, parameters:{}):
 
 def tsiversion():
     '''version of algoritm and it is kept here so only need to edit core'''
-    return dawgie.VERSION(1,0,0)
+    return dawgie.VERSION(1,0,1)
