@@ -49,7 +49,7 @@ class TransitSpectrumInjection(dawgie.Algorithm):
         '''process desired excalibur data'''
         # a touch evil to prevent cerberus from becoming swamped
         # pylint: disable=protected-access
-        target_name = ds._get_tn()
+        target_name = ds._tn()
         # pylint: enable=protected-access
 
         if not self.__pre or not any (sv['STATUS'][-1] for sv in self.__pre):
