@@ -61,7 +61,7 @@ class TransitSpectrumInjection(dawgie.Algorithm):
             spectrum['STATUS'][-1] = target_name in INJECT_TARGETS
             self.sv_as_dict()[spectrum.name()].update (spectrum)
             pass
-        ds.retarget('taurex transit.spectrum injection',
+        ds.retarget('taurex TSI',
                     [dawgie.ALG_REF(sys.task, self.__fin)]).update()
         return
 
