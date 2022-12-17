@@ -345,7 +345,7 @@ class SpectrumSV(dawgie.StateVector):
                         ax[0].plot(x, resid_std, '-o', label='Observed')
                         ax[0].plot(x, relative_expec, c='black', label='Expected (Relative)')
                         ax[0].plot(x, shot_noise_expec, c='purple', label='Expected (Shot Noise)')
-                        ax[0].set_xscale('log', basex=2)
+                        ax[0].set_xscale('log', base=2)
                         ax[0].legend()
                         ax[1].set_title('Observed to Expected SD Ratio')
                         ax[1].set_xlabel('# synthetic channels averaged')
@@ -354,7 +354,7 @@ class SpectrumSV(dawgie.StateVector):
                                    label='Empirical Expected Ratio')
                         ax[1].plot(x, resid_std/np.array(shot_noise_expec),
                                    label='Shot Noise Ratio')
-                        ax[1].set_xscale('log', basex=2)
+                        ax[1].set_xscale('log', base=2)
                         ax[1].legend()
                         buf = io.BytesIO()
                         myfig.savefig(buf, format='png')

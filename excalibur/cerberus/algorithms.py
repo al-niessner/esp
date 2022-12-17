@@ -11,6 +11,8 @@ import excalibur.cerberus.states as crbstates
 
 import excalibur.system as sys
 import excalibur.system.algorithms as sysalg
+import excalibur.taurex as tau
+import excalibur.taurex.algorithms as taualg
 import excalibur.transit as trn
 import excalibur.transit.algorithms as trnalg
 import excalibur.target.edit as trgedit
@@ -30,6 +32,7 @@ class xslib(dawgie.Algorithm):
         '''__init__ ds'''
         self._version_ = crbcore.myxsecsversion()
         self.__spc = trnalg.spectrum()
+        self.__tau = taualg.TransitSpectrumInjection()
         self.__out = [crbstates.xslibSV(ext) for ext in fltrs]
         return
 
@@ -39,7 +42,8 @@ class xslib(dawgie.Algorithm):
 
     def previous(self):
         '''Input State Vectors: transit.spectrum'''
-        return [dawgie.ALG_REF(trn.task, self.__spc)]
+        return [dawgie.ALG_REF(trn.task, self.__spc),
+                dawgie.ALG_REF(tau.task, self.__tau)]
 
     def state_vectors(self):
         '''Output State Vectors: cerberus.xslib'''
@@ -50,7 +54,14 @@ class xslib(dawgie.Algorithm):
         svupdate = []
         for ext in fltrs:
             update = False
-            vspc, sspc = crbcore.checksv(self.__spc.sv_as_dict()[ext])
+
+            if ext in self.__tau.sv_as_dict():
+                vspc, sspc = crbcore.checksv(self.__tau.sv_as_dict()[ext])
+
+                if not vspc: \
+                   vspc, sspc = crbcore.checksv(self.__spc.sv_as_dict()[ext])
+            else: vspc, sspc = crbcore.checksv(self.__spc.sv_as_dict()[ext])
+
             if vspc:
                 log.warning('--< CERBERUS XSLIB: %s >--', ext)
                 update = self._xslib(self.__spc.sv_as_dict()[ext], fltrs.index(ext))
@@ -87,6 +98,7 @@ class atmos(dawgie.Algorithm):
         self.__spc = trnalg.spectrum()
         self.__fin = sysalg.finalize()
         self.__xsl = xslib()
+        self.__tau = taualg.TransitSpectrumInjection()
         self.__out = [crbstates.atmosSV(ext) for ext in fltrs]
         return
 
@@ -98,7 +110,8 @@ class atmos(dawgie.Algorithm):
         '''Input State Vectors: transit.spectrum, system.finalize, cerberus.xslib'''
         return [dawgie.ALG_REF(trn.task, self.__spc),
                 dawgie.ALG_REF(sys.task, self.__fin),
-                dawgie.ALG_REF(crb.task, self.__xsl)]
+                dawgie.ALG_REF(crb.task, self.__xsl),
+                dawgie.ALG_REF(tau.task, self.__tau)]
 
     def state_vectors(self):
         '''Output State Vectors: cerberus.atmos'''
@@ -111,7 +124,14 @@ class atmos(dawgie.Algorithm):
         for ext in fltrs:
             update = False
             vxsl, sxsl = crbcore.checksv(self.__xsl.sv_as_dict()[ext])
-            vspc, sspc = crbcore.checksv(self.__spc.sv_as_dict()[ext])
+
+            if ext in self.__tau.sv_as_dict():
+                vspc, sspc = crbcore.checksv(self.__tau.sv_as_dict()[ext])
+
+                if not vspc: \
+                   vspc, sspc = crbcore.checksv(self.__spc.sv_as_dict()[ext])
+            else: vspc, sspc = crbcore.checksv(self.__spc.sv_as_dict()[ext])
+
             if vfin and vxsl and vspc:
                 log.warning('--< CERBERUS ATMOS: %s >--', ext)
                 update = self._atmos(self.__fin.sv_as_dict()['parameters'],

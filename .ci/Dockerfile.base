@@ -24,7 +24,7 @@ RUN set -ex && \
     /usr/bin/pip3 install cython && \
     /usr/bin/pip3 install arviz==0.12.0 \
                           astropy==5.0.4 \
-                          dawgie==1.4.0-rc2  \
+                          dawgie==1.4.0-rc4 \
                           dynesty==1.2.2 \
                           importlib_metadata==4.11.3 \
                           joblib==1.1.0 \
@@ -38,7 +38,8 @@ RUN set -ex && \
                           pyvo==1.3 \
                           scipy==1.7.3 \
                           scikit-learn==1.1.0 \
-                          service_identity && \
+                          service_identity \
+                          taurex && \
    rm -rf ${HOME}/.cache && \
    mkdir /.theano && chmod 777 /.theano && \
    mkdir -p /proj/data/ldtk && chmod 777 /proj/data/ldtk && \
