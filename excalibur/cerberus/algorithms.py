@@ -63,7 +63,7 @@ class xslib(dawgie.Algorithm):
             if not vspc:
                 sv = self.__spc.sv_as_dict()[ext]
                 vspc, sspc = crbcore.checksv(sv)
-                pass
+            elif 'taurex' in sv['data']: del sv['data']['taurex']
 
             if vspc:
                 log.warning('--< CERBERUS XSLIB: %s >--', ext)
@@ -135,7 +135,7 @@ class atmos(dawgie.Algorithm):
             if not vspc:
                 sv = self.__spc.sv_as_dict()[ext]
                 vspc, sspc = crbcore.checksv(sv)
-                pass
+            elif 'taurex' in sv['data']: del sv['data']['taurex']
 
             if vfin and vxsl and vspc:
                 log.warning('--< CERBERUS ATMOS: %s >--', ext)
