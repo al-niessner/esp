@@ -56,16 +56,18 @@ class xslib(dawgie.Algorithm):
             update = False
 
             if ext in self.__tau.sv_as_dict():
-                vspc, sspc = crbcore.checksv(self.__tau.sv_as_dict()[ext])
+                sv = self.__tau.sv_as_dict()[ext]
+                vspc, sspc = crbcore.checksv(sv)
+            else: vspc = False
 
-                if not vspc: \
-                   vspc, sspc = crbcore.checksv(self.__spc.sv_as_dict()[ext])
-            else: vspc, sspc = crbcore.checksv(self.__spc.sv_as_dict()[ext])
+            if not vspc:
+                sv = self.__spc.sv_as_dict()[ext]
+                vspc, sspc = crbcore.checksv(sv)
+                pass
 
             if vspc:
                 log.warning('--< CERBERUS XSLIB: %s >--', ext)
-                update = self._xslib(self.__spc.sv_as_dict()[ext], fltrs.index(ext))
-                pass
+                update = self._xslib(sv, fltrs.index(ext))
             else:
                 errstr = [m for m in [sspc] if m is not None]
                 self._failure(errstr[0])
@@ -126,17 +128,20 @@ class atmos(dawgie.Algorithm):
             vxsl, sxsl = crbcore.checksv(self.__xsl.sv_as_dict()[ext])
 
             if ext in self.__tau.sv_as_dict():
-                vspc, sspc = crbcore.checksv(self.__tau.sv_as_dict()[ext])
+                sv = self.__tau.sv_as_dict()[ext]
+                vspc, sspc = crbcore.checksv(sv)
+            else: vspc = False
 
-                if not vspc: \
-                   vspc, sspc = crbcore.checksv(self.__spc.sv_as_dict()[ext])
-            else: vspc, sspc = crbcore.checksv(self.__spc.sv_as_dict()[ext])
+            if not vspc:
+                sv = self.__spc.sv_as_dict()[ext]
+                vspc, sspc = crbcore.checksv(sv)
+                pass
 
             if vfin and vxsl and vspc:
                 log.warning('--< CERBERUS ATMOS: %s >--', ext)
                 update = self._atmos(self.__fin.sv_as_dict()['parameters'],
                                      self.__xsl.sv_as_dict()[ext],
-                                     self.__spc.sv_as_dict()[ext],
+                                     sv,
                                      fltrs.index(ext), ext)
                 pass
             else:

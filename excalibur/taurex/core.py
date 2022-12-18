@@ -2,6 +2,7 @@
 # -- IMPORTS -- ------------------------------------------------------
 import dawgie
 import numpy
+import os
 import taurex
 import taurex.log
 taurex.log.disableLogging()
@@ -17,9 +18,14 @@ from taurex.planet import Planet
 from taurex.stellar import BlackbodyStar
 from taurex.temperature import Guillot2010
 
-OpacityCache().clear_cache()
-OpacityCache().set_opacity_path("/proj/data/taurex/xsec/xsec_sampled_R15000_0.3-50")
-CIACache().set_cia_path("/proj/data/taurex/cia/HITRAN")
+def init():
+    '''init the library so that tests do not need to pass this step'''
+    TAUREX_DATA_ROOT = os.environ.get ('TAUREX_DATA_ROOT', '/proj/data/taurex')
+    OpacityCache().clear_cache()
+    OpacityCache().set_opacity_path(os.path.join (TAUREX_DATA_ROOT,
+                                                  "xsec/xsec_sampled_R15000_0.3-50"))
+    CIACache().set_cia_path(os.path.join (TAUREX_DATA_ROOT, "cia/HITRAN"))
+    return
 
 def tsi(spectrums:{}, parameters:{}):
     '''actually inject data into transit.spectrum data'''

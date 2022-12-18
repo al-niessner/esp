@@ -55,10 +55,12 @@ class TransitSpectrumInjection(dawgie.Algorithm):
         if not self.__pre or not any (sv['STATUS'][-1] for sv in self.__pre):
             raise dawgie.NoValidInputDataError('exptected filter(s) not in SV')
 
+        excalibur.taurex.core.init()
         for spectrum in filter (lambda d:d['STATUS'][-1], self.__pre):
             excalibur.taurex.core.tsi (spectrum,
                                        self.__fin.sv_as_dict()['parameters'])
             spectrum['STATUS'][-1] = target_name in INJECT_TARGETS
+            spectrum['data']['taurex'] = True
             self.sv_as_dict()[spectrum.name()].update (spectrum)
             pass
         ds.retarget('taurex TSI',

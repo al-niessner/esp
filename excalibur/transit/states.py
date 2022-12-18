@@ -158,7 +158,7 @@ class SpectrumSV(dawgie.StateVector):
 
     def view(self, visitor:dawgie.Visitor)->None:
         '''view ds'''
-        if self['STATUS'][-1]:
+        if self['STATUS'][-1] or 'taurex' in self['data']:
             if self.__name == "Composite":
                 plist = []
                 for f in self['data'].keys():
