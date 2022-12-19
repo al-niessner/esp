@@ -36,7 +36,7 @@ class TransitSpectrumInjection(dawgie.Algorithm):
 
     def name(self):
         '''excalibur algorithm name'''
-        return 'spectrum'
+        return 'spectral-sim'
 
     def previous(self):
         '''Input state vectors: transit.spectrum, system.finalize'''
@@ -55,7 +55,7 @@ class TransitSpectrumInjection(dawgie.Algorithm):
                                        self.__fin.sv_as_dict()['parameters'])
             self.sv_as_dict()[spectrum.name()].update (spectrum)
             pass
-        ds.retarget('taurex TSI',
+        ds.retarget('taurex sim @TS',
                     [dawgie.ALG_REF(sys.task, self.__fin)]).update()
         return
 
