@@ -16,7 +16,6 @@ import excalibur.transit.states as trnstates
 # ------------- ------------------------------------------------------
 # -- ALGO RUN OPTIONS -- ---------------------------------------------
 # Injectable Targets and filters
-INJECT_TARGETS = ['GJ 1214']
 PROCESS_FILTERS = ['HST-WFC3-IR-G141-SCAN']
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
@@ -47,11 +46,6 @@ class TransitSpectrumInjection(dawgie.Algorithm):
 
     def run(self, ds, ps):
         '''process desired excalibur data'''
-        # a touch evil to prevent cerberus from becoming swamped
-        # pylint: disable=protected-access
-        target_name = ds._tn()
-        # pylint: enable=protected-access
-
         if not self.__pre or not any (sv['STATUS'][-1] for sv in self.__pre):
             raise dawgie.NoValidInputDataError('exptected filter(s) not in SV')
 
@@ -59,8 +53,6 @@ class TransitSpectrumInjection(dawgie.Algorithm):
         for spectrum in filter (lambda d:d['STATUS'][-1], self.__pre):
             excalibur.taurex.core.tsi (spectrum,
                                        self.__fin.sv_as_dict()['parameters'])
-            spectrum['STATUS'][-1] = target_name in INJECT_TARGETS
-            spectrum['data']['taurex'] = True
             self.sv_as_dict()[spectrum.name()].update (spectrum)
             pass
         ds.retarget('taurex TSI',
