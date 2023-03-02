@@ -1,3 +1,4 @@
+'''data core ds'''
 # -- IMPORTS -- ------------------------------------------------------
 import os
 import glob
@@ -76,6 +77,7 @@ def collect(name, scrape, out):
 # ------------------ -------------------------------------------------
 # -- TIMING -- -------------------------------------------------------
 def timingversion():
+    '''timingversion ds'''
     return dawgie.VERSION(1,1,5)
 
 def timing(force, ext, clc, out, verbose=False):
@@ -626,7 +628,7 @@ def scancal(clc, tim, tid, flttype, out,
                 maxl = np.nanmax(maxlocs)
                 # CONTAMINATION FROM ANOTHER SOURCE IN THE UPPER FRAME -------------------
                 if (tid in ['HAT-P-41']) and ((maxl - minl) > 15): minl = maxl - 15
-                if minl < 10: minl = 10
+                minl = max(minl, 10)
                 if maxl > (psdiff[0].shape[0] - 10): maxl = psdiff[0].shape[0] - 10
                 pass
             else:
@@ -939,7 +941,7 @@ def scancal(clc, tim, tid, flttype, out,
                 pass
             wave, disp, shift, si, bck = wavesol(abs(spectrum), tt, wavett, disper,
                                                  ovszspc=ovszspc, bck=None, debug=debug)
-            if (disp > ldisp) and (disp < udisp): spectralindex.append(si)
+            if ldisp < disp < udisp: spectralindex.append(si)
             pass
         pass
     siv = np.nanmedian(spectralindex)
@@ -1044,7 +1046,7 @@ def scancal(clc, tim, tid, flttype, out,
         pass
     data.pop('EXP', None)
     data.pop('EXPFLAG', None)
-    for key in data: out['data'][key] = data[key]
+    for k,v in data.items(): out['data'][k] = v
     caled = not np.all(data['IGNORED'])
     if caled: out['STATUS'].append(True)
     return caled
@@ -1079,7 +1081,7 @@ def validrange(flttype):
     http://www.stsci.edu/hst/stis/design/gratings/documents/handbooks/currentIHB/c13_specref07.html
     http://www.stsci.edu/hst/stis/design/gratings/documents/handbooks/currentIHB/c13_specref16.html
     http://www.stsci.edu/hst/stis/design/gratings/documents/handbooks/currentIHB/c13_specref05.html
-        '''
+    '''
     fltr = flttype.split('-')[3]
     vrange = None
     if fltr in ['G141']: vrange = [1.12, 1.65]  # MICRONS
@@ -1744,7 +1746,7 @@ def starecal(_fin, clc, tim, tid, flttype, out,
             spectrum = abs(spectrum)
             w, d, s, si, _bck = wavesol(spectrum, tt, wavett, disper, ovszspc=ovszspc,
                                         debug=False)
-            if (d > ldisp) and (d < udisp): spectralindex.append(si)
+            if ldisp < d < udisp: spectralindex.append(si)
             pass
         pass
     siv = np.nanmedian(spectralindex)
@@ -1837,7 +1839,7 @@ def starecal(_fin, clc, tim, tid, flttype, out,
         pass
     data.pop('EXP', None)
     data.pop('EXPFLAG', None)
-    for key in data: out['data'][key] = data[key]
+    for k, v in data.items(): out['data'][k] = v
     calibrated = not np.all(data['IGNORED'])
     if calibrated: out['STATUS'].append(True)
     return calibrated
@@ -1963,7 +1965,7 @@ def stiscal_G750L(_fin, clc, tim, tid, flttype, out,
         timeobs_exp = data['ALLTIMEOBS'][index]
         tog_exp = dateobs_exp +' '+ timeobs_exp
         time_exp = raissatime.mktime(datetime.datetime.strptime(tog_exp, "%Y-%m-%d %H:%M:%S").timetuple())
-        # LOAD FRINGE FLAT -------------------------------------------------------------------
+        # LOAD FRINGE FLAT ---------------------------------------------------------------
         obs_name = clc['ROOTNAME'][0]
         name_sel = obs_name[:-5]
         lightpath_fringe = ('STIS/CCDFLAT/')
@@ -1980,7 +1982,7 @@ def stiscal_G750L(_fin, clc, tim, tid, flttype, out,
         else:
             diff_list = []
             all_infile = []
-            for infile in glob.glob('%s/%s*_flt.fits' % (filefringe,name_sel)):
+            for infile in glob.glob(f'{filefringe}/{name_sel}*_flt.fits'):
                 hdu = pyfits.open(infile)
                 all_infile.append(infile)
                 header_flat = hdu[0].header
@@ -2301,7 +2303,7 @@ def stiscal_G750L(_fin, clc, tim, tid, flttype, out,
         if ignore: log.warning('>-- %s: %s', str(index), str(allculprits[index]))
         pass
     data.pop('EXP', None)
-    for key in data: out['data'][key] = data[key]
+    for k, v in data.items(): out['data'][k] = v
     calibrated = not np.all(data['IGNORED'])
     if calibrated: out['STATUS'].append(True)
     return calibrated
@@ -2514,8 +2516,8 @@ def stiscal_G430L(fin, clc, tim, tid, flttype, out,
                            z=(fin['priors']['FEH*'], feherr),
                            filters=filters)
         list_diff = []
-        for i in range(0,len(sc.files)):
-            hdul = pyfits.open(sc.files[i])
+        for thisfile in sc.files:
+            hdul = pyfits.open(thisfile)
             teff = hdul[0].header['PHXTEFF']
             zz = hdul[0].header['PHXM_H']
             logg_str = hdul[0].header['PHXLOGG']
@@ -2524,6 +2526,7 @@ def stiscal_G430L(fin, clc, tim, tid, flttype, out,
             diff3 = abs(fin['priors']['b']['logg'] - logg_str)
             diff_total = diff1 + diff2 + diff3
             list_diff.append(diff_total)
+            pass
         cond_win = np.where(list_diff == np.min(list_diff))
         hdul2 = pyfits.open(sc.files[cond_win[0][0]])  # 1 for HAT-p-26 and Hat-P-11, 3 for Hat-p-18, 1 for WASP-52, 4 for WASP-80
         data_all = hdul2[0].data
@@ -2561,6 +2564,7 @@ def stiscal_G430L(fin, clc, tim, tid, flttype, out,
         return mid, bin_spec
 
     def chisqfunc(args):
+        '''chisqfunc ds'''
         avar, bvar= args
         chisq = np.sum(((g_wav*bin_spec_norm[cond_mid]) - f(bvar+(avar)*mid_ang[cond_mid]))**2)
         return chisq
@@ -2782,7 +2786,7 @@ def stiscal_G430L(fin, clc, tim, tid, flttype, out,
         if ignore: log.warning('>-- %s: %s', str(index), str(allculprits[index]))
         pass
     data.pop('EXP', None)
-    for key in data: out['data'][key] = data[key]
+    for k, v in data.items(): out['data'][k] = v
     calibrated = not np.all(data['IGNORED'])
     if calibrated: out['STATUS'].append(True)
     return calibrated
@@ -2953,7 +2957,7 @@ def stiscal_unified(fin, clc, tim, tid, flttype, out,
             else:
                 diff_list = []
                 all_infile = []
-                for infile in glob.glob('%s/%s*_flt.fits' % (filefringe,name_sel)):
+                for infile in glob.glob(f'{filefringe}/{name_sel}*_flt.fits'):
                     hdu = pyfits.open(infile)
                     all_infile.append(infile)
                     header_flat = hdu[0].header
@@ -3078,7 +3082,7 @@ def stiscal_unified(fin, clc, tim, tid, flttype, out,
         plt.ylabel('Stellar Spectra [Counts]')
         plt.xlabel('Pixel Number')
         plt.show()
-        # MASK BAD PIXELS IN SPECTRUM --------------------------------------------------------
+        # MASK BAD PIXELS IN SPECTRUM ----------------------------------------------------
     for v in set(visits):
         select = (visits == v) & ~(data['IGNORED'])
         specarray = np.array([s for s, ok in zip(data['SPECTRUM'], select) if ok])
@@ -3114,16 +3118,15 @@ def stiscal_unified(fin, clc, tim, tid, flttype, out,
         # PHOENIX MODELS
         filters = [BoxcarFilter('a', 550, 950)]  # Define your passbands
         feherr=np.sqrt(abs(fin['priors']['FEH*_uperr']*fin['priors']['FEH*_lowerr']))
-        loggerr = np.sqrt(abs(fin['priors']['LOGG*_uperr']*
-                              fin['priors']['LOGG*_lowerr']))
+        loggerr = np.sqrt(abs(fin['priors']['LOGG*_uperr']*fin['priors']['LOGG*_lowerr']))
         terr = np.sqrt(abs(fin['priors']['T*_uperr']*fin['priors']['T*_lowerr']))
         sc = LDPSetCreator(teff=(fin['priors']['T*'], terr),
                            logg=(fin['priors']['b']['logg'], loggerr),
                            z=(fin['priors']['FEH*'], feherr),
                            filters=filters)
         list_diff = []
-        for i in range(0,len(sc.files)):
-            hdul = pyfits.open(sc.files[i])
+        for thisfile in sc.files:
+            hdul = pyfits.open(thisfile)
             teff = hdul[0].header['PHXTEFF']
             zz = hdul[0].header['PHXM_H']
             logg_str = hdul[0].header['PHXLOGG']
@@ -3132,6 +3135,7 @@ def stiscal_unified(fin, clc, tim, tid, flttype, out,
             diff3 = abs(fin['priors']['b']['logg'] - logg_str)
             diff_total = diff1 + diff2 + diff3
             list_diff.append(diff_total)
+            pass
         cond_win = np.where(list_diff == np.min(list_diff))
         hdul2 = pyfits.open(sc.files[cond_win[0][0]])  # 1 for HAT-p-26 and Hat-P-11, 3 for Hat-p-18, 1 for WASP-52, 4 for WASP-80
         data_all = hdul2[0].data
@@ -3400,21 +3404,24 @@ def stiscal_unified(fin, clc, tim, tid, flttype, out,
         if ignore: log.warning('>-- %s: %s', str(index), str(allculprits[index]))
         pass
     data.pop('EXP', None)
-    for key in data: out['data'][key] = data[key]
+    for k, v in data.items(): out['data'][k] = v
     calibrated = not np.all(data['IGNORED'])
     if calibrated: out['STATUS'].append(True)
     return calibrated
 
 
 def find_target(target, hdu, verbose=False):
-    # query simbad to get proper motions
+    '''
+    query simbad to get proper motions
+    http://simbad.u-strasbg.fr/simbad/tap/tapsearch.html
+    '''
     service = vo.dal.TAPService("http://simbad.u-strasbg.fr/simbad/sim-tap")
-    # http://simbad.u-strasbg.fr/simbad/tap/tapsearch.html
-    query = '''
+    # GMR: seems this query was formatted in a very specific way, I might have broken it
+    query = f"""
     SELECT basic.OID, ra, dec, main_id, pmra, pmdec
     FROM basic JOIN ident ON oidref = oid
-    WHERE id = '{}';
-    '''.format(target)
+    WHERE id = '{target}';
+    """
 
     result = service.search(query)
     # Future check that simbad returned a value
@@ -3455,6 +3462,7 @@ def find_target(target, hdu, verbose=False):
 # ---------------------- ---------------------------------------------
 # -------------------------- -----------------------------------------
 def binnagem(t, nbins):
+    '''binnagem ds'''
     tmax = t[-1]
     tmin = t[0]
     tbin = (tmax-tmin)*np.arange(nbins+1)/nbins
@@ -3465,7 +3473,6 @@ def binnagem(t, nbins):
     binsize = np.diff(tbin)
     return tmid, lower, higher, binsize
 # ---------------------- ---------------------------------------------
-# -------------------------- -----------------------------------------
 # -- SPITZER CALIBRATION -- ------------------------------------------
 def spitzercal(clc, out):
     '''
@@ -3494,8 +3501,7 @@ def spitzercal(clc, out):
                     if fits.data.ndim == 2:
                         # full frame data - todo locate star in field
                         continue
-                    elif fits.data.ndim == 3:
-                        dcube = fits.data.copy()
+                    if fits.data.ndim == 3: dcube = fits.data.copy()
 
                     # convert from ADU to e/s
                     dcube *= float(fits.header.get('FLUXCONV',0.1257))
@@ -3527,14 +3533,13 @@ def spitzercal(clc, out):
                             data['FAILED'].append(True)
 
     # transfer data
-    for key in data: out['data'][key] = data[key]
+    for k, v in data.items(): out['data'][k] = v
     calibrated = not np.all(data['FAILED'])
     if calibrated: out['STATUS'].append(True)
-
     return calibrated
 
 def aper_phot(img):
-
+    '''aper_phot ds'''
     # flux weighted centroid
     yc, xc = np.unravel_index(np.argmax(img,axis=None), img.shape)  # pylint: disable=unbalanced-tuple-unpacking
     xv, yv = mesh_box([xc,yc],5)
@@ -3550,6 +3555,7 @@ def aper_phot(img):
     return wx, wy, apers, bgs, npps
 
 def mesh_box(pos,box):
+    '''mesh_box ds'''
     pos = [int(np.round(pos[0])),int(np.round(pos[1]))]
     x = np.arange(pos[0]-box, pos[0]+box+1)
     y = np.arange(pos[1]-box, pos[1]+box+1)
@@ -3557,7 +3563,7 @@ def mesh_box(pos,box):
     return xv.astype(int),yv.astype(int)
 
 def phot(data,xc,yc,r=5,dr=5):
-
+    '''phot ds'''
     if dr>0:
         bgflux = skybg_phot(data,xc,yc,r,dr)
     else:
@@ -3576,6 +3582,7 @@ def phot(data,xc,yc,r=5,dr=5):
     return float(phot_table['aperture_sum']), bgflux, npp
 
 def skybg_phot(data,xc,yc,r=10,dr=5):
+    '''skybg_phot ds'''
     # create a crude annulus to mask out bright background pixels
     xv,yv = mesh_box([xc,yc], np.round(r+dr))
     rv = ((xv-xc)**2 + (yv-yc)**2)**0.5
@@ -3586,6 +3593,7 @@ def skybg_phot(data,xc,yc,r=10,dr=5):
     return min(np.mean(dat[yv,xv][mask]),np.median(dat[yv,xv][mask]))
 
 def linfit(x, y):
+    '''linfit ds'''
     A = np.vstack([np.ones(len(x)), x]).T
     return np.linalg.lstsq(A, y, rcond=None)[0]  # b, m
 
@@ -3671,7 +3679,7 @@ def jwstcal_NIRISS(fin, clc, tim, tid, flttype, out, verbose=False):
                         data['RAMP_NUM'].append(k+1)
 
     # transfer data
-    for key in data: out['data'][key] = data[key]
+    for k, v in data.items(): out['data'][k] = v
     calibrated = not np.all(data['FAILED']) or len(data['FAILED']) == 0
     if calibrated: out['STATUS'].append(True)
 

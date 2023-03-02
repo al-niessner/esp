@@ -1,3 +1,4 @@
+'''data algorithms dc'''
 # -- IMPORTS -- ------------------------------------------------------
 import logging; log = logging.getLogger(__name__)
 
@@ -7,8 +8,6 @@ import dawgie.context
 import excalibur.data as dat
 import excalibur.data.core as datcore
 import excalibur.data.states as datstates
-
-import excalibur.transit.core as trncore
 
 import excalibur.target as trg
 import excalibur.target.edit as trgedit
@@ -22,7 +21,7 @@ import excalibur.system.algorithms as sysalg
 fltrs = (trgedit.activefilters.__doc__).split('\n')
 fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
 # KICK SPITZER FOR THE MOMENT
-fltrs = [f for f in fltrs if 'HST' not in f]
+fltrs = [f for f in fltrs if 'HST' in f]
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class collect(dawgie.Algorithm):
@@ -30,6 +29,7 @@ class collect(dawgie.Algorithm):
     G. ROUDIER: Data collection by filters
     '''
     def __init__(self):
+        '''__init__ ds'''
         self._version_ = dawgie.VERSION(1,1,2)
         self.__create = trgalg.create()
         self.__scrape = trgalg.scrape()
@@ -37,16 +37,20 @@ class collect(dawgie.Algorithm):
         return
 
     def name(self):
+        '''Database name for subtask extension'''
         return 'collect'
 
     def previous(self):
+        '''Input State Vectors: target.create, target.scrape'''
         return [dawgie.ALG_REF(trg.analysis, self.__create),
                 dawgie.ALG_REF(trg.task, self.__scrape)]
 
     def state_vectors(self):
+        '''Output State Vectors: data.collect'''
         return [self.__out]
 
     def run(self, ds, ps):
+        '''Top level algorithm call'''
         update = False
         create = self.__create.sv_as_dict()['filters']
         scrape = self.__scrape.sv_as_dict()['databases']
@@ -57,30 +61,33 @@ class collect(dawgie.Algorithm):
             for name in create['activefilters']['NAMES']:
                 ok = self._collect(name, scrape, self.__out)
                 update = update or ok
-
                 pass
             if update: ds.update()
+            else: raise dawgie.NoValidOutputDataError(f'No output created for DATA.{self.name()}')
             pass
         else: self._failure(errstring)
         return
 
     @staticmethod
     def _collect(name, scrape, out):
+        '''Core code call'''
         log.warning('--< DATA COLLECT: %s >--', name)
         collected = datcore.collect(name, scrape, out)
         return collected
 
     @staticmethod
     def _failure(errstr):
+        '''Failure log'''
         log.warning('--< DATA COLLECT: %s >--', errstr)
         return
     pass
 
 class timing(dawgie.Algorithm):
     '''
-    G. ROUDIER: Categorize data into 3 science purposes: TRANSIT, ECLIPSE, PHASE CURVE
+    G. ROUDIER: Categorize data into 3 science purposes: TRANSIT, ECLIPSE, PHASECURVE
     '''
     def __init__(self):
+        '''__init__ ds'''
         self._version_ = datcore.timingversion()
         self.__fin = sysalg.finalize()
         self.__col = collect()
@@ -88,16 +95,20 @@ class timing(dawgie.Algorithm):
         return
 
     def name(self):
+        '''Database name for subtask extension'''
         return 'timing'
 
     def previous(self):
+        '''Input State Vectors: system.finalize, data.collect'''
         return [dawgie.ALG_REF(sys.task, self.__fin),
                 dawgie.ALG_REF(dat.task, self.__col)]
 
     def state_vectors(self):
+        '''Output State Vectors: data.timing'''
         return self.__out
 
     def run(self, ds, ps):
+        '''Top level algorithm call'''
         update = False
         fin = self.__fin.sv_as_dict()['parameters']
         vfin, efin = datcore.checksv(fin)
@@ -121,17 +132,20 @@ class timing(dawgie.Algorithm):
             pass
         self.__out = svupdate
         if self.__out.__len__() > 0: ds.update()
-        else: self._failure('NO DATA')
+        else: raise dawgie.NoValidOutputDataError(
+                f'No output created for DATA.{self.name()}')
         return
 
     @staticmethod
     def _timing(fin, ext, colin, out):
+        '''Core code call'''
         log.warning('--< DATA TIMING: %s >--', ext)
         chunked = datcore.timing(fin, ext, colin, out, verbose=False)
         return chunked
 
     @staticmethod
     def _failure(errstr):
+        '''Failure log'''
         log.warning('--< DATA TIMING: %s >--', errstr)
         return
     pass
@@ -141,6 +155,7 @@ class calibration(dawgie.Algorithm):
     G. ROUDIER: Data re-calibration and reduction
     '''
     def __init__(self):
+        '''__init__ ds'''
         self._version_ = dawgie.VERSION(1,4,4)
         self.__fin = sysalg.finalize()
         self.__col = collect()
@@ -149,22 +164,26 @@ class calibration(dawgie.Algorithm):
         return
 
     def name(self):
+        '''Database name for subtask extension'''
         return 'calibration'
 
     def previous(self):
+        '''Input State Vectors: system.finalize, data.collect, data.timing'''
         return [dawgie.ALG_REF(sys.task, self.__fin),
                 dawgie.ALG_REF(dat.task, self.__col),
                 dawgie.ALG_REF(dat.task, self.__tim)]
 
     def state_vectors(self):
+        '''Output State Vectors: data.calibration'''
         return self.__out
 
     def run(self, ds, ps):
+        '''Top level algorithm call'''
         update = False
         cll = self.__col.sv_as_dict()['frames']
         vcll, ecll = datcore.checksv(cll)
         fin = self.__fin.sv_as_dict()['parameters']
-        vfin, sfin = trncore.checksv(fin)
+        vfin, sfin = datcore.checksv(fin)
         validtype = []
         for test in cll['activefilters'].keys():
             if test in fltrs: validtype.append(test)
@@ -187,30 +206,37 @@ class calibration(dawgie.Algorithm):
             pass
         self.__out = svupdate
         if self.__out.__len__() > 0: ds.update()
-        else: self._failure('NO DATA')
+        else: raise dawgie.NoValidOutputDataError(
+                f'No output created for DATA.{self.name()}')
         return
 
     @staticmethod
     def _calib(fin, cll, tim, tid, flttype, out):
+        '''Core code call'''
         log.warning('--< DATA CALIBRATION: %s >--', flttype)
         caled = False
         if 'SCAN' in flttype:
             caled = datcore.scancal(cll, tim, tid, flttype, out, verbose=False)
             pass
         if 'G430' in flttype:
-            caled = datcore.stiscal_G430L(fin, cll, tim, tid, flttype, out, verbose=False)
+            caled = datcore.stiscal_G430L(fin, cll, tim, tid, flttype, out,
+                                          verbose=False)
             pass
         if 'G750' in flttype:
-            caled = datcore.stiscal_G750L(fin, cll, tim, tid, flttype, out, verbose=False)
+            caled = datcore.stiscal_G750L(fin, cll, tim, tid, flttype, out,
+                                          verbose=False)
         if 'Spitzer' in flttype:
             caled = datcore.spitzercal(cll, out)
             pass
         if 'NIRISS' in flttype:
-            caled = datcore.jwstcal_NIRISS(fin, cll, tim, tid, flttype, out, verbose=False)
+            caled = datcore.jwstcal_NIRISS(fin, cll, tim, tid, flttype, out,
+                                           verbose=False)
+            pass
         return caled
 
     @staticmethod
     def _failure(errstr):
+        '''Failure log'''
         log.warning('--< DATA CALIBRATION: %s >--', errstr)
         return
     pass

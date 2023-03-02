@@ -1,4 +1,6 @@
+'''cerberus core ds'''
 # -- IMPORTS -- ------------------------------------------------------
+import dawgie
 import excalibur
 # pylint: disable=import-self
 import excalibur.cerberus.core
@@ -13,6 +15,7 @@ import os
 import pymc3 as pm
 import numpy as np
 # import numpy.polynomial.polynomial as poly
+import matplotlib.image as img
 import matplotlib.pyplot as plt
 
 import theano.tensor as tt
@@ -58,7 +61,6 @@ def myxsecsversion():
     shifting effects (like exomol)
     Done to speed up processing of CH4 HITEMP line list
     '''
-    import dawgie
     return dawgie.VERSION(1,1,3)
 
 def myxsecs(spc, out,
@@ -77,7 +79,6 @@ G. ROUDIER: Builds Cerberus cross section library
     for p in spc['data'].keys():
         out['data'][p] = {}
         wgrid = np.array(spc['data'][p]['WB'])
-#         cond_grid = (wgrid < 0.56) | (wgrid > 1.02)
         qtgrid = gettpf(tips, knownspecies)
         library = {}
         nugrid = (1e4/np.copy(wgrid))[::-1]
@@ -91,7 +92,7 @@ G. ROUDIER: Builds Cerberus cross section library
             myfiles = [f for f in os.listdir(thisxmdir) if f.endswith('K')]
             for mf in myfiles:
                 xmtemp = float(mf.split('K')[0])
-                with open(os.path.join(thisxmdir, mf), 'r') as fp:
+                with open(os.path.join(thisxmdir, mf), 'r', encoding="utf-8") as fp:
                     data = fp.readlines()
                     fp.close()
                     for line in data:
@@ -137,7 +138,7 @@ G. ROUDIER: Builds Cerberus cross section library
             if verbose:
                 fts = 20
                 plt.figure(figsize=(16,12))
-                haha = [huhu for huhu in set(library[myexomol]['T'])]
+                haha = list(set(library[myexomol]['T']))
                 haha = np.sort(np.array(haha))
                 haha = haha[::-1]
                 for temp in haha:
@@ -165,7 +166,7 @@ G. ROUDIER: Builds Cerberus cross section library
             library[mycia] = {'I':[], 'nu':[], 'T':[],
                               'Itemp':[], 'nutemp':[], 'Ttemp':[],
                               'SPL':[], 'SPLNU':[]}
-            with open(myfile, 'r') as fp:
+            with open(myfile, 'r', encoding="utf-8") as fp:
                 data = fp.readlines()
                 fp.close()
                 # Richard et Al. 2012
@@ -244,7 +245,8 @@ G. ROUDIER: Builds Cerberus cross section library
                     if minweq > (np.max(wgrid)+dwmax): readit = False
                     pass
                 if readit:
-                    with open(os.path.join(hitemp, ks, fdata), 'r') as fp:
+                    with open(os.path.join(hitemp, ks, fdata), 'r',
+                              encoding="utf-8") as fp:
                         data = fp.readlines()
                         fp.close()
                         # Rothman et Al. 2010
@@ -333,7 +335,7 @@ G. ROUDIER: Builds Cerberus cross section library
             if verbose:
                 fts = 20
                 plt.figure(figsize=(16,12))
-                haha = [huhu for huhu in set(library[ks]['T'])]
+                haha = list(set(library[ks]['T']))
                 haha = np.sort(np.array(haha))
                 haha = haha[::-1]
                 for temp in haha:
@@ -372,7 +374,7 @@ G. ROUDIER: Wrapper around HITRAN partition functions (Gamache et al. 2011)
     tempgrid = list(np.arange(60., 3035., 25.))
     for ks in knownspecies:
         grid[ks] = {'T':tempgrid, 'Q':[], 'SPL':[]}
-        with open(os.path.join(tips, ks)) as fp:
+        with open(os.path.join(tips, ks), 'r', encoding="utf-8") as fp:
             data = fp.readlines()
             fp.close()
             for line in data:
@@ -403,7 +405,6 @@ def atmosversion():
     R ESTRELA:131
     Merged Spectra Capability
     '''
-    import dawgie
     return dawgie.VERSION(1,3,2)
 
 def atmos(fin, xsl, spc, out, ext,
@@ -416,7 +417,7 @@ G. ROUDIER: Cerberus retrievial
     orbp = fin['priors'].copy()
     ssc = syscore.ssconstants(mks=True)
     crbhzlib = {'PROFILE':[]}
-    hazelib(crbhzlib, hazedir=hazedir, verbose=verbose)
+    hazelib(crbhzlib, hazedir=hazedir, verbose=False)
     # MODELS
     modfam = ['TEC', 'PHOTOCHEM']
     modparlbl = {'TEC':['XtoH', 'CtoO', 'NtoO'],
@@ -436,16 +437,17 @@ G. ROUDIER: Cerberus retrievial
         tspectrum = tspc**2
         if 'STIS-WFC3' in ext:
             filters = np.array(spc['data'][p]['Fltrs'])
-        cond_specG750 = filters == 'HST-STIS-CCD-G750L-STARE'
-        # MASKING G750 WAV > 0.80
-        twav_G750 = twav[cond_specG750]
-        tspec_G750 = tspectrum[cond_specG750]
-        tspecerr_G750 = tspecerr[cond_specG750]
-        mask = (twav_G750 > 0.80) & (twav_G750 < 0.95)
-        tspec_G750[mask] = np.nan
-        tspecerr_G750[mask] = np.nan
-        tspectrum[cond_specG750] = tspec_G750
-        tspecerr[cond_specG750] = tspecerr_G750
+            cond_specG750 = filters == 'HST-STIS-CCD-G750L-STARE'
+            # MASKING G750 WAV > 0.80
+            twav_G750 = twav[cond_specG750]
+            tspec_G750 = tspectrum[cond_specG750]
+            tspecerr_G750 = tspecerr[cond_specG750]
+            mask = (twav_G750 > 0.80) & (twav_G750 < 0.95)
+            tspec_G750[mask] = np.nan
+            tspecerr_G750[mask] = np.nan
+            tspectrum[cond_specG750] = tspec_G750
+            tspecerr[cond_specG750] = tspecerr_G750
+            pass
         # CLEAN UP G750
 #         cond_nan = np.isfinite(tspec_G750)
 #         coefs_spec_G750 = poly.polyfit(twav_G750[cond_nan], tspec_G750[cond_nan], 1)
@@ -503,50 +505,54 @@ G. ROUDIER: Cerberus retrievial
                                 off2 = pm.Uniform('OFF2', -off2_value, off2_value)
                                 nodes.append(off2)
                             if valid1 and valid2 and not valid3:
-                                off0_value = np.nanmedian(1e2*tspectrum[cond_off2])- np.nanmedian(1e2*tspectrum[cond_off0])
-                                off1_value = np.nanmedian(1e2*tspectrum[cond_off2])- np.nanmedian(1e2*tspectrum[cond_off1])
+                                off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off2])- np.nanmedian(1e2*tspectrum[cond_off0]))
+                                off1_value = abs(np.nanmedian(1e2*tspectrum[cond_off2])- np.nanmedian(1e2*tspectrum[cond_off1]))
                                 off0 = pm.Uniform('OFF0', -off0_value, off0_value)
                                 nodes.append(off0)
                                 off1 = pm.Uniform('OFF1', -off1_value, off1_value)
                                 nodes.append(off1)
                             if valid1 and valid3 and not valid2:
-                                off0_value = np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off0])
-                                off1_value = np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off1])
+                                off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off0]))
+                                off1_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off1]))
                                 off0 = pm.Uniform('OFF0', -off0_value, off0_value)
                                 nodes.append(off0)
                                 off1 = pm.Uniform('OFF1', -off1_value, off1_value)
                                 nodes.append(off1)
                             if valid2 and valid3 and not valid1:
-                                off0_value = np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off0])
-                                off1_value = np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off2])
+                                off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off0]))
+                                off1_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off2]))
                                 off0 = pm.Uniform('OFF0', -off0_value, off0_value)
                                 nodes.append(off0)
                                 off1 = pm.Uniform('OFF1', -off1_value, off1_value)
                                 nodes.append(off1)
                             if valid3 and not valid1 and not valid2:
-                                off0_value = np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off0])
+                                off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off0]))
                                 off0 = pm.Uniform('OFF0', -off0_value, off0_value)
                                 nodes.append(off0)
                         if not valid0:
                             if valid1 and valid2 and valid3:
-                                off0_value = np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off1])
-                                off1_value = np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off2])
+                                off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off1]))
+                                off1_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off2]))
                                 off0 = pm.Uniform('OFF0', -off0_value, off0_value)
                                 nodes.append(off0)
                                 off1 = pm.Uniform('OFF1', -off1_value, off1_value)
                                 nodes.append(off1)
                             if valid1 and valid3 and not valid2:
-                                off0_value = np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off1])
+                                off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off1]))
                                 off0 = pm.Uniform('OFF0', -off0_value, off0_value)
                                 nodes.append(off0)
                             if valid1 and valid2 and not valid3:
-                                off0_value = np.nanmedian(1e2*tspectrum[cond_off2])- np.nanmedian(1e2*tspectrum[cond_off1])
+                                off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off2])- np.nanmedian(1e2*tspectrum[cond_off1]))
+                                off0 = pm.Uniform('OFF0', -off0_value, off0_value)
+                                nodes.append(off0)
+                            if valid1 and valid2 and not valid3:
+                                off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off2])- np.nanmedian(1e2*tspectrum[cond_off1]))
                                 off0 = pm.Uniform('OFF0', -off0_value, off0_value)
                                 nodes.append(off0)
 
                     if 'WFC3' in filters[0]:
                         if valid2 and valid3:
-                            off0_value = np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off2])
+                            off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off2]))
                             off0 = pm.Uniform('OFF0', -off0_value, off0_value)
                             nodes.append(off0)
                 # KILL HAZE POWER INDEX FOR SPHERICAL SHELL
@@ -640,7 +646,9 @@ G. ROUDIER: Cerberus retrievial
                 trace = pm.sample(mclen, cores=4, tune=int(mclen/4),
                                   compute_convergence_checks=False, step=pm.Metropolis(),
                                   progressbar=verbose)
-                mcpost = pm.summary(trace)
+                # GMR: Should be able to find it... Joker
+                # pylint: disable=no-member
+                mcpost = pm.stats.summary(trace)
                 pass
             mctrace = {}
             for key in mcpost['mean'].keys():
@@ -655,9 +663,6 @@ G. ROUDIER: Cerberus retrievial
         out['data'][p]['WAVELENGTH'] = np.array(spc['data'][p]['WB'])
         out['data'][p]['SPECTRUM'] = np.array(spc['data'][p]['ES'])
         out['data'][p]['ERRORS'] = np.array(spc['data'][p]['ESerr'])
-#         out['data'][p]['WAVELENGTH'] = twav
-#         out['data'][p]['SPECTRUM'] = tspectrum
-#         out['data'][p]['ERRORS'] = tspecerr
         out['data'][p]['VALID'] = cleanup
         am = True
         pass
@@ -673,7 +678,8 @@ def crbmodel(mixratio, rayleigh, cloudtp, rp0, orbp, xsecs, qtgrid,
              cheq=None, h2rs=True, logx=False, pnet='b', sphshell=False,
              verbose=False, debug=False):
     '''
-G. ROUDIER: Cerberus forward model probing up to 'Hsmax' scale heights from solid radius solrad evenly log divided amongst nlevels steps
+    G. ROUDIER: Cerberus forward model probing up to 'Hsmax' scale heights from solid
+    radius solrad evenly log divided amongst nlevels steps
     '''
     ssc = syscore.ssconstants(mks=True)
     pgrid = np.arange(np.log(solrad)-Hsmax, np.log(solrad)+Hsmax/nlevels,
@@ -814,6 +820,7 @@ G. ROUDIER: Builds optical depth matrix
         for elem in mixratio:
             mmr = 10.**(mixratio[elem]-6.)
             # Fake use of xmollist due to changes in xslib v112
+            # THIS HAS TO BE FIXED
             # if elem not in xmollist:
             if not xmollist:
                 # HITEMP/HITRAN ROTHMAN ET AL. 2010 --------------------------------------
@@ -1259,10 +1266,10 @@ G. ROUDIER: BURROWS AND SHARP 1998 + ANDERS & GREVESSE 1989
             nHe = nH*solar['nHe']/solar['nH']
             pass
         pass
-    if C2Or < -10.: C2Or = -10.
-    if C2Or > 10.: C2Or = 10.
-    if N2Or < -10.: N2Or = -10.
-    if N2Or > 10.: N2Or = 10.
+    C2Or = max(C2Or, -10.0)
+    C2Or = min(C2Or, 10.0)
+    N2Or = max(N2Or, -10.0)
+    N2Or = min(N2Or, 10.0)
     pH2 = nH2*p
     K1 = np.exp((a1/temp + b1 + c1*temp + d1*temp**2 + e1*temp**3)/(RcalpmolpK*temp))
     AH2 = (pH2**2.)/(2.*K1)
@@ -1298,9 +1305,8 @@ G. ROUDIER: BURROWS AND SHARP 1998 + ANDERS & GREVESSE 1989
            otypes=[tt.dvector])
 def fmcerberus(*crbinputs):
     '''
-G. ROUDIER: Wrapper around Cerberus forward model
+    G. ROUDIER: Wrapper around Cerberus forward model
     '''
-    # ctp, hza, hzi, tpr, mdp = crbinputs
     ctp, hza, hzi, tpr, mdp = crbinputs
     fmc = np.zeros(ctxt.tspectrum.size)
     if ctxt.model == 'TEC':
@@ -1336,7 +1342,7 @@ G. ROUDIER: Wrapper around Cerberus forward model
            otypes=[tt.dvector])
 def spshfmcerberus(*crbinputs):
     '''
-G. ROUDIER: Wrapper around Cerberus forward model, spherical shell symmetry
+    G. ROUDIER: Wrapper around Cerberus forward model, spherical shell symmetry
     '''
     ctp, hza, hzloc, hzthick, tpr, mdp = crbinputs
     # ctp, hza, hzloc, hzthick, tpr, mdp = crbinputs
@@ -1371,8 +1377,8 @@ G. ROUDIER: Wrapper around Cerberus forward model, spherical shell symmetry
     fmc = fmc + np.nanmean(ctxt.tspectrum[ctxt.cleanup])
     return fmc
 
-@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
-                   tt.dvector],
+@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
+                   tt.dscalar, tt.dscalar, tt.dscalar, tt.dvector],
            otypes=[tt.dvector])
 # @tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar],
 #             otypes=[tt.dvector])
@@ -1432,11 +1438,10 @@ R.ESTRELA: ADD offsets between STIS filters and STIS and WFC3 filters
     fmc[cond_G430] = fmc[cond_G430] - 1e-2*float(off0)
     fmc[cond_G750] = fmc[cond_G750] - 1e-2*float(off1)
     fmc[cond_G102] = fmc[cond_G102] - 1e-2*float(off2)
-#     fmc[cond_G141] = fmc[cond_G141] + 1e-2*float(off2)
     return fmc
 
-@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
-                   tt.dvector],
+@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
+                   tt.dscalar, tt.dscalar, tt.dvector],
            otypes=[tt.dvector])
 def offcerberus1(*crbinputs):
     '''
@@ -1482,8 +1487,8 @@ R.ESTRELA: ADD offsets between STIS filters and STIS and WFC3 filters
     fmc[cond_G750] = fmc[cond_G750] + 1e-2*float(off1)
     return fmc
 
-@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
-                   tt.dvector],
+@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
+                   tt.dscalar, tt.dscalar, tt.dvector],
            otypes=[tt.dvector])
 def offcerberus2(*crbinputs):
     '''
@@ -1529,8 +1534,8 @@ R.ESTRELA: ADD offsets between STIS filters and STIS and WFC3 filters
     fmc[cond_G750] = fmc[cond_G750] + 1e-2*float(off1)
     return fmc
 
-@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
-                   tt.dvector],
+@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
+                   tt.dscalar, tt.dscalar, tt.dvector],
            otypes=[tt.dvector])
 def offcerberus3(*crbinputs):
     '''
@@ -1621,8 +1626,8 @@ R.ESTRELA: ADD offsets between STIS filters and STIS and WFC3 filters
     fmc[cond_G430] = fmc[cond_G430] + 1e-2*float(off0)
     return fmc
 
-@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
-                   tt.dvector],
+@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
+                   tt.dscalar, tt.dscalar, tt.dvector],
            otypes=[tt.dvector])
 def offcerberus5(*crbinputs):
     '''
@@ -1758,8 +1763,8 @@ R.ESTRELA: ADD offsets between STIS filters and WFC3 filters
     fmc[cond_G750] = fmc[cond_G750] + 1e-2*float(off0)
     return fmc
 
-@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
-                   tt.dvector],
+@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
+                   tt.dscalar, tt.dscalar, tt.dvector],
            otypes=[tt.dvector])
 def offcerberus8(*crbinputs):
     '''
@@ -1802,16 +1807,18 @@ R.ESTRELA: ADD offsets between WFC3 filters
     cond_G102 = 'HST-WFC3-IR-G102-SCAN' in flt
     fmc[cond_G102] = fmc[cond_G102] + 1e-2*float(off0)
     return fmc
-
 # ----------------------------------- --------------------------------
 # -- HAZE DENSITY PROFILE LIBRARY -- ---------------------------------
 def hazelib(sv,
             hazedir=os.path.join(excalibur.context['data_dir'], 'CERBERUS/HAZE'),
             datafile='Jup-ISS-aerosol.dat', verbose=False,
             fromjupiter=True, narrow=True):
+    '''Haze density profiles'''
     vdensity = {'PRESSURE':[], 'CONSTANT':[], 'JMAX':[], 'MAX':[],
                 'JMEDIAN':[], 'MEDIAN':[], 'JAVERAGE':[], 'AVERAGE':[]}
-    with open(os.path.join(hazedir, datafile), 'r') as fp: data = fp.readlines()
+    with open(os.path.join(hazedir, datafile), 'r', encoding="utf-8") as fp:
+        data = fp.readlines()
+        pass
     # LATITUDE GRID
     latitude = data[0]
     latitude = np.array(latitude.split(' '))
@@ -1949,3 +1956,55 @@ def hazelib(sv,
     sv['PROFILE'].append(vdensity)
     return
 # ---------------------------------- ---------------------------------
+# -- ROUDIER ET AL. 2021 RELEASE -- ----------------------------------
+def rlsversion():
+    '''
+    GMR:110 Initial release to IPAC
+    GMR:111 Removed empty keys
+    '''
+    return dawgie.VERSION(1,1,1)
+
+def release(trgt, fin, out, verbose=False):
+    '''
+    GMR: Format Cerberus SV products to be released to IPAC
+    trgt [INPUT]: target name
+    fin [INPUT]: system.finalize.parameters
+    out [INPUT/OUTPUT]
+    ext [INPUT]: 'HST-WFC3-IR-G141-SCAN'
+    verbose [OPTIONAL]: verbosity
+    '''
+    rlsed = False
+    plist = fin['priors']['planets']
+    thispath = os.path.join(excalibur.context['data_dir'], 'CERBERUS')
+    for p in plist:
+        intxtf = os.path.join(thispath, 'P.CERBERUS.atmos', trgt+p+'.txt')
+        incorrpng = os.path.join(thispath, 'P.CERBERUS.atmos', trgt+p+'_atmos_corr.png')
+        intxtpng = os.path.join(thispath, 'P.CERBERUS.atmos', trgt+p+'_atmos.png')
+        out['data'][p] = {}
+        try:
+            atm = np.loadtxt(intxtf)
+            out['data'][p]['atmos'] = atm
+            out['STATUS'].append(True)
+            pass
+        except FileNotFoundError: pass
+        try:
+            corrplot = img.imread(incorrpng)
+            out['data'][p]['corrplot'] = corrplot
+            out['STATUS'].append(True)
+            pass
+        except FileNotFoundError: pass
+        try:
+            modelplot = img.imread(intxtpng)
+            out['data'][p]['modelplot'] = modelplot
+            out['STATUS'].append(True)
+            pass
+        except FileNotFoundError: pass
+        if not out['data'][p]:
+            if verbose: log.warning('--< No data found for %s', p)
+            out['data'].pop(p)
+            pass
+        pass
+    rlsed = out['STATUS'][-1]
+    if verbose: log.warning('--< %s', out['STATUS'])
+    return rlsed
+# --------------------------------- ----------------------------------

@@ -1,25 +1,16 @@
-'''ancillary bot ds'''
+'''taurex bot'''
 # -- IMPORTS -- ------------------------------------------------------
 import dawgie
 
-import excalibur.ancillary.algorithms as ancalg
+import excalibur.taurex.algorithms
 # ------------- ------------------------------------------------------
 # -- A&A -- ----------------------------------------------------------
-class Actor(dawgie.Analysis):
+class Actor(dawgie.Task):
     '''Actor ds'''
-    def list(self)->[dawgie.Analyzer]:
-        '''list ds'''
-        return [
-            ancalg.population()
-        ]
-    pass
-
-class Agent(dawgie.Task):
-    '''Agent ds'''
     def list(self)->[dawgie.Task]:
-        '''list ds'''
+        '''Subtasks top level ordered call'''
         return [
-            ancalg.estimate()
+            excalibur.taurex.algorithms.TransitSpectrumInjection(),
         ]
     pass
 # --------- ----------------------------------------------------------

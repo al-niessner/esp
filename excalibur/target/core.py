@@ -1,5 +1,7 @@
+'''target core ds'''
 # -- IMPORTS -- ------------------------------------------------------
 import os
+import numpy
 import shutil
 import re
 import tempfile
@@ -11,13 +13,39 @@ import dawgie.db
 
 import excalibur.target as trg
 import excalibur.target.edit as trgedit
+import excalibur.system.core as syscore
 
 import astropy.io.fits as pyfits
 import urllib.error
 import urllib.request as urlrequest
 # ------------- ------------------------------------------------------
+# -- URLTRICK -- -----------------------------------------------------
+class urltrick():
+    '''
+    # GMR: with statement generates an attribute __enter__ error
+    # without the with statement it doesnt pass CI checks
+    # pulling out dirty tricks
+    '''
+    def __init__(self, thisurl):
+        '''__init__ ds'''
+        self.thisurl = thisurl
+        self.req = None
+        return
+
+    def __enter__(self):
+        '''__enter__ ds'''
+        self.req = urlrequest.urlopen(self.thisurl)
+        return self.req.read()
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        '''__exit__ ds'''
+        self.req.close()
+        return
+    pass
+# -------------- -----------------------------------------------------
 # -- SV VALIDITY -- --------------------------------------------------
 def checksv(sv):
+    '''Checks for empty SV'''
     valid = False
     errstring = None
     if sv['STATUS'][-1]: valid = True
@@ -26,23 +54,23 @@ def checksv(sv):
 # ----------------- --------------------------------------------------
 # -- TAP QUERY --  ---------------------------------------------------
 def tap_query(base_url, query):
-    # table access protocol query
-
+    '''table access protocol query'''
     # build url
     uri_full = base_url
     for k in query:
-        if k != "format":
-            uri_full+= "{} {} ".format(k, query[k])
-
-    uri_full = uri_full[:-1] + "&format={}".format(query.get("format","csv"))
+        if k != "format": uri_full+= f"{k} {query[k]} "
+        pass
+    uri_full = uri_full[:-1] + f"&format={query.get('format','csv')}"
     uri_full = uri_full.replace(' ','+')
-
-    response = (urlrequest.urlopen(uri_full)).read().decode('utf-8')
-
+    response = None
+    with urltrick(uri_full) as test: response = test.decode('utf-8')
     return response
 # ----------------- --------------------------------------------------
 # -- SCRAPE IDS -- ---------------------------------------------------
 def scrapeids(ds:dawgie.Dataset, out, web, genIDs=True):
+    '''
+    Parses table from ipac exoplanetarchive
+    '''
     targets = trgedit.targetlist.__doc__
     targets = targets.split('\n')
     targets = [t.strip() for t in targets if t.replace(' ', '').__len__() > 0]
@@ -50,14 +78,15 @@ def scrapeids(ds:dawgie.Dataset, out, web, genIDs=True):
     if tn is not None:
         found_target_list = None
         for target in targets:
-            if tn in target:
-                found_target_list = target
+            if tn == target.split(':')[0].strip(): found_target_list = target
+            pass
         if found_target_list is None:
             # this is an ERROR.  the selected target should be in the target list
             # exit('ERROR: are you sure about that target?  it is not in the list')
-            pass
-        else:
-            targets = [found_target_list]
+            mssg = f'Obsolete target / Error in target name: {tn}'
+            raise dawgie.NoValidOutputDataError(mssg)
+        targets = [found_target_list]
+        pass
     for target in targets:
         parsedstr = target.split(':')
         parsedstr = [t.strip() for t in parsedstr]
@@ -72,7 +101,7 @@ def scrapeids(ds:dawgie.Dataset, out, web, genIDs=True):
             dawgie.db.connect(trg.algorithms.create(), ds._bot(), parsedstr[0]).load()
             pass
         pass
-    cols = "hostname,pl_letter,rowupdate,pl_refname,sy_pnum,pl_orbper,pl_orbpererr1,pl_orbpererr2,pl_orbsmax,pl_orbsmaxerr1,pl_orbsmaxerr2,pl_orbeccen,pl_orbeccenerr1,pl_orbeccenerr2,pl_orbincl,pl_orbinclerr1,pl_orbinclerr2,pl_bmassj,pl_bmassjerr1,pl_bmassjerr2,pl_radj,pl_radjerr1,pl_radjerr2,pl_dens,pl_denserr1,pl_denserr2,pl_eqt,pl_eqterr1,pl_eqterr2,pl_tranmid,pl_tranmiderr1,pl_tranmiderr2,pl_imppar,pl_impparerr1,pl_impparerr2,st_teff,st_tefferr1,st_tefferr2,st_mass,st_masserr1,st_masserr2,st_rad,st_raderr1,st_raderr2,st_lum,st_lumerr1,st_lumerr2,st_logg,st_loggerr1,st_loggerr2,st_dens,st_denserr1,st_denserr2,st_met,st_meterr1,st_meterr2,sy_hmag,sy_hmagerr2,sy_hmagerr2"
+    cols = "hostname,pl_letter,rowupdate,pl_refname,sy_pnum,pl_orbper,pl_orbpererr1,pl_orbpererr2,pl_orbsmax,pl_orbsmaxerr1,pl_orbsmaxerr2,pl_orbeccen,pl_orbeccenerr1,pl_orbeccenerr2,pl_orbincl,pl_orbinclerr1,pl_orbinclerr2,pl_bmassj,pl_bmassjerr1,pl_bmassjerr2,pl_radj,pl_radjerr1,pl_radjerr2,pl_dens,pl_denserr1,pl_denserr2,pl_eqt,pl_eqterr1,pl_eqterr2,pl_tranmid,pl_tranmiderr1,pl_tranmiderr2,pl_imppar,pl_impparerr1,pl_impparerr2,st_teff,st_tefferr1,st_tefferr2,st_mass,st_masserr1,st_masserr2,st_rad,st_raderr1,st_raderr2,st_lum,st_lumerr1,st_lumerr2,st_logg,st_loggerr1,st_loggerr2,st_dens,st_denserr1,st_denserr2,st_met,st_meterr1,st_meterr2,sy_hmag,sy_hmagerr1,sy_hmagerr2,st_age,st_ageerr1,st_ageerr2"
     uri_ipac_query = {
         "select": cols,
         "from": 'ps',
@@ -80,23 +109,25 @@ def scrapeids(ds:dawgie.Dataset, out, web, genIDs=True):
         "order by": "pl_name",
         "format": "csv"
     }
-    # First retrieval just gets default row for each target from table
+    # First Exoplanet Archive query gets default row for each target
+    uri_ipac_query['where'] = 'tran_flag = 1 and default_flag = 1'
     response = tap_query(web, uri_ipac_query)
-    for line in response.split('\n'): out['nexscie'].append(line)
-    # Second and third retrieval grab all rows for respective columns
-    uri_ipac_query['select'] = "hostname,pl_letter,rowupdate,pl_orbper,pl_orbpererr1,pl_orbpererr2,pl_refname,pl_orbsmax,pl_orbsmaxerr1,pl_orbsmaxerr2,pl_refname,pl_orbeccen,pl_orbeccenerr1,pl_orbeccenerr2,pl_refname,pl_radj,pl_radjerr1,pl_radjerr2,pl_refname,pl_eqt,pl_eqterr1,pl_eqterr2,pl_refname,st_teff,st_tefferr1,st_tefferr2,st_refname,st_rad,st_raderr1,st_raderr2,st_refname,st_lum,st_lumerr1,st_lumerr2,st_refname,st_logg,st_loggerr1,st_loggerr2,st_refname,st_met,st_meterr1,st_meterr2,st_refname,st_age,st_ageerr1,st_ageerr2,st_refname"
+    for line in response.split('\n'): out['nexsciDefaults'].append(line)
+
+    # Second Exoplanet Archive query gets all rows, not just the defaults
     uri_ipac_query['where'] = 'tran_flag = 1'
     response = tap_query(web, uri_ipac_query)
-    for line in response.split('\n'): out['nexscic'].append(line)
-    uri_ipac_query['select'] = "hostname,pl_letter,pl_refname,rowupdate,pl_orbincl,pl_orbinclerr1,pl_orbinclerr2,pl_tranmid,pl_tranmiderr1,pl_tranmiderr2,st_logg,st_loggerr1,st_loggerr2,st_met,st_meterr1,st_meterr2"
-    response = tap_query(web, uri_ipac_query)
-    for line in response.split('\n'): out['nexscix'].append(line)
+    for line in response.split('\n'): out['nexsciFulltable'].append(line)
+
     out['STATUS'].append(True)
     ds.update()
     return
 # ---------------- ---------------------------------------------------
 # -- CREATE FILTERS -- -----------------------------------------------
 def createfltrs(out):
+    '''
+    Create filter name
+    '''
     created = False
     filters = trgedit.activefilters.__doc__
     filters = filters.split('\n')
@@ -121,13 +152,20 @@ def autofillversion():
     1.1.4: add stellar age integration
     1.1.5: added Hmag, L*; fixed FEH* problems
     1.2.0: new Exoplanet Archive tables and TAP protocol
+    1.2.1: non-default parameters included; only two Exoplanet Archive queries; RHO* filled in by R*,M*
     '''
-    return dawgie.VERSION(1,2,0)
+    return dawgie.VERSION(1,2,1)
+
 def autofill(ident, thistarget, out,
              queryurl="https://archive.stsci.edu/hst/search.php?target=",
              action="&action=Search&resolver=SIMBAD&radius=3.0",
              outfmt="&outputformat=CSV&max_records=100000",
              opt="&sci_aec=S"):
+    '''autofill ds'''
+
+    # get Msun and Rsun definitions, for calculating stellar density from M*,R*
+    sscmks = syscore.ssconstants(cgs=True)
+
     out['starID'][thistarget] = ident['starID'][thistarget]
     targetID = [thistarget]
 
@@ -136,7 +174,7 @@ def autofill(ident, thistarget, out,
     querytarget = thistarget.replace(' ', '+')
     queryform = queryurl+querytarget+action+outfmt+opt
     failure = ['target not resolved, continue\n\n', 'no rows found\n\n']
-    framelist = urlrequest.urlopen(queryform).read().decode('utf-8')
+    with urltrick(queryform) as temp: framelist = temp.decode('utf-8')
     if framelist not in failure:
         framelist = framelist.split('\n')
         header = framelist[0].split(',')
@@ -149,35 +187,27 @@ def autofill(ident, thistarget, out,
             pidlist.append(row[pidindex])
             aliaslist.append(row[aliasindex])
             pass
-        pidlist = [pid for pid in set(pidlist)]
-        aliaslist = [alias for alias in set(aliaslist)]
+        pidlist = list(set(pidlist))
+        aliaslist = list(set(aliaslist))
         out['starID'][thistarget]['aliases'].extend(aliaslist)
         out['starID'][thistarget]['PID'].extend(pidlist)
         solved = True
         out['STATUS'].append(True)
         pass
     solved = True  # target list autofill KP
-    # AUTOFILL WITH NEXSCI EXOPLANET TABLE ---------------------------
+
+    # AUTOFILL WITH NEXSCI EXOPLANET TABLE, DEFAULTS ONLY ---------------------------
     merged = False
     targetID.extend(ident['starID'][thistarget]['aliases'])
-    response = ident['nexscie']
+    response = ident['nexsciDefaults']
     header = response[0].split(',')
     # list all keys contained in csv
     # using tuples of form (a, b) where a is the key name
     # and then b are the other types of columns for that key
     # that are included
-    matchlist = [('star', []), ('planet', []),
-                 ('update', []), ('ref', []), ('np', []),
-                 ('period', ['err']), ('sma', ['err']),
-                 ('ecc', ['err']), ('inc', ['err']),
-                 ('mass', ['err']), ('rp', ['err']),
-                 ('rho', ['err']), ('teq', ['err']),
-                 ('t0', ['err']), ('impact', ['err']),
-                 ('T*', ['err']), ('M*', ['err']),
-                 ('R*', ['err']), ('L*', ['err']),
-                 ('LOGG*', ['err']),('RHO*', ['err']),
-                 ('FEH*', ['err']),
-                 ('Hmag', ['err'])]
+    # GMR: They are continuously changing the format: creating translatekeys()
+    matchlist = translatekeys(header)
+
     banlist = ['star', 'planet', 'update', 'ref', 'np']
     plist = ['period', 'period_uperr', 'period_lowerr', 'period_ref',
              'sma', 'sma_uperr', 'sma_lowerr', 'sma_ref',
@@ -192,24 +222,37 @@ def autofill(ident, thistarget, out,
     for line in response:
         elem = line.split(',')
         elem = clean_elems(elem)  # remove things such as bounding quotation marks
-        if elem[0] in targetID:
-            out['starID'][thistarget]['PLANETS #'] = elem[4]
-            if elem[1] not in out['starID'][thistarget].keys():
-                out['starID'][thistarget][elem[1]] = {}
-                if 'CREATED' not in out['starID'][thistarget][elem[1]].keys():
-                    out['starID'][thistarget][elem[1]]['CREATED'] = True
+        trgt = elem[header.index('hostname')]
+        if trgt in targetID:
+            out['starID'][thistarget]['PLANETS #'] = elem[header.index('sy_pnum')]
+            thisplanet = elem[header.index('pl_letter')]
+            if thisplanet not in out['starID'][thistarget].keys():
+                # GMR: Init planet dict
+                out['starID'][thistarget][thisplanet] = {}
+                if 'CREATED' not in out['starID'][thistarget][thisplanet].keys():
+                    out['starID'][thistarget][thisplanet]['CREATED'] = True
+                    # GMR: Inits with empty strings
                     null_keys = ['date', 'date_ref']
                     for key in null_keys:
-                        out['starID'][thistarget][elem[1]][key] = ['']
-                    blank_keys = ['period_units', 'period_ref', 'sma_units',
-                                  'sma_ref', 'ecc_units', 'ecc_ref', 'inc_units',
-                                  'inc_ref', 'mass_units', 'mass_ref', 'rp_units',
-                                  'rp_ref', 'rho_units', 'rho_ref', 'teq_units',
-                                  'teq_ref', 't0_units', 't0_ref', 'impact_units',
-                                  'impact_ref']
+                        out['starID'][thistarget][thisplanet][key] = ['']
+                        pass
+                    # GMR: Inits with empty lists
+                    blank_keys = ['period_units', 'period_ref',
+                                  'sma_units', 'sma_ref',
+                                  'ecc_units', 'ecc_ref',
+                                  'inc_units', 'inc_ref',
+                                  'mass_units', 'mass_ref',
+                                  'rp_units', 'rp_ref',
+                                  'rho_units', 'rho_ref',
+                                  'teq_units', 'teq_ref',
+                                  't0_units', 't0_ref',
+                                  'impact_units', 'impact_ref',
+                                  'impact_units', 'impact_ref']
                     for key in blank_keys:
-                        out['starID'][thistarget][elem[1]][key] = []
+                        out['starID'][thistarget][thisplanet][key] = []
+                        pass
                     pass
+                # GMR: Init stellar dict
                 if 'CREATED' not in out['starID'][thistarget].keys():
                     out['starID'][thistarget]['CREATED'] = True
                     out['starID'][thistarget]['date'] = ['']
@@ -226,88 +269,61 @@ def autofill(ident, thistarget, out,
                     out['starID'][thistarget]['LOGG*_ref'] = []
                     out['starID'][thistarget]['RHO*_units'] = []
                     out['starID'][thistarget]['RHO*_ref'] = []
-                    out['starID'][thistarget]['FEH*_units'] = []
                     out['starID'][thistarget]['FEH*_ref'] = []
-                    out['starID'][thistarget]['AGE*'] = ['']
-                    out['starID'][thistarget]['AGE*_uperr'] = ['']
-                    out['starID'][thistarget]['AGE*_lowerr'] = ['']
-                    out['starID'][thistarget]['AGE*_units'] = ['']
-                    out['starID'][thistarget]['AGE*_ref'] = ['']
-                    out['starID'][thistarget]['Hmag_units'] = ['mag']
+                    out['starID'][thistarget]['FEH*_units'] = ['[]']
+                    out['starID'][thistarget]['AGE*'] = []
+                    out['starID'][thistarget]['AGE*_uperr'] = []
+                    out['starID'][thistarget]['AGE*_lowerr'] = []
+                    out['starID'][thistarget]['AGE*_units'] = []
+                    out['starID'][thistarget]['AGE*_ref'] = []
+                    out['starID'][thistarget]['Hmag_units'] = []
                     out['starID'][thistarget]['Hmag_ref'] = []
                     pass
-                ref = elem[3]
+                ref = elem[header.index('pl_refname')]
                 ref = ref.split('</a>')[0]
                 ref = ref.split('target=ref>')[-1]
                 ref = ref.strip()
                 pass
-            idx = 0
-            for keymatch in matchlist:
-                key = keymatch[0]
-                match = keymatch[1]
-                if key not in banlist:
-                    if key in plist:
-                        out_ref = out['starID'][thistarget][elem[1]]
-                        pass
-                    else:
-                        out_ref = out['starID'][thistarget]
-                        pass
+            for idx, keymatch in enumerate(matchlist):
+                if keymatch not in banlist:
+                    # GMR: Planet dict
+                    if keymatch in plist: out_ref = out['starID'][thistarget][thisplanet]
+                    # GMR: Stellar dict
+                    else: out_ref = out['starID'][thistarget]
+                    # Init
+                    if keymatch not in out_ref: out_ref[keymatch] = []
+                    out_ref[keymatch].append(elem[idx])
                     pass
-                    # initialize array if not already defined
-                    keys = [key] + ([key+'_lowerr', key+'_uperr'] if 'err' in match else []) + \
-                            ([key+'_units'] if 'units' in match else [])
-                    for _key in keys:
-                        if _key not in out_ref.keys():
-                            out_ref[_key] = []
-                    already_added = False
-                    if out_ref[key] and out_ref[key][0]:
-                        # ensure only first default value is added
-                        already_added = True
-                    # now add values in proper order
-                    if not already_added:
-                        out_ref[key].append(elem[idx])
-                        if 'err' in match:
-                            # ensure that system.validate will give +/-10% err
-                            null_val = '' if key in plist else '0.0'
-                            if elem[idx+1] or not elem[idx]:
-                                out_ref[key+'_uperr'].append(elem[idx+1])
-                            else: out_ref[key+'_uperr'].append(null_val)
-                            if elem[idx+2] or not elem[idx]:
-                                out_ref[key+'_lowerr'].append(elem[idx+2])
-                            else: out_ref[key+'_lowerr'].append(null_val)
-                        if 'units' in match:
-                            units_idx = idx + (2 if 'err' in match else 0) + 1
-                            out_ref[key+'_units'].append(elem[units_idx])
                 pass
-                # update to start of next key segment
-                idx += 1 + (2 if 'err' in match else 0) + (1 if 'units' in match else 0)
-            out['starID'][thistarget][elem[1]]['period_units'].append('[days]')
-            out['starID'][thistarget][elem[1]]['sma_units'].append('[AU]')
-            out['starID'][thistarget][elem[1]]['ecc_units'].append('[]')
-            out['starID'][thistarget][elem[1]]['inc_units'].append('[degree]')
-            out['starID'][thistarget][elem[1]]['mass_units'].append('[Jupiter mass]')
-            out['starID'][thistarget][elem[1]]['rp_units'].append('[Jupiter radius]')
-            out['starID'][thistarget][elem[1]]['rho_units'].append('[g.cm-3]')
-            out['starID'][thistarget][elem[1]]['teq_units'].append('[K]')
-            out['starID'][thistarget][elem[1]]['t0_units'].append('[Julian Days]')
-            out['starID'][thistarget][elem[1]]['impact_units'].append('[R*]')
+            # GMR: Adding units to the planet dict
+            out['starID'][thistarget][thisplanet]['period_units'].append('[days]')
+            out['starID'][thistarget][thisplanet]['sma_units'].append('[AU]')
+            out['starID'][thistarget][thisplanet]['ecc_units'].append('[]')
+            out['starID'][thistarget][thisplanet]['inc_units'].append('[degree]')
+            out['starID'][thistarget][thisplanet]['mass_units'].append('[Jupiter mass]')
+            out['starID'][thistarget][thisplanet]['rp_units'].append('[Jupiter radius]')
+            out['starID'][thistarget][thisplanet]['rho_units'].append('[g.cm-3]')
+            out['starID'][thistarget][thisplanet]['teq_units'].append('[K]')
+            out['starID'][thistarget][thisplanet]['t0_units'].append('[Julian Days]')
+            out['starID'][thistarget][thisplanet]['impact_units'].append('[R*]')
+            # GMR: Adding refs to the planet dict
             pkeys = [pk for pk in plist if '_' not in pk]
             for pk in pkeys:
-                if out['starID'][thistarget][elem[1]][pk][-1]: addme = ref
+                if out['starID'][thistarget][thisplanet][pk]: addme = ref
                 else: addme = ''
-                out['starID'][thistarget][elem[1]][pk+'_ref'].append(addme)
+                out['starID'][thistarget][thisplanet][pk+'_ref'].append(addme)
                 pass
-            skeys = [sk[0] for sk in matchlist
-                     if sk[0] not in banlist and sk[0] not in plist]
+            # GMR: Adding refs to the stellar dict
+            skeys = [sk for sk in matchlist
+                     if (sk not in banlist) and (sk not in plist) and ('_' not in sk)]
             for sk in skeys:
-                if out['starID'][thistarget][sk][-1]: addme = ref
+                if out['starID'][thistarget][sk]: addme = ref
                 else: addme = ''
-                if out['starID'][thistarget][sk+'_ref'] and \
-                        out['starID'][thistarget][sk+'_ref'][0]:
-                    # ensure only first defined row is added
-                    continue
-                out['starID'][thistarget][sk+'_ref'].append(addme)
+                if not out['starID'][thistarget][sk+'_ref']:
+                    out['starID'][thistarget][sk+'_ref'].append(addme)
+                    pass
                 pass
+            # GMR: Adding units to the stellar dict
             out['starID'][thistarget]['R*_units'].append('[Rsun]')
             out['starID'][thistarget]['M*_units'].append('[Msun]')
             out['starID'][thistarget]['T*_units'].append('[K]')
@@ -315,129 +331,101 @@ def autofill(ident, thistarget, out,
             out['starID'][thistarget]['LOGG*_units'].append('log10[cm.s-2]')
             out['starID'][thistarget]['RHO*_units'].append('[g.cm-3]')
             out['starID'][thistarget]['AGE*_units'].append('[Gyr]')
-            out['starID'][thistarget]['FEH*_units'].append('[Fe/H]')
+            out['starID'][thistarget]['Hmag_units'].append('[mag]')
             merged = True
             pass
         pass
-    # AUTOFILL WITH NEXSCI EXTENDED TABLE ----------------------------
-    response = ident['nexscix']
+    # AUTOFILL WITH NEXSCI FULL TABLE, INCLUDING NON-DEFAULTS ----------------------------
+    response = ident['nexsciFulltable']
     header = response[0].split(',')
-    matchkey = ['star', 'planet', 'ref', 'date', 'inc', 'inc_uperr', 'inc_lowerr',
-                't0', 't0_uperr', 't0_lowerr',
-                'LOGG*', 'LOGG*_uperr', 'LOGG*_lowerr',
-                'FEH*', 'FEH*_uperr', 'FEH*_lowerr']
+    matchkey = translatekeys(header)
     for line in response:
         elem = line.split(',')
         elem = clean_elems(elem)
-        if elem[0] in targetID:
-            ref = elem[2]
+        if len(elem) != len(header):
+            trgt = 'YOLO'
+            thisplanet = 'CARPEDIEM'
+            pass
+        else:
+            trgt = elem[header.index('hostname')]
+            thisplanet = elem[header.index('pl_letter')]
+            pass
+        if trgt in targetID:
+            ref = elem[header.index('pl_refname')]
             ref = ref.split('</a>')[0]
             ref = ref.split('target=ref>')[-1]
             ref = ref.strip()
-            numdate = elem[3]
+            numdate = elem[header.index('rowupdate')]
             strnum = ''
             for n in re.split('-|:| ', numdate): strnum = strnum+n.strip()
             numdate = float(strnum)
-            for addme,key in zip(elem,matchkey):
-                if key not in banlist and addme:
+            for addme, key in zip(elem, matchkey):
+                if key not in banlist:
                     if key in plist:
-                        test = out['starID'][thistarget][elem[1]][key]
+                        test = out['starID'][thistarget][thisplanet][key]
                         refkey = key.split('_')[0]
-                        tref = out['starID'][thistarget][elem[1]][refkey+'_ref']
-                        updt = (key+'updt') in out['starID'][thistarget][elem[1]].keys()
-                        if updt:
-                            lupdt = out['starID'][thistarget][elem[1]][key+'updt']
-                            if numdate > lupdt: test.append('')
-                            pass
-                        if len(test[-1]) < 1 and not test[0]:
-                            test.append(addme)
-                            tref.append(ref)
-                            out['starID'][thistarget][elem[1]][key+'updt'] = numdate
-                            pass
+                        tref = out['starID'][thistarget][thisplanet][refkey+'_ref']
+                        test.append(addme)
+                        tref.append(ref)
                         pass
                     else:
                         test = out['starID'][thistarget][key]
                         refkey = key.split('_')[0]
                         tref = out['starID'][thistarget][refkey+'_ref']
-                        updt = (key+'updt') in out['starID'][thistarget]
-                        if updt:
-                            lupdt = out['starID'][thistarget][key+'updt']
-                            if numdate > lupdt: test.append('')
-                            pass
-                        if len(test[-1]) < 1 and not test[0]:
-                            test.append(addme)
-                            tref.append(ref)
-                            out['starID'][thistarget][key+'updt'] = numdate
-                            pass
+                        test.append(addme)
+                        tref.append(ref)
                         pass
                     pass
                 pass
             merged = True
             pass
         pass
-    # AUTOFILL WITH NEXSCI COMPOSITE TABLE ---------------------------
-    response = ident['nexscic']
-    header = response[0].split(',')
-    matchkey = ['star', 'planet', 'date',
-                'period', 'period_uperr', 'period_lowerr',
-                'period_ref',
-                'sma', 'sma_uperr', 'sma_lowerr', 'sma_ref',
-                'ecc', 'ecc_uperr', 'ecc_lowerr', 'ecc_ref',
-                'rp', 'rp_uperr', 'rp_lowerr', 'rp_ref',
-                'teq', 'teq_uperr', 'teq_lowerr', 'teq_ref',
-                'T*', 'T*_uperr', 'T*_lowerr', 'T*_ref',
-                'R*', 'R*_uperr', 'R*_lowerr', 'R*_ref',
-                'L*', 'L*_uperr', 'L*_lowerr', 'L*_ref',
-                'LOGG*', 'LOGG*_uperr', 'LOGG*_lowerr', 'LOGG*_ref',
-                'FEH*', 'FEH*_uperr', 'FEH*_lowerr','FEH*_ref',
-                'AGE*', 'AGE*_uperr', 'AGE*_lowerr', 'AGE*_ref']
-    for line in response:
-        elem = line.split(',')
-        elem = clean_elems(elem)
-        if elem[0] in targetID:
-            numdate = elem[2]
-            strnum = ''
-            for n in re.split('-|:| ', numdate): strnum = strnum+n.strip()
-            numdate = float(strnum)
-            for addme,key in zip(elem,matchkey):
-                if '_ref' in key and addme:
-                    addme = addme.split('</a>')[0]
-                    addme = addme.split('target=ref>')[-1]
-                    addme = addme.strip()
-                    pass
-                if 'target=_blank>Calculated Value' in addme:
-                    addme = 'NEXSCI'
-                    pass
-                if key not in banlist and addme:
-                    if key in plist:
-                        test = out['starID'][thistarget][elem[1]][key]
-                        updt = (key+'updt') in out['starID'][thistarget][elem[1]].keys()
-                        if updt:
-                            lupdt = out['starID'][thistarget][elem[1]][key+'updt']
-                            if numdate > lupdt: test.append('')
-                            pass
-                        if len(test[-1]) < 1 and not test[0]:
-                            test.append(addme)
-                            out['starID'][thistarget][elem[1]][key+'updt'] = numdate
-                            pass
-                        pass
-                    else:
-                        test = out['starID'][thistarget][key]
-                        updt = (key+'updt') in out['starID'][thistarget]
-                        if updt:
-                            lupdt = out['starID'][thistarget][key+'updt']
-                            if numdate > lupdt: test.append('')
-                            pass
-                        if len(test[-1]) < 1 and not test[0]:
-                            test.append(addme)
-                            out['starID'][thistarget][key+'updt'] = numdate
-                            pass
-                        pass
-                    pass
-                pass
-            merged = True
-            pass
-        pass
+
+    # RHO* is a mandatory field
+    # if stellar density is blank, fill it in based on R* and M*
+    RHO_calculated_here = []
+    RHO_lowerr_calculated_here = []
+    RHO_uperr_calculated_here = []
+    for R,Rerr1,Rerr2, M,Merr1,Merr2, RHO,RHOerr1,RHOerr2 in zip(
+            out['starID'][thistarget]['R*'],
+            out['starID'][thistarget]['R*_lowerr'],
+            out['starID'][thistarget]['R*_uperr'],
+            out['starID'][thistarget]['M*'],
+            out['starID'][thistarget]['M*_lowerr'],
+            out['starID'][thistarget]['M*_uperr'],
+            out['starID'][thistarget]['RHO*'],
+            out['starID'][thistarget]['RHO*_lowerr'],
+            out['starID'][thistarget]['RHO*_uperr']):
+        # check for blank stellar density
+        #  (but only update it if M* and R* are both defined)
+        if RHO=='' and R!='' and M!='':
+            newRHO = float(M)*sscmks['Msun'] / \
+                (4.*numpy.pi/3. * (float(R)*sscmks['Rsun'])**3)
+            RHO_calculated_here.append(str(newRHO))
+
+            # also fill in the uncertainty on RHO, based on R,M uncertainties
+            if Rerr1=='' or Merr1=='':
+                RHO_lowerr_calculated_here.append('')
+            else:
+                newRHOfractionalError1 = -numpy.sqrt((3.*float(Rerr1)/float(R))**2 +
+                                                     (float(Merr1)/float(M))**2)
+                RHO_lowerr_calculated_here.append(str(newRHO * newRHOfractionalError1))
+            if Rerr2=='' or Merr2=='':
+                RHO_uperr_calculated_here.append('')
+            else:
+                newRHOfractionalError2 = numpy.sqrt((3.*float(Rerr2)/float(R))**2 +
+                                                    (float(Merr2)/float(M))**2)
+                RHO_uperr_calculated_here.append(str(newRHO * newRHOfractionalError2))
+        else:
+            RHO_calculated_here.append(RHO)
+            RHO_lowerr_calculated_here.append(RHOerr1)
+            RHO_uperr_calculated_here.append(RHOerr2)
+
+    if out['starID'][thistarget]['RHO*'] != RHO_calculated_here:
+        out['starID'][thistarget]['RHO*'] = RHO_calculated_here
+        out['starID'][thistarget]['RHO*_lowerr'] = RHO_lowerr_calculated_here
+        out['starID'][thistarget]['RHO*_uperr'] = RHO_uperr_calculated_here
+
     # FINALIZE OUTPUT ------------------------------------------------
     if merged:
         candidates = ['b','c','d','e','f','g','h','i','j','k','l',
@@ -460,17 +448,114 @@ def autofill(ident, thistarget, out,
     return status
 
 def clean_elem(elem):
-    # remove formatting on a single element from TAP API
-    if not elem:
-        return elem
-    if elem[0] == '"' and elem[-1] == '"':
-        return elem[1:-1]
+    '''remove formatting on a single element from TAP API'''
+    if not elem: return elem
+    if elem[0] == '"' and elem[-1] == '"': return elem[1:-1]
     return elem
 
 def clean_elems(elems):
-    # removes formatting symbols and prepares values for saving
+    '''removes formatting symbols and prepares values for saving'''
     return [clean_elem(elem) for elem in elems]
 
+def translatekeys(header):
+    '''GMR: Translate NEXSCI keywords into Excalibur ones'''
+    matchlist = []
+    for key in header:
+        thiskey = key
+        if 'pl_hostname' == thiskey: xclbrkey = 'star'
+        elif 'hostname' == thiskey: xclbrkey = 'star'
+        elif 'pl_letter' == thiskey: xclbrkey = 'planet'
+        elif 'pl_reflink' == thiskey: xclbrkey = 'ref'
+        elif 'rowupdate' == thiskey: xclbrkey = 'update'
+        elif 'pl_def_refname' == thiskey: xclbrkey = 'ref'
+        elif 'pl_refname' == thiskey: xclbrkey = 'ref'
+        elif 'pl_pnum' == thiskey: xclbrkey = 'np'
+        elif 'sy_pnum' == thiskey: xclbrkey = 'np'
+        elif 'pl_orbper' == thiskey: xclbrkey = 'period'
+        elif 'pl_orbpererr1' == thiskey: xclbrkey = 'period_uperr'
+        elif 'pl_orbpererr2' == thiskey: xclbrkey = 'period_lowerr'
+        elif 'pl_orbperreflink' == thiskey: xclbrkey = 'period_ref'
+        elif 'pl_orbsmax' == thiskey: xclbrkey = 'sma'
+        elif 'pl_smax' == thiskey: xclbrkey = 'sma'
+        elif 'pl_orbsmaxerr1' == thiskey: xclbrkey = 'sma_uperr'
+        elif 'pl_smaxerr1' == thiskey: xclbrkey = 'sma_uperr'
+        elif 'pl_orbsmaxerr2' == thiskey: xclbrkey = 'sma_lowerr'
+        elif 'pl_smaxerr2' == thiskey: xclbrkey = 'sma_lowerr'
+        elif 'pl_smaxreflink' == thiskey: xclbrkey = 'sma_ref'
+        elif 'pl_orbeccen' == thiskey: xclbrkey = 'ecc'
+        elif 'pl_eccen' == thiskey: xclbrkey = 'ecc'
+        elif 'pl_orbeccenerr1' == thiskey: xclbrkey = 'ecc_uperr'
+        elif 'pl_eccenerr1' == thiskey: xclbrkey = 'ecc_uperr'
+        elif 'pl_orbeccenerr2' == thiskey: xclbrkey = 'ecc_lowerr'
+        elif 'pl_eccenerr2' == thiskey: xclbrkey = 'ecc_lowerr'
+        elif 'pl_eccenreflink' == thiskey: xclbrkey = 'ecc_ref'
+        elif 'pl_orbincl' == thiskey: xclbrkey = 'inc'
+        elif 'pl_orbinclerr1' == thiskey: xclbrkey = 'inc_uperr'
+        elif 'pl_orbinclerr2' == thiskey: xclbrkey = 'inc_lowerr'
+        elif 'pl_bmassj' == thiskey: xclbrkey = 'mass'
+        elif 'pl_bmassjerr1' == thiskey: xclbrkey = 'mass_uperr'
+        elif 'pl_bmassjerr2' == thiskey: xclbrkey = 'mass_lowerr'
+        elif 'pl_radj' == thiskey: xclbrkey = 'rp'
+        elif 'pl_radjerr1' == thiskey: xclbrkey = 'rp_uperr'
+        elif 'pl_radjerr2' == thiskey: xclbrkey = 'rp_lowerr'
+        elif 'pl_radreflink' == thiskey: xclbrkey = 'rp_ref'
+        elif 'pl_dens' == thiskey: xclbrkey = 'rho'
+        elif 'pl_denserr1' == thiskey: xclbrkey = 'rho_uperr'
+        elif 'pl_denserr2' == thiskey: xclbrkey = 'rho_lowerr'
+        elif 'pl_eqt' == thiskey: xclbrkey = 'teq'
+        elif 'pl_eqterr1' == thiskey: xclbrkey = 'teq_uperr'
+        elif 'pl_eqterr2' == thiskey: xclbrkey = 'teq_lowerr'
+        elif 'pl_eqtreflink' == thiskey: xclbrkey = 'teq_ref'
+        elif 'pl_tranmid' == thiskey: xclbrkey = 't0'
+        elif 'pl_tranmiderr1' == thiskey: xclbrkey = 't0_uperr'
+        elif 'pl_tranmiderr2' == thiskey: xclbrkey = 't0_lowerr'
+        elif 'pl_imppar' == thiskey: xclbrkey = 'impact'
+        elif 'pl_impparerr1' == thiskey: xclbrkey = 'impact_uperr'
+        elif 'pl_impparerr2' == thiskey: xclbrkey = 'impact_lowerr'
+        elif 'st_teff' == thiskey: xclbrkey = 'T*'
+        elif 'st_tefferr1' == thiskey: xclbrkey = 'T*_uperr'
+        elif 'st_tefferr2' == thiskey: xclbrkey = 'T*_lowerr'
+        elif 'st_teffreflink' == thiskey: xclbrkey = 'T*_ref'
+        elif 'st_refname' == thiskey: xclbrkey = 'ref'
+        elif 'st_mass' == thiskey: xclbrkey = 'M*'
+        elif 'st_masserr1' == thiskey: xclbrkey = 'M*_uperr'
+        elif 'st_masserr2' == thiskey: xclbrkey = 'M*_lowerr'
+        elif 'st_rad' == thiskey: xclbrkey = 'R*'
+        elif 'st_raderr1' == thiskey: xclbrkey = 'R*_uperr'
+        elif 'st_raderr2' == thiskey: xclbrkey = 'R*_lowerr'
+        elif 'st_radreflink' == thiskey: xclbrkey = 'R*_ref'
+        elif 'st_lum' == thiskey: xclbrkey = 'L*'
+        elif 'st_lumerr1' == thiskey: xclbrkey = 'L*_uperr'
+        elif 'st_lumerr2' == thiskey: xclbrkey = 'L*_lowerr'
+        elif 'st_logg' == thiskey: xclbrkey = 'LOGG*'
+        elif 'st_loggerr1' == thiskey: xclbrkey = 'LOGG*_uperr'
+        elif 'st_loggerr2' == thiskey: xclbrkey = 'LOGG*_lowerr'
+        elif 'st_loggreflink' == thiskey: xclbrkey = 'LOGG*_ref'
+        elif 'st_dens' == thiskey: xclbrkey = 'RHO*'
+        elif 'st_denserr1' == thiskey: xclbrkey = 'RHO*_uperr'
+        elif 'st_denserr2' == thiskey: xclbrkey = 'RHO*_lowerr'
+        elif 'st_metfe' == thiskey: xclbrkey = 'FEH*'
+        elif 'st_met' == thiskey: xclbrkey = 'FEH*'
+        elif 'st_metfeerr1' == thiskey: xclbrkey = 'FEH*_uperr'
+        elif 'st_meterr1' == thiskey: xclbrkey = 'FEH*_uperr'
+        elif 'st_metfeerr2' == thiskey: xclbrkey = 'FEH*_lowerr'
+        elif 'st_meterr2' == thiskey: xclbrkey = 'FEH*_lowerr'
+        elif 'st_metratio' == thiskey: xclbrkey = 'FEH*_units'
+        elif 'st_metreflink' == thiskey: xclbrkey = 'FEH*_ref'
+        elif 'sy_hmag' == thiskey: xclbrkey = 'Hmag'
+        elif 'sy_hmagerr1' == thiskey: xclbrkey = 'Hmag_uperr'
+        elif 'sy_hmagerr2' == thiskey: xclbrkey = 'Hmag_lowerr'
+        elif 'st_age' == thiskey: xclbrkey = 'AGE*'
+        elif 'st_ageerr1' == thiskey: xclbrkey = 'AGE*_uperr'
+        elif 'st_ageerr2' == thiskey: xclbrkey = 'AGE*_lowerr'
+        else: xclbrkey = None
+        if xclbrkey is not None: matchlist.append(xclbrkey)
+        pass
+    if len(matchlist) != len(header):
+        errstr = 'MISSING NEXSCI KEY MAPPING'
+        log.warning('--< TARGET AUTOFILL: %s >--', errstr)
+        pass
+    return matchlist
 # -------------- -----------------------------------------------------
 # -- MAST -- ---------------------------------------------------------
 def mast(selfstart, out, dbs, queryurl, mirror,
@@ -478,14 +563,16 @@ def mast(selfstart, out, dbs, queryurl, mirror,
          action='&action=Search&resolver=SIMBAD&radius=3.0',
          outfmt='&outputformat=CSV&max_records=100000',
          opt='&sci_aec=S'):
+    '''Query and download from MAST'''
     found = False
     temploc = dawgie.context.data_stg
-    targetID = [t for t in selfstart['starID'].keys()]
+    targetID = list(selfstart['starID'].keys())
     querytarget = targetID[0].replace(' ', '+')
     targetID.extend(selfstart['starID'][targetID[0]]['aliases'])
     queryform = queryurl + querytarget + action + outfmt + opt
-    framelist = urlrequest.urlopen(queryform)
-    framelist = framelist.read().decode('utf-8').split('\n')
+    with urlrequest.urlopen(queryform) as temp:
+        framelist = temp.read().decode('utf-8').split('\n')
+        pass
     namelist = []
     instlist = []
     for frame in framelist:
@@ -527,8 +614,9 @@ def mast(selfstart, out, dbs, queryurl, mirror,
 # ---------- ---------------------------------------------------------
 # -- DISK -- ---------------------------------------------------------
 def disk(selfstart, out, diskloc, dbs):
+    '''Query on disk data'''
     merge = False
-    targetID = [t for t in selfstart['starID'].keys()]
+    targetID = list(selfstart['starID'].keys())
     targets = trgedit.targetondisk.__doc__
     targets = targets.split('\n')
     targets = [t.strip() for t in targets if t.replace(' ', '')]
@@ -549,7 +637,7 @@ def disk(selfstart, out, diskloc, dbs):
 # ---------- ---------------------------------------------------------
 # -- DBS COPY -- -----------------------------------------------------
 def dbscp(locations, dbs, out):
-
+    '''Format data into SV'''
     copied = False
     imalist = None
     for loc in locations:
@@ -580,7 +668,7 @@ def dbscp(locations, dbs, out):
             # HST
             if 'SCI' in mainheader.get('FILETYPE',''):
                 keys = [k for k in mainheader.keys() if k != '']
-                keys = [k for k in set(keys)]
+                keys = list(set(keys))
 
                 if 'TELESCOP' in keys: filedict['observatory'] = mainheader['TELESCOP']
                 if 'INSTRUME' in keys: filedict['instrument'] = mainheader['INSTRUME']

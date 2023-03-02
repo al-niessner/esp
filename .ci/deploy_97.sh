@@ -20,15 +20,19 @@ then
     docker save -o ${tempfn} esp_cit:${cit_version} esp_devel:${base_version} esp_base:${base_version} esp_server:${base_version} esp_tools:${base_version} esp_worker:latest
     # install all of the new images
     ssh mentor0 docker load -i ${tempfn}
-    ssh mentor1 docker load -i ${tempfn}
+    ssh mentor0 docker rmi -f esp_server:latest
+    ssh mentor0 docker tag esp_server:${base_version} esp_server:latest
+    #ssh mentor1 docker load -i ${tempfn}
     ssh mentor2 docker load -i ${tempfn}
     ssh mentor3 docker load -i ${tempfn}
     ssh mentor4 docker load -i ${tempfn}
     ssh mentor5 docker load -i ${tempfn}
+    ssh mentor6 docker load -i ${tempfn}
+    ssh mentor7 docker load -i ${tempfn}
     ssh mentor0 docker container prune -f
     ssh mentor0 docker image prune -f
-    ssh mentor1 docker container prune -f
-    ssh mentor1 docker image prune -f
+    #ssh mentor1 docker container prune -f
+    #ssh mentor1 docker image prune -f
     ssh mentor2 docker container prune -f
     ssh mentor2 docker image prune -f
     ssh mentor3 docker container prune -f
@@ -37,6 +41,10 @@ then
     ssh mentor4 docker image prune -f
     ssh mentor5 docker container prune -f
     ssh mentor5 docker image prune -f
+    ssh mentor6 docker container prune -f
+    ssh mentor6 docker image prune -f
+    ssh mentor7 docker container prune -f
+    ssh mentor7 docker image prune -f
     # cleanup
     rm ${tempfn}
     set +x

@@ -1,5 +1,10 @@
+'''data __init__ ds'''
+
 ignore = False
 
-def task (prefix, ps_hint=0, runid=-1, target='__none__'):
-    import excalibur.data.bot as datbot
+# -- IMPORTS -- ------------------------------------------------------
+import excalibur.data.bot as datbot
+# ------------- ------------------------------------------------------
+def task (prefix:str, ps_hint:int=0, runid:int=-1, target:str='__none__'):
+    '''task ds'''
     return datbot.Actor(prefix, ps_hint, runid, target)

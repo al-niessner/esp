@@ -1,3 +1,4 @@
+'''ancillary core ds'''
 # -- IMPORTS -- ------------------------------------------------------
 import dawgie
 
@@ -14,6 +15,7 @@ SV_EXTS = ['_descr', '_units', '_uperr', '_lowerr', '_ref']
 # View README.md for instructions on defining and adding an estimator.
 # NOTE: Estimators are evaluated in the order they are listed..
 def getestimators():
+    '''getestimators ds'''
     # defined as function so it can reference functions defined
     # later in file
     st_estimators = [
@@ -50,10 +52,16 @@ def getestimators():
                     ref='CEA (T=1000K;C/O=solar)'),
         ancestor.HEstimator(),
         ancestor.HmaxEstimator(),
-        PlEstimator(name='ZFOM', units='10^-10',
+        PlEstimator(name='modulation', units='dimensionless',
+                    descr='spectral modulation (CBE)', method=ancestor.pl_modulation,
+                    ref='Zellem et al 2017'),
+        PlEstimator(name='modulation_max', units='dimensionless',
+                    descr='spectral modulation (max)', method=ancestor.pl_modulationmax,
+                    ref='Zellem et al 2017'),
+        PlEstimator(name='ZFOM', units='ppm',
                     descr='Zellem Figure-of-Merit (CBE)', method=ancestor.pl_ZFOM,
                     ref='Zellem et al 2017'),
-        PlEstimator(name='ZFOM_max', units='10^-10',
+        PlEstimator(name='ZFOM_max', units='ppm',
                     descr='Zellem Figure-of-Merit (max)', method=ancestor.pl_ZFOMmax,
                     ref='Zellem et al 2017'),
         PlEstimator(name='v_wind', units='km/s',
@@ -64,20 +72,22 @@ def getestimators():
                     ref='Leblanc et al 1998'),
         PlEstimator(name='M_loss_rate_wind', units='M_Jup/Gyr',
                     descr='Wind-driven mass loss rate', method=ancestor.pl_windMassLoss,
-                    ref='Canto et al 1991')]
-#        PlEstimator(name='M_loss_rate_evap', units='M_Jup/Gyr',
-#                    descr='EUV-driven mass loss rate', method=ancestor.pl_evapMassLoss,
-#                    ref='Estrela et al 2020')
-#           ]
+                    ref='Canto et al 1991'),
+        PlEstimator(name='M_loss_rate_evap', units='M_Jup/Gyr',
+                    descr='EUV-driven mass loss rate', method=ancestor.pl_evapMassLoss,
+                    ref='Estrela et al 2020'),
+        PlEstimator(name='Beta_rad', units='dimensionless',
+                    descr='radiation pressure/gravity',
+                    method=ancestor.pl_beta_rad,
+                    ref='Owens et al 2023')
+    ]
 
     return st_estimators, pl_estimators
 
 # ------------- ------------------------------------------------------
 # -- SV VALIDITY -- --------------------------------------------------
 def checksv(sv):
-    '''
-    N. HUBER-FEELY: Tests for empty SV shell
-    '''
+    '''N. HUBER-FEELY: Tests for empty SV shell'''
     valid = False
     errstring = None
     if sv['STATUS'][-1]: valid = True
@@ -85,11 +95,13 @@ def checksv(sv):
     return valid, errstring
 
 def estimateversion():
-    return dawgie.VERSION(2,0,0)
-
+    '''estimateversion ds'''
+    # return dawgie.VERSION(2,0,0)
+    return dawgie.VERSION(2,1,0)  # checks for blank values; betaRad included
 # ----------------- --------------------------------------------------
 # -- ESTIMATOR EVALUATOR ---------------------------------------------
 def estimate(fin, out):
+    '''estimate ds'''
     st_estimators, pl_estimators = getestimators()
 
     planets = fin['priors']['planets']
@@ -99,20 +111,22 @@ def estimate(fin, out):
         raw_estimate = est.run(fin['priors'], out['data'])
         if raw_estimate is None:  # flag for failed or uncomputed estimator
             continue  # prevent estimator addition
-        elif isinstance(raw_estimate, dict):
+        if isinstance(raw_estimate, dict):
             out['data'][est.name()] = raw_estimate['val']
             if 'uperr' in raw_estimate:
                 out['data'][est.name()+'_uperr'] = raw_estimate['uperr']
             if 'lowerr' in raw_estimate:
                 out['data'][est.name()+'_lowerr'] = raw_estimate['lowerr']
+                pass
+            pass
         else:  # default to add
             out['data'][est.name()] = raw_estimate
         if est.descr():
             out['data'][est.name() + '_descr'] = est.descr()
         if est.units():
             out['data'][est.name() + '_units'] = est.units()
-        if est.ref():
-            out['data'][est.name() + '_ref'] = est.ref()
+        if est.ref(): out['data'][est.name() + '_ref'] = est.ref()
+        pass
 
     # get estimates from each planetary estimator
     out['data']['planets'] = planets
@@ -122,12 +136,15 @@ def estimate(fin, out):
             raw_estimate = est.run(fin['priors'], out['data'], pl)
             if raw_estimate is None:
                 continue  # prevent estimator addition
-            elif isinstance(raw_estimate, dict):
+            if isinstance(raw_estimate, dict):
                 out['data'][pl][est.name()] = raw_estimate['val']
                 if 'uperr' in raw_estimate:
                     out['data'][pl][est.name()+'_uperr'] = raw_estimate['uperr']
+                    pass
                 if 'lowerr' in raw_estimate:
                     out['data'][pl][est.name()+'_lowerr'] = raw_estimate['lowerr']
+                    pass
+                pass
             else:  # default to add
                 out['data'][pl][est.name()] = raw_estimate
             if est.descr():

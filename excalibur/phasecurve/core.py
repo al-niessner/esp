@@ -1,3 +1,4 @@
+'''phasecurve core ds'''
 # -- IMPORTS -- ------------------------------------------------------
 import io
 import copy
@@ -40,10 +41,14 @@ class LDPSet(ldtk.LDPSet):
     A. NIESSNER: INLINE HACK TO ldtk.LDPSet
     '''
     @staticmethod
-    def is_mime(): return True
+    def is_mime():
+        '''is_mime ds'''
+        return True
 
     @property
-    def profile_mu(self): return self._mu
+    def profile_mu(self):
+        '''profile_mu ds'''
+        return self._mu
     pass
 setattr(ldtk, 'LDPSet', LDPSet)
 setattr(ldtk.ldtk, 'LDPSet', LDPSet)
@@ -139,7 +144,7 @@ def phasecurve_spitzer(nrm, fin, out, selftype, fltr):
     wl= False
     priors = fin['priors'].copy()
     ssc = syscore.ssconstants()
-    planetloop = [pnet for pnet in nrm['data'].keys()]
+    planetloop = list(nrm['data'].keys())
 
     for p in planetloop:
 
@@ -238,12 +243,13 @@ def phasecurve_spitzer(nrm, fin, out, selftype, fltr):
             print(" N neighbors:",nneighbors)
             print(" N datapoints:", len(subt))
 
-            myfit = trncore.pc_fitter(subt, aper, aper_err, tpars, mybounds, syspars, neighbors=nneighbors)
+            myfit = trncore.pc_fitter(subt, aper, aper_err, tpars, mybounds, syspars,
+                                      neighbors=nneighbors)
 
             # copy best fit parameters and uncertainties
             for k in myfit.bounds.keys():
-                print(" {} = {:.6f} +/- {:.6f}".format(k, myfit.parameters[k], myfit.errors[k]))
-
+                print(f" {k} = {myfit.parameters[k]:.6f} +/- {myfit.errors[k]:.6f}")
+                pass
             out['data'][p].append({})
             out['data'][p][ec]['time'] = subt
             out['data'][p][ec]['flux'] = aper

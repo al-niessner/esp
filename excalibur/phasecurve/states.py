@@ -1,3 +1,4 @@
+'''Phasecurve Database Products View'''
 # -- IMPORTS -- ------------------------------------------------------
 import io
 
@@ -10,7 +11,9 @@ import matplotlib.pyplot as plt
 # ------------- ------------------------------------------------------
 # -- SV -- -----------------------------------------------------------
 class NormSV(dawgie.StateVector):
+    '''phasecurve.normalization view'''
     def __init__(self, name):
+        '''__init__ ds'''
         self._version_ = dawgie.VERSION(1,1,0)
         self.__name = name
         self['STATUS'] = excalibur.ValuesList()
@@ -19,9 +22,11 @@ class NormSV(dawgie.StateVector):
         return
 
     def name(self):
+        '''name ds'''
         return self.__name
 
     def view(self, visitor:dawgie.Visitor)->None:
+        '''view ds'''
         if self['STATUS'][-1]:
             for p in self['data'].keys():
                 for v, m in zip(self['data'][p]['vignore'], self['data'][p]['trial']):
@@ -52,7 +57,9 @@ class NormSV(dawgie.StateVector):
     pass
 
 class WhiteLightSV(dawgie.StateVector):
+    '''phasecurve.whitelight view'''
     def __init__(self, name):
+        '''__init__ ds'''
         self._version_ = dawgie.VERSION(1,1,1)
         self.__name = name
         self['STATUS'] = excalibur.ValuesList()
@@ -61,9 +68,11 @@ class WhiteLightSV(dawgie.StateVector):
         return
 
     def name(self):
+        '''name ds'''
         return self.__name
 
     def view(self, visitor:dawgie.Visitor)->None:
+        '''view ds'''
         if self['STATUS'][-1]:
             for p in self['data'].keys():
 
@@ -104,38 +113,10 @@ class WhiteLightSV(dawgie.StateVector):
                         visitor.add_image('...', ' ', self['data'][p][i]['plot_posterior'])
                         visitor.add_image('...', ' ', self['data'][p][i]['plot_pixelmap'])
                         # another centroid timeseries plot?
-
-# class SpectrumSV(dawgie.StateVector):
-#     def __init__(self, name):
-#         self._version_ = dawgie.VERSION(1,1,0)
-#         self.__name = name
-#         self['STATUS'] = excalibur.ValuesList()
-#         self['data'] = excalibur.ValuesDict()
-#         self['STATUS'].append(False)
-#         return
-
-#     def name(self):
-#         return self.__name
-
-#     def view(self, visitor:dawgie.Visitor)->None:
-#         if self['STATUS'][-1]:
-#             for p in self['data'].keys():
-#                 spectrum = np.array(self['data'][p]['ES'])
-#                 specerr = np.array(self['data'][p]['ESerr'])
-#                 specwave = np.array(self['data'][p]['WB'])
-#                 specerr = abs(spectrum**2 - (spectrum + specerr)**2)
-#                 spectrum = spectrum**2
-#                 myfig = plt.figure(figsize=(8,6))
-#                 plt.title(p)
-#                 plt.errorbar(specwave, 1e2*spectrum, fmt='.', yerr=1e2*specerr)
-#                 plt.xlabel(str('Wavelength [$\\mu m$]'))
-#                 plt.ylabel(str('$(R_p/R_*)^2$ [%]'))
-#                 buf = io.BytesIO()
-#                 myfig.savefig(buf, format='png')
-#                 visitor.add_image('...', ' ', buf.getvalue())
-#                 plt.close(myfig)
-#                 pass
-#             pass
-#         pass
-#     pass
+                        pass
+                    pass
+                pass
+            pass
+        return
+    pass
 # -------- -----------------------------------------------------------

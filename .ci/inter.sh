@@ -18,7 +18,7 @@ done
 pn=$(cat .ci/inter.txt.dcp)
 docker build --network host --tag mausoleum:latest - <<EOF
 FROM ${di}
-ENV DOCKER_GIT_REVISION ${aerev}
+ENV DAWGIE_DOCKERIZED_AE_GIT_REVISION ${aerev}
 RUN set -ex && \
     mkdir -p /proj/src/ae/ && \
     /bin/dcp.py --port ${pn} -r excalibur /proj/src/ae

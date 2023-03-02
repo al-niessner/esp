@@ -1,13 +1,17 @@
+'''target.monitor ds'''
 
+# -- IMPORTS -- ------------------------------------------------------
 import email.message
 import logging; log = logging.getLogger(__name__)
 import numpy
 import smtplib
 import math
+# ------------- ------------------------------------------------------
 
 care_about = ['t0']
 
 def _diff (vl):
+    '''_diff ds'''
     if 1 < len (vl):
         try:
             d = numpy.nan
@@ -20,28 +24,29 @@ def _diff (vl):
     return d
 
 def _outlier (vl):
-    # Finds whether first element of vl is within 5 sigma of other elems
+    '''Finds whether first element of vl is within 5 sigma of other elems'''
     if 1 < len (vl):
+        vl = [float(v) for v in vl]
+
         if math.isnan(vl[0]):
             is_outlier = False
         else:
             vl_prev = numpy.array(vl[1:])
             vl_prev = vl_prev[~numpy.isnan(vl_prev)]  # clear all nans
-            if len(vl_prev)<=1:
-                is_outlier = False
-            else:
+            if len(vl_prev) > 1:
                 mean = numpy.mean(vl_prev)
                 std = numpy.std(vl_prev)
-                if abs(vl[0]-mean)>5*std:
-                    is_outlier = True
+                is_outlier = abs(vl[0]-mean)>5*std
+            else: is_outlier = False
     else: is_outlier = False  # only 1 or 0 elems; no outlier can exist
     return is_outlier
 
-def alert (asp:[(str,{str:{}})], known:[], table:[])->([],[],[]):
+def alert (asp:{str:{str:{str:object}}}, known:[], table:[])->([],[],[]):
+    '''alert ds'''
     changes,kwn,tab = [],[],[]
-    for target,svs in sorted (asp, key=lambda t:t[0]):
+    for target in sorted (asp, key=lambda t:t[0]):
         kwn.append (target)
-        tab.append (svs['target.variations_of.parameters']['last'])
+        tab.append (asp[target]['target.variations_of.parameters']['last'])
 
         if target in known:
             index = known.index (target)
@@ -82,12 +87,14 @@ def alert (asp:[(str,{str:{}})], known:[], table:[])->([],[],[]):
         pass
     return changes, kwn, tab
 
-def regress (planet:{},rids:[],tl:[(int,{str:{}})])->({str:float},{str:[]},[]):
-    for i,(rid,svs) in enumerate (tl):
+def regress (planet:{},rids:[],tl:{str:{str:{str:object}}})->({str:float},{str:[]},[]):
+    '''regress ds'''
+    for i,rid in enumerate (tl):
         if rid in rids: break
 
         rids.insert (i,rid)
-        svv = [t for t in svs['target.autofill.parameters']['starID'].values()][0]
+        svv = list(tl[rid]['target.autofill.parameters']['starID'].values())
+        svv = svv[0]
         for p in svv['planets']:
             for ca in care_about:
                 k = '_'.join ([p,ca])
@@ -96,6 +103,9 @@ def regress (planet:{},rids:[],tl:[(int,{str:{}})])->({str:float},{str:[]},[]):
                 pass
             pass
         pass
-    last = dict([(pp, _diff (vl)) for pp,vl in planet.items()])
-    outliers = dict([(pp, _outlier (vl)) for pp,vl in planet.items()])
+    # last = dict([(pp, _diff (vl)) for pp,vl in planet.items()])
+    print (planet.items())
+    last = {pp:_diff (vl) for pp, vl in planet.items()}
+    # outliers = dict([(pp, _outlier (vl)) for pp,vl in planet.items()])
+    outliers = {pp:_outlier (vl) for pp, vl in planet.items()}
     return last,outliers
