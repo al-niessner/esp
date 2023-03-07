@@ -79,8 +79,8 @@ class rlsSV(dawgie.StateVector):
     Model + Data plot
     '''
     def __init__(self, name):
-        '''__init__ ds'''
-        self._version_ = dawgie.VERSION(1,1,0)
+        '''1.1.1: GMR - Fixed view for low model selection preference.'''
+        self._version_ = dawgie.VERSION(1,1,1)
         self.__name = name
         self['STATUS'] = excalibur.ValuesList()
         self['data'] = excalibur.ValuesDict()
@@ -95,21 +95,27 @@ class rlsSV(dawgie.StateVector):
         '''view ds'''
         if self['STATUS'][-1]:
             for p in self['data']:
-                myfig = plt.figure(figsize=(10, 6))
-                plt.imshow(self['data'][p]['modelplot'])
-                plt.axis('off')
-                buf = io.BytesIO()
-                myfig.savefig(buf, format='png')
-                visitor.add_image('...', p+': Atmos results', buf.getvalue())
-                plt.close(myfig)
+                if 'modelplot' in self['data'][p]:
+                    myfig = plt.figure(figsize=(10, 6))
+                    plt.imshow(self['data'][p]['modelplot'])
+                    plt.axis('off')
+                    buf = io.BytesIO()
+                    myfig.savefig(buf, format='png')
+                    visitor.add_image('...', p+': Atmos results', buf.getvalue())
+                    plt.close(myfig)
 
-                myfig = plt.figure(figsize=(20, 15))
-                plt.imshow(self['data'][p]['corrplot'])
-                plt.axis('off')
-                buf = io.BytesIO()
-                myfig.savefig(buf, format='png')
-                visitor.add_image('...', p+': Profiled best model chains', buf.getvalue())
-                plt.close(myfig)
+                    myfig = plt.figure(figsize=(20, 15))
+                    plt.imshow(self['data'][p]['corrplot'])
+                    plt.axis('off')
+                    buf = io.BytesIO()
+                    myfig.savefig(buf, format='png')
+                    visitor.add_image('...', p+': Profiled best model chains',
+                                      buf.getvalue())
+                    plt.close(myfig)
+                    pass
+                else:
+                    visitor.add_declaration(p+': No/Low Evidence for Model Selection')
+                    pass
                 pass
             pass
         else:

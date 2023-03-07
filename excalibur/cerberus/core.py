@@ -68,9 +68,9 @@ def myxsecs(spc, out,
             tips=os.path.join(excalibur.context['data_dir'], 'CERBERUS/TIPS'),
             ciadir=os.path.join(excalibur.context['data_dir'], 'CERBERUS/HITRAN/CIA'),
             exomoldir=os.path.join(excalibur.context['data_dir'], 'CERBERUS/EXOMOL'),
-            knownspecies=['NO', 'CH4','OH', 'C2H2', 'N2', 'N2O', 'O3', 'O2'].copy(),
+            knownspecies=['NO','OH', 'C2H2', 'N2', 'N2O', 'O3', 'O2'].copy(),
             cialist=['H2-H', 'H2-H2', 'H2-He', 'He-H'].copy(),
-            xmspecies=['TIO', 'H2O', 'H2CO', 'HCN', 'CO', 'CO2', 'NH3'].copy(),
+            xmspecies=['TIO', 'H2O', 'H2CO', 'HCN', 'CO', 'CO2', 'NH3', 'CH4'].copy(),
             verbose=False):
     '''
 G. ROUDIER: Builds Cerberus cross section library
@@ -694,6 +694,7 @@ def crbmodel(mixratio, rayleigh, cloudtp, rp0, orbp, xsecs, qtgrid,
         mixratio, fH2, fHe = crbce(p, temp,
                                    C2Or=cheq['CtoO'], X2Hr=cheq['XtoH'],
                                    N2Or=cheq['NtoO'])
+        mixratio['CO2'] = mixratio['NH3']
         mmw, fH2, fHe = getmmw(mixratio, protosolar=False, fH2=fH2, fHe=fHe)
         pass
     else: mmw, fH2, fHe = getmmw(mixratio)
