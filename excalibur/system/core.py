@@ -2,6 +2,14 @@
 # -- IMPORTS -- ------------------------------------------------------
 import logging; log = logging.getLogger(__name__)
 
+# import excalibur.target.edit as trgedit
+# overwrite = trgedit.ppar()
+
+from excalibur.system.autofill import \
+    bestValue, fillUncertainty, \
+    derive_RHOstar_from_M_and_R, derive_SMA_from_P_and_Mstar, \
+    derive_LOGGstar_from_R_and_M, derive_LOGGplanet_from_R_and_M
+
 import numpy as np
 # ------------- ------------------------------------------------------
 # -- SOLAR SYSTEM CONSTANTS -- ---------------------------------------
@@ -42,29 +50,8 @@ G. ROUDIER: IAU 2012
                'Rsun/AU':4.650467260962158e-3,
                'Tsun': 5772}
         pass
+    ssc['day'] = 24.*60.*60.
     return ssc
-# ----------------- --------------------------------------------------
-# -- SELECT THE BEST PARAMETER VALUE ---------------------------------
-def bestValue(values):
-    '''
-    From a list of parameter values, determine the most trustworthy value
-    '''
-
-    if values[0] != '':
-        # step 1: if there is a default value at the start of the list, use that
-        bestvalue = values[0]
-
-    else:
-        # step 2: iterate from the end of the list inward, until getting a non-blank value
-        #   (this assumes that the non-default values have been ordered by publish date,
-        #    such that the end of the list is the most recently published value)
-        bestvalue = ''
-        for value in values:
-            if value != '':
-                bestvalue = value
-
-    return bestvalue
-
 # ---------------------------- ---------------------------------------
 # -- SV VALIDITY -- --------------------------------------------------
 def checksv(sv):
@@ -89,57 +76,107 @@ def buildsp(autofill, out):
     out['starkeys'].extend(autofill['starkeys'])
     out['planetkeys'].extend(autofill['planetkeys'])
     out['exts'].extend(autofill['exts'])
-
-    # REMOVED FROM MANDATORY LIST:  L*, AGE*
+    # REMOVED FROM STELLAR MANDATORY LIST:  L*, AGE*
     #  we could add L* back into the list, if desired (can derive it from R*,T*)
     out['starmdt'].extend(['R*', 'T*', 'FEH*', 'LOGG*', 'M*', 'RHO*', 'Hmag'])
-    out['planetmdt'].extend(['inc', 'period', 'ecc', 'rp', 't0', 'sma', 'mass'])
+    # ADDED TO THE PLANET MANDATORY LIST: logg
+    # out['planetmdt'].extend(['inc', 'period', 'ecc', 'rp', 't0', 'sma', 'mass'])
+    out['planetmdt'].extend(['inc', 'period', 'ecc', 'rp', 't0', 'sma', 'mass', 'logg'])
+    # NOTE: this list of mandatory extensions is not actually used anymore
     out['extsmdt'].extend(['_lowerr', '_uperr'])
+
+    # use stellar mass,radius to fill in blank stellar density
+    RHO_derived, RHO_lowerr_derived, RHO_uperr_derived, RHO_ref_derived = \
+        derive_RHOstar_from_M_and_R(autofill['starID'][target])
+    if autofill['starID'][target]['RHO*'] != RHO_derived:
+        # print('RHO before ',autofill['starID'][target]['RHO*'])
+        # print('RHO derived',RHO_derived)
+        # print('RHO_ref derived',RHO_ref_derived)
+        # print('RHO_ref before ',autofill['starID'][target]['RHO*_ref'])
+        autofill['starID'][target]['RHO*'] = RHO_derived
+        autofill['starID'][target]['RHO*_lowerr'] = RHO_lowerr_derived
+        autofill['starID'][target]['RHO*_uperr'] = RHO_uperr_derived
+        autofill['starID'][target]['RHO*_ref'] = RHO_ref_derived
+
+    # use orbital period, stellar mass to fill in blank semi-major axis
+    for p in autofill['starID'][target]['planets']:
+        sma_derived, sma_lowerr_derived, sma_uperr_derived, sma_ref_derived = \
+            derive_SMA_from_P_and_Mstar(autofill['starID'][target],p)
+        if autofill['starID'][target][p]['sma'] != sma_derived:
+            # print('SMA before ',autofill['starID'][target][p]['sma'])
+            # print('SMA derived',sma_derived)
+            # print('SMA_ref derived',sma_ref_derived)
+            # print('SMA_ref before ',autofill['starID'][target][p]['sma_ref'])
+            autofill['starID'][target][p]['sma'] = sma_derived
+            autofill['starID'][target][p]['sma_lowerr'] = sma_lowerr_derived
+            autofill['starID'][target][p]['sma_uperr'] = sma_uperr_derived
+            autofill['starID'][target][p]['sma_ref'] = sma_ref_derived
+            # exit('test2')
+
+    # use stellar mass and radius to fill in blank stellar log-g
+    logg_derived, logg_lowerr_derived, logg_uperr_derived, logg_ref_derived = \
+        derive_LOGGstar_from_R_and_M(autofill['starID'][target])
+    if autofill['starID'][target]['LOGG*'] != logg_derived:
+        # print('logg* before ',autofill['starID'][target]['LOGG*'])
+        # print('logg* derived',logg_derived)
+        # print('logg*_ref derived',logg_ref_derived)
+        # print('logg*_ref before ',autofill['starID'][target]['LOGG*_ref'])
+        autofill['starID'][target]['LOGG*'] = logg_derived
+        autofill['starID'][target]['LOGG*_lowerr'] = logg_lowerr_derived
+        autofill['starID'][target]['LOGG*_uperr'] = logg_uperr_derived
+        autofill['starID'][target]['LOGG*_ref'] = logg_ref_derived
+        # exit('test3')
+
+    # use planet mass and radius to fill in blank planetary log-g
+    for p in autofill['starID'][target]['planets']:
+        logg_derived, logg_lowerr_derived, logg_uperr_derived, logg_ref_derived = \
+            derive_LOGGplanet_from_R_and_M(autofill['starID'][target],p)
+        # this one is different from the previous,
+        #  in that the 'logg' field doesn't exist yet
+        if 'logg' in autofill['starID'][target][p].keys():
+            print('ERROR: logg field shouldnt exist yet')
+        if 'mass' not in autofill['starID'][target][p].keys():
+            print('ERROR: mass field should exist already')
+        # if autofill['starID'][target][p]['logg'] != logg_derived:
+        # print('logg before ',autofill['starID'][target][p]['logg'])
+        # print('logg derived',logg_derived)
+        # print('logg_ref derived',logg_ref_derived)
+        # print('logg_ref before ',autofill['starID'][target][p]['logg_ref'])
+        autofill['starID'][target][p]['logg'] = logg_derived
+        autofill['starID'][target][p]['logg_lowerr'] = logg_lowerr_derived
+        autofill['starID'][target][p]['logg_uperr'] = logg_uperr_derived
+        autofill['starID'][target][p]['logg_ref'] = logg_ref_derived
+        autofill['starID'][target][p]['logg_ref'] = logg_ref_derived
+        autofill['starID'][target][p]['logg_units'] = ['log10[cm.s-2]']*len(logg_derived)
+        # exit('test4')
+
     for lbl in out['starmdt']:
         # Retrocompatibility
         try:
             values = autofill['starID'][target][lbl].copy()
-            # old version would just take the last of the values
-            #  (when filling in with non-default values, they are ordered by timestamp)
-            # new selection takes the first value, if non-blank; otherwise from the end
-            newValue = bestValue(values)
-            # oldValue = values[-1]
-            # if oldValue!=newValue:
-            #    print('bestValue() results in a changed value',lbl,oldValue,newValue)
-            value = newValue
-            pass
-        except KeyError: value = ''
+            uperrs = autofill['starID'][target][lbl+'_uperr'].copy()
+            lowerrs = autofill['starID'][target][lbl+'_lowerr'].copy()
+            refs = autofill['starID'][target][lbl+'_ref'].copy()
+            value,uperr,lowerr,ref = bestValue(values,uperrs,lowerrs,refs)
+        except KeyError:
+            value = ''
+            uperr = ''
+            lowerr = ''
+            ref = ''
         if value.__len__() > 0:
             if lbl=='spTyp':
                 out['priors'][lbl] = value
-                for ext in out['extsmdt']:
-                    out['priors'][lbl+ext] = ''
             else:
                 out['priors'][lbl] = float(value)
-                for ext in out['extsmdt']:
-                    values = autofill['starID'][target][lbl+ext].copy()
-                    value = bestValue(values)
-
-                    if value.__len__() > 0:
-                        fillvalue = float(value)
-                        if ('lowerr' in ext) and (fillvalue == 0):
-                            fillvalue = out['priors'][lbl]*(-1e-1)
-                            pass
-                        if ('uperr' in ext) and (fillvalue == 0):
-                            fillvalue = out['priors'][lbl]*(1e-1)
-                            pass
-                        out['priors'][lbl+ext] = fillvalue
-                        pass
-                    else:
-                        out['priors'][lbl+ext] = out['priors'][lbl]/1e1
-                        out['autofill'].append(lbl+ext)
-                        pass
+            out['priors'][lbl+'_ref'] = ref
+            fillvalue,autofilled = fillUncertainty(lbl,value,uperr,'uperr')
+            if autofilled: out['autofill'].append(lbl+'_uperr')
+            out['priors'][lbl+'_uperr'] = fillvalue
+            fillvalue,autofilled = fillUncertainty(lbl,value,lowerr,'lowerr')
+            if autofilled: out['autofill'].append(lbl+'_lowerr')
+            out['priors'][lbl+'_lowerr'] = fillvalue
             strval = autofill['starID'][target][lbl+'_units'].copy()
-            strval = strval[-1]
-            out['priors'][lbl+'_units'] = strval
-            strval = autofill['starID'][target][lbl+'_ref'].copy()
-            strval = strval[-1]
-            out['priors'][lbl+'_ref'] = strval
+            out['priors'][lbl+'_units'] = strval[0]
             pass
         else:
             out['priors'][lbl] = ''
@@ -151,64 +188,80 @@ def buildsp(autofill, out):
     if ('LOGG*' in out['needed']) and ('R*' not in out['needed']):
         radstar = (out['priors']['R*'])*(ssc['Rsun'])
         values = autofill['starID'][target]['RHO*'].copy()
-        value = bestValue(values)
+        uperrs = autofill['starID'][target]['RHO*_uperr'].copy()
+        lowerrs = autofill['starID'][target]['RHO*_lowerr'].copy()
+        refs = autofill['starID'][target]['RHO*_ref'].copy()
+        value,uperr,lowerr,ref = bestValue(values,uperrs,lowerrs,refs)
         if value.__len__() > 0:
+            # exit('THIS SHOULDNT BE NEEDED ANYMORE1')
+            print('THIS SHOULDNT BE NEEDED ANYMORE1')
             rho = float(value)
             g = 4e0*np.pi*(ssc['G'])*rho*radstar/3e0
             out['priors']['LOGG*'] = np.log10(g)
             out['autofill'].append('LOGG*')
             index = out['needed'].index('LOGG*')
             out['needed'].pop(index)
-            for ext in out['extsmdt']:
-                out['priors']['LOGG*'+ext] = np.log10(g)/1e1
-                out['autofill'].append('LOGG*'+ext)
-                pass
+            # note that the RHO* uncertainty is not used (nor R* uncertainty)
+            fillvalue,autofilled = fillUncertainty('LOGG*',np.log10(g),'','uperr')
+            out['priors']['LOGG*_uperr'] = fillvalue
+            if autofilled: out['autofill'].append('LOGG*_uperr')
+            fillvalue,autofilled = fillUncertainty('LOGG*',np.log10(g),'','lowerr')
+            out['priors']['LOGG*_lowerr'] = fillvalue
+            if autofilled: out['autofill'].append('LOGG*_lowerr')
+
             strval = autofill['starID'][target]['LOGG*_units'].copy()
-            strval = strval[-1]
-            out['priors']['LOGG*_units'] = strval
+            out['priors']['LOGG*_units'] = strval[-1]
             out['priors']['LOGG*_ref'] = 'System Prior Auto Fill'
             pass
         values = autofill['starID'][target]['M*'].copy()
-        value = bestValue(values)
+        uperrs = autofill['starID'][target]['M*_uperr'].copy()
+        lowerrs = autofill['starID'][target]['M*_lowerr'].copy()
+        refs = autofill['starID'][target]['M*_ref'].copy()
+        value,uperr,lowerr,ref = bestValue(values,uperrs,lowerrs,refs)
         if (value.__len__() > 0) and ('LOGG*' in out['needed']):
+            # exit('THIS SHOULDNT BE NEEDED ANYMORE2')
+            print('THIS SHOULDNT BE NEEDED ANYMORE2')
             mass = float(value)*ssc['Msun']
             g = (ssc['G'])*mass/(radstar**2)
             out['priors']['LOGG*'] = np.log10(g)
             out['autofill'].append('LOGG*')
             index = out['needed'].index('LOGG*')
             out['needed'].pop(index)
-            for ext in out['extsmdt']:
-                out['priors']['LOGG*'+ext] = np.log10(g)/1e1
-                out['autofill'].append('LOGG*'+ext)
-                pass
+            # note that the M* uncertainty is not used (nor R* uncertainty)
+            fillvalue,autofilled = fillUncertainty('LOGG*',np.log10(g),'','uperr')
+            out['priors']['LOGG*_uperr'] = fillvalue
+            if autofilled: out['autofill'].append('LOGG*_uperr')
+            fillvalue,autofilled = fillUncertainty('LOGG*',np.log10(g),'','lowerr')
+            out['priors']['LOGG*_lowerr'] = fillvalue
+            if autofilled: out['autofill'].append('LOGG*_lowerr')
+
             strval = autofill['starID'][target]['LOGG*_units'].copy()
-            strval = strval[-1]
-            out['priors']['LOGG*_units'] = strval
+            out['priors']['LOGG*_units'] = strval[-1]
             out['priors']['LOGG*_ref'] = 'System Prior Auto Fill'
             pass
         pass
     for p in out['priors']['planets']:
         for lbl in out['planetmdt']:
             values = autofill['starID'][target][p][lbl].copy()
-            value = bestValue(values)
+            uperrs = autofill['starID'][target][p][lbl+'_uperr'].copy()
+            lowerrs = autofill['starID'][target][p][lbl+'_lowerr'].copy()
+            refs = autofill['starID'][target][p][lbl+'_ref'].copy()
+            value,uperr,lowerr,ref = bestValue(values,uperrs,lowerrs,refs)
+            # print('')
+            # print(lbl)
+            # print(value)
+            # print(values)
             if value.__len__() > 0:
                 out['priors'][p][lbl] = float(value)
-                for ext in out['extsmdt']:
-                    values = autofill['starID'][target][p][lbl+ext].copy()
-                    value = bestValue(values)
-                    if value.__len__() > 0: out['priors'][p][lbl+ext] = float(value)
-                    else:
-                        err = out['priors'][p][lbl]/1e1
-                        out['priors'][p][lbl+ext] = err
-                        out['autofill'].append(p+':'+lbl+ext)
-                        pass
-                    pass
+                out['priors'][p][lbl+'_ref'] = ref
+                err,autofilled = fillUncertainty(lbl,value,uperr,'uperr')
+                if autofilled: out['autofill'].append(p+':'+lbl+'_uperr')
+                out['priors'][p][lbl+'_uperr'] = err
+                err,autofilled = fillUncertainty(lbl,value,lowerr,'lowerr')
+                if autofilled: out['autofill'].append(p+':'+lbl+'_lowerr')
+                out['priors'][p][lbl+'_lowerr'] = err
                 strval = autofill['starID'][target][p][lbl+'_units'].copy()
-                strval = strval[-1]
-                out['priors'][p][lbl+'_units'] = strval
-                strval = autofill['starID'][target][p][lbl+'_ref'].copy()
-                strval = strval[-1]
-                out['priors'][p][lbl+'_ref'] = strval
+                out['priors'][p][lbl+'_units'] = strval[-1]
                 pass
             else:
                 out['priors'][p][lbl] = ''
@@ -222,22 +275,26 @@ def buildsp(autofill, out):
             index = out['needed'].index(p+':ecc')
             out['needed'].pop(index)
             strval = autofill['starID'][target][p]['ecc_units'].copy()
-            strval = strval[-1]
-            out['priors'][p]['ecc_units'] = strval
+            out['priors'][p]['ecc_units'] = strval[-1]
             out['priors'][p]['ecc_ref'] = 'System Prior Auto Fill'
-            for ext in out['extsmdt']:
-                err = 1e-10
-                out['priors'][p]['ecc'+ext] = err
-                out['autofill'].append(p+':ecc'+ext)
-                pass
-            pass
+            err,autofilled = fillUncertainty('ecc',0,'','uperr')
+            out['priors'][p]['ecc_uperr'] = err
+            if autofilled: out['autofill'].append(p+':ecc_uperr')
+            err,autofilled = fillUncertainty('ecc',0,'','lowerr')
+            out['priors'][p]['ecc_lowerr'] = err
+            if autofilled: out['autofill'].append(p+':ecc_lowerr')
         pincnd = (p+':inc') in out['needed']
         psmain = (p+':sma') not in out['needed']
         rstarin = 'R*' not in out['needed']
         if pincnd and psmain and rstarin:
             values = autofill['starID'][target][p]['impact'].copy()
-            value = bestValue(values)
+            uperrs = autofill['starID'][target][p]['impact_uperr'].copy()
+            lowerrs = autofill['starID'][target][p]['impact_lowerr'].copy()
+            refs = autofill['starID'][target][p]['impact_ref'].copy()
+            value,uperr,lowerr,ref = bestValue(values,uperrs,lowerrs,refs)
             if value.__len__() > 0:
+                # exit('THIS SHOULDNT BE NEEDED ANYMORE3')
+                print('THIS SHOULDNT BE NEEDED ANYMORE3')
                 sininc = float(value)*(out['priors']['R*'])*ssc['Rsun/AU']/(out['priors'][p]['sma'])
                 inc = 9e1 - np.arcsin(sininc)*18e1/np.pi
                 out['priors'][p]['inc'] = inc
@@ -245,15 +302,14 @@ def buildsp(autofill, out):
                 index = out['needed'].index(p+':inc')
                 out['needed'].pop(index)
                 strval = autofill['starID'][target][p]['inc_units'].copy()
-                strval = strval[-1]
-                out['priors'][p]['inc_units'] = strval
+                out['priors'][p]['inc_units'] = strval[-1]
                 out['priors'][p]['inc_ref'] = 'System Prior Auto Fill'
-                for ext in out['extsmdt']:
-                    err = inc/1e1
-                    if inc + err > 9e1: err = (9e1 - inc)
-                    out['priors'][p]['inc'+ext] = err
-                    out['autofill'].append(p+':inc'+ext)
-                    pass
+                fillValue,autofilled = fillUncertainty('inc',inc,'','uperr')
+                out['priors'][p]['inc_uperr'] = fillValue
+                if autofilled: out['autofill'].append(p+':inc_uperr')
+                fillValue,autofilled = fillUncertainty('inc',inc,'','lowerr')
+                out['priors'][p]['inc_lowerr'] = fillValue
+                if autofilled: out['autofill'].append(p+':inc_lowerr')
                 pass
             pass
         if p+':inc' in out['needed']:
@@ -264,27 +320,16 @@ def buildsp(autofill, out):
             out['needed'].pop(index)
             out['priors'][p]['inc_units'] = '[degree]'
             out['priors'][p]['inc_ref'] = 'System Prior Auto Fill'
-            for ext in out['extsmdt']:
-                err = inc/1e1
-                if inc + err > 9e1: err = (9e1 - inc)
-                out['priors'][p]['inc'+ext] = err
-                out['autofill'].append(p+':inc'+ext)
-                pass
-            pass
+            fillValue,autofilled = fillUncertainty('inc',inc,'','uperr')
+            out['priors'][p]['inc_uperr'] = fillValue
+            if autofilled: out['autofill'].append(p+':inc_uperr')
+            fillValue,autofilled = fillUncertainty('inc',inc,'','lowerr')
+            out['priors'][p]['inc_lowerr'] = fillValue
+            if autofilled: out['autofill'].append(p+':inc_lowerr')
         prpin = (p+':rp') not in out['needed']
         pmassin = (p+':mass') not in out['needed']
         if prpin and pmassin:
-            radplanet = out['priors'][p]['rp']*ssc['Rjup']
-            mass = out['priors'][p]['mass']*ssc['Mjup']
-            g = (ssc['G'])*mass/(radplanet**2)
-            out['priors'][p]['logg'] = np.log10(g)
-            out['autofill'].append(p+':logg')
-            for ext in out['extsmdt']:
-                out['priors'][p]['logg'+ext] = np.log10(g)/1e1
-                out['autofill'].append(p+':logg'+ext)
-                pass
-            out['priors'][p]['logg_units'] = 'log10[cm.s-2]'
-            out['priors'][p]['logg_ref'] = 'System Prior Auto Fill'
+            # (setting of planet logg is no longer needed here; already done above)
             pass
         else: out['needed'].append(p+':logg')
         pass
@@ -300,15 +345,24 @@ def buildsp(autofill, out):
                 pass
             pass
         pass
+    # print('needed,pneeded',out['needed'],out['pneeded'])
     for p in out['ignore']:
+        dropIndices = []
         for value in out['needed']:
             index = out['needed'].index(value)
             if p+':' in value:
-                out['needed'].pop(index)
+                dropIndices.append(index)
                 out['pneeded'].append(value)
                 pass
             pass
+        if dropIndices:
+            # have to pop off the list in reverse order
+            dropIndices.reverse()
+            for index in dropIndices:
+                # print('index',index)
+                out['needed'].pop(index)
         pass
+    # print('needed,pneeded',out['needed'],out['pneeded'])
     starneed = False
     for p in out['needed']:
         if ':' not in p: starneed = True

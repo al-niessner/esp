@@ -59,8 +59,10 @@ class PriorsSV(dawgie.StateVector):
                 allstar.append(listkeys)
                 pass
             pkeys = self['planetmdt']
-            pkeys.pop(pkeys.index('mass'))
-            pkeys.append('logg')
+            # why remove mass?  It's a nice parameter to see in the final table, no?
+            # pkeys.pop(pkeys.index('mass'))
+            # logg is now in the mandatory param list in core.py; don't add again here
+            # pkeys.append('logg')
             allplanet = []
             for key in pkeys:
                 listkeys = [key]

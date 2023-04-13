@@ -1,7 +1,6 @@
 '''target core ds'''
 # -- IMPORTS -- ------------------------------------------------------
 import os
-import numpy
 import shutil
 import re
 import tempfile
@@ -13,7 +12,6 @@ import dawgie.db
 
 import excalibur.target as trg
 import excalibur.target.edit as trgedit
-import excalibur.system.core as syscore
 
 import astropy.io.fits as pyfits
 import urllib.error
@@ -101,7 +99,7 @@ def scrapeids(ds:dawgie.Dataset, out, web, genIDs=True):
             dawgie.db.connect(trg.algorithms.create(), ds._bot(), parsedstr[0]).load()
             pass
         pass
-    cols = "hostname,pl_letter,rowupdate,pl_refname,sy_pnum,pl_orbper,pl_orbpererr1,pl_orbpererr2,pl_orbsmax,pl_orbsmaxerr1,pl_orbsmaxerr2,pl_orbeccen,pl_orbeccenerr1,pl_orbeccenerr2,pl_orbincl,pl_orbinclerr1,pl_orbinclerr2,pl_bmassj,pl_bmassjerr1,pl_bmassjerr2,pl_radj,pl_radjerr1,pl_radjerr2,pl_dens,pl_denserr1,pl_denserr2,pl_eqt,pl_eqterr1,pl_eqterr2,pl_tranmid,pl_tranmiderr1,pl_tranmiderr2,pl_imppar,pl_impparerr1,pl_impparerr2,st_teff,st_tefferr1,st_tefferr2,st_mass,st_masserr1,st_masserr2,st_rad,st_raderr1,st_raderr2,st_lum,st_lumerr1,st_lumerr2,st_logg,st_loggerr1,st_loggerr2,st_dens,st_denserr1,st_denserr2,st_met,st_meterr1,st_meterr2,sy_hmag,sy_hmagerr1,sy_hmagerr2,st_age,st_ageerr1,st_ageerr2"
+    cols = "hostname,pl_letter,rowupdate,st_refname,pl_refname,sy_pnum,pl_orbper,pl_orbpererr1,pl_orbpererr2,pl_orbsmax,pl_orbsmaxerr1,pl_orbsmaxerr2,pl_orbeccen,pl_orbeccenerr1,pl_orbeccenerr2,pl_orbincl,pl_orbinclerr1,pl_orbinclerr2,pl_bmassj,pl_bmassjerr1,pl_bmassjerr2,pl_radj,pl_radjerr1,pl_radjerr2,pl_dens,pl_denserr1,pl_denserr2,pl_eqt,pl_eqterr1,pl_eqterr2,pl_tranmid,pl_tranmiderr1,pl_tranmiderr2,pl_imppar,pl_impparerr1,pl_impparerr2,st_teff,st_tefferr1,st_tefferr2,st_mass,st_masserr1,st_masserr2,st_rad,st_raderr1,st_raderr2,st_lum,st_lumerr1,st_lumerr2,st_logg,st_loggerr1,st_loggerr2,st_dens,st_denserr1,st_denserr2,st_met,st_meterr1,st_meterr2,sy_hmag,sy_hmagerr1,sy_hmagerr2,st_age,st_ageerr1,st_ageerr2"
     uri_ipac_query = {
         "select": cols,
         "from": 'ps',
@@ -163,9 +161,6 @@ def autofill(ident, thistarget, out,
              opt="&sci_aec=S"):
     '''autofill ds'''
 
-    # get Msun and Rsun definitions, for calculating stellar density from M*,R*
-    sscmks = syscore.ssconstants(cgs=True)
-
     out['starID'][thistarget] = ident['starID'][thistarget]
     targetID = [thistarget]
 
@@ -173,7 +168,8 @@ def autofill(ident, thistarget, out,
     solved = True
     querytarget = thistarget.replace(' ', '+')
     queryform = queryurl+querytarget+action+outfmt+opt
-    failure = ['target not resolved, continue\n\n', 'no rows found\n\n']
+    failure = ['target not resolved, continue\n\n', 'no rows found\n\n',
+               'target not resolved, continue', 'no rows found']
     with urltrick(queryform) as temp: framelist = temp.decode('utf-8')
     if framelist not in failure:
         framelist = framelist.split('\n')
@@ -208,7 +204,7 @@ def autofill(ident, thistarget, out,
     # GMR: They are continuously changing the format: creating translatekeys()
     matchlist = translatekeys(header)
 
-    banlist = ['star', 'planet', 'update', 'ref', 'np']
+    banlist = ['star', 'planet', 'update', 'ref', 'ref_st', 'ref_pl', 'np']
     plist = ['period', 'period_uperr', 'period_lowerr', 'period_ref',
              'sma', 'sma_uperr', 'sma_lowerr', 'sma_ref',
              'ecc', 'ecc_uperr', 'ecc_lowerr', 'ecc_ref',
@@ -279,10 +275,14 @@ def autofill(ident, thistarget, out,
                     out['starID'][thistarget]['Hmag_units'] = []
                     out['starID'][thistarget]['Hmag_ref'] = []
                     pass
-                ref = elem[header.index('pl_refname')]
-                ref = ref.split('</a>')[0]
-                ref = ref.split('target=ref>')[-1]
-                ref = ref.strip()
+                ref_pl = elem[header.index('pl_refname')]
+                ref_pl = ref_pl.split('</a>')[0]
+                ref_pl = ref_pl.split('target=ref>')[-1]
+                ref_pl = ref_pl.strip()
+                ref_st = elem[header.index('st_refname')]
+                ref_st = ref_st.split('</a>')[0]
+                ref_st = ref_st.split('target=ref>')[-1]
+                ref_st = ref_st.strip()
                 pass
             for idx, keymatch in enumerate(matchlist):
                 if keymatch not in banlist:
@@ -309,7 +309,7 @@ def autofill(ident, thistarget, out,
             # GMR: Adding refs to the planet dict
             pkeys = [pk for pk in plist if '_' not in pk]
             for pk in pkeys:
-                if out['starID'][thistarget][thisplanet][pk]: addme = ref
+                if out['starID'][thistarget][thisplanet][pk]: addme = ref_pl
                 else: addme = ''
                 out['starID'][thistarget][thisplanet][pk+'_ref'].append(addme)
                 pass
@@ -317,7 +317,7 @@ def autofill(ident, thistarget, out,
             skeys = [sk for sk in matchlist
                      if (sk not in banlist) and (sk not in plist) and ('_' not in sk)]
             for sk in skeys:
-                if out['starID'][thistarget][sk]: addme = ref
+                if out['starID'][thistarget][sk]: addme = ref_st
                 else: addme = ''
                 if not out['starID'][thistarget][sk+'_ref']:
                     out['starID'][thistarget][sk+'_ref'].append(addme)
@@ -335,6 +335,7 @@ def autofill(ident, thistarget, out,
             merged = True
             pass
         pass
+
     # AUTOFILL WITH NEXSCI FULL TABLE, INCLUDING NON-DEFAULTS ----------------------------
     response = ident['nexsciFulltable']
     header = response[0].split(',')
@@ -351,80 +352,37 @@ def autofill(ident, thistarget, out,
             thisplanet = elem[header.index('pl_letter')]
             pass
         if trgt in targetID:
-            ref = elem[header.index('pl_refname')]
-            ref = ref.split('</a>')[0]
-            ref = ref.split('target=ref>')[-1]
-            ref = ref.strip()
+            ref_pl = elem[header.index('pl_refname')]
+            ref_pl = ref_pl.split('</a>')[0]
+            ref_pl = ref_pl.split('target=ref>')[-1]
+            ref_pl = ref_pl.strip()
+            ref_st = elem[header.index('st_refname')]
+            ref_st = ref_st.split('</a>')[0]
+            ref_st = ref_st.split('target=ref>')[-1]
+            ref_st = ref_st.strip()
             numdate = elem[header.index('rowupdate')]
             strnum = ''
             for n in re.split('-|:| ', numdate): strnum = strnum+n.strip()
             numdate = float(strnum)
             for addme, key in zip(elem, matchkey):
                 if key not in banlist:
+                    refkey = key.split('_')[0]
                     if key in plist:
-                        test = out['starID'][thistarget][thisplanet][key]
-                        refkey = key.split('_')[0]
-                        tref = out['starID'][thistarget][thisplanet][refkey+'_ref']
-                        test.append(addme)
-                        tref.append(ref)
+                        out['starID'][thistarget][thisplanet][key].append(addme)
+                        if refkey==key:
+                            out['starID'][thistarget][thisplanet][refkey+'_ref'].append(ref_pl)
                         pass
                     else:
-                        test = out['starID'][thistarget][key]
                         refkey = key.split('_')[0]
-                        tref = out['starID'][thistarget][refkey+'_ref']
-                        test.append(addme)
-                        tref.append(ref)
+                        out['starID'][thistarget][key].append(addme)
+                        if refkey==key:
+                            out['starID'][thistarget][refkey+'_ref'].append(ref_st)
                         pass
                     pass
                 pass
             merged = True
             pass
         pass
-
-    # RHO* is a mandatory field
-    # if stellar density is blank, fill it in based on R* and M*
-    RHO_calculated_here = []
-    RHO_lowerr_calculated_here = []
-    RHO_uperr_calculated_here = []
-    for R,Rerr1,Rerr2, M,Merr1,Merr2, RHO,RHOerr1,RHOerr2 in zip(
-            out['starID'][thistarget]['R*'],
-            out['starID'][thistarget]['R*_lowerr'],
-            out['starID'][thistarget]['R*_uperr'],
-            out['starID'][thistarget]['M*'],
-            out['starID'][thistarget]['M*_lowerr'],
-            out['starID'][thistarget]['M*_uperr'],
-            out['starID'][thistarget]['RHO*'],
-            out['starID'][thistarget]['RHO*_lowerr'],
-            out['starID'][thistarget]['RHO*_uperr']):
-        # check for blank stellar density
-        #  (but only update it if M* and R* are both defined)
-        if RHO=='' and R!='' and M!='':
-            newRHO = float(M)*sscmks['Msun'] / \
-                (4.*numpy.pi/3. * (float(R)*sscmks['Rsun'])**3)
-            RHO_calculated_here.append(str(newRHO))
-
-            # also fill in the uncertainty on RHO, based on R,M uncertainties
-            if Rerr1=='' or Merr1=='':
-                RHO_lowerr_calculated_here.append('')
-            else:
-                newRHOfractionalError1 = -numpy.sqrt((3.*float(Rerr1)/float(R))**2 +
-                                                     (float(Merr1)/float(M))**2)
-                RHO_lowerr_calculated_here.append(str(newRHO * newRHOfractionalError1))
-            if Rerr2=='' or Merr2=='':
-                RHO_uperr_calculated_here.append('')
-            else:
-                newRHOfractionalError2 = numpy.sqrt((3.*float(Rerr2)/float(R))**2 +
-                                                    (float(Merr2)/float(M))**2)
-                RHO_uperr_calculated_here.append(str(newRHO * newRHOfractionalError2))
-        else:
-            RHO_calculated_here.append(RHO)
-            RHO_lowerr_calculated_here.append(RHOerr1)
-            RHO_uperr_calculated_here.append(RHOerr2)
-
-    if out['starID'][thistarget]['RHO*'] != RHO_calculated_here:
-        out['starID'][thistarget]['RHO*'] = RHO_calculated_here
-        out['starID'][thistarget]['RHO*_lowerr'] = RHO_lowerr_calculated_here
-        out['starID'][thistarget]['RHO*_uperr'] = RHO_uperr_calculated_here
 
     # FINALIZE OUTPUT ------------------------------------------------
     if merged:
@@ -465,10 +423,10 @@ def translatekeys(header):
         if 'pl_hostname' == thiskey: xclbrkey = 'star'
         elif 'hostname' == thiskey: xclbrkey = 'star'
         elif 'pl_letter' == thiskey: xclbrkey = 'planet'
-        elif 'pl_reflink' == thiskey: xclbrkey = 'ref'
+        elif 'pl_reflink' == thiskey: xclbrkey = 'ref_pl'
         elif 'rowupdate' == thiskey: xclbrkey = 'update'
-        elif 'pl_def_refname' == thiskey: xclbrkey = 'ref'
-        elif 'pl_refname' == thiskey: xclbrkey = 'ref'
+        elif 'pl_def_refname' == thiskey: xclbrkey = 'ref_pl'
+        elif 'pl_refname' == thiskey: xclbrkey = 'ref_pl'
         elif 'pl_pnum' == thiskey: xclbrkey = 'np'
         elif 'sy_pnum' == thiskey: xclbrkey = 'np'
         elif 'pl_orbper' == thiskey: xclbrkey = 'period'
@@ -516,7 +474,7 @@ def translatekeys(header):
         elif 'st_tefferr1' == thiskey: xclbrkey = 'T*_uperr'
         elif 'st_tefferr2' == thiskey: xclbrkey = 'T*_lowerr'
         elif 'st_teffreflink' == thiskey: xclbrkey = 'T*_ref'
-        elif 'st_refname' == thiskey: xclbrkey = 'ref'
+        elif 'st_refname' == thiskey: xclbrkey = 'ref_st'
         elif 'st_mass' == thiskey: xclbrkey = 'M*'
         elif 'st_masserr1' == thiskey: xclbrkey = 'M*_uperr'
         elif 'st_masserr2' == thiskey: xclbrkey = 'M*_lowerr'

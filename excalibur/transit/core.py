@@ -5,7 +5,7 @@ import dawgie
 # pylint: disable=import-self
 import excalibur.data.core as datcore
 import excalibur.system.core as syscore
-import excalibur.cerberus.core as crbcore
+import excalibur.util.cerberus as crbutil
 import excalibur.transit.core
 
 import re
@@ -1802,8 +1802,8 @@ def spectrum(fin, nrm, wht, out, ext, selftype,
             pgrid = np.arange(np.log(10.)-15., np.log(10.)+15./100, 15./99)
             pgrid = np.exp(pgrid)
             pressure = pgrid[::-1]
-            mixratio, fH2, fHe = crbcore.crbce(pressure, eqtemp)
-            mmw, fH2, fHe = crbcore.getmmw(mixratio, protosolar=False, fH2=fH2, fHe=fHe)
+            mixratio, fH2, fHe = crbutil.crbce(pressure, eqtemp)
+            mmw, fH2, fHe = crbutil.getmmw(mixratio, protosolar=False, fH2=fH2, fHe=fHe)
             mmw = mmw*cst.m_p  # [kg]
             Hs = cst.Boltzmann*eqtemp/(mmw*1e-2*(10.**priors[p]['logg']))  # [m]
             Hs = Hs/(priors['R*']*sscmks['Rsun'])
@@ -2225,8 +2225,8 @@ def fastspec(fin, nrm, wht, ext, selftype,
         pgrid = np.arange(np.log(10.)-15., np.log(10.)+15./100, 15./99)
         pgrid = np.exp(pgrid)
         pressure = pgrid[::-1]
-        mixratio, fH2, fHe = crbcore.crbce(pressure, eqtemp)
-        mmw, fH2, fHe = crbcore.getmmw(mixratio, protosolar=False, fH2=fH2, fHe=fHe)
+        mixratio, fH2, fHe = crbutil.crbce(pressure, eqtemp)
+        mmw, fH2, fHe = crbutil.getmmw(mixratio, protosolar=False, fH2=fH2, fHe=fHe)
         mmw = mmw*cst.m_p  # [kg]
         Hs = cst.Boltzmann*eqtemp/(mmw*1e-2*(10.**priors[p]['logg']))  # [m]
         Hs = Hs/(priors['R*']*sscmks['Rsun'])

@@ -75,7 +75,7 @@ class TargetSV(dawgie.StateVector):
                     for l in starlabels:
                         j = starlabels.index(l)
                         table.get_cell(i, j).add_primitive(l)
-                        elem = starinfo[l][-1]
+                        elem = starinfo[l][0]
                         if elem:
                             table.get_cell(i, j).add_primitive(elem)
                             pass
@@ -93,7 +93,7 @@ class TargetSV(dawgie.StateVector):
                         for l in starlabels:
                             j = starlabels.index(l)
                             table.get_cell(i, j).add_primitive(l)
-                            elem = starinfo[c][l][-1]
+                            elem = starinfo[c][l][0]
                             if elem:
                                 table.get_cell(i, j).add_primitive(elem)
                                 pass

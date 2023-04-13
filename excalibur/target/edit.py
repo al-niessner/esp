@@ -2639,8 +2639,18 @@ overwrite[starID] =
     # only one system (this one) is missing an H_mag
     #  make a guess at it based on V=16.56,I=15.30
     overwrite['OGLE-TR-056'] = {
-        'Hmag':14, 'Hmag_uperr':1, 'Hmag_lowerr':-1,
+        'Hmag':14,
+        'Hmag_uperr':1, 'Hmag_lowerr':-1,
         'Hmag_units':'[mag]', 'Hmag_ref':'Geoff guess'}
+
+    # there's a bug in the Archive where this planet's radius is
+    #  only given in Earth units, not our standard Jupiter units
+    #  0.37+-0.18 REarth = 0.033+-0.16
+    overwrite['Kepler-37'] = {
+        'e':{'rp':0.033,
+             'rp_uperr':0.016, 'rp_lowerr':-0.016,
+             'rp_units':'[Jupiter radius]',
+             'rp_ref':'Q1-Q8 KOI Table'}}
 
     return overwrite
 # -------------------------------------------------------------------

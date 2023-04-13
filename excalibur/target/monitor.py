@@ -44,7 +44,7 @@ def _outlier (vl):
 def alert (asp:{str:{str:{str:object}}}, known:[], table:[])->([],[],[]):
     '''alert ds'''
     changes,kwn,tab = [],[],[]
-    for target in sorted (asp, key=lambda t:t[0]):
+    for target in asp:
         kwn.append (target)
         tab.append (asp[target]['target.variations_of.parameters']['last'])
 
