@@ -99,7 +99,18 @@ def scrapeids(ds:dawgie.Dataset, out, web, genIDs=True):
             dawgie.db.connect(trg.algorithms.create(), ds._bot(), parsedstr[0]).load()
             pass
         pass
-    cols = "hostname,pl_letter,rowupdate,st_refname,pl_refname,sy_pnum,pl_orbper,pl_orbpererr1,pl_orbpererr2,pl_orbsmax,pl_orbsmaxerr1,pl_orbsmaxerr2,pl_orbeccen,pl_orbeccenerr1,pl_orbeccenerr2,pl_orbincl,pl_orbinclerr1,pl_orbinclerr2,pl_bmassj,pl_bmassjerr1,pl_bmassjerr2,pl_radj,pl_radjerr1,pl_radjerr2,pl_dens,pl_denserr1,pl_denserr2,pl_eqt,pl_eqterr1,pl_eqterr2,pl_tranmid,pl_tranmiderr1,pl_tranmiderr2,pl_imppar,pl_impparerr1,pl_impparerr2,st_teff,st_tefferr1,st_tefferr2,st_mass,st_masserr1,st_masserr2,st_rad,st_raderr1,st_raderr2,st_lum,st_lumerr1,st_lumerr2,st_logg,st_loggerr1,st_loggerr2,st_dens,st_denserr1,st_denserr2,st_met,st_meterr1,st_meterr2,sy_hmag,sy_hmagerr1,sy_hmagerr2,st_age,st_ageerr1,st_ageerr2"
+    # new additions 4/14/23:
+    #   pl_orblper (omega is used as prior in the transit fitting)
+    #   pl_trandep (transit depth    is not used, but load it in, in case we want it later)
+    #   pl_insol   (insolation       is not used, but load it in, in case we want it later)
+    #   pl_trandur (transit duration is not used, but load it in, in case we want it later)
+    #   pl_ratdor  (a/R*             is not used, but load it in, in case we want it later)
+    #   pl_ratror  (Rp/R*            is not used, but load it in, in case we want it later)
+    #   sy_dist    (same for distance; not used, but potentially useful)
+    #  actually these additional references are only in the PSCompPars table, not the PS table
+    # NO  sy_hmag_reflink (H magnitude reference can differ from the star param reference)
+    # NO  sy_age_reflink  (age reference can differ from the star param reference)
+    cols = "hostname,pl_letter,rowupdate,st_refname,pl_refname,sy_pnum,pl_orbper,pl_orbpererr1,pl_orbpererr2,pl_orbsmax,pl_orbsmaxerr1,pl_orbsmaxerr2,pl_orbeccen,pl_orbeccenerr1,pl_orbeccenerr2,pl_orbincl,pl_orbinclerr1,pl_orbinclerr2,pl_bmassj,pl_bmassjerr1,pl_bmassjerr2,pl_radj,pl_radjerr1,pl_radjerr2,pl_dens,pl_denserr1,pl_denserr2,pl_eqt,pl_eqterr1,pl_eqterr2,pl_tranmid,pl_tranmiderr1,pl_tranmiderr2,pl_imppar,pl_impparerr1,pl_impparerr2,st_teff,st_tefferr1,st_tefferr2,st_mass,st_masserr1,st_masserr2,st_rad,st_raderr1,st_raderr2,st_lum,st_lumerr1,st_lumerr2,st_logg,st_loggerr1,st_loggerr2,st_dens,st_denserr1,st_denserr2,st_met,st_meterr1,st_meterr2,sy_hmag,sy_hmagerr1,sy_hmagerr2,st_age,st_ageerr1,st_ageerr2,pl_orblper,pl_orblpererr1,pl_orblpererr2,pl_trandep,pl_trandeperr1,pl_trandeperr2,pl_insol,pl_insolerr1,pl_insolerr2,pl_trandur,pl_trandurerr1,pl_trandurerr2,pl_ratdor,pl_ratdorerr1,pl_ratdorerr2,pl_ratror,pl_ratrorerr1,pl_ratrorerr2,sy_dist,sy_disterr1,sy_disterr2"
     uri_ipac_query = {
         "select": cols,
         "from": 'ps',
@@ -203,7 +214,6 @@ def autofill(ident, thistarget, out,
     # that are included
     # GMR: They are continuously changing the format: creating translatekeys()
     matchlist = translatekeys(header)
-
     banlist = ['star', 'planet', 'update', 'ref', 'ref_st', 'ref_pl', 'np']
     plist = ['period', 'period_uperr', 'period_lowerr', 'period_ref',
              'sma', 'sma_uperr', 'sma_lowerr', 'sma_ref',
@@ -214,7 +224,13 @@ def autofill(ident, thistarget, out,
              'rho', 'rho_uperr', 'rho_lowerr', 'rho_ref',
              'teq', 'teq_uperr', 'teq_lowerr', 'teq_ref',
              't0', 't0_uperr', 't0_lowerr', 't0_ref',
-             'impact', 'impact_uperr', 'impact_lowerr', 'impact_ref']
+             'impact', 'impact_uperr', 'impact_lowerr', 'impact_ref',
+             'omega','omega_uperr','omega_lowerr','omega_ref',
+             'trandepth','trandepth_uperr','trandepth_lowerr','trandepth_ref',
+             'trandur','trandur_uperr','trandur_lowerr','trandur_ref',
+             'insol','insol_uperr','insol_lowerr','insol_ref',
+             'ars','ars_uperr','ars_lowerr','ars_ref',
+             'rprs','rprs_uperr','rprs_lowerr','rprs_ref']
     for line in response:
         elem = line.split(',')
         elem = clean_elems(elem)  # remove things such as bounding quotation marks
@@ -243,7 +259,12 @@ def autofill(ident, thistarget, out,
                                   'teq_units', 'teq_ref',
                                   't0_units', 't0_ref',
                                   'impact_units', 'impact_ref',
-                                  'impact_units', 'impact_ref']
+                                  'omega_units', 'omega_ref',
+                                  'trandepth_units', 'trandepth_ref',
+                                  'trandur_units', 'trandur_ref',
+                                  'insol_units', 'insol_ref',
+                                  'ars_units', 'ars_ref',
+                                  'rprs_units', 'rprs_ref']
                     for key in blank_keys:
                         out['starID'][thistarget][thisplanet][key] = []
                         pass
@@ -266,7 +287,7 @@ def autofill(ident, thistarget, out,
                     out['starID'][thistarget]['RHO*_units'] = []
                     out['starID'][thistarget]['RHO*_ref'] = []
                     out['starID'][thistarget]['FEH*_ref'] = []
-                    out['starID'][thistarget]['FEH*_units'] = ['[]']
+                    out['starID'][thistarget]['FEH*_units'] = ['[dex]']
                     out['starID'][thistarget]['AGE*'] = []
                     out['starID'][thistarget]['AGE*_uperr'] = []
                     out['starID'][thistarget]['AGE*_lowerr'] = []
@@ -274,6 +295,8 @@ def autofill(ident, thistarget, out,
                     out['starID'][thistarget]['AGE*_ref'] = []
                     out['starID'][thistarget]['Hmag_units'] = []
                     out['starID'][thistarget]['Hmag_ref'] = []
+                    out['starID'][thistarget]['dist_units'] = []
+                    out['starID'][thistarget]['dist_ref'] = []
                     pass
                 ref_pl = elem[header.index('pl_refname')]
                 ref_pl = ref_pl.split('</a>')[0]
@@ -306,6 +329,12 @@ def autofill(ident, thistarget, out,
             out['starID'][thistarget][thisplanet]['teq_units'].append('[K]')
             out['starID'][thistarget][thisplanet]['t0_units'].append('[Julian Days]')
             out['starID'][thistarget][thisplanet]['impact_units'].append('[R*]')
+            out['starID'][thistarget][thisplanet]['omega_units'].append('[degree]')
+            out['starID'][thistarget][thisplanet]['trandepth_units'].append('[%]')
+            out['starID'][thistarget][thisplanet]['trandur_units'].append('[hour]')
+            out['starID'][thistarget][thisplanet]['insol_units'].append('[Earth flux]')
+            out['starID'][thistarget][thisplanet]['ars_units'].append('[]')
+            out['starID'][thistarget][thisplanet]['rprs_units'].append('[]')
             # GMR: Adding refs to the planet dict
             pkeys = [pk for pk in plist if '_' not in pk]
             for pk in pkeys:
@@ -332,6 +361,7 @@ def autofill(ident, thistarget, out,
             out['starID'][thistarget]['RHO*_units'].append('[g.cm-3]')
             out['starID'][thistarget]['AGE*_units'].append('[Gyr]')
             out['starID'][thistarget]['Hmag_units'].append('[mag]')
+            out['starID'][thistarget]['dist_units'].append('[pc]')
             merged = True
             pass
         pass
@@ -470,6 +500,24 @@ def translatekeys(header):
         elif 'pl_imppar' == thiskey: xclbrkey = 'impact'
         elif 'pl_impparerr1' == thiskey: xclbrkey = 'impact_uperr'
         elif 'pl_impparerr2' == thiskey: xclbrkey = 'impact_lowerr'
+        elif 'pl_orblper' == thiskey: xclbrkey = 'omega'
+        elif 'pl_orblpererr1' == thiskey: xclbrkey = 'omega_uperr'
+        elif 'pl_orblpererr2' == thiskey: xclbrkey = 'omega_lowerr'
+        elif 'pl_trandep' == thiskey: xclbrkey = 'trandepth'
+        elif 'pl_trandeperr1' == thiskey: xclbrkey = 'trandepth_uperr'
+        elif 'pl_trandeperr2' == thiskey: xclbrkey = 'trandepth_lowerr'
+        elif 'pl_trandur' == thiskey: xclbrkey = 'trandur'
+        elif 'pl_trandurerr1' == thiskey: xclbrkey = 'trandur_uperr'
+        elif 'pl_trandurerr2' == thiskey: xclbrkey = 'trandur_lowerr'
+        elif 'pl_insol' == thiskey: xclbrkey = 'insol'
+        elif 'pl_insolerr1' == thiskey: xclbrkey = 'insol_uperr'
+        elif 'pl_insolerr2' == thiskey: xclbrkey = 'insol_lowerr'
+        elif 'pl_ratdor' == thiskey: xclbrkey = 'ars'
+        elif 'pl_ratdorerr1' == thiskey: xclbrkey = 'ars_uperr'
+        elif 'pl_ratdorerr2' == thiskey: xclbrkey = 'ars_lowerr'
+        elif 'pl_ratror' == thiskey: xclbrkey = 'rprs'
+        elif 'pl_ratrorerr1' == thiskey: xclbrkey = 'rprs_uperr'
+        elif 'pl_ratrorerr2' == thiskey: xclbrkey = 'rprs_lowerr'
         elif 'st_teff' == thiskey: xclbrkey = 'T*'
         elif 'st_tefferr1' == thiskey: xclbrkey = 'T*_uperr'
         elif 'st_tefferr2' == thiskey: xclbrkey = 'T*_lowerr'
@@ -506,6 +554,9 @@ def translatekeys(header):
         elif 'st_age' == thiskey: xclbrkey = 'AGE*'
         elif 'st_ageerr1' == thiskey: xclbrkey = 'AGE*_uperr'
         elif 'st_ageerr2' == thiskey: xclbrkey = 'AGE*_lowerr'
+        elif 'sy_dist' == thiskey: xclbrkey = 'dist'
+        elif 'sy_disterr1' == thiskey: xclbrkey = 'dist_uperr'
+        elif 'sy_disterr2' == thiskey: xclbrkey = 'dist_lowerr'
         else: xclbrkey = None
         if xclbrkey is not None: matchlist.append(xclbrkey)
         pass

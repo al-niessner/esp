@@ -543,14 +543,11 @@ overwrite[starID] =
 {
     'R*':[Rsun], 'R*_ref':ref,
     'T*':[K], 'T*_lowerr':[K], 'T*_uperr':[K], 'T*_ref':ref,
-    'FEH*':[dex], 'FEH*_lowerr':[dex], 'FEH*_uperr':[dex],
-    'FEH*_units':'[Fe/H]', 'FEH*_ref':ref,
-    'LOGG*':[dex CGS], 'LOGG*_lowerr':[dex CGS], 'LOGG*_uperr':[dex CGS],
-    'LOGG*_ref':ref,
+    'FEH*':[dex], 'FEH*_lowerr':[dex], 'FEH*_uperr':[dex], 'FEH*_ref':ref,
+    'LOGG*':[dex CGS], 'LOGG*_lowerr':[dex CGS], 'LOGG*_uperr':[dex CGS], 'LOGG*_ref':ref,
     planet:
     {
-    'inc':[degrees], 'inc_lowerr':[dex CGS], 'inc_uperr':[dex CGS],
-    'inc_ref':ref,
+    'inc':[degrees], 'inc_lowerr':[degrees], 'inc_uperr':[degrees], 'inc_ref':ref,
     't0':[JD], 't0_lowerr':[JD], 't0_uperr':[JD], 't0_ref':ref,
     'sma':[AU], 'sma_lowerr':[AU], 'sma_uperr':[AU], 'sma_ref':ref,
     'period':[days], 'period_ref':ref,
@@ -560,191 +557,14 @@ overwrite[starID] =
 }
     '''
     overwrite = {}
-    # GEOFF UPDATE
-    overwrite['GJ 3053'] = {
-        # 'b':{'t0':2456915.70654,
-        #     't0_uperr':0.00004, 't0_lowerr':-0.00004,
-        #     't0_ref':'GMR'}
-        'b':{'t0':2458399.9303,
-             't0_uperr':0.0012, 't0_lowerr':-0.0013,
-             't0_ref':'Lillo-Box et al. 2020'}
-    }
-    overwrite['GJ 436'] = {
-        # 'b':{'inc':86.774,
-        #     'inc_uperr':0.03, 'inc_lowerr':-0.03,
-        #     'inc_ref':'Knutson et al. 2014',
-        #     't0':2456295.431924,
-        #     't0_uperr':0.000045, 't0_lowerr':-0.000045,
-        #     't0_ref':'Knutson et al. 2014',
-        #     'ecc':0, 'ecc_ref':'Knutson et al. 2014',
-        #     'sma':0.030826087286013763,
-        #     'sma_uperr':0.0002,
-        #     'sma_lowerr':-0.0002,
-        #     'sma_ref':'Knutson et al. 2014',
-        #     'period':2.64389782,
-        #     'period_uperr':0.00000008, 'period_lowerr':-0.00000008,
-        #     'period_ref':'Knutson et al. 2014'}
-        'b':{'inc':86.44,
-             'inc_uperr':0.17, 'inc_lowerr':-0.16,
-             'inc_ref':'Maciejewski et al. 2014',
-             't0':2454510.80162,
-             't0_uperr':0.00007, 't0_lowerr':-0.00007,
-             't0_ref':'Maciejewski et al. 2014',
-             'ecc':0.13827, 'ecc_ref':'Maciejewski et al. 2014',
-             'sma':0.0291,
-             'sma_uperr':0.0015,
-             'sma_lowerr':-0.0015,
-             'sma_ref':'Maciejewski et al. 2014',
-             'period':2.64388312,
-             'period_uperr':0.00000057, 'period_lowerr':-0.00000057,
-             'period_ref':'Maciejewski et al. 2014'}
-    }
     overwrite['GJ 9827'] = {
         'R*':0.637, 'R*_uperr':0.063, 'R*_lowerr':-0.063,
         'R*_ref':'Prieto-Arranz et al. 2018',
-        # 'b':{'inc':88.33,
-        #     'inc_uperr':1.15, 'inc_lowerr':-2.1,
-        #     'inc_ref':'Prieto-Arranz et al. 2018',
-        #     't0':2457738.52646,
-        #     't0_uperr':0.00044, 't0_lowerr':-0.00042,
-        #     't0_ref':'Prieto-Arranz et al. 2018',
-        #     'sma':0.0210,
-        #     'sma_uperr':0.0024,
-        #     'sma_lowerr':-0.0026,
-        #     'sma_ref':'Prieto-Arranz et al. 2018',
-        #     'period':1.208966,
-        #     'period_uperr':0.000012, 'period_lowerr':-0.000012,
-        #     'period_ref':'Prieto-Arranz et al. 2018',
-        #     'logg':3.1445742076096161,
-        #     'logg_uperr':0.11, 'logg_lowerr':-0.11,
-        #     'logg_ref':'Prieto-Arranz et al. 2018', 'logg_units':'log10[cm.s-2]'},
-        # 'c':{'inc':89.07,
-        #     'inc_uperr':0.59, 'inc_lowerr':-0.92,
-        #     'inc_ref':'Prieto-Arranz et al. 2018',
-        #     't0':2457738.54961,
-        #     't0_uperr':0.00146, 't0_lowerr':-0.00145,
-        #     't0_ref':'Prieto-Arranz et al. 2018',
-        #     'sma':0.0439,
-        #     'sma_uperr':0.0050,
-        #     'sma_lowerr':-0.0055,
-        #     'sma_ref':'Prieto-Arranz et al. 2018',
-        #     'period':3.648227,
-        #     'period_uperr':0.000117, 'period_lowerr':-0.000119,
-        #     'period_ref':'Prieto-Arranz et al. 2018',
-        #     'logg':2.9479236198317262,
-        #     'logg_uperr':0.18, 'logg_lowerr':-0.18,
-        #     'logg_ref':'Prieto-Arranz et al. 2018', 'logg_units':'log10[cm.s-2]'},
-        # 'd':{'inc':87.703,
-        #     'inc_uperr':0.081, 'inc_lowerr':-0.253,
-        #     'inc_ref':'Prieto-Arranz et al. 2018',
-        #     't0':2457740.96198,
-        #     't0_uperr':0.00084, 't0_lowerr':-0.00086,
-        #     't0_ref':'Prieto-Arranz et al. 2018',
-        #     'sma':0.0625,
-        #     'sma_uperr':0.0071,
-        #     'sma_lowerr':-0.0078,
-        #     'sma_ref':'Prieto-Arranz et al. 2018',
-        #     'period':6.201419,
-        #     'period_uperr':0.000128, 'period_lowerr':-0.000128,
-        #     'period_ref':'Prieto-Arranz et al. 2018',
-        #     'logg':2.7275412570285562,
-        #     'logg_uperr':0.15, 'logg_lowerr':-0.15,
-        #     'logg_ref':'Prieto-Arranz et al. 2018', 'logg_units':'log10[cm.s-2]'}
-        'b':{'inc':86.07,
-             'inc_uperr':0.41, 'inc_lowerr':-0.34,
-             'inc_ref':'Rice et al. 2019',
-             't0':2457738.82586,
-             't0_uperr':0.00026, 't0_lowerr':-0.00026,
-             't0_ref':'Rice et al. 2019',
-             'sma':0.0188,
-             'sma_uperr':0.0002,
-             'sma_lowerr':-0.0002,
-             'sma_ref':'Rice et al. 2019',
-             'period':1.2089819,
-             'period_uperr':6.93e-06, 'period_lowerr':-7.14e-06,
-             'period_ref':'Rice et al. 2019',
-             'logg':3.284795731186922,
-             'logg_uperr':0.3284795731186922, 'logg_lowerr':-0.3284795731186922,
-             'logg_ref':'System Prior Auto Fill',
-             'logg_units':'log10[cm.s-2]'},
-        'c':{'inc':88.19,
-             'inc_uperr':0.21, 'inc_lowerr':-0.18,
-             'inc_ref':'Rice et al. 2019',
-             't0':2457742.1993,
-             't0_uperr':0.00072, 't0_lowerr':-0.00073,
-             't0_ref':'Rice et al. 2019',
-             'sma':0.03925,
-             'sma_uperr':0.00042,
-             'sma_lowerr':-0.00029,
-             'sma_ref':'Rice et al. 2019',
-             'period':3.6480957,
-             'period_uperr':6.33e-05, 'period_lowerr':-6.21e-05,
-             'period_ref':'Rice et al. 2019',
-             'logg':2.7252634420333446,
-             'logg_uperr':0.27252634420333444, 'logg_lowerr':-0.27252634420333444,
-             'logg_ref':'System Prior Auto Fill', 'logg_units':'log10[cm.s-2]'},
-        'd':{'inc':87.443,
-             'inc_uperr':0.045, 'inc_lowerr':-0.045,
-             'inc_ref':'Rice et al. 2019',
-             't0':2457740.96115,
-             't0_uperr':0.00044, 't0_lowerr':-0.00045,
-             't0_ref':'Rice et al. 2019',
-             'sma':0.05591,
-             'sma_uperr':0.00059,
-             'sma_lowerr':-0.00041,
-             'sma_ref':'Rice et al. 2019',
-             'period':6.2014698,
-             'period_uperr':6.26e-05, 'period_lowerr':-6.26e-05,
-             'period_ref':'Rice et al. 2019',
-             'logg':2.987906013084224,
-             'logg_uperr':0.2987906013084224, 'logg_lowerr':-0.2987906013084224,
-             'logg_ref':'System Prior Auto Fill', 'logg_units':'log10[cm.s-2]'}
-    }
-    overwrite['HAT-P-1'] = {
-        # 'b':{'t0':2453979.92802,
-        #     't0_uperr':0.00004, 't0_lowerr':-0.00004,
-        #     't0_ref':'GMR'}
-        'b':{'t0':2453979.93202,
-             't0_uperr':0.00024, 't0_lowerr':-0.00024,
-             't0_ref':'Nikolov et al. 2014'}
     }
     overwrite['HAT-P-11'] = {
         'R*':0.683, 'R*_uperr':0.009, 'R*_lowerr':-0.009,
         'R*_ref':'Yee et al. 2018',
-        # 'b':{'inc':90,
-        #     'inc_uperr':0.114, 'inc_lowerr':-0.114,
-        #     'inc_ref':'Yee et al. 2018',
-        #     't0':2454957.8132067,
-        #     't0_uperr':0.0000663, 't0_lowerr':-0.0000663,
-        #     't0_ref':'Yee et al. 2018',
-        #     'rp':0.3889738152520562,
-        #     'rp_uperr':0.0017, 'rp_lowerr':-0.0017,
-        #     'rp_ref':'Yee et al. 2018',
-        #     'sma':0.05254,
-        #     'sma_uperr':0.00064, 'sma_lowerr':-0.00064,
-        #     'sma_ref':'Yee et al. 2018',
-        #     'ecc':0,
-        #     'ecc_uperr':0.034, 'ecc_lowerr':-0.034,
-        #     'ecc_ref':'Yee et al. 2018',
-        #     'period':4.887802443,
-        #     'period_uperr':0.0000071, 'period_lowerr':-0.0000071,
-        #     'period_ref':'Yee et al. 2018'}
-        'b':{'inc':88.5,
-             'inc_uperr':0.6, 'inc_lowerr':-0.6,
-             'inc_ref':'Stassun et al. 2017',
-             't0':2455109.335119,
-             't0_uperr':2.1e-5, 't0_lowerr':-2.1e-5,
-             't0_ref':'Kokori et al. 2021',
-             'rp':0.389,
-             'rp_uperr':0.005, 'rp_lowerr':-0.005,
-             'rp_ref':'Yee et al. 2018',
-             'sma':0.05254,
-             'sma_uperr':0.00064, 'sma_lowerr':-0.00064,
-             'sma_ref':'Yee et al. 2018',
-             'ecc':0.218,
-             'ecc_uperr':0.034, 'ecc_lowerr':-0.034,
-             'ecc_ref':'Yee et al. 2018',
-             'period':4.88780244,
+        'b':{'period':4.88780244,
              'period_uperr':3e-7, 'period_lowerr':-3e-7,
              'period_ref':'Yee et al. 2018'}
     }
@@ -761,71 +581,22 @@ overwrite[starID] =
              'sma_uperr':0.0014, 'sma_lowerr':-0.0014,
              'sma_ref':'Howard et al. 2012 + high ecc',
              'period':10.338523,
-             'period_ref':'Howard et al. 2012',
-             'omega':200.5,
-             'omega_lowerr':-1.3,
-             'omega_uperr':1.3,
-             'omega_ref':"Bonomo et al. 2017"}
+             'period_ref':'Howard et al. 2012'}
     }
     overwrite['HAT-P-3'] = {
-        # 'b':{'inc':87.24,
-        #     'inc_uperr':0.69, 'inc_lowerr':-0.69,
-        #     'inc_ref':'Torres et al. 2017',
-        #     'sma':0.03894,
-        #     'sma_uperr':0.0007, 'sma_lowerr':-0.0007,
-        #     'sma_ref':'Torres et al. 2017',
-        #     't0':2454218.81,
-        #     't0_uperr':0.0029, 't0_lowerr':-0.0029,
-        #     't0_ref':'Torres et al. 2017 + GMR',
-        #     'logg':3.310,
-        #     'logg_uperr':0.066, 'logg_lowerr':-0.066,
-        #     'logg_ref':'Torres et al. 2017', 'logg_units':'log10[cm.s-2]'}
-        'b':{'inc':87.24,
-             'inc_uperr':0.69, 'inc_lowerr':-0.69,
-             'inc_ref':'Stassun et al. 2017',
-             'sma':0.03878,
+        'b':{'sma':0.03878,
              'sma_uperr':0.00065, 'sma_lowerr':-0.00065,
              'sma_ref':'Kokori et al. 2021',
              't0':2455694.72623,
              't0_uperr':8e-05, 't0_lowerr':-8e-05,
-             't0_ref':'Kokori et al. 2021',
-             'logg':3.2609631221802866,
-             'logg_uperr':0.32609631221802865, 'logg_lowerr':-0.32609631221802865,
-             'logg_ref':'System Prior Auto Fill', 'logg_units':'log10[cm.s-2]'}
-    }
-    overwrite['HAT-P-38'] = {
-        'FEH*':0.06, 'FEH*_uperr':0.1, 'FEH*_lowerr':-0.1,
-        'FEH*_units':'[Fe/H]', 'FEH*_ref':'Sato et al. 2012',
-        'b':{'omega':240,
-             'omega_lowerr':-104,
-             'omega_uperr':104,
-             'omega_ref':"Sato et al. 2012"}
+             't0_ref':'Kokori et al. 2021'}
     }
     overwrite['HAT-P-41'] = {
         'R*':1.683, 'R*_uperr':0.058, 'R*_lowerr':-0.036,
         'R*_ref':'Hartman et al. 2012',
-        # 'b':{'inc':87.7,
-        #     'inc_uperr':1.0, 'inc_lowerr':-1.0,
-        #     'inc_ref':'Hartman et al. 2012',
-        #     't0':2454983.86167,
-        #     't0_uperr':0.00107, 't0_lowerr':-0.00107,
-        #     't0_ref':'Hartman et al. 2012',
-        #     'sma':0.0426,
-        #     'sma_uperr':0.0005, 'sma_lowerr':-0.0005,
-        #     'sma_ref':'Hartman et al. 2012',
-        #     'period':2.694047,
-        #     'period_ref':'Hartman et al. 2012'}
-        'b':{'inc':87.7,
-             'inc_uperr':1.0, 'inc_lowerr':-1.0,
-             'inc_ref':'Stassun et al. 2017',
-             't0':2458071.24389,
-             't0_uperr':0.00012, 't0_lowerr':-0.00012,
-             't0_ref':'Kokori et al. 2021',
-             'sma':0.04258,
+        'b':{'sma':0.04258,
              'sma_uperr':0.00047, 'sma_lowerr':-0.00048,
-             'sma_ref':'Kokori et al. 2021',
-             'period':2.69405,
-             'period_ref':'Stassun et al. 2017'}
+             'sma_ref':'Kokori et al. 2021'}
     }
     overwrite['HD 106315'] = {
         'R*':1.18, 'R*_uperr':0.11, 'R*_lowerr':-0.11,
@@ -836,184 +607,23 @@ overwrite[starID] =
         'FEH*_ref':'Crossfield et al. 2017',
         'LOGG*':4.29, 'LOGG*_uperr':0.07, 'LOGG*_lowerr':-0.07,
         'LOGG*_ref':'Crossfield et al. 2017',
-        # 'b':{'inc':88.4,
-        #     'inc_uperr':1.1, 'inc_lowerr':-2.1,
-        #     'inc_ref':'Crossfield et al. 2017',
-        #     't0':2457605.6521,
-        #     't0_uperr':0.0042, 't0_lowerr':-0.0045,
-        #     't0_ref':'Crossfield et al. 2017',
-        #     'sma':0.09012,
-        #     'sma_uperr':0.00083, 'sma_lowerr':-0.00085,
-        #     'sma_ref':'Crossfield et al. 2017',
-        #     'ecc':0,
-        #     'ecc_ref':'Crossfield et al. 2017',
-        #     'rp':0.199,
-        #     'rp_ref':'Crossfield et al. 2017',
-        #     'period':9.5521,
-        #     'period_ref':'Crossfield et al. 2017',
-        #     'logg':2.51,
-        #     'logg_uperr':0.26, 'logg_lowerr':-0.26,
-        #     'logg_ref':'Crossfield et al. 2017', 'logg_units':'log10[cm.s-2]'},
-        # 'c':{'inc':89.42,
-        #     'inc_uperr':0.4, 'inc_lowerr':-0.67,
-        #     'inc_ref':'Crossfield et al. 2017',
-        #     't0':2457611.1310,
-        #     't0_uperr':0.0012, 't0_lowerr':-0.0012,
-        #     't0_ref':'Crossfield et al. 2017',
-        #     'sma':0.1526,
-        #     'sma_uperr':0.0014, 'sma_lowerr':-0.0014,
-        #     'sma_ref':'Crossfield et al. 2017',
-        #     'ecc':0,
-        #     'ecc_ref':'Crossfield et al. 2017',
-        #     'rp':0.352,
-        #     'rp_ref':'Crossfield et al. 2017',
-        #     'period':21.0576,
-        #     'period_ref':'Crossfield et al. 2017',
-        #     'logg':2.98,
-        #     'logg_uperr':0.3, 'logg_lowerr':-0.3,
-        #     'logg_ref':'Crossfield et al. 2017', 'logg_units':'log10[cm.s-2]'}
-        'b':{'inc':87.54,
-             'inc_uperr':0.32, 'inc_lowerr':-0.32,
-             'inc_ref':'Barros et al. 2017',
-             't0':2457586.5487,
-             't0_uperr':0.0029, 't0_lowerr':-0.0029,
-             't0_ref':'Barros et al. 2017',
-             'sma':0.0907,
-             'sma_uperr':0.001, 'sma_lowerr':-0.001,
-             'sma_ref':'Barros et al. 2017',
-             'ecc':0.093,
-             'ecc_ref':'Barros et al. 2017',
-             'rp':0.218,
-             'rp_ref':'Barros et al. 2017',
-             'period':9.55237,
-             'period_ref':'Barros et al. 2017',
-             'logg':3.3155261313408566,
-             'logg_uperr':0.3315526131340857, 'logg_lowerr':-0.3315526131340857,
-             'logg_ref':'System Prior Auto Fill', 'logg_units':'log10[cm.s-2]'},
-        'c':{'inc':88.61,
-             'inc_uperr':0.7, 'inc_lowerr':-0.25,
-             'inc_ref':'Barros et al. 2017',
-             't0':2457569.0173,
-             't0_uperr':0.0014, 't0_lowerr':-0.0014,
-             't0_ref':'Barros et al. 2017',
-             'sma':0.1536,
-             'sma_uperr':0.0017, 'sma_lowerr':-0.0017,
-             'sma_ref':'Barros et al. 2017',
-             'ecc':0.22,
-             'ecc_ref':'Barros et al. 2017',
-             'rp':0.388,
-             'rp_ref':'Barros et al. 2017',
-             'period':21.05704,
-             'period_ref':'Barros et al. 2017',
-             'logg':2.8962515933281696,
-             'logg_uperr':0.28962515933281696, 'logg_lowerr':-0.28962515933281696,
-             'logg_ref':'System Prior Auto Fill', 'logg_units':'log10[cm.s-2]'}
     }
     overwrite['HD 97658'] = {
-        # 'b':{'inc':89.85,
-        #     'inc_uperr':0.15, 'inc_lowerr':-0.48,
-        #     'inc_ref':'Knutson et al. 2014',
-        #     't0':2456523.12537,
-        #     't0_uperr':0.00049, 't0_lowerr':-0.00049,
-        #     't0_ref':'Knutson et al. 2014',
-        #     'sma':0.09030091308645881,
-        #     'sma_uperr':0.004164, 'sma_lowerr':-0.004164,
-        #     'sma_ref':'Knutson et al. 2014',
-        #     'ecc':0, 'ecc_ref':'Knutson et al. 2014',
-        #     'period':9.489264,
-        #     'period_ref':'Knutson et al. 2014'}
-        'b':{'inc':89.05,
-             'inc_uperr':0.41, 'inc_lowerr':-0.24,
-             'inc_ref':'Ellis et al. 2021',
-             't0':2458904.9366,
-             't0_uperr':0.0008, 't0_lowerr':-0.0008,
-             't0_ref':'Ellis et al. 2021',
-             'sma':0.0805,
+        'b':{'sma':0.0805,
              'sma_uperr':0.001, 'sma_lowerr':-0.001,
-             'sma_ref':'ExoFOP-TESS TOI',
-             'ecc':0.05, 'ecc_ref':'Ellis et al. 2021',
-             'period':9.4897116,
-             'period_ref':'Ellis et al. 2021'}
+             'sma_ref':'ExoFOP-TESS TOI'}
     }
-    overwrite['K2-24'] = {
-        # 'b':{'logg':2.9233923050832749,
-        #     'logg_uperr':0.28, 'logg_lowerr':-0.28,
-        #     'logg_ref':'Petigura et al. 2016', 'logg_units':'log10[cm.s-2]'},
-        # 'c':{'logg':3.2300188146519129,
-        #     'logg_uperr':0.3, 'logg_lowerr':-0.3,
-        #     'logg_ref':'Petigura et al. 2016', 'logg_units':'log10[cm.s-2]'}
-        'b':{'logg':2.804767306962391,
-             'logg_uperr':0.28047673069623913, 'logg_lowerr':-0.28,
-             'logg_ref':'System Prior Auto Fill', 'logg_units':'log10[cm.s-2]'},
-        'c':{'logg':2.4287470185879663,
-             'logg_uperr':0.24287470185879662, 'logg_lowerr':-0.24287470185879662,
-             'logg_ref':'System Prior Auto Fill', 'logg_units':'log10[cm.s-2]'}
-    }
-    overwrite['K2-3'] = {
-        # 'b':{
-        #    'mass':0.0181,
-        #    'mass_uperr':0.0077,
-        #    'mass_lowerr':-0.0054,
-        #    'mass_ref':'Pearson 2019',
-        #    'mass_units':'Jupiter mass',
-        #    'logg':3.0730,
-        #    'logg_lowerr':-0.15, 'logg_uperr':0.15,
-        #    'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
-        # },
-        # 'c':{
-        #    'mass':0.0154,
-        #    'mass_uperr':0.0066,
-        #    'mass_lowerr':-0.0046,
-        #    'mass_ref':'Pearson 2019',
-        #    'mass_units':'Jupiter mass',
-        #    'logg':3.1462,
-        #    'logg_lowerr':-0.15, 'logg_uperr':0.15,
-        #    'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
-        # },
-        # 'd':{
-        #    'mass':0.0154,
-        #    'mass_uperr':0.0066,
-        #    'mass_lowerr':-0.0046,
-        #    'mass_ref':'Pearson 2019',
-        #    'mass_units':'Jupiter mass',
-        #    'logg':3.1462,
-        #    'logg_lowerr':-0.15, 'logg_uperr':0.15,
-        #    'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
-        # },
-        'b':{
-            'mass':0.02039,
-            'mass_uperr':0.00311,
-            'mass_lowerr':-0.00293,
-            'mass_ref':'Kosiarek et al. 2019',
-            'mass_units':'Jupiter mass',
-            'logg':3.141655964019513,
-            'logg_lowerr':-0.3141655964019513, 'logg_uperr':0.3141655964019513,
-            'logg_ref':'System Prior Auto Fill', 'logg_units':'log10[cm.s-2]'
-        },
-        'c':{
-            'mass':0.00673,
-            'mass_uperr':0.0034,
-            'mass_lowerr':-0.00327,
-            'mass_ref':'Kosiarek et al. 2019',
-            'mass_units':'Jupiter mass',
-            'logg':2.887685867464453,
-            'logg_lowerr':-0.2887685867464453, 'logg_uperr':0.2887685867464453,
-            'logg_ref':'System Prior Auto Fill', 'logg_units':'log10[cm.s-2]'
-        },
-        'd':{
-            'mass':0.00881,
-            'mass_uperr':0.0008810000000000001,
-            'mass_lowerr':-0.0008810000000000001,
-            'mass_ref':'Kosiarek et al. 2019',
-            'mass_units':'Jupiter mass',
-            'logg':3.0046467116525237,
-            'logg_lowerr':-0.3004646711652524, 'logg_uperr':0.3004646711652524,
-            'logg_ref':'System Prior Auto Fill', 'logg_units':'log10[cm.s-2]'
-        }
-    }
+    #  this logg is way off from what it's getting now (3.5). diff Rp I guess
+    # overwrite['K2-3'] = {
+    #    'd':{
+    #        'logg':3.0046467116525237,
+    #        'logg_lowerr':-0.3004646711652524, 'logg_uperr':0.3004646711652524,
+    #        'logg_ref':'System Prior Auto Fill', 'logg_units':'log10[cm.s-2]'
+    #    }
+    # }
     overwrite['K2-33'] = {
         'FEH*':0.0, 'FEH*_uperr':0.13, 'FEH*_lowerr':-0.14,
-        'FEH*_units':'[Fe/H]', 'FEH*_ref':'Mann et al. 2016'}
+        'FEH*_units':'[dex]', 'FEH*_ref':'Mann et al. 2016'}
 
     overwrite['K2-93'] = {
         'R*':1.4, 'R*_uperr':0.19, 'R*_lowerr':-0.19,
@@ -1095,8 +705,9 @@ overwrite[starID] =
              'logg_ref':'System Prior Auto Fill', 'logg_units':'log10[cm.s-2]'}}
     overwrite['KELT-1'] = {
         'FEH*':0.009, 'FEH*_uperr':0.073, 'FEH*_lowerr':-0.073,
-        'FEH*_units':'[Fe/H]', 'FEH*_ref':'Siverd et al. 2012',
+        'FEH*_units':'[dex]', 'FEH*_ref':'Siverd et al. 2012',
         'b':{
+            # hmm, these values are off a bit, even though its the same reference
             'inc':87.6,
             'inc_uperr':1.4, 'inc_lowerr':-1.9,
             'inc_ref':'Siverd et al. 2012',
@@ -1107,8 +718,6 @@ overwrite[starID] =
             'sma_uperr':0.00039, 'sma_lowerr':-0.00039,
             'sma_ref':'Siverd et al. 2012',
             'ecc':0, 'ecc_ref':'Siverd et al. 2012',
-            'period':1.217513,
-            'period_ref':'Siverd et al. 2012',
             "Spitzer_IRAC1_subarray": [
                 0.3499475318779155,
                 -0.13450119362315333,
@@ -1133,30 +742,6 @@ overwrite[starID] =
     overwrite['Kepler-16'] = {
         'R*':0.665924608009903, 'R*_uperr':0.0013, 'R*_lowerr':-0.0013,
         'R*_ref':'Oroz + GMR',
-        # 'b':{'inc':89.7511397641686,
-        #     'inc_uperr':0.0323, 'inc_lowerr':-0.04,
-        #     'inc_ref':'Oroz + GMR',
-        #     't0':2457914.235774330795,
-        #     't0_uperr':0.004, 't0_lowerr':-0.004,
-        #     't0_ref':'Oroz',
-        #     'sma':0.7048,
-        #     'sma_uperr':0.0011,
-        #     'sma_lowerr':-0.0011,
-        #     'sma_ref':'Doyle et al. 2011',
-        #     'period':228.776,
-        #     'period_ref':'Doyle et al. 2011'}
-        'b':{'inc':90.032,
-             'inc_uperr':0.002, 'inc_lowerr':-0.002,
-             'inc_ref':'Doyle et al. 2011',
-             't0':2455212.12316,
-             't0_uperr':0.004, 't0_lowerr':-0.004,
-             't0_ref':'Doyle et al. 2011',
-             'sma':0.7048,
-             'sma_uperr':0.0011,
-             'sma_lowerr':-0.0011,
-             'sma_ref':'Doyle et al. 2011',
-             'period':228.776,
-             'period_ref':'Doyle et al. 2011'}
     }
     overwrite['Kepler-1625'] = {
         'b':{'logg':3.0132,
@@ -1187,10 +772,6 @@ overwrite[starID] =
             'sma_ref':'Collins et al. 2017',
             'period':1.09142245,
             'period_ref':'Stassun et al. 2017',
-            'omega':272.7,
-            'omega_lowerr':-1.3,
-            'omega_uperr':2.4,
-            'omega_ref':"Knutson et al. 2014",
             # limb darkening
             "Spitzer_IRAC1_subarray": [
                 0.36885966190119,
@@ -1214,10 +795,10 @@ overwrite[starID] =
     }
     overwrite['WASP-39'] = {
         'FEH*':-0.10, 'FEH*_uperr':0.1, 'FEH*_lowerr':-0.1,
-        'FEH*_units':'[Fe/H]', 'FEH*_ref':'Faedi et al. 2011'}
+        'FEH*_units':'[dex]', 'FEH*_ref':'Faedi et al. 2011'}
     overwrite['WASP-43'] = {
         'FEH*':-0.05, 'FEH*_uperr':0.17, 'FEH*_lowerr':-0.17,
-        'FEH*_units':'[Fe/H]', 'FEH*_ref':'Hellier et al. 2011',
+        'FEH*_units':'[dex]', 'FEH*_ref':'Hellier et al. 2011',
         "b": {
             "Spitzer_IRAC1_subarray": [
                 0.5214015151262713,
@@ -1240,35 +821,15 @@ overwrite[starID] =
         }
     }
     overwrite['WASP-6'] = {
-        # 'b':{'inc':88.38,
-        #     'inc_uperr':0.31, 'inc_lowerr':-0.31,
-        #     'inc_ref':'Tregloan-Reed et al. 2015',
-        #     't0':2456132.41081,
-        #     't0_uperr':0.00015, 't0_lowerr':-0.00015,
-        #     't0_ref':'Tregloan-Reed et al. 2015',
-        #     'sma':0.0414,
-        #     'sma_uperr':0.001,
-        #     'sma_lowerr':-0.001,
-        #     'sma_ref':'Tregloan-Reed et al. 2015',
-        #     'period':3.361,
-        #     'period_ref':'Tregloan-Reed et al. 2015'}
-        'b':{'inc':88.47,
-             'inc_uperr':0.56, 'inc_lowerr':-0.56,
-             'inc_ref':'Stassun et al. 2017',
-             't0':2455591.28967,
+        'b':{'t0':2455591.28967,
              't0_uperr':7e-05, 't0_lowerr':-7e-05,
              't0_ref':'Kokori et al. 2021',
              'sma':0.04217,
              'sma_uperr':0.00079,
              'sma_lowerr':-0.0012,
-             'sma_ref':'Kokori et al. 2021',
-             'period':3.36101,
-             'period_ref':'Stassun et al. 2017'}
+             'sma_ref':'Kokori et al. 2021'}
     }
     overwrite['XO-2'] = {
-        # 'b':{'t0':2455565.54048,
-        #     't0_uperr':0.005, 't0_lowerr':-0.005,
-        #     't0_ref':'GMR'}
         'b':{'t0':2454508.73829,
              't0_uperr':0.00014, 't0_lowerr':-0.00016,
              't0_ref':'Crouzet et al. 2012'}
@@ -1288,22 +849,6 @@ overwrite[starID] =
             'ecc_uperr':0.01,
         }
     }
-    overwrite['HAT-P-19'] = {
-        'b':{
-            'omega':256,
-            'omega_lowerr':-77,
-            'omega_uperr':77,
-            'omega_ref':"Hartman et al. 2011"
-        }
-    }
-    overwrite['HAT-P-15'] = {
-        'b':{
-            'omega':262.5,
-            'omega_lowerr':-2.9,
-            'omega_uperr':2.4,
-            'omega_ref':"Bonomo et al. 2017"
-        }
-    }
     overwrite['HAT-P-16'] = {
         'b':{
             'omega':213.0,
@@ -1320,20 +865,8 @@ overwrite[starID] =
             'omega_ref':"Esposito et al. 2014"
         }
     }
-    overwrite['HAT-P-2'] = {
-        'b':{
-            'omega':188.0,
-            'omega_lowerr':-0.2,
-            'omega_uperr':0.2,
-            'omega_ref':"Ment et al. 2018"
-        }
-    }
     overwrite['HAT-P-23'] = {
         'b':{
-            'omega':121.0,
-            'omega_lowerr':-9,
-            'omega_uperr':11,
-            'omega_ref':"Stassun et al. 2017",
             "Spitzer_IRAC1_subarray": [
                 0.4028945813566236,
                 -0.1618193396025557,
@@ -1354,84 +887,8 @@ overwrite[starID] =
             ]
         }
     }
-    overwrite['HAT-P-26'] = {
-        'b':{
-            'omega':46.0,
-            'omega_lowerr':-71,
-            'omega_uperr':33,
-            'omega_ref':"Knutson et al. 2014"
-        }
-    }
-    overwrite['HAT-P-30'] = {
-        'b':{
-            'omega':114.0,
-            'omega_lowerr':-77,
-            'omega_uperr':200,
-            'omega_ref':"Knutson et al. 2014"
-        }
-    }
-    overwrite['HAT-P-32'] = {
-        'b':{
-            'omega':50.0,
-            'omega_lowerr':-18,
-            'omega_uperr':27,
-            'omega_ref':"Wang et al. 2019"
-        }
-    }
-    overwrite['HAT-P-34'] = {
-        'b':{
-            'omega':21.9,
-            'omega_lowerr':-5.6,
-            'omega_uperr':5.2,
-            'omega_ref':"Bonomo et al. 2017"
-        }
-    }
-    overwrite['HD 17156'] = {
-        'b':{
-            'omega':121.51,
-            'omega_lowerr':-0.3,
-            'omega_uperr':0.3,
-            'omega_ref':"Ment et al. 2018"
-        }
-    }
-    overwrite['K2-132'] = {
-        'b':{
-            'omega':82.6,
-            'omega_lowerr':-4.2,
-            'omega_uperr':4.0,
-            'omega_ref':"Jones et al. 2018"
-        }
-    }
-    overwrite['K2-18'] = {
-        'b':{
-            'omega':-5.7,
-            'omega_lowerr':-33.8,
-            'omega_uperr':46.40,
-            'omega_ref':"Sarkis et al. 2018"
-        }
-    }
-    overwrite['K2-22'] = {
-        'b':{
-            'omega':46.7,
-            'omega_lowerr':-144,
-            'omega_uperr':90,
-            'omega_ref':"Dressing et al. 2017"
-        }
-    }
-    overwrite['WASP-10'] = {
-        'b':{
-            'omega':151.9,
-            'omega_lowerr':-8.8,
-            'omega_uperr':11,
-            'omega_ref':"Bonomo et al. 2017"
-        }
-    }
     overwrite['WASP-14'] = {
         'b':{
-            'omega':251.61,
-            'omega_lowerr':-0.41,
-            'omega_uperr':0.41,
-            'omega_ref':"Bonomo et al. 2017",
             "Spitzer_IRAC1_subarray": [
                 0.3556193331718539,
                 -0.13491841927882636,
@@ -1454,10 +911,6 @@ overwrite[starID] =
     }
     overwrite['WASP-34'] = {
         'b':{
-            'omega':215,
-            'omega_lowerr':-150,
-            'omega_uperr':77,
-            'omega_ref':"Knutson et al. 2014",
             "Spitzer_IRAC1_subarray": [
                 0.428983331524869,
                 -0.18290950217251944,
@@ -1476,30 +929,6 @@ overwrite[starID] =
                 0.567918864270408,
                 -0.2807821851882787
             ]
-        }
-    }
-    overwrite['WASP-5'] = {
-        'b':{
-            'omega':34.38,
-            'omega_lowerr':-22,
-            'omega_uperr':-26.93,
-            'omega_ref':"Gillon et al. 2009"
-        }
-    }
-    overwrite['WASP-7'] = {
-        'b':{
-            'omega':109,
-            'omega_lowerr':-55,
-            'omega_uperr':170,
-            'omega_ref':"Knutson et al. 2014"
-        }
-    }
-    overwrite['WASP-8'] = {
-        'b':{
-            'omega':274.21,
-            'omega_lowerr':-0.33,
-            'omega_uperr':0.33,
-            'omega_ref':"Bonomo et al. 2017"
         }
     }
     overwrite['Kepler-11'] = {
@@ -1523,21 +952,11 @@ overwrite[starID] =
             'mass_lowerr':-0.01,
             'mass_ref':'Hadden & Lithwick et al. 2017',
             'mass_units':'Jupiter mass',
-            'omega':357.0,
-            'omega_lowerr':-0.4,
-            'omega_uperr':0.5,
-            'omega_ref':"Borsato et al. 2019"
-        },
-        'c':{
-            'omega':167.5,
-            'omega_lowerr':-0.1,
-            'omega_uperr':0.1,
-            'omega_ref':"Borsato et al. 2019"
         }
     }
     overwrite['LHS 3844'] = {
         'FEH*':0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
-        'FEH*_units':'[Fe/H]', 'FEH*_ref':"Kyle's best guess",
+        'FEH*_units':'[dex]', 'FEH*_ref':"Kyle's best guess",
         'b':{
             'mass':0.0118,
             'mass_uperr':0.0051,
@@ -1617,108 +1036,6 @@ overwrite[starID] =
             'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
         }
     }
-    overwrite['K2-138'] = {
-        # 'b':{
-        #    'mass':0.0135,
-        #    'mass_uperr':0.0058,
-        #    'mass_lowerr':-0.0040,
-        #    'mass_ref':'Pearson 2019',
-        #    'mass_units':'Jupiter mass',
-        #    'logg':3.2305,
-        #    'logg_lowerr':-0.15, 'logg_uperr':0.15,
-        #    'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
-        # },
-        # 'c':{
-        #    'mass':0.0213,
-        #    'mass_uperr':0.0091,
-        #    'mass_lowerr':-0.0064,
-        #    'mass_ref':'Pearson 2019',
-        #    'mass_units':'Jupiter mass',
-        #    'logg':3.0195,
-        #    'logg_lowerr':-0.15, 'logg_uperr':0.15,
-        #    'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
-        # },
-        # 'd':{
-        #    'mass':0.0229,
-        #    'mass_uperr':0.0097,
-        #    'mass_lowerr':-0.0068,
-        #    'mass_ref':'Pearson 2019',
-        #    'mass_units':'Jupiter mass',
-        #    'logg':3.0025,
-        #    'logg_lowerr':-0.15, 'logg_uperr':0.15,
-        #    'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
-        # },
-        # 'e':{
-        #    'mass':0.0313,
-        #    'mass_uperr':0.0133,
-        #    'mass_lowerr':-0.0093,
-        #    'mass_ref':'Pearson 2019',
-        #    'mass_units':'Jupiter mass',
-        #    'logg':2.9538,
-        #    'logg_lowerr':-0.15, 'logg_uperr':0.15,
-        #    'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
-        # },
-        # 'f':{
-        #    'mass':0.0246,
-        #    'mass_uperr':0.0105,
-        #    'mass_lowerr':-0.0074,
-        #    'mass_ref':'Pearson 2019',
-        #    'mass_units':'Jupiter mass',
-        #    'logg':2.9871,
-        #    'logg_lowerr':-0.15, 'logg_uperr':0.15,
-        #    'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
-        # }
-        'b':{
-            'mass':0.00975,
-            'mass_uperr':0.0033,
-            'mass_lowerr':-0.0033,
-            'mass_ref':'Lopez et al. 2019',
-            'mass_units':'Jupiter mass',
-            'logg':3.122642551445353,
-            'logg_lowerr':-0.31226425514453526, 'logg_uperr':0.31226425514453526,
-            'logg_ref':'System Prior Auto Fill', 'logg_units':'log10[cm.s-2]'
-        },
-        'c':{
-            'mass':0.01985,
-            'mass_uperr':0.00356,
-            'mass_lowerr':-0.00356,
-            'mass_ref':'Lopez et al. 2019',
-            'mass_units':'Jupiter mass',
-            'logg':3.0685582617244536,
-            'logg_lowerr':-0.30685582617244533, 'logg_uperr':0.30685582617244533,
-            'logg_ref':'System Prior Auto Fill', 'logg_units':'log10[cm.s-2]'
-        },
-        'd':{
-            'mass':0.02492,
-            'mass_uperr':0.00437,
-            'mass_lowerr':-0.00425,
-            'mass_ref':'Lopez et al. 2019',
-            'mass_units':'Jupiter mass',
-            'logg':3.134094303846485,
-            'logg_lowerr':-0.3134094303846485, 'logg_uperr':0.3134094303846485,
-            'logg_ref':'System Prior Auto Fill', 'logg_units':'log10[cm.s-2]'
-        },
-        'e':{
-            'mass':0.04081,
-            'mass_uperr':0.00623,
-            'mass_lowerr':-0.00626,
-            'mass_ref':'Lopez et al. 2019',
-            'mass_units':'Jupiter mass',
-            'logg':3.045058181595798,
-            'logg_lowerr':-0.3045058181595798, 'logg_uperr':0.3045058181595798,
-            'logg_ref':'System Prior Auto Fill', 'logg_units':'log10[cm.s-2]'
-        },
-        'f':{
-            'mass':0.00513,
-            'mass_uperr':0.00667,
-            'mass_lowerr':-0.00371,
-            'mass_ref':'Lopez et al. 2019',
-            'mass_units':'Jupiter mass',
-            'logg':2.277823309686141,
-            'logg_lowerr':-0.22778233096861408, 'logg_uperr':0.22778233096861408,
-            'logg_ref':'System Prior Auto Fill', 'logg_units':'log10[cm.s-2]'
-        }
-    }
     overwrite['K2-167'] = {
         'b':{
             'mass':0.0246,
@@ -1777,10 +1094,6 @@ overwrite[starID] =
             'logg':3.1488,
             'logg_lowerr':-0.15, 'logg_uperr':0.15,
             'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]',
-            'omega':34.38,
-            'omega_lowerr':-133,
-            'omega_uperr':101,
-            'omega_ref':"Dressing et al. 2017"
         },
         'c':{
             'mass':0.0210,
@@ -1791,10 +1104,6 @@ overwrite[starID] =
             'logg':3.0235,
             'logg_lowerr':-0.15, 'logg_uperr':0.15,
             'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]',
-            'omega':59.96,
-            'omega_lowerr':-120,
-            'omega_uperr':75,
-            'omega_ref':"Dressing et al. 2017"
         }
     }
     overwrite['K2-212'] = {
@@ -1845,68 +1154,6 @@ overwrite[starID] =
             'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
         }
     }
-    overwrite['K2-32'] = {
-        # 'b':{
-        #    'mass':0.0717,
-        #    'mass_uperr':0.0306,
-        #    'mass_lowerr':-0.0215,
-        #    'mass_ref':'Pearson 2019',
-        #    'mass_units':'Jupiter mass',
-        #    'logg':2.9578,
-        #    'logg_lowerr':-0.15, 'logg_uperr':0.15,
-        #    'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
-        # },
-        # 'c':{
-        #    'mass':0.0238,
-        #    'mass_uperr':0.0101,
-        #    'mass_lowerr':-0.0071,
-        #    'mass_ref':'Pearson 2019',
-        #    'mass_units':'Jupiter mass',
-        #    'logg':2.9940,
-        #    'logg_lowerr':-0.15, 'logg_uperr':0.15,
-        #    'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
-        # },
-        # 'd':{
-        #    'mass':0.0310,
-        #    'mass_uperr':0.0132,
-        #    'mass_lowerr':-0.0092,
-        #    'mass_ref':'Pearson 2019',
-        #    'mass_units':'Jupiter mass',
-        #    'logg':2.9548,
-        #    'logg_lowerr':-0.15, 'logg_uperr':0.15,
-        #    'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
-        # },
-        'b':{
-            'mass':0.0472,
-            'mass_uperr':0.00566,
-            'mass_lowerr':-0.00535,
-            'mass_ref':'Lillo-Box et al. 2020',
-            'mass_units':'Jupiter mass',
-            'logg':2.718525189895293,
-            'logg_lowerr':-0.2718525189895293, 'logg_uperr':0.2718525189895293,
-            'logg_ref':'System Prior Auto Fill', 'logg_units':'log10[cm.s-2]'
-        },
-        'c':{
-            'mass':0.02549,
-            'mass_uperr':0.00755,
-            'mass_lowerr':-0.00755,
-            'mass_ref':'Lillo-Box et al. 2020',
-            'mass_units':'Jupiter mass',
-            'logg':2.9063592455216574,
-            'logg_lowerr':-0.29063592455216575, 'logg_uperr':0.29063592455216575,
-            'logg_ref':'System Prior Auto Fill', 'logg_units':'log10[cm.s-2]'
-        },
-        'd':{
-            'mass':0.02108,
-            'mass_uperr':0.00787,
-            'mass_lowerr':-0.00787,
-            'mass_ref':'Lillo-Box et al. 2020',
-            'mass_units':'Jupiter mass',
-            'logg':2.7326553012236623,
-            'logg_lowerr':-0.2732655301223662, 'logg_uperr':0.2732655301223662,
-            'logg_ref':'System Prior Auto Fill', 'logg_units':'log10[cm.s-2]'
-        },
-    }
     overwrite['K2-52'] = {
         'b':{
             'mass':1.0821,
@@ -1933,7 +1180,7 @@ overwrite[starID] =
     }
     overwrite['K2-55'] = {
         'FEH*':0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
-        'FEH*_units':'[Fe/H]', 'FEH*_ref':"Kyle's best guess",
+        'FEH*_units':'[dex]', 'FEH*_ref':"Kyle's best guess",
         'b':{
             'mass':0.0539,
             'mass_uperr':0.0230,
@@ -2033,10 +1280,6 @@ overwrite[starID] =
             'logg':3.3391,
             'logg_lowerr':-0.1548, 'logg_uperr':0.1548,
             'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]',
-            'omega':56.7,
-            'omega_lowerr':-129,
-            'omega_uperr':79.9,
-            'omega_ref':"Dressing et al. 2017"
         }
     }
     overwrite['K2-95'] = {
@@ -2113,15 +1356,8 @@ overwrite[starID] =
             ]
         }
     }
-    # GEOFF UPDATE
     overwrite['GJ 1132'] = {
         'b':{
-            # 'inc':88.41,
-            'inc':86.58,
-            # 'inc_uperr':2.6, 'inc_lowerr':-2.7,
-            'inc_uperr':0.63, 'inc_lowerr':-0.63,
-            # 'inc_ref':'KAP',
-            'inc_ref':'Southworth et al. 2017',
             "Spitzer_IRAC1_subarray": [
                 0.8808056407530139,
                 -0.7457051451918199,
@@ -2214,11 +1450,7 @@ overwrite[starID] =
         }
     }
 
-    # this one (WASP-33) has FEH* in the Exoplanet Archive, but no error bars
-    #  there's three values in the table: 0.0,0.1,0.1 (no error bars for any of them)
     overwrite["WASP-33"] = {
-        'FEH*':0.1, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
-        'FEH*_units':'[Fe/H]', 'FEH*_ref':"Zhang et al. 2018",
         "b": {
             "Spitzer_IRAC1_subarray": [
                 0.3360838105569875,
@@ -2634,7 +1866,7 @@ overwrite[starID] =
 
     overwrite['WASP-87'] = {
         'FEH*':0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
-        'FEH*_units':'[Fe/H]', 'FEH*_ref':"Default to solar metallicity"}
+        'FEH*_units':'[dex]', 'FEH*_ref':"Default to solar metallicity"}
 
     # only one system (this one) is missing an H_mag
     #  make a guess at it based on V=16.56,I=15.30
@@ -2646,11 +1878,21 @@ overwrite[starID] =
     # there's a bug in the Archive where this planet's radius is
     #  only given in Earth units, not our standard Jupiter units
     #  0.37+-0.18 REarth = 0.033+-0.16
+    # mass is normally filled in via an assumed MRrelation; needs to be done here instead
+    # logg is normally calculated from M+R; needs to be done here instead
     overwrite['Kepler-37'] = {
         'e':{'rp':0.033,
              'rp_uperr':0.016, 'rp_lowerr':-0.016,
              'rp_units':'[Jupiter radius]',
-             'rp_ref':'Q1-Q8 KOI Table'}}
+             'rp_ref':'Q1-Q8 KOI Table',
+             'mass':0.0002,
+             'mass_uperr':0.0002, 'mass_lowerr':-0.0001,
+             'mass_units':'[Jupiter mass]',
+             'mass_ref':'Assumed mass/radius relation',
+             'logg':2.7,
+             'logg_uperr':0.3, 'logg_lowerr':-0.2,
+             'logg_units':'log10[cm.s-2]',
+             'logg_ref':'Assumed mass/radius relation'}}
 
     return overwrite
 # -------------------------------------------------------------------

@@ -11,6 +11,9 @@ import excalibur.system.states as sysstates
 import excalibur.target as trg
 import excalibur.target.edit as trgedit
 import excalibur.target.algorithms as trgalg
+
+from excalibur.system.consistency import consistency_checks
+
 # ------------- ------------------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class validate(dawgie.Algorithm):
@@ -91,15 +94,34 @@ class finalize(dawgie.Algorithm):
             for key in val: self.__out[key] = val.copy()[key]
             # pylint: disable=protected-access
             if ds._tn() in overwrite:
+                # print('UPDATE overwrite start',ds._tn())
                 update = self._priority(overwrite[ds._tn()], self.__out)
+                if not update:
+                    log.warning('>-- STILL MISSING DICT INFO')
+                    log.warning('>-- ADD MORE KEYS TO TARGET/EDIT.PY PPAR()')
                 pass
-            elif not self.__out['PP'][-1]: update = True
+            elif not self.__out['PP'][-1]:
+                update = True
             else:
                 log.warning('>-- MISSING DICT INFO')
                 log.warning('>-- ADD KEY TO TARGET/EDIT.PY PPAR()')
                 pass
             pass
         else: self._failure(errstring)
+
+        # consistency checks
+        inconsistencies = consistency_checks(self.__out['priors'])
+        for inconsistency in inconsistencies:
+            self.__out['autofill'].append('inconsistent:'+inconsistency)
+
+        # log warnings moved to the very end (previously were before forcepar)
+        log.warning('>-- FORCE PARAMETER: %s', str(self.__out['PP'][-1]))
+        log.warning('>-- MISSING MANDATORY PARAMETERS: %s', str(self.__out['needed']))
+        log.warning('>-- MISSING PLANET PARAMETERS: %s', str(self.__out['pneeded']))
+        log.warning('>-- PLANETS IGNORED: %s', str(self.__out['ignore']))
+        log.warning('>-- INCONSISTENCIES: %s', str(inconsistencies))
+        log.warning('>-- AUTOFILL: %s', str(self.__out['autofill']))
+
         if update: ds.update()
         else: raise dawgie.NoValidOutputDataError(
                 f'No output created for SYSTEM.{self.name()}')

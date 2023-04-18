@@ -347,7 +347,10 @@ def st_luminosity(priors, _ests):
     sscmks = syscore.ssconstants(mks=True)
     Tsun = sscmks['Tsun']
     if 'L*' in priors.keys() and priors['L*']!='':
-        est = 10.**priors['L*']
+        # est = 10.**priors['L*']
+        # autofill now corrects for luminosity being logged in the Archive
+        est = priors['L*']
+        # est_ref = priors['L*_ref']
         if priors['R*']!='' and priors['T*']!='':
             # print('L* vs T*R* consistency?',
             #      est/(priors['R*']**2*(priors['T*']/Tsun)**4),
@@ -360,7 +363,8 @@ def st_luminosity(priors, _ests):
             est = 'missing T*'
         else:
             est = priors['R*']**2*(priors['T*']/Tsun)**4
-    return est
+            # est_ref = 'from R_star & T_star'
+    return est  # ,est_ref
 
 def st_spTyp(priors, _ests):
     '''st_spTyp ds'''

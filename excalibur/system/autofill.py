@@ -1,4 +1,4 @@
-'''system deriveQuantities ds'''
+'''system autofill ds'''
 # -- IMPORTS -- ------------------------------------------------------
 import numpy
 import excalibur.system.core as syscore
@@ -28,7 +28,8 @@ def fillUncertainty(param,param_value,param_uncertainty,error_type):
             # for stellar temperature, 100 K uncertainty as default
             fillvalue = 100
         elif param=='inc':
-            # inclination should be pretty close to 90degrees, 5deg uncertainty?
+            # inclination should be pretty close to 90degrees
+            #  let's try 5deg uncertainty
             fillvalue = 5
             # make sure inclination range stays within 0-90 degrees
             # actually no, allow inclination to go 0-180, as in the Archive
@@ -36,6 +37,9 @@ def fillUncertainty(param,param_value,param_uncertainty,error_type):
         elif param=='ecc':
             # for eccentricity, set uncertainty to 20%, with a minimum of 0.1
             fillvalue = numpy.min([float(param_value) * 2.e-1, 0.1])
+        elif param=='omega':
+            # for argument of periastron, set a large uncertainty (120 degrees)
+            fillvalue = 120
         elif param=='FEH*':
             # for metallicity, fallback uncertainty is 0.1 dex
             fillvalue = 0.1
@@ -57,9 +61,9 @@ def fillUncertainty(param,param_value,param_uncertainty,error_type):
                 #   problem though - period is not passed in here
                 # for now, set it to 1 hour uncertainty
                 fillvalue = 1./24.
-            elif param in ['rp','sma','mass','R*','M*','RHO*']:
+            elif param in ['rp','sma','mass','R*','M*','RHO*','L*']:
                 # set uncertainty to 10% for planet radius, semi-major axis, mass
-                #   same for stellar radius, mass, density (for HAT-P-38)
+                #   same for stellar radius, mass, density, luminosity
                 fillvalue = float(param_value) * 1.e-1
             else:
                 # fallback option is to set uncertainty to 10%
@@ -105,14 +109,71 @@ def bestValue(values,uperrs,lowerrs,refs):
                 # there are some refs without a year; make them lower priority
                 year = 1
             # select the most recently published non-blank value
-            if value != '' and year > bestyear:
-                bestyear = year
-                bestvalue = value
-                bestuperr = uperr
-                bestlowerr = lowerr
-                bestref = ref
+            if value != '' and year >= bestyear:
+                # use author name as tie-breaker for 2 with same year
+                if year==bestyear and bestref < ref:
+                    # print('skipping this same-year ref',year,ref,bestref)
+                    pass
+                else:
+                    bestyear = year
+                    bestvalue = value
+                    bestuperr = uperr
+                    bestlowerr = lowerr
+                    bestref = ref
 
     return bestvalue,bestuperr,bestlowerr,bestref
+
+# -------------------------------------------------------------------
+def estimate_mass_from_radius(radius_Jup):
+    '''
+    Use an assumed mass-radius relationship to guess the planet mass
+    '''
+
+    sscmks = syscore.ssconstants(cgs=True)
+
+    radius_Earth = radius_Jup * sscmks['Rjup'] / sscmks['Rearth']
+
+    ChenKipping_is_acceptable = False
+
+    if ChenKipping_is_acceptable:
+        rocky_slope = 0.279
+        gas_slope = 0.589
+        R_0 = 1.008  # radius for 1 Earth mass
+        transition_point_mass = 2.04  # Earth masses
+        transition_point_radius = R_0 * transition_point_mass**rocky_slope
+        # transition point is 1.23 Earth radii
+        # print('power law transition point (R_Earth)',transition_point_radius)
+
+        if radius_Earth < transition_point_radius:
+            mass_Earth = (radius_Earth/R_0)**(1./rocky_slope)
+            # at trans: mass_Earth = (transition_point_radius/R_0)**(1./rocky_slope)
+            # which simplifies to: mass_Earth = transition_point_mass  check
+        else:
+            mass_Earth = transition_point_mass * \
+                (radius_Earth/transition_point_radius)**(1./gas_slope)
+            # at trans: mass_Earth = transition_point_mass
+
+    else:
+        # Traub2011 formula, modified to enforce Earth/Jupiter fit
+        r0 = 0.375
+        r1 = 11.
+        m1 = 1000.
+        w = 1.5
+        if radius_Earth > r1:
+            # for radius larger than Jupiter, assume Jupiter mass
+            mass_Earth = sscmks['Mjup'] / sscmks['Mearth']
+
+        elif radius_Earth < 1:
+            # for planets smaller than Earth, assume Earth density
+            mass_Earth = radius_Earth**3
+
+        else:
+            # regular formula
+            mass_Earth = m1*10.**(-w*((r1-radius_Earth)/(radius_Earth-r0))**0.25)
+
+    mass_Jup = mass_Earth * sscmks['Mearth'] / sscmks['Mjup']
+
+    return mass_Jup
 
 # -------------------------------------------------------------------
 def derive_RHOstar_from_M_and_R(starInfo):
@@ -283,7 +344,7 @@ def derive_LOGGstar_from_R_and_M(starInfo):
     return LOGG_derived, LOGG_lowerr_derived, LOGG_uperr_derived, LOGG_ref_derived
 
 # -------------------------------------------------------------------
-def derive_LOGGplanet_from_R_and_M(starInfo, planetLetter):
+def derive_LOGGplanet_from_R_and_M(starInfo, planetLetter, verbose=False):
     '''
     If planetary log-g is blank, fill it in based on the planet's radius and mass
     '''
@@ -302,7 +363,7 @@ def derive_LOGGplanet_from_R_and_M(starInfo, planetLetter):
     # print()
 
     # this one is different from above - the 'logg' field doesn't exist yet
-    if 'logg' in starInfo[planetLetter].keys():
+    if 'logg' in starInfo[planetLetter].keys() and verbose:
         print('ERROR: logg field shouldnt exist yet')
     # for R,Rerr1,Rerr2, M,Merr1,Merr2, logg,loggerr1,loggerr2,loggref in zip(
     for R,Rerr1,Rerr2, M,Merr1,Merr2 in zip(
@@ -334,15 +395,22 @@ def derive_LOGGplanet_from_R_and_M(starInfo, planetLetter):
             else:
                 loggfractionalError1 = -numpy.sqrt((2.*float(Rerr1)/float(R))**2 +
                                                       (float(Merr1)/float(M))**2)
-                print()
-                print('Rstar fractional error',float(Rerr1),float(R))
-                print('Rstar fractional error',float(Rerr1)/float(R))
-                print('Mstar fractional error',float(Merr1),float(M))
-                print('Mstar fractional error',float(Merr1)/float(M))
-                print('logg fractional error',-loggfractionalError1)
+                # print()
+                # print('Rp fractional error',float(Rerr1),float(R))
+                # print('Rp fractional error',float(Rerr1)/float(R))
+                # print('Mp fractional error',float(Merr1),float(M))
+                # print('Mp fractional error',float(Merr1)/float(M))
+                # print('logg fractional error',-loggfractionalError1)
                 # if loggfractionalError1
                 # logg_lowerr_derived.append(str('%6.4f' %numpy.log10
-                logg_lowerr_derived.append(f'{numpy.log10(1 + loggfractionalError1):6.4f}')
+
+                # this conditional avoids log(negative) error
+                if loggfractionalError1 > -1:
+                    logg_lowerr_derived.append(f'{numpy.log10(1 + loggfractionalError1):6.4f}')
+                else:
+                    # HD 23472 Trifonov2019 has large R,M error bars, probably a typo
+                    # doesn't matter, since it's not the default publication
+                    logg_lowerr_derived.append('-1')
             if Rerr2=='' or Merr2=='':
                 logg_uperr_derived.append('')
             else:
@@ -358,3 +426,72 @@ def derive_LOGGplanet_from_R_and_M(starInfo, planetLetter):
             logg_ref_derived.append('')
 
     return logg_derived, logg_lowerr_derived, logg_uperr_derived, logg_ref_derived
+# -------------------------------------------------------------------
+def derive_Lstar_from_R_and_T(starInfo):
+    '''
+    If stellar luminosity is blank, calculate it from the star's radius and temperature
+    '''
+
+    # get Tsun definition
+    sscmks = syscore.ssconstants(cgs=True)
+
+    Lstar_derived = []
+    Lstar_lowerr_derived = []
+    Lstar_uperr_derived = []
+    Lstar_ref_derived = []
+
+    # print(starInfo['L*'])
+    # print(starInfo['L*_lowerr'])
+    # print(starInfo['L*_uperr'])
+
+    for R,Rerr1,Rerr2, T,Terr1,Terr2, Lstar,Lstarerr1,Lstarerr2,Lstarref in zip(
+            starInfo['R*'],starInfo['R*_lowerr'],starInfo['R*_uperr'],
+            starInfo['T*'],starInfo['T*_lowerr'],starInfo['T*_uperr'],
+            starInfo['L*'],starInfo['L*_lowerr'],starInfo['L*_uperr'],
+            starInfo['L*_ref']):
+
+        # check for blank stellar luminosity
+        #  (but only update it if R* and T* are both defined)
+        if Lstar=='' and R!='' and T!='':
+            newLstar = float(R)**2 * (float(T)/sscmks['Tsun'])**4
+            # print('Lstar derived',newLstar)
+
+            Lstar_derived.append(f'{newLstar:6.4f}')
+            Lstar_ref_derived.append('derived from R*,T*')
+
+            # also fill in the uncertainty on Lstar, based on R,M uncertainties
+            if Rerr1=='' or Terr1=='':
+                Lstar_lowerr_derived.append('')
+            else:
+                newLstarfractionalError1 = -numpy.sqrt((2.*float(Rerr1)/float(R))**2 +
+                                                       (4.*float(Terr1)/float(T))**2)
+                Lstar_lowerr_derived.append(f'{(newLstar * newLstarfractionalError1):6.4f}')
+            if Rerr2=='' or Terr2=='':
+                Lstar_uperr_derived.append('')
+            else:
+                newLstarfractionalError2 = numpy.sqrt((2.*float(Rerr2)/float(R))**2 +
+                                                      (4.*float(Terr2)/float(T))**2)
+                Lstar_uperr_derived.append(f'{(newLstar * newLstarfractionalError2):6.4f}')
+        else:
+            # SPECIAL ATTENTION FOR L*: the Archive gives it logged; correct here
+            if Lstar!='':
+                Lstar = 10.**float(Lstar)
+                # print('Lstar fixed',Lstar)
+                # print('Lstar errors before',Lstarerr1,Lstarerr2)
+                # there's an Archive bug where some upper error bars are missing, eg HAT-P-40
+                if Lstarerr1=='' and Lstarerr2!='':
+                    Lstarerr1 = -float(Lstarerr2)
+                if Lstarerr1!='':
+                    Lstarerr1 = Lstar * (10**float(Lstarerr1) - 1)
+                    Lstarerr1 = f'{Lstarerr1:6.4f}'
+                if Lstarerr2!='':
+                    Lstarerr2 = Lstar * (10**float(Lstarerr2) - 1)
+                    Lstarerr2 = f'{Lstarerr2:6.4f}'
+                Lstar = f'{Lstar:6.4f}'
+                # print('Lstar errors after ',Lstarerr1,Lstarerr2)
+            Lstar_derived.append(Lstar)
+            Lstar_lowerr_derived.append(Lstarerr1)
+            Lstar_uperr_derived.append(Lstarerr2)
+            Lstar_ref_derived.append(Lstarref)
+
+    return Lstar_derived, Lstar_lowerr_derived, Lstar_uperr_derived, Lstar_ref_derived

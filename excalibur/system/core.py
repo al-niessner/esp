@@ -6,9 +6,10 @@ import logging; log = logging.getLogger(__name__)
 # overwrite = trgedit.ppar()
 
 from excalibur.system.autofill import \
-    bestValue, fillUncertainty, \
+    bestValue, fillUncertainty, estimate_mass_from_radius, \
     derive_RHOstar_from_M_and_R, derive_SMA_from_P_and_Mstar, \
-    derive_LOGGstar_from_R_and_M, derive_LOGGplanet_from_R_and_M
+    derive_LOGGstar_from_R_and_M, derive_LOGGplanet_from_R_and_M, \
+    derive_Lstar_from_R_and_T
 
 import numpy as np
 # ------------- ------------------------------------------------------
@@ -28,6 +29,8 @@ G. ROUDIER: IAU 2012
                'Lsun':3.828e26,
                'Rjup':7.1492e7,
                'Mjup':1.8985233541508517e27,
+               'Rearth':6.371e6,
+               'Mearth':5.972168e24,
                'AU':1.495978707e11,
                'G':6.67428e-11,
                'c':2.99792e8,
@@ -42,6 +45,8 @@ G. ROUDIER: IAU 2012
                'Lsun':3.828e33,
                'Rjup':7.1492e9,
                'Mjup':1.8985233541508517e30,
+               'Rearth':6.371e8,
+               'Mearth':5.972168e27,
                'AU':1.495978707e13,
                'G':6.67428e-8,
                'c':2.99792e10,
@@ -76,14 +81,16 @@ def buildsp(autofill, out):
     out['starkeys'].extend(autofill['starkeys'])
     out['planetkeys'].extend(autofill['planetkeys'])
     out['exts'].extend(autofill['exts'])
-    # REMOVED FROM STELLAR MANDATORY LIST:  L*, AGE*
-    #  we could add L* back into the list, if desired (can derive it from R*,T*)
-    out['starmdt'].extend(['R*', 'T*', 'FEH*', 'LOGG*', 'M*', 'RHO*', 'Hmag'])
-    # ADDED TO THE PLANET MANDATORY LIST: logg
-    # out['planetmdt'].extend(['inc', 'period', 'ecc', 'rp', 't0', 'sma', 'mass'])
-    out['planetmdt'].extend(['inc', 'period', 'ecc', 'rp', 't0', 'sma', 'mass', 'logg'])
-    # NOTE: this list of mandatory extensions is not actually used anymore
-    out['extsmdt'].extend(['_lowerr', '_uperr'])
+    # MANDATORY STELLAR PARAMETERS
+    # out['starmdt'].extend(['R*', 'T*', 'FEH*', 'LOGG*', 'M*', 'RHO*', 'Hmag'])
+    out['starmdt'].extend(['R*', 'M*', 'LOGG*', 'RHO*', 'FEH*', 'Hmag', 'T*'])
+    # NEW CATEGORY: PARAMS TO PASS THROUGH TO ANCILLARY, BUT THEY"RE NOT MANDATORY
+    out['starnonmdt'].extend(['spTyp', 'L*', 'age'])
+    # AWKWARD: non-mandatory has to be included in 'starmdt' or it won't display
+    out['starmdt'].extend(out['starnonmdt'])
+    # MANDATORY PLANET PARAMETERS
+    # out['planetmdt'].extend(['inc', 'period', 'ecc', 'rp', 't0', 'sma', 'mass', 'logg'])
+    out['planetmdt'].extend(['rp', 'mass', 'logg', 'sma', 'period', 't0', 'inc', 'ecc', 'omega'])
 
     # use stellar mass,radius to fill in blank stellar density
     RHO_derived, RHO_lowerr_derived, RHO_uperr_derived, RHO_ref_derived = \
@@ -127,6 +134,19 @@ def buildsp(autofill, out):
         autofill['starID'][target]['LOGG*_ref'] = logg_ref_derived
         # exit('test3')
 
+    # use stellar radius and temperature to fill in blank stellar luminosity
+    lstar_derived, lstar_lowerr_derived, lstar_uperr_derived, lstar_ref_derived = \
+        derive_Lstar_from_R_and_T(autofill['starID'][target])
+    if autofill['starID'][target]['L*'] != lstar_derived:
+        # print('L* before ',autofill['starID'][target]['L*'])
+        # print('L* derived',lstar_derived)
+        # print('L*_ref derived',lstar_ref_derived)
+        # print('L*_ref before ',autofill['starID'][target]['L*_ref'])
+        autofill['starID'][target]['L*'] = lstar_derived
+        autofill['starID'][target]['L*_lowerr'] = lstar_lowerr_derived
+        autofill['starID'][target]['L*_uperr'] = lstar_uperr_derived
+        autofill['starID'][target]['L*_ref'] = lstar_ref_derived
+
     # use planet mass and radius to fill in blank planetary log-g
     for p in autofill['starID'][target]['planets']:
         logg_derived, logg_lowerr_derived, logg_uperr_derived, logg_ref_derived = \
@@ -146,12 +166,12 @@ def buildsp(autofill, out):
         autofill['starID'][target][p]['logg_lowerr'] = logg_lowerr_derived
         autofill['starID'][target][p]['logg_uperr'] = logg_uperr_derived
         autofill['starID'][target][p]['logg_ref'] = logg_ref_derived
-        autofill['starID'][target][p]['logg_ref'] = logg_ref_derived
         autofill['starID'][target][p]['logg_units'] = ['log10[cm.s-2]']*len(logg_derived)
         # exit('test4')
 
+    # loop over both the mandatory and non-mandatry parameters
+    # for lbl in out['starmdt']+out['starnonmdt']:
     for lbl in out['starmdt']:
-        # Retrocompatibility
         try:
             values = autofill['starID'][target][lbl].copy()
             uperrs = autofill['starID'][target][lbl+'_uperr'].copy()
@@ -163,17 +183,17 @@ def buildsp(autofill, out):
             uperr = ''
             lowerr = ''
             ref = ''
-        if value.__len__() > 0:
+        if str(value).__len__() > 0:
             if lbl=='spTyp':
                 out['priors'][lbl] = value
             else:
                 out['priors'][lbl] = float(value)
             out['priors'][lbl+'_ref'] = ref
             fillvalue,autofilled = fillUncertainty(lbl,value,uperr,'uperr')
-            if autofilled: out['autofill'].append(lbl+'_uperr')
+            if autofilled: out['autofill'].append('errorEstimate:'+lbl+'_uperr')
             out['priors'][lbl+'_uperr'] = fillvalue
             fillvalue,autofilled = fillUncertainty(lbl,value,lowerr,'lowerr')
-            if autofilled: out['autofill'].append(lbl+'_lowerr')
+            if autofilled: out['autofill'].append('errorEstimate:'+lbl+'_lowerr')
             out['priors'][lbl+'_lowerr'] = fillvalue
             strval = autofill['starID'][target][lbl+'_units'].copy()
             out['priors'][lbl+'_units'] = strval[0]
@@ -181,65 +201,14 @@ def buildsp(autofill, out):
         else:
             out['priors'][lbl] = ''
             for ext in out['exts']: out['priors'][lbl+ext] = ''
-            out['needed'].append(lbl)
+            # don't add parameter to the 'missing' list if it is non-mandatory
+            if lbl not in out['starnonmdt']:
+                out['needed'].append(lbl)
             pass
         pass
+
     ssc = ssconstants(cgs=True)
-    if ('LOGG*' in out['needed']) and ('R*' not in out['needed']):
-        radstar = (out['priors']['R*'])*(ssc['Rsun'])
-        values = autofill['starID'][target]['RHO*'].copy()
-        uperrs = autofill['starID'][target]['RHO*_uperr'].copy()
-        lowerrs = autofill['starID'][target]['RHO*_lowerr'].copy()
-        refs = autofill['starID'][target]['RHO*_ref'].copy()
-        value,uperr,lowerr,ref = bestValue(values,uperrs,lowerrs,refs)
-        if value.__len__() > 0:
-            # exit('THIS SHOULDNT BE NEEDED ANYMORE1')
-            print('THIS SHOULDNT BE NEEDED ANYMORE1')
-            rho = float(value)
-            g = 4e0*np.pi*(ssc['G'])*rho*radstar/3e0
-            out['priors']['LOGG*'] = np.log10(g)
-            out['autofill'].append('LOGG*')
-            index = out['needed'].index('LOGG*')
-            out['needed'].pop(index)
-            # note that the RHO* uncertainty is not used (nor R* uncertainty)
-            fillvalue,autofilled = fillUncertainty('LOGG*',np.log10(g),'','uperr')
-            out['priors']['LOGG*_uperr'] = fillvalue
-            if autofilled: out['autofill'].append('LOGG*_uperr')
-            fillvalue,autofilled = fillUncertainty('LOGG*',np.log10(g),'','lowerr')
-            out['priors']['LOGG*_lowerr'] = fillvalue
-            if autofilled: out['autofill'].append('LOGG*_lowerr')
 
-            strval = autofill['starID'][target]['LOGG*_units'].copy()
-            out['priors']['LOGG*_units'] = strval[-1]
-            out['priors']['LOGG*_ref'] = 'System Prior Auto Fill'
-            pass
-        values = autofill['starID'][target]['M*'].copy()
-        uperrs = autofill['starID'][target]['M*_uperr'].copy()
-        lowerrs = autofill['starID'][target]['M*_lowerr'].copy()
-        refs = autofill['starID'][target]['M*_ref'].copy()
-        value,uperr,lowerr,ref = bestValue(values,uperrs,lowerrs,refs)
-        if (value.__len__() > 0) and ('LOGG*' in out['needed']):
-            # exit('THIS SHOULDNT BE NEEDED ANYMORE2')
-            print('THIS SHOULDNT BE NEEDED ANYMORE2')
-            mass = float(value)*ssc['Msun']
-            g = (ssc['G'])*mass/(radstar**2)
-            out['priors']['LOGG*'] = np.log10(g)
-            out['autofill'].append('LOGG*')
-            index = out['needed'].index('LOGG*')
-            out['needed'].pop(index)
-            # note that the M* uncertainty is not used (nor R* uncertainty)
-            fillvalue,autofilled = fillUncertainty('LOGG*',np.log10(g),'','uperr')
-            out['priors']['LOGG*_uperr'] = fillvalue
-            if autofilled: out['autofill'].append('LOGG*_uperr')
-            fillvalue,autofilled = fillUncertainty('LOGG*',np.log10(g),'','lowerr')
-            out['priors']['LOGG*_lowerr'] = fillvalue
-            if autofilled: out['autofill'].append('LOGG*_lowerr')
-
-            strval = autofill['starID'][target]['LOGG*_units'].copy()
-            out['priors']['LOGG*_units'] = strval[-1]
-            out['priors']['LOGG*_ref'] = 'System Prior Auto Fill'
-            pass
-        pass
     for p in out['priors']['planets']:
         for lbl in out['planetmdt']:
             values = autofill['starID'][target][p][lbl].copy()
@@ -255,10 +224,10 @@ def buildsp(autofill, out):
                 out['priors'][p][lbl] = float(value)
                 out['priors'][p][lbl+'_ref'] = ref
                 err,autofilled = fillUncertainty(lbl,value,uperr,'uperr')
-                if autofilled: out['autofill'].append(p+':'+lbl+'_uperr')
+                if autofilled: out['autofill'].append('errorEstimate:'+p+':'+lbl+'_uperr')
                 out['priors'][p][lbl+'_uperr'] = err
                 err,autofilled = fillUncertainty(lbl,value,lowerr,'lowerr')
-                if autofilled: out['autofill'].append(p+':'+lbl+'_lowerr')
+                if autofilled: out['autofill'].append('errorEstimate:'+p+':'+lbl+'_lowerr')
                 out['priors'][p][lbl+'_lowerr'] = err
                 strval = autofill['starID'][target][p][lbl+'_units'].copy()
                 out['priors'][p][lbl+'_units'] = strval[-1]
@@ -269,20 +238,57 @@ def buildsp(autofill, out):
                 out['needed'].append(p+':'+lbl)
                 pass
             pass
+
+        # if planet mass is missing (and there is a planet radius),
+        #  fill in the mass with an assumed mass-radius relation
+        if p+':mass' in out['needed'] and p+':rp' not in out['needed']:
+            planet_radius = out['priors'][p]['rp']
+            assumed_planet_mass = estimate_mass_from_radius(planet_radius)
+            out['priors'][p]['mass'] = assumed_planet_mass
+            index = out['needed'].index(p+':mass')
+            out['needed'].pop(index)
+            # uncertainty is pretty large here; let's say 50%
+            out['priors'][p]['mass_uperr'] = 0.5 * assumed_planet_mass
+            out['priors'][p]['mass_lowerr'] = -0.5 * assumed_planet_mass
+            out['priors'][p]['mass_units'] = '[Jupiter mass]'
+            out['priors'][p]['mass_ref'] = 'assumed mass/radius relation'
+            out['autofill'].append('MRrelation:'+p+':mass')
+            out['autofill'].append('MRrelation:'+p+':mass_uperr')
+            out['autofill'].append('MRrelation:'+p+':mass_lowerr')
+
+            # careful here - logg also has to be filled in
+            if p+':logg' in out['needed']:
+                g = ssc['G'] * assumed_planet_mass*ssc['Mjup'] \
+                    / (float(planet_radius)*ssc['Rjup'])**2
+                logg = np.log10(g)
+                out['priors'][p]['logg'] = f'{logg:6.4f}'
+                index = out['needed'].index(p+':logg')
+                out['needed'].pop(index)
+                # uncertainty is pretty large here; let's say 0.2 dex
+                out['priors'][p]['logg_uperr'] = 0.2
+                out['priors'][p]['logg_lowerr'] = -0.2
+                out['priors'][p]['logg_units'] = 'log10[cm.s-2]'
+                out['priors'][p]['logg_ref'] = 'assumed mass/radius relation'
+                out['autofill'].append('MRrelation:'+p+':logg')
+                out['autofill'].append('MRrelation:'+p+':logg_uperr')
+                out['autofill'].append('MRrelation:'+p+':logg_lowerr')
+            else:
+                print('STRANGE: why was there logg but no mass')
+
+        # if planet eccentricity is missing, assume 0
         if p+':ecc' in out['needed']:
-            out['priors'][p]['ecc'] = 0e0
-            out['autofill'].append(p+':ecc')
+            out['priors'][p]['ecc'] = 0
             index = out['needed'].index(p+':ecc')
             out['needed'].pop(index)
-            strval = autofill['starID'][target][p]['ecc_units'].copy()
-            out['priors'][p]['ecc_units'] = strval[-1]
-            out['priors'][p]['ecc_ref'] = 'System Prior Auto Fill'
-            err,autofilled = fillUncertainty('ecc',0,'','uperr')
-            out['priors'][p]['ecc_uperr'] = err
-            if autofilled: out['autofill'].append(p+':ecc_uperr')
-            err,autofilled = fillUncertainty('ecc',0,'','lowerr')
-            out['priors'][p]['ecc_lowerr'] = err
-            if autofilled: out['autofill'].append(p+':ecc_lowerr')
+            out['priors'][p]['ecc_units'] = ''
+            out['priors'][p]['ecc_ref'] = 'assumed circular orbit'
+            # (this will set uncertainty to the min value of 0.1)
+            out['priors'][p]['ecc_uperr'],_ = fillUncertainty('ecc',0,'','uperr')
+            out['priors'][p]['ecc_lowerr'],_ = fillUncertainty('ecc',0,'','lowerr')
+            out['autofill'].append('default:'+p+':ecc')
+            out['autofill'].append('default:'+p+':ecc_uperr')
+            out['autofill'].append('default:'+p+':ecc_lowerr')
+
         pincnd = (p+':inc') in out['needed']
         psmain = (p+':sma') not in out['needed']
         rstarin = 'R*' not in out['needed']
@@ -298,7 +304,7 @@ def buildsp(autofill, out):
                 sininc = float(value)*(out['priors']['R*'])*ssc['Rsun/AU']/(out['priors'][p]['sma'])
                 inc = 9e1 - np.arcsin(sininc)*18e1/np.pi
                 out['priors'][p]['inc'] = inc
-                out['autofill'].append(p+':inc')
+                out['autofill'].append('fromImpactParam:'+p+':inc')
                 index = out['needed'].index(p+':inc')
                 out['needed'].pop(index)
                 strval = autofill['starID'][target][p]['inc_units'].copy()
@@ -306,33 +312,40 @@ def buildsp(autofill, out):
                 out['priors'][p]['inc_ref'] = 'System Prior Auto Fill'
                 fillValue,autofilled = fillUncertainty('inc',inc,'','uperr')
                 out['priors'][p]['inc_uperr'] = fillValue
-                if autofilled: out['autofill'].append(p+':inc_uperr')
+                if autofilled: out['autofill'].append('errorEstimate:'+p+':inc_uperr')
                 fillValue,autofilled = fillUncertainty('inc',inc,'','lowerr')
                 out['priors'][p]['inc_lowerr'] = fillValue
-                if autofilled: out['autofill'].append(p+':inc_lowerr')
+                if autofilled: out['autofill'].append('errorEstimate:'+p+':inc_lowerr')
                 pass
             pass
+        # if planet inclination is missing, assume 90 degrees
         if p+':inc' in out['needed']:
             inc = 90e0
             out['priors'][p]['inc'] = inc
-            out['autofill'].append(p+':inc')
             index = out['needed'].index(p+':inc')
             out['needed'].pop(index)
             out['priors'][p]['inc_units'] = '[degree]'
-            out['priors'][p]['inc_ref'] = 'System Prior Auto Fill'
-            fillValue,autofilled = fillUncertainty('inc',inc,'','uperr')
-            out['priors'][p]['inc_uperr'] = fillValue
-            if autofilled: out['autofill'].append(p+':inc_uperr')
-            fillValue,autofilled = fillUncertainty('inc',inc,'','lowerr')
-            out['priors'][p]['inc_lowerr'] = fillValue
-            if autofilled: out['autofill'].append(p+':inc_lowerr')
-        prpin = (p+':rp') not in out['needed']
-        pmassin = (p+':mass') not in out['needed']
-        if prpin and pmassin:
-            # (setting of planet logg is no longer needed here; already done above)
-            pass
-        else: out['needed'].append(p+':logg')
-        pass
+            out['priors'][p]['inc_ref'] = 'assumed edge-on orbit'
+            out['priors'][p]['inc_uperr'],_ =fillUncertainty('inc',inc,'','uperr')
+            out['priors'][p]['inc_lowerr'],_=fillUncertainty('inc',inc,'','lowerr')
+            out['autofill'].append('default:'+p+':inc')
+            out['autofill'].append('default:'+p+':inc_uperr')
+            out['autofill'].append('default:'+p+':inc_lowerr')
+
+        # if argument of periastron is missing, assume 0 degrees
+        if p+':omega' in out['needed']:
+            out['priors'][p]['omega'] = 0
+            index = out['needed'].index(p+':omega')
+            out['needed'].pop(index)
+            out['priors'][p]['omega_units'] = '[degree]'
+            out['priors'][p]['omega_ref'] = 'default'
+            # give it a large uncertainty, say 120 degrees 1-sigma
+            out['priors'][p]['omega_uperr'] = 120
+            out['priors'][p]['omega_lowerr'] = 120
+            out['autofill'].append('default:'+p+':omega')
+            out['autofill'].append('default:'+p+':omega_uperr')
+            out['autofill'].append('default:'+p+':omega_lowerr')
+
     for key in out['needed']:
         if ':' in key:
             p = key.split(':')[0]
@@ -368,12 +381,13 @@ def buildsp(autofill, out):
         if ':' not in p: starneed = True
         pass
     if starneed or (len(out['priors']['planets']) < 1): out['PP'].append(True)
-    log.warning('>-- FORCE PARAMETER: %s', str(out['PP'][-1]))
-    log.warning('>-- MISSING MANDATORY PARAMETERS: %s', str(out['needed']))
-    log.warning('>-- MISSING PLANET PARAMETERS: %s', str(out['pneeded']))
-    log.warning('>-- PLANETS IGNORED: %s', str(out['ignore']))
-    log.warning('>-- AUTOFILL: %s', str(out['autofill']))
+    # log.warning('>-- FORCE PARAMETER: %s', str(out['PP'][-1]))
+    # log.warning('>-- MISSING MANDATORY PARAMETERS: %s', str(out['needed']))
+    # log.warning('>-- MISSING PLANET PARAMETERS: %s', str(out['pneeded']))
+    # log.warning('>-- PLANETS IGNORED: %s', str(out['ignore']))
+    # log.warning('>-- AUTOFILL: %s', str(out['autofill']))
     out['STATUS'].append(True)
+
     return True
 # ------------------------- ------------------------------------------
 # -- FORCE PRIOR PARAMETERS -- ---------------------------------------
@@ -382,18 +396,39 @@ def forcepar(overwrite, out):
 G. ROUDIER: Completes/Overrides parameters using target/edit.py
     '''
     forced = True
+    # print('starting to force')
+    # print('edit.py stuff for this guy:',overwrite)
+    # print('out.keys',out.keys())
     for key in overwrite.keys():
         mainkey = key.split(':')[0]
+        # print(' key',key)
         if (mainkey not in out.keys()) and (len(mainkey) < 2):
             if mainkey in out['pignore'].keys():
+                print('its in pignore',out['pignore'])
                 out['priors'][mainkey] = out['pignore'][mainkey].copy()
                 pass
             for pkey in overwrite[key].keys():
+                if pkey in out['priors'][mainkey].keys():
+                    print('OVERWRITING:',mainkey,pkey,overwrite[mainkey][pkey],
+                          ' current value:',out['priors'][mainkey][pkey])
+                else:
+                    # print(' adding key:',mainkey,pkey)
+                    print('OVERWRITING:',mainkey,pkey,overwrite[mainkey][pkey],
+                          ' current value:')
                 out['priors'][mainkey][pkey] = overwrite.copy()[mainkey][pkey]
+                if not pkey.endswith('ref') and not pkey.endswith('units'):
+                    out['autofill'].append('forcepar:'+mainkey+':'+pkey)
                 pass
             pass
-        else: out['priors'][key] = overwrite.copy()[key]
+        else:
+            print('OVERWRITING:',key,overwrite[key],
+                  ' current value:',out['priors'][key])
+            out['priors'][key] = overwrite.copy()[key]
+            if not key.endswith('ref') and not key.endswith('units'):
+                out['autofill'].append('forcepar:'+key)
         pass
+    # print('outprior now',key,out['priors'][key])
+    # print('needed',out['needed'])
     for n in out['needed'].copy():
         if ':' not in n:
             try:
@@ -415,10 +450,12 @@ G. ROUDIER: Completes/Overrides parameters using target/edit.py
             pass
         pass
     ptry = []
+    # print('pneeded',out['pneeded'])
     for p in out['pneeded'].copy():
         pnet = p.split(':')[0]
         pkey = p.split(':')[1]
         ptry.append(pnet)
+        # print('pnet,ptry',pnet,'x',ptry)
         try:
             float(out['priors'][pnet][pkey])
             out['pneeded'].pop(out['pneeded'].index(p))
@@ -427,7 +464,9 @@ G. ROUDIER: Completes/Overrides parameters using target/edit.py
             if ('mass' not in p) and ('rho' not in p): forced = False
             pass
         pass
+    # print('okbott2')
     for p in set(ptry):
+        # print('p bott',p)
         addback = True
         planetchecklist = [k for k in out['pneeded']
                            if k.split(':')[0] not in out['ignore']]
@@ -446,14 +485,25 @@ G. ROUDIER: Completes/Overrides parameters using target/edit.py
     for p in out['needed']:
         if ':' not in p: starneed = True
         pass
+    # these 5 print statements moved from above, so they're after overwriting
+    # actually move it out to after call; this print only done if params are forced
+    # log.warning('>-- FORCE PARAMETER: %s', str(out['PP'][-1]))
+    # log.warning('>-- MISSING MANDATORY PARAMETERS: %s', str(out['needed']))
+    # log.warning('>-- MISSING PLANET PARAMETERS: %s', str(out['pneeded']))
+    # log.warning('>-- PLANETS IGNORED: %s', str(out['ignore']))
+    # log.warning('>-- AUTOFILL: %s', str(out['autofill']))
     if starneed or (len(out['priors']['planets']) < 1):
         forced = False
-        log.warning('>-- MISSING MANDATORY PARAMETERS')
-        log.warning('>-- ADD THEM TO TARGET/EDIT.PY PPAR()')
+        # log.warning('>-- MISSING MANDATORY PARAMETERS')
+        # log.warning('>-- ADD THEM TO TARGET/EDIT.PY PPAR()')
+        log.warning('>-- PARAMETER STILL MISSING; ADD TO TARGET/EDIT.PY PPAR()')
         pass
     else:
         forced = True
-        log.warning('>-- PRIORITY PARAMETERS SUCCESSFUL')
+        # log.warning('>-- PRIORITY PARAMETERS SUCCESSFUL')
+        log.warning('>-- PARAMETER FORCING SUCCESSFUL')
         pass
     return forced
 # ---------------------------- ---------------------------------------
+
+# Kepler-37 e is still showing in view, even when ignored for lack of M,logg
