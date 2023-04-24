@@ -165,14 +165,19 @@ class scrape(dawgie.Algorithm):
 
     def run(self, ds, ps):
         '''Top level algorithm call'''
-        update = False
+        # update = False
         var_autofill = self.__autofill.sv_as_dict()['parameters']
         valid, errstring = trgcore.checksv(var_autofill)
-        if valid: update = self._scrape(var_autofill, self.__out)
+        # if valid: update = self._scrape(var_autofill, self.__out)
+        if valid: _ = self._scrape(var_autofill, self.__out)
         else: self._failure(errstring)
-        if update: ds.update()
-        else: raise dawgie.NoValidOutputDataError(
-                f'No output created for TARGET.{self.name()}')
+        # if update: ds.update()
+        # else: raise dawgie.NoValidOutputDataError(
+        #         f'No output created for TARGET.{self.name()}')
+        # If there's no fits data files, 'update' will return as False
+        # Let's not do an error crash though;
+        #  still finish off the target.scrape output, even if there's no HST or Spitzer data
+        ds.update()
         return
 
     @staticmethod

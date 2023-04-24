@@ -641,6 +641,16 @@ def disk(selfstart, out, diskloc, dbs):
             pass
         pass
 
+    if locations is None:
+        print('ADD data subdirectory name to list in target/etit.py!!')
+        # exit('ADD it')
+
+    # make sure that the data storage directory exists for this star
+    # dang this gives 'permission denied' error for access to /proj/sdp
+    # I guess I'll have to create all the new directories by command-line
+    for loc in locations:
+        if not os.path.exists(loc): os.makedirs(loc)
+
     if locations is not None: merge = dbscp(locations, dbs, out)
     return merge
 # ---------- ---------------------------------------------------------

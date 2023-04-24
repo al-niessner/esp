@@ -10,8 +10,9 @@ def createversion():
     1.4.0: Added more targets (242 total)
     1.5.0: New limb darkening coefficients for spitzer targest
     1.6.0: Added a few FEH* values and one Hmag; removed some redundant settings
+    1.7.0: Added confirmed planets in Ariel target list
     '''
-    return dawgie.VERSION(1,6,0)
+    return dawgie.VERSION(1,7,0)
 # ------------ -------------------------------------------------------
 # -- TARGET LIST -- --------------------------------------------------
 # FIRST COL HAS TO BE SOLVABLE BY
@@ -260,6 +261,385 @@ XO-2 : XO-2 N
 XO-3 :
 XO-4 :
 XO-5 :
+AU Mic :
+CoRoT-5 :
+CoRoT-11 :
+CoRoT-19 :
+DS Tuc A :
+EPIC 211945201 :
+EPIC 246851721 :
+G 9-40 :
+GJ 3473 :
+GJ 357 :
+GJ 367 :
+GJ 3929 :
+GJ 486 :
+GPX-1 :
+HAT-P-14 :
+HAT-P-21 :
+HAT-P-24 :
+HAT-P-25 :
+HAT-P-27 :
+HAT-P-28 :
+HAT-P-29 :
+HAT-P-31 :
+HAT-P-35 :
+HAT-P-36 :
+HAT-P-37 :
+HAT-P-39 :
+HAT-P-42 :
+HAT-P-43 :
+HAT-P-44 :
+HAT-P-45 :
+HAT-P-46 :
+HAT-P-49 :
+HAT-P-50 :
+HAT-P-51 :
+HAT-P-52 :
+HAT-P-53 :
+HAT-P-54 :
+HAT-P-55 :
+HAT-P-56 :
+HAT-P-57 :
+HAT-P-58 :
+HAT-P-59 :
+HAT-P-60 :
+HAT-P-61 :
+HAT-P-62 :
+HAT-P-64 :
+HAT-P-65 :
+HAT-P-66 :
+HAT-P-67 :
+HAT-P-68 :
+HAT-P-69 :
+HAT-P-70 :
+HAT-P-9 :
+HATS-1 :
+HATS-11 :
+HATS-13 :
+HATS-18 :
+HATS-2 :
+HATS-23 :
+HATS-24 :
+HATS-25 :
+HATS-26 :
+HATS-27 :
+HATS-29 :
+HATS-30 :
+HATS-31 :
+HATS-33 :
+HATS-34 :
+HATS-35 :
+HATS-37 A :
+HATS-38 :
+HATS-39 :
+HATS-4 :
+HATS-40 :
+HATS-41 :
+HATS-42 :
+HATS-43 :
+HATS-46 :
+HATS-47 :
+HATS-48 A :
+HATS-5 :
+HATS-50 :
+HATS-51 :
+HATS-52 :
+HATS-53 :
+HATS-56 :
+HATS-57 :
+HATS-58 A :
+HATS-6 :
+HATS-60 :
+HATS-62 :
+HATS-64 :
+HATS-67 :
+HATS-68 :
+HATS-70 :
+HATS-72 :
+HATS-9 :
+HD 108236 :
+HD 110082 :
+HD 110113 :
+HD 136352 :
+HD 1397 :
+HD 152843 :
+HD 15337 :
+HD 183579 :
+HD 191939 :
+HD 202772 A :
+HD 207897 :
+HD 221416 :
+HD 2685 :
+HD 332231 :
+HD 5278 :
+HD 63433 :
+HD 63935 :
+HD 73583 :
+HD 86226 :
+HD 89345 :
+HIP 65 A :
+HIP 67522 :
+K2-107 :
+K2-116 :
+K2-121 :
+K2-129 :
+K2-139 :
+K2-140 :
+K2-155 :
+K2-198 :
+K2-222 :
+K2-232 :
+K2-237 :
+K2-238 :
+K2-239 :
+K2-260 :
+K2-261 :
+K2-266 :
+K2-280 :
+K2-284 :
+K2-287 :
+K2-29 :
+K2-295 :
+K2-329 :
+K2-333 :
+K2-334 :
+K2-34 :
+K2-353 :
+K2-39 :
+K2-403 :
+K2-405 :
+K2-406 :
+KELT-10 :
+KELT-12 :
+KELT-15 :
+KELT-17 :
+KELT-18 :
+KELT-19 A :
+KELT-2 A :
+KELT-21 :
+KELT-23 A :
+KELT-24 :
+KELT-4 A :
+KELT-6 :
+KELT-8 :
+KOI-13 :
+KOI-94 :
+KPS-1 :
+Kepler-105 :
+Kepler-108 :
+Kepler-1314 :
+Kepler-1513 :
+Kepler-33 :
+Kepler-396 :
+Kepler-42 :
+Kepler-435 :
+Kepler-444 :
+Kepler-447 :
+Kepler-450 :
+Kepler-468 :
+Kepler-489 :
+Kepler-76 :
+Kepler-79 :
+L 98-59 :
+LHS 1478 :
+LHS 1678 :
+LP 714-47 :
+LP 791-18 :
+LTT 1445 A :
+LTT 3780 :
+LTT 9779 :
+MASCARA-1 :
+MASCARA-4 :
+NGTS-10 :
+NGTS-11 :
+NGTS-12 :
+NGTS-13 :
+NGTS-2 :
+NGTS-5 :
+NGTS-6 :
+NGTS-8 :
+Qatar-10 :
+Qatar-4 :
+Qatar-5 :
+Qatar-6 :
+Qatar-7 :
+Qatar-8 :
+Qatar-9 :
+TIC 257060897 :
+TOI-1064 :
+TOI-1075 :
+TOI-1130 :
+TOI-1201 :
+TOI-122 :
+TOI-1227 :
+TOI-1231 :
+TOI-125 :
+TOI-1259 A :
+TOI-1260 :
+TOI-1266 :
+TOI-1268 :
+TOI-1296 :
+TOI-1298 :
+TOI-1333 :
+TOI-1411 :
+TOI-1431 :
+TOI-1442 :
+TOI-1478 :
+TOI-150 :
+TOI-1518 :
+TOI-157 :
+TOI-1601 :
+TOI-163 :
+TOI-1670 :
+TOI-1685 :
+TOI-169 :
+TOI-1693 :
+TOI-172 :
+TOI-1728 :
+TOI-1759 :
+TOI-178 :
+TOI-1789 :
+TOI-1807 :
+TOI-1842 :
+TOI-1860 :
+TOI-1899 :
+TOI-201 :
+TOI-2076 :
+TOI-2109 :
+TOI-216 :
+TOI-2260 :
+TOI-2337 :
+TOI-237 :
+TOI-2411 :
+TOI-2427 :
+TOI-257 :
+TOI-2669 :
+TOI-269 :
+TOI-3362 :
+TOI-421 :
+TOI-431 :
+TOI-4329 :
+TOI-451 :
+TOI-481 :
+TOI-500 :
+TOI-530 :
+TOI-540 :
+TOI-544 :
+TOI-559 :
+TOI-561 :
+TOI-564 :
+TOI-620 :
+TOI-628 :
+TOI-640 :
+TOI-674 :
+TOI-677 :
+TOI-776 :
+TOI-813 :
+TOI-824 :
+TOI-833 :
+TOI-837 :
+TOI-892 :
+TOI-905 :
+TOI-954 :
+TrES-4 :
+TrES-5 :
+V1298 Tau :
+WASP-105 :
+WASP-106 :
+WASP-110 :
+WASP-113 :
+WASP-114 :
+WASP-117 :
+WASP-118 :
+WASP-119 :
+WASP-120 :
+WASP-123 :
+WASP-124 :
+WASP-126 :
+WASP-132 :
+WASP-133 :
+WASP-135 :
+WASP-136 :
+WASP-138 :
+WASP-139 :
+WASP-141 :
+WASP-142 :
+WASP-145 A :
+WASP-147 :
+WASP-148 :
+WASP-151 :
+WASP-153 :
+WASP-156 :
+WASP-157 :
+WASP-158 :
+WASP-159 :
+WASP-160 B :
+WASP-161 :
+WASP-163 :
+WASP-164 :
+WASP-165 :
+WASP-166 :
+WASP-167 :
+WASP-168 :
+WASP-169 :
+WASP-170 :
+WASP-172 :
+WASP-173 A :
+WASP-174 :
+WASP-175 :
+WASP-176 :
+WASP-177 :
+WASP-178 :
+WASP-180 A :
+WASP-181 :
+WASP-182 :
+WASP-183 :
+WASP-184 :
+WASP-185 :
+WASP-186 :
+WASP-187 :
+WASP-189 :
+WASP-190 :
+WASP-192 :
+WASP-20 :
+WASP-22 :
+WASP-23 :
+WASP-25 :
+WASP-41 :
+WASP-42 :
+WASP-44 :
+WASP-45 :
+WASP-47 :
+WASP-53 :
+WASP-54 :
+WASP-55 :
+WASP-56 :
+WASP-57 :
+WASP-58 :
+WASP-61 :
+WASP-66 :
+WASP-68 :
+WASP-70 A :
+WASP-71 :
+WASP-73 :
+WASP-81 :
+WASP-82 :
+WASP-83 :
+WASP-84 :
+WASP-85 A :
+WASP-88 :
+WASP-89 :
+WASP-90 :
+WASP-91 :
+WASP-92 :
+WASP-93 :
+WASP-98 :
+WASP-99 :
+Wolf 503 :
+XO-6 :
+XO-7 :
+pi Men :
     '''
     return
 # ----------------- --------------------------------------------------
@@ -508,6 +888,385 @@ XO-2 : XO2
 XO-3 : XO3
 XO-4 : XO4
 XO-5 : XO5
+AU Mic : AUMIC
+CoRoT-5 : COROT5
+CoRoT-11 : COROT11
+CoRoT-19 : COROT19
+DS Tuc A : DSTUCA
+EPIC 211945201 : EPIC211945201
+EPIC 246851721 : EPIC246851721
+G 9-40 : G940
+GJ 3473 : GJ3473
+GJ 357 : GJ357
+GJ 367 : GJ367
+GJ 3929 : GJ3929
+GJ 486 : GJ486
+GPX-1 : GPX1
+HAT-P-14 : HATP14
+HAT-P-21 : HATP21
+HAT-P-24 : HATP24
+HAT-P-25 : HATP25
+HAT-P-27 : HATP27
+HAT-P-28 : HATP28
+HAT-P-29 : HATP29
+HAT-P-31 : HATP31
+HAT-P-35 : HATP35
+HAT-P-36 : HATP36
+HAT-P-37 : HATP37
+HAT-P-39 : HATP39
+HAT-P-42 : HATP42
+HAT-P-43 : HATP43
+HAT-P-44 : HATP44
+HAT-P-45 : HATP45
+HAT-P-46 : HATP46
+HAT-P-49 : HATP49
+HAT-P-50 : HATP50
+HAT-P-51 : HATP51
+HAT-P-52 : HATP52
+HAT-P-53 : HATP53
+HAT-P-54 : HATP54
+HAT-P-55 : HATP55
+HAT-P-56 : HATP56
+HAT-P-57 : HATP57
+HAT-P-58 : HATP58
+HAT-P-59 : HATP59
+HAT-P-60 : HATP60
+HAT-P-61 : HATP61
+HAT-P-62 : HATP62
+HAT-P-64 : HATP64
+HAT-P-65 : HATP65
+HAT-P-66 : HATP66
+HAT-P-67 : HATP67
+HAT-P-68 : HATP68
+HAT-P-69 : HATP69
+HAT-P-70 : HATP70
+HAT-P-9 : HATP9
+HATS-1 : HATS1
+HATS-11 : HATS11
+HATS-13 : HATS13
+HATS-18 : HATS18
+HATS-2 : HATS2
+HATS-23 : HATS23
+HATS-24 : HATS24
+HATS-25 : HATS25
+HATS-26 : HATS26
+HATS-27 : HATS27
+HATS-29 : HATS29
+HATS-30 : HATS30
+HATS-31 : HATS31
+HATS-33 : HATS33
+HATS-34 : HATS34
+HATS-35 : HATS35
+HATS-37 A : HATS37A
+HATS-38 : HATS38
+HATS-39 : HATS39
+HATS-4 : HATS4
+HATS-40 : HATS40
+HATS-41 : HATS41
+HATS-42 : HATS42
+HATS-43 : HATS43
+HATS-46 : HATS46
+HATS-47 : HATS47
+HATS-48 A : HATS48A
+HATS-5 : HATS5
+HATS-50 : HATS50
+HATS-51 : HATS51
+HATS-52 : HATS52
+HATS-53 : HATS53
+HATS-56 : HATS56
+HATS-57 : HATS57
+HATS-58 A : HATS58A
+HATS-6 : HATS6
+HATS-60 : HATS60
+HATS-62 : HATS62
+HATS-64 : HATS64
+HATS-67 : HATS67
+HATS-68 : HATS68
+HATS-70 : HATS70
+HATS-72 : HATS72
+HATS-9 : HATS9
+HD 108236 : HD108236
+HD 110082 : HD110082
+HD 110113 : HD110113
+HD 136352 : HD136352
+HD 1397 : HD1397
+HD 152843 : HD152843
+HD 15337 : HD15337
+HD 183579 : HD183579
+HD 191939 : HD191939
+HD 202772 A : HD202772A
+HD 207897 : HD207897
+HD 221416 : HD221416
+HD 2685 : HD2685
+HD 332231 : HD332231
+HD 5278 : HD5278
+HD 63433 : HD63433
+HD 63935 : HD63935
+HD 73583 : HD73583
+HD 86226 : HD86226
+HD 89345 : HD89345
+HIP 65 A : HIP65A
+HIP 67522 : HIP67522
+K2-107 : K2107
+K2-116 : K2116
+K2-121 : K2121
+K2-129 : K2129
+K2-139 : K2139
+K2-140 : K2140
+K2-155 : K2155
+K2-198 : K2198
+K2-222 : K2222
+K2-232 : K2232
+K2-237 : K2237
+K2-238 : K2238
+K2-239 : K2239
+K2-260 : K2260
+K2-261 : K2261
+K2-266 : K2266
+K2-280 : K2280
+K2-284 : K2284
+K2-287 : K2287
+K2-29 : K229
+K2-295 : K2295
+K2-329 : K2329
+K2-333 : K2333
+K2-334 : K2334
+K2-34 : K234
+K2-353 : K2353
+K2-39 : K239
+K2-403 : K2403
+K2-405 : K2405
+K2-406 : K2406
+KELT-10 : KELT10
+KELT-12 : KELT12
+KELT-15 : KELT15
+KELT-17 : KELT17
+KELT-18 : KELT18
+KELT-19 A : KELT19A
+KELT-2 A : KELT2A
+KELT-21 : KELT21
+KELT-23 A : KELT23A
+KELT-24 : KELT24
+KELT-4 A : KELT4A
+KELT-6 : KELT6
+KELT-8 : KELT8
+KOI-13 : KOI13
+KOI-94 : KOI94
+KPS-1 : KPS1
+Kepler-105 : KEPLER105
+Kepler-108 : KEPLER108
+Kepler-1314 : KEPLER1314
+Kepler-1513 : KEPLER1513
+Kepler-33 : KEPLER33
+Kepler-396 : KEPLER396
+Kepler-42 : KEPLER42
+Kepler-435 : KEPLER435
+Kepler-444 : KEPLER444
+Kepler-447 : KEPLER447
+Kepler-450 : KEPLER450
+Kepler-468 : KEPLER468
+Kepler-489 : KEPLER489
+Kepler-76 : KEPLER76
+Kepler-79 : KEPLER79
+L 98-59 : L9859
+LHS 1478 : LHS1478
+LHS 1678 : LHS1678
+LP 714-47 : LP71447
+LP 791-18 : LP79118
+LTT 1445 A : LTT1445A
+LTT 3780 : LTT3780
+LTT 9779 : LTT9779
+MASCARA-1 : MASCARA1
+MASCARA-4 : MASCARA4
+NGTS-10 : NGTS10
+NGTS-11 : NGTS11
+NGTS-12 : NGTS12
+NGTS-13 : NGTS13
+NGTS-2 : NGTS2
+NGTS-5 : NGTS5
+NGTS-6 : NGTS6
+NGTS-8 : NGTS8
+Qatar-10 : QATAR10
+Qatar-4 : QATAR4
+Qatar-5 : QATAR5
+Qatar-6 : QATAR6
+Qatar-7 : QATAR7
+Qatar-8 : QATAR8
+Qatar-9 : QATAR9
+TIC 257060897 : TIC257060897
+TOI-1064 : TOI1064
+TOI-1075 : TOI1075
+TOI-1130 : TOI1130
+TOI-1201 : TOI1201
+TOI-122 : TOI122
+TOI-1227 : TOI1227
+TOI-1231 : TOI1231
+TOI-125 : TOI125
+TOI-1259 A : TOI1259A
+TOI-1260 : TOI1260
+TOI-1266 : TOI1266
+TOI-1268 : TOI1268
+TOI-1296 : TOI1296
+TOI-1298 : TOI1298
+TOI-1333 : TOI1333
+TOI-1411 : TOI1411
+TOI-1431 : TOI1431
+TOI-1442 : TOI1442
+TOI-1478 : TOI1478
+TOI-150 : TOI150
+TOI-1518 : TOI1518
+TOI-157 : TOI157
+TOI-1601 : TOI1601
+TOI-163 : TOI163
+TOI-1670 : TOI1670
+TOI-1685 : TOI1685
+TOI-169 : TOI169
+TOI-1693 : TOI1693
+TOI-172 : TOI172
+TOI-1728 : TOI1728
+TOI-1759 : TOI1759
+TOI-178 : TOI178
+TOI-1789 : TOI1789
+TOI-1807 : TOI1807
+TOI-1842 : TOI1842
+TOI-1860 : TOI1860
+TOI-1899 : TOI1899
+TOI-201 : TOI201
+TOI-2076 : TOI2076
+TOI-2109 : TOI2109
+TOI-216 : TOI216
+TOI-2260 : TOI2260
+TOI-2337 : TOI2337
+TOI-237 : TOI237
+TOI-2411 : TOI2411
+TOI-2427 : TOI2427
+TOI-257 : TOI257
+TOI-2669 : TOI2669
+TOI-269 : TOI269
+TOI-3362 : TOI3362
+TOI-421 : TOI421
+TOI-431 : TOI431
+TOI-4329 : TOI4329
+TOI-451 : TOI451
+TOI-481 : TOI481
+TOI-500 : TOI500
+TOI-530 : TOI530
+TOI-540 : TOI540
+TOI-544 : TOI544
+TOI-559 : TOI559
+TOI-561 : TOI561
+TOI-564 : TOI564
+TOI-620 : TOI620
+TOI-628 : TOI628
+TOI-640 : TOI640
+TOI-674 : TOI674
+TOI-677 : TOI677
+TOI-776 : TOI776
+TOI-813 : TOI813
+TOI-824 : TOI824
+TOI-833 : TOI833
+TOI-837 : TOI837
+TOI-892 : TOI892
+TOI-905 : TOI905
+TOI-954 : TOI954
+TrES-4 : TRES4
+TrES-5 : TRES5
+V1298 Tau : V1298TAU
+WASP-105 : WASP105
+WASP-106 : WASP106
+WASP-110 : WASP110
+WASP-113 : WASP113
+WASP-114 : WASP114
+WASP-117 : WASP117
+WASP-118 : WASP118
+WASP-119 : WASP119
+WASP-120 : WASP120
+WASP-123 : WASP123
+WASP-124 : WASP124
+WASP-126 : WASP126
+WASP-132 : WASP132
+WASP-133 : WASP133
+WASP-135 : WASP135
+WASP-136 : WASP136
+WASP-138 : WASP138
+WASP-139 : WASP139
+WASP-141 : WASP141
+WASP-142 : WASP142
+WASP-145 A : WASP145A
+WASP-147 : WASP147
+WASP-148 : WASP148
+WASP-151 : WASP151
+WASP-153 : WASP153
+WASP-156 : WASP156
+WASP-157 : WASP157
+WASP-158 : WASP158
+WASP-159 : WASP159
+WASP-160 B : WASP160B
+WASP-161 : WASP161
+WASP-163 : WASP163
+WASP-164 : WASP164
+WASP-165 : WASP165
+WASP-166 : WASP166
+WASP-167 : WASP167
+WASP-168 : WASP168
+WASP-169 : WASP169
+WASP-170 : WASP170
+WASP-172 : WASP172
+WASP-173 A : WASP173A
+WASP-174 : WASP174
+WASP-175 : WASP175
+WASP-176 : WASP176
+WASP-177 : WASP177
+WASP-178 : WASP178
+WASP-180 A : WASP180A
+WASP-181 : WASP181
+WASP-182 : WASP182
+WASP-183 : WASP183
+WASP-184 : WASP184
+WASP-185 : WASP185
+WASP-186 : WASP186
+WASP-187 : WASP187
+WASP-189 : WASP189
+WASP-190 : WASP190
+WASP-192 : WASP192
+WASP-20 : WASP20
+WASP-22 : WASP22
+WASP-23 : WASP23
+WASP-25 : WASP25
+WASP-41 : WASP41
+WASP-42 : WASP42
+WASP-44 : WASP44
+WASP-45 : WASP45
+WASP-47 : WASP47
+WASP-53 : WASP53
+WASP-54 : WASP54
+WASP-55 : WASP55
+WASP-56 : WASP56
+WASP-57 : WASP57
+WASP-58 : WASP58
+WASP-61 : WASP61
+WASP-66 : WASP66
+WASP-68 : WASP68
+WASP-70 A : WASP70A
+WASP-71 : WASP71
+WASP-73 : WASP73
+WASP-81 : WASP81
+WASP-82 : WASP82
+WASP-83 : WASP83
+WASP-84 : WASP84
+WASP-85 A : WASP85A
+WASP-88 : WASP88
+WASP-89 : WASP89
+WASP-90 : WASP90
+WASP-91 : WASP91
+WASP-92 : WASP92
+WASP-93 : WASP93
+WASP-98 : WASP98
+WASP-99 : WASP99
+Wolf 503 : WOLF503
+XO-6 : XO6
+XO-7 : XO7
+pi Men : PIMEN
     '''
     return
 # -------------------- -----------------------------------------------
@@ -1893,6 +2652,86 @@ overwrite[starID] =
              'logg_uperr':0.3, 'logg_lowerr':-0.2,
              'logg_units':'log10[cm.s-2]',
              'logg_ref':'Assumed mass/radius relation'}}
+
+    # for the newly added comfirmed-planet Ariel targets, some metallicities are missing
+    overwrite['AU Mic'] = {
+        'FEH*':0.15, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+        'FEH*_units':'[dex]', 'FEH*_ref':'Seli et al. 2002'}  # Neves 2013 has 0.32
+    overwrite['HATS-50'] = {
+        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+        'FEH*_units':'[dex]', 'FEH*_ref':'Chen et al. 2021'}
+    overwrite['HATS-51'] = {
+        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+        'FEH*_units':'[dex]', 'FEH*_ref':'Chen et al. 2021'}
+    overwrite['HATS-52'] = {
+        'FEH*':-0.09, 'FEH*_uperr':0.17, 'FEH*_lowerr':-0.17,
+        'FEH*_units':'[dex]', 'FEH*_ref':'Magrini et al. 2022'}
+    overwrite['HATS-53'] = {
+        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+        'FEH*_units':'[dex]', 'FEH*_ref':'Chen et al. 2021'}
+    overwrite['HATS-58 A'] = {
+        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+        'FEH*_units':'[dex]', 'FEH*_ref':'Chen et al. 2021'}
+    overwrite['K2-129'] = {
+        'FEH*':0.105, 'FEH*_uperr':0.235, 'FEH*_lowerr':-0.235,
+        'FEH*_units':'[dex]', 'FEH*_ref':'Hardagree-Ullman et al. 2020'}
+    overwrite['LHS 1678'] = {
+        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    # Ammons 2006 has 0.76+-2.26, which is absurd
+    overwrite['TIC 257060897'] = {
+        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    overwrite['TOI-122'] = {
+        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    overwrite['TOI-1227'] = {
+        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    overwrite['TOI-1442'] = {
+        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    overwrite['TOI-1693'] = {
+        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    overwrite['TOI-237'] = {
+        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    overwrite['TOI-2411'] = {
+        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    overwrite['TOI-2427'] = {
+        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    overwrite['TOI-451'] = {
+        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    overwrite['TOI-540'] = {
+        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    overwrite['TOI-544'] = {
+        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    overwrite['TOI-833'] = {
+        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    # this one is missing Hmag.  not sure why; it's in 2MASS/Simbad
+    overwrite['K2-295'] = {
+        'Hmag':11.135, 'Hmag_uperr':0.025, 'Hmag_lowerr':-0.025,
+        'Hmag_units':'[mag]', 'Hmag_ref':'2MASS'}
+    # this one is missing R* and M*.  That's unusual!
+    # ah wait it does actually have a log-g measure of 4.1 (lower than Solar)
+    # arg this one is really tricky.  planet semi-major axis is undefined without M*
+    overwrite['WASP-110'] = {
+        'R*':1.0, 'R*_uperr':0.25, 'R*_lowerr':-0.25,
+        'R*_ref':'Default to solar radius',
+        'M*':1.0, 'M*_uperr':0.25, 'M*_lowerr':-0.25,
+        'M*_ref':'Default to solar mass',
+        # 'LOGG*':4.3, 'LOGG*_uperr':0.1, 'LOGG*_lowerr':-0.1,
+        # 'LOGG*_ref':'Default to solar log(g)'}
+        # Period is 3.87 days
+        'b':{'sma':0.05, 'sma_uperr':0.01, 'sma_lowerr':-0.01,
+             'sma_ref':'Assume solar mass'}}
 
     return overwrite
 # -------------------------------------------------------------------
