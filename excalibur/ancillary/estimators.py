@@ -144,7 +144,7 @@ class HEstimator(PlEstimator):
         if priors[pl]['logg'] == '':
             g = sscmks['G'] * priors[pl]['mass']*sscmks['Mjup'] / \
                 (priors[pl]['rp']*sscmks['Rjup'])**2
-        else: g = 10.**priors[pl]['logg']
+        else: g = 10.**float(priors[pl]['logg'])
 
         mmw = pl_mmw(priors, ests, pl)
 
@@ -178,7 +178,7 @@ class HmaxEstimator(PlEstimator):
             g = sscmks['G'] * priors[pl]['mass']*sscmks['Mjup'] / \
                 (priors[pl]['rp']*sscmks['Rjup'])**2
         else:
-            g = 10.**priors[pl]['logg']
+            g = 10.**float(priors[pl]['logg'])
 
         mmw = pl_mmwmin(priors, ests, pl)
 
@@ -231,7 +231,7 @@ def pl_modulation(priors, _ests, pl):
 
     # g = sscmks['G'] * priors[pl]['mass']*sscmks['Mjup'] / \
     #             (priors[pl]['rp']*sscmks['Rjup'])**2
-    g = 10.**priors[pl]['logg']
+    g = 10.**float(priors[pl]['logg'])
 
     mmw = pl_mmw(priors, _ests, pl)
 
@@ -263,7 +263,7 @@ def pl_modulationmax(priors, _ests, pl):
 
     # g = sscmks['G'] * priors[pl]['mass']*sscmks['Mjup'] / \
     #             (priors[pl]['rp']*sscmks['Rjup'])**2
-    g = 10.**priors[pl]['logg']
+    g = 10.**float(priors[pl]['logg'])
 
     # H/He-dominant atmosphere (for minimum mmw case)
     mmw_min = pl_mmwmin(priors, _ests, pl)
@@ -347,7 +347,7 @@ def st_luminosity(priors, _ests):
     sscmks = syscore.ssconstants(mks=True)
     Tsun = sscmks['Tsun']
     if 'L*' in priors.keys() and priors['L*']!='':
-        # est = 10.**priors['L*']
+        # est = 10.**float(priors['L*'])
         # autofill now corrects for luminosity being logged in the Archive
         est = priors['L*']
         # est_ref = priors['L*_ref']
@@ -443,14 +443,14 @@ def pl_windVelocity(priors, ests, pl):
 
     if 'M*' not in priors.keys():
         if priors['LOGG*'] == '': return None
-        priors['M*'] = 10.**priors['LOGG*'] / sscmks['G'] /sscmks['Msun'] \
+        priors['M*'] = 10.**float(priors['LOGG*']) / sscmks['G'] /sscmks['Msun'] \
             * (priors['R*']*sscmks['Rsun'])**2
         pass
 
     if priors['M*'] == '':
         if priors['LOGG*'] == '':
             return None
-        priors['M*'] = 10.**priors['LOGG*'] / sscmks['G'] /sscmks['Msun'] \
+        priors['M*'] = 10.**float(priors['LOGG*']) / sscmks['G'] /sscmks['Msun'] \
             * (priors['R*']*sscmks['Rsun'])**2
         pass
 

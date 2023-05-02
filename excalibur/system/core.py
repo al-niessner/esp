@@ -6,10 +6,11 @@ import logging; log = logging.getLogger(__name__)
 # overwrite = trgedit.ppar()
 
 from excalibur.system.autofill import \
-    bestValue, fillUncertainty, estimate_mass_from_radius, \
+    bestValue, estimate_mass_from_radius, \
+    fixZeroUncertainties, fillUncertainty, \
     derive_RHOstar_from_M_and_R, derive_SMA_from_P_and_Mstar, \
     derive_LOGGstar_from_R_and_M, derive_LOGGplanet_from_R_and_M, \
-    derive_Lstar_from_R_and_T
+    derive_Lstar_from_R_and_T, derive_Teqplanet_from_Lstar_and_sma
 
 import numpy as np
 # ------------- ------------------------------------------------------
@@ -85,12 +86,19 @@ def buildsp(autofill, out):
     # out['starmdt'].extend(['R*', 'T*', 'FEH*', 'LOGG*', 'M*', 'RHO*', 'Hmag'])
     out['starmdt'].extend(['R*', 'M*', 'LOGG*', 'RHO*', 'FEH*', 'Hmag', 'T*'])
     # NEW CATEGORY: PARAMS TO PASS THROUGH TO ANCILLARY, BUT THEY"RE NOT MANDATORY
-    out['starnonmdt'].extend(['spTyp', 'L*', 'age'])
+    out['starnonmdt'].extend(['spTyp', 'L*', 'AGE*'])
     # AWKWARD: non-mandatory has to be included in 'starmdt' or it won't display
     out['starmdt'].extend(out['starnonmdt'])
     # MANDATORY PLANET PARAMETERS
     # out['planetmdt'].extend(['inc', 'period', 'ecc', 'rp', 't0', 'sma', 'mass', 'logg'])
-    out['planetmdt'].extend(['rp', 'mass', 'logg', 'sma', 'period', 't0', 'inc', 'ecc', 'omega'])
+    # out['planetmdt'].extend(['rp', 'mass', 'logg', 'sma', 'period', 't0', 'inc', 'ecc', 'omega'])
+    out['planetmdt'].extend(['rp', 'mass', 'logg', 'teq', 'sma', 'period', 't0', 'inc', 'ecc', 'omega'])
+
+    # some uncertainties are zero, e.g. lots of e=0+-0
+    #  remove the zeros (will be filled in below with fillUncertainty())
+    autofill['starID'][target] = fixZeroUncertainties(autofill['starID'][target],
+                                                      out['starmdt'],
+                                                      out['planetmdt'])
 
     # use stellar mass,radius to fill in blank stellar density
     RHO_derived, RHO_lowerr_derived, RHO_uperr_derived, RHO_ref_derived = \
@@ -147,6 +155,20 @@ def buildsp(autofill, out):
         autofill['starID'][target]['L*_uperr'] = lstar_uperr_derived
         autofill['starID'][target]['L*_ref'] = lstar_ref_derived
 
+    # use stellar luminosity and planet orbit to derive planet temperature
+    teq_derived, teq_lowerr_derived, teq_uperr_derived, teq_ref_derived = \
+        derive_Teqplanet_from_Lstar_and_sma(autofill['starID'][target],p)
+    if autofill['starID'][target][p]['teq'] != teq_derived:
+        # print('teq before ',autofill['starID'][target][p]['teq'])
+        # print('teq derived',teq_derived)
+        # print('teq_ref derived',teq_ref_derived)
+        # print('teq_ref before ',autofill['starID'][target][p]['teq_ref'])
+        autofill['starID'][target][p]['teq'] = teq_derived
+        autofill['starID'][target][p]['teq_lowerr'] = teq_lowerr_derived
+        autofill['starID'][target][p]['teq_uperr'] = teq_uperr_derived
+        autofill['starID'][target][p]['teq_ref'] = teq_ref_derived
+        autofill['starID'][target][p]['teq_units'] = ['[K]']*len(teq_derived)
+
     # use planet mass and radius to fill in blank planetary log-g
     for p in autofill['starID'][target]['planets']:
         logg_derived, logg_lowerr_derived, logg_uperr_derived, logg_ref_derived = \
@@ -186,17 +208,19 @@ def buildsp(autofill, out):
         if str(value).__len__() > 0:
             if lbl=='spTyp':
                 out['priors'][lbl] = value
+                out['priors'][lbl+'_uperr'] = ''
+                out['priors'][lbl+'_lowerr'] = ''
             else:
                 out['priors'][lbl] = float(value)
-            out['priors'][lbl+'_ref'] = ref
-            fillvalue,autofilled = fillUncertainty(lbl,value,uperr,'uperr')
-            if autofilled: out['autofill'].append('errorEstimate:'+lbl+'_uperr')
-            out['priors'][lbl+'_uperr'] = fillvalue
-            fillvalue,autofilled = fillUncertainty(lbl,value,lowerr,'lowerr')
-            if autofilled: out['autofill'].append('errorEstimate:'+lbl+'_lowerr')
-            out['priors'][lbl+'_lowerr'] = fillvalue
+                fillvalue,autofilled = fillUncertainty(lbl,value,uperr,'uperr')
+                if autofilled: out['autofill'].append('errorEstimate:'+lbl+'_uperr')
+                out['priors'][lbl+'_uperr'] = fillvalue
+                fillvalue,autofilled = fillUncertainty(lbl,value,lowerr,'lowerr')
+                if autofilled: out['autofill'].append('errorEstimate:'+lbl+'_lowerr')
+                out['priors'][lbl+'_lowerr'] = fillvalue
             strval = autofill['starID'][target][lbl+'_units'].copy()
             out['priors'][lbl+'_units'] = strval[0]
+            out['priors'][lbl+'_ref'] = ref
             pass
         else:
             out['priors'][lbl] = ''

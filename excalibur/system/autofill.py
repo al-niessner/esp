@@ -36,7 +36,7 @@ def fillUncertainty(param,param_value,param_uncertainty,error_type):
             # if param_value + fillvalue > 90: fillvalue = 90 - param_value
         elif param=='ecc':
             # for eccentricity, set uncertainty to 20%, with a minimum of 0.1
-            fillvalue = numpy.min([float(param_value) * 2.e-1, 0.1])
+            fillvalue = numpy.max([float(param_value) * 2.e-1, 0.1])
         elif param=='omega':
             # for argument of periastron, set a large uncertainty (120 degrees)
             fillvalue = 120
@@ -495,3 +495,103 @@ def derive_Lstar_from_R_and_T(starInfo):
             Lstar_ref_derived.append(Lstarref)
 
     return Lstar_derived, Lstar_lowerr_derived, Lstar_uperr_derived, Lstar_ref_derived
+# -------------------------------------------------------------------
+def derive_Teqplanet_from_Lstar_and_sma(starInfo, planetLetter):
+    '''
+    If planet T_equilibrium is blank, calculate it from star luminosity, planet sma
+    '''
+
+    # get Lsun definition.  (not needed if we scale to solar)
+    # sscmks = syscore.ssconstants(cgs=True)
+    # F_1AU = sscmks['Lsun'] / 4./numpy.pi / sscmks['AU']**2
+    # sigrad = 5.6704e-5  # cgs
+    # T_1AU = (F_1AU / 4. / sigrad)**0.25
+    # print('T_eq for Earth',T_1AU)
+    T_1AU = 278.33  # K
+    # NOTE: this equilibrium temperature assumes albedo=0
+
+    Teq_derived = []
+    Teq_lowerr_derived = []
+    Teq_uperr_derived = []
+    Teq_ref_derived = []
+
+    for Lstar,Lstarerr1,Lstarerr2, sma,smaerr1,smaerr2, \
+        Teq,Teqerr1,Teqerr2,Teqref in zip(
+            starInfo['L*'],starInfo['L*_lowerr'],starInfo['L*_uperr'],
+            starInfo[planetLetter]['sma'],
+            starInfo[planetLetter]['sma_lowerr'],
+            starInfo[planetLetter]['sma_uperr'],
+            starInfo[planetLetter]['teq'],
+            starInfo[planetLetter]['teq_lowerr'],
+            starInfo[planetLetter]['teq_uperr'],
+            starInfo[planetLetter]['teq_ref']):
+
+        # check for blank equilibrium temperature
+        #  (but only update it if L* and sma are both defined)
+        if Teq=='' and Lstar!='' and sma!='':
+            newTeq = T_1AU * float(Lstar)**0.25 / float(sma)**0.5
+            # print('Lstar derived',newTeq)
+
+            Teq_derived.append(f'{newTeq:6.4f}')
+            Teq_ref_derived.append('derived from L*,sma')
+
+            # also fill in the uncertainty on Teq, based on R,M uncertainties
+            if Lstarerr1=='' or smaerr1=='':
+                Teq_lowerr_derived.append('')
+            else:
+                newTeqfractionalError1 = -numpy.sqrt((0.25*float(Lstarerr1)/float(Lstar))**2 +
+                                                     (0.5*float(smaerr1)/float(sma))**2)
+                Teq_lowerr_derived.append(f'{(newTeq * newTeqfractionalError1):6.4f}')
+            if Lstarerr2=='' or smaerr2=='':
+                Teq_uperr_derived.append('')
+            else:
+                newTeqfractionalError2 = numpy.sqrt((0.25*float(Lstarerr2)/float(Lstar))**2 +
+                                                    (0.5*float(smaerr2)/float(sma))**2)
+                Teq_uperr_derived.append(f'{(newTeq * newTeqfractionalError2):6.4f}')
+        else:
+            Teq_derived.append(Teq)
+            Teq_lowerr_derived.append(Teqerr1)
+            Teq_uperr_derived.append(Teqerr2)
+            Teq_ref_derived.append(Teqref)
+
+    return Teq_derived, Teq_lowerr_derived, Teq_uperr_derived, Teq_ref_derived
+
+# -------------------------------------------------------------------
+def fixZeroUncertainties(starInfo, starParam, planetParam):
+    '''
+    If any uncertainty is zero, remove it.  We don't want chi-squared=infinity
+    '''
+
+    for param in starParam:
+        # print('param check',param)
+        if param!='spTyp':
+            for i in range(len(starInfo[param+'_uperr'])):
+                if str(starInfo[param+'_uperr'][i]).__len__() > 0 and \
+                   str(starInfo[param+'_lowerr'][i]).__len__() > 0:
+                    if float(starInfo[param+'_uperr'][i])==0 or \
+                       float(starInfo[param+'_lowerr'][i])==0:
+                        print('zero uncertainty fixed',i,param,
+                              starInfo[param+'_uperr'][i],
+                              starInfo[param+'_lowerr'][i])
+                        starInfo[param+'_uperr'][i] = ''
+                        starInfo[param+'_lowerr'][i] = ''
+
+    for param in planetParam:
+        if param!='logg':
+            # print()
+            # print('param check',param)
+            for planet in starInfo['planets']:
+                for i in range(len(starInfo[planet][param+'_uperr'])):
+                    if str(starInfo[planet][param+'_uperr'][i]).__len__() > 0 and \
+                       str(starInfo[planet][param+'_lowerr'][i]).__len__() > 0:
+                        # print(float(starInfo[planet][param+'_uperr'][i]),
+                        #       float(starInfo[planet][param+'_lowerr'][i]))
+                        if float(starInfo[planet][param+'_uperr'][i])==0 or \
+                           float(starInfo[planet][param+'_lowerr'][i])==0:
+                            print('zero uncertainty fixed',i,planet+':'+param,
+                                  starInfo[planet][param+'_uperr'][i],
+                                  starInfo[planet][param+'_lowerr'][i])
+                            starInfo[planet][param+'_uperr'][i] = ''
+                            starInfo[planet][param+'_lowerr'][i] = ''
+
+    return starInfo
