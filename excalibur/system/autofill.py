@@ -317,7 +317,6 @@ def derive_LOGGstar_from_R_and_M(starInfo):
             newLOGG = numpy.log10(g)
             # LOGG_derived.append(str('%6.4f' %newLOGG))
             LOGG_derived.append(f'{newLOGG:6.4f}')
-
             LOGG_ref_derived.append('derived from M*,R*')
 
             # also fill in the uncertainty on LOGG, based on R,M uncertainties

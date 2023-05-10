@@ -11,7 +11,6 @@ from excalibur.system.autofill import \
     derive_RHOstar_from_M_and_R, derive_SMA_from_P_and_Mstar, \
     derive_LOGGstar_from_R_and_M, derive_LOGGplanet_from_R_and_M, \
     derive_Lstar_from_R_and_T, derive_Teqplanet_from_Lstar_and_sma
-
 import numpy as np
 # ------------- ------------------------------------------------------
 # -- SOLAR SYSTEM CONSTANTS -- ---------------------------------------
@@ -99,7 +98,6 @@ def buildsp(autofill, out):
     autofill['starID'][target] = fixZeroUncertainties(autofill['starID'][target],
                                                       out['starmdt'],
                                                       out['planetmdt'])
-
     # use stellar mass,radius to fill in blank stellar density
     RHO_derived, RHO_lowerr_derived, RHO_uperr_derived, RHO_ref_derived = \
         derive_RHOstar_from_M_and_R(autofill['starID'][target])
@@ -232,7 +230,6 @@ def buildsp(autofill, out):
         pass
 
     ssc = ssconstants(cgs=True)
-
     for p in out['priors']['planets']:
         for lbl in out['planetmdt']:
             values = autofill['starID'][target][p][lbl].copy()

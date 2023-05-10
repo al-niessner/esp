@@ -143,10 +143,13 @@ class autofill(dawgie.Algorithm):
     pass
 
 class scrape(dawgie.Algorithm):
-    '''Download data or ingest data from disk'''
+    '''
+    Download data or ingest data from disk
+    2.0.0: GMR: Code changes to use the new MAST API
+    '''
     def __init__(self):
         '''__init__ ds'''
-        self._version_ = dawgie.VERSION(1,2,0)
+        self._version_ = dawgie.VERSION(2,0,0)
         self.__autofill = autofill()
         self.__out = trgstates.DatabaseSV('databases')
         return
@@ -176,7 +179,8 @@ class scrape(dawgie.Algorithm):
         #         f'No output created for TARGET.{self.name()}')
         # If there's no fits data files, 'update' will return as False
         # Let's not do an error crash though;
-        #  still finish off the target.scrape output, even if there's no HST or Spitzer data
+        # still finish off the target.scrape output,
+        # even if there's no HST or Spitzer data
         ds.update()
         return
 
@@ -185,9 +189,11 @@ class scrape(dawgie.Algorithm):
         '''Core code call'''
         dbs = os.path.join(dawgie.context.data_dbs, 'mast')
         if not os.path.exists(dbs): os.makedirs(dbs)
-        # umast = trgcore.mast(arg_autofill, out, dbs, queryform, mirror1, alt=mirror2)
+        # Download from MAST
+        umast = trgcore.mast(arg_autofill, out, dbs, queryform, mirror1, alt=mirror2)
+        # Get data from diskloc
         udisk = trgcore.disk(arg_autofill, out, diskloc, dbs)
-        return udisk
+        return udisk or umast
 
     @staticmethod
     def _failure(errstr):

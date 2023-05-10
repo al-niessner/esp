@@ -11,12 +11,14 @@ def createversion():
     1.5.0: New limb darkening coefficients for spitzer targest
     1.6.0: Added a few FEH* values and one Hmag; removed some redundant settings
     1.7.0: Added confirmed planets in Ariel target list
+    1.7.1: WFC3 targets 2023
     '''
     return dawgie.VERSION(1,7,0)
 # ------------ -------------------------------------------------------
 # -- TARGET LIST -- --------------------------------------------------
 # FIRST COL HAS TO BE SOLVABLE BY
-# https://archive.stsci.edu/hst/
+# -- Obsolete https://archive.stsci.edu/hst/
+# https://mast.stsci.edu/portal/Mashup/Clients/Mast/Portal.html
 # SECOND COL [OPTIONAL] HAS TO BE 'Default Alias' RETURNED FROM
 # https://exoplanetarchive.ipac.caltech.edu/index.html
 # OR ALIAS KNOWN BY https://archive.stsci.edu/hst/
@@ -31,6 +33,7 @@ GJ 1132 :
 GJ 1214 :
 GJ 1252 :
 GJ 3053 : LHS 1140
+GJ 3193 :
 GJ 3470 :
 GJ 436 :
 GJ 9827 :
@@ -60,6 +63,7 @@ HAT-P-41 :
 HAT-P-5 :
 HAT-P-6 :
 HAT-P-7 :
+HAT-P-70 :
 HAT-P-8 :
 HATS-28 :
 HATS-3 :
@@ -68,13 +72,19 @@ HATS-7 :
 HD 106315 :
 HD 149026 :
 HD 17156 :
+HD 185603 :
 HD 189733 :
+HD 191939 :
+HD 195689 :
+HD 197481 :
 HD 209458 :
 HD 213885 :
 HD 219134 :
 HD 219666 :
 HD 23472 :
+HD 86226 :
 HD 97658 :
+HIP 41378 :
 HR 858 :
 K2-124 :
 K2-132 :
@@ -178,12 +188,21 @@ Kepler-786 :
 Kepler-9 :
 Kepler-93 :
 Kepler-94 :
+KIC 12266812 :
 LHS 3844 :
 OGLE-TR-056 :
 OGLE-TR-10 :
 Qatar-1 :
 Qatar-2 :
+TIC 184892124 :
+TOI-175 :
+TOI-193 :
+TOI-1201 :
+TOI-1231 :
 TOI-270 :
+TOI-431 :
+TOI-561 :
+TOI-674 :
 TOI-700 :
 TOI-849 :
 TrES-1 :
@@ -208,6 +227,7 @@ WASP-140 :
 WASP-15 :
 WASP-16 :
 WASP-17 :
+WASP-178 :
 WASP-18 :
 WASP-19 :
 WASP-2 :

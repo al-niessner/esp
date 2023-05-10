@@ -416,10 +416,12 @@ def autofill(ident, thistarget, out,
                         out['starID'][thistarget][key].append(addme)
                         if refkey==key:
                             out['starID'][thistarget][refkey+'_ref'].append(ref_st)
+                            pass
                         # again, fill in spectral type have uncertainties by hand
                         if key=='spTyp':
                             out['starID'][thistarget][key+'_uperr'].append('')
                             out['starID'][thistarget][key+'_lowerr'].append('')
+                            pass
                         pass
                     pass
                 pass
@@ -656,14 +658,16 @@ def disk(selfstart, out, diskloc, dbs):
         pass
 
     if locations is None:
-        print('ADD data subdirectory name to list in target/etit.py!!')
+        log.warning('ADD data subdirectory name to list in target/edit.py!!')
         # exit('ADD it')
+        pass
 
     # make sure that the data storage directory exists for this star
     # dang this gives 'permission denied' error for access to /proj/sdp
     # I guess I'll have to create all the new directories by command-line
     for loc in locations:
         if not os.path.exists(loc): os.makedirs(loc)
+        pass
 
     if locations is not None: merge = dbscp(locations, dbs, out)
     return merge

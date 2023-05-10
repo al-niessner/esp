@@ -79,7 +79,7 @@ class rlsSV(dawgie.StateVector):
     Model + Data plot
     '''
     def __init__(self, name):
-        '''1.1.1: GMR - Fixed view for low model selection preference.'''
+        '''1.1.1: GMR - Fixed view for low model selection preference'''
         self._version_ = dawgie.VERSION(1,1,1)
         self.__name = name
         self['STATUS'] = excalibur.ValuesList()
