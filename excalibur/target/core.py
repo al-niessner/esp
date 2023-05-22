@@ -1,6 +1,7 @@
 '''target core ds'''
 # -- IMPORTS -- ------------------------------------------------------
 import os
+import numpy
 import shutil
 import re
 import tempfile
@@ -12,6 +13,7 @@ import dawgie.db
 
 import excalibur.target as trg
 import excalibur.target.edit as trgedit
+import excalibur.system.core as syscore
 
 import astropy.io.fits as pyfits
 import urllib.error

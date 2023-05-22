@@ -57,6 +57,28 @@ G. ROUDIER: IAU 2012
         pass
     ssc['day'] = 24.*60.*60.
     return ssc
+# ----------------- --------------------------------------------------
+# -- SELECT THE BEST PARAMETER VALUE ---------------------------------
+def bestValue(values):
+    '''
+    From a list of parameter values, determine the most trustworthy value
+    '''
+
+    if values[0] != '':
+        # step 1: if there is a default value at the start of the list, use that
+        bestvalue = values[0]
+
+    else:
+        # step 2: iterate from the end of the list inward, until getting a non-blank value
+        #   (this assumes that the non-default values have been ordered by publish date,
+        #    such that the end of the list is the most recently published value)
+        bestvalue = ''
+        for value in values:
+            if value != '':
+                bestvalue = value
+
+    return bestvalue
+
 # ---------------------------- ---------------------------------------
 # -- SV VALIDITY -- --------------------------------------------------
 def checksv(sv):

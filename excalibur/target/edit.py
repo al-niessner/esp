@@ -2135,6 +2135,7 @@ overwrite[starID] =
             ]
         }
     }
+    # GEOFF UPDATE
     overwrite['GJ 1132'] = {
         'b':{
             "Spitzer_IRAC1_subarray": [
@@ -2229,7 +2230,11 @@ overwrite[starID] =
         }
     }
 
+    # this one (WASP-33) has FEH* in the Exoplanet Archive, but no error bars
+    #  there's three values in the table: 0.0,0.1,0.1 (no error bars for any of them)
     overwrite["WASP-33"] = {
+        'FEH*':0.1, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+        'FEH*_units':'[Fe/H]', 'FEH*_ref':"Zhang et al. 2018",
         "b": {
             "Spitzer_IRAC1_subarray": [
                 0.3360838105569875,
