@@ -77,8 +77,8 @@ def collect(name, scrape, out):
 # ------------------ -------------------------------------------------
 # -- TIMING -- -------------------------------------------------------
 def timingversion():
-    '''timingversion ds'''
-    return dawgie.VERSION(1,1,5)
+    '''1.2.0: GMR: Create outputs with top level keys'''
+    return dawgie.VERSION(1,2,0)
 
 def timing(force, ext, clc, out, verbose=False):
     '''
@@ -428,6 +428,8 @@ def timing(force, ext, clc, out, verbose=False):
             log.warning('--< Phase Curve: %s', str(out['data'][p]['phasecurve']))
 
             if out['data'][p]['transit'] or out['data'][p]['eclipse'] or out['data'][p]['phasecurve']: chunked = True
+            pass
+        pass
     return chunked
 # ------------ -------------------------------------------------------
 # -- CALIBRATE SCAN DATA -- ------------------------------------------

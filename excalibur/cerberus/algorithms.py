@@ -22,8 +22,6 @@ import excalibur.target.edit as trgedit
 fltrs = (trgedit.activefilters.__doc__).split('\n')
 fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
 fltrs.append('STIS-WFC3')
-# fltrs = [f for f in fltrs if 'STIS-WFC3' in f]
-fltrs = [f for f in fltrs if 'Spitzer' not in f]
 # ----------------------- --------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class xslib(dawgie.Algorithm):
@@ -65,11 +63,14 @@ class xslib(dawgie.Algorithm):
                 vspc, sspc = crbcore.checksv(sv)
                 pass
 
-            if vspc:
+            # pylint: disable=protected-access
+            prcd = trgedit.proceed(ds._tn(), ext, verbose=False)
+            if vspc and prcd:
                 log.warning('--< CERBERUS XSLIB: %s >--', ext)
                 update = self._xslib(sv, fltrs.index(ext))
             else:
                 errstr = [m for m in [sspc] if m is not None]
+                if not prcd: errstr = ['Kicked by edit.processme()']
                 self._failure(errstr[0])
                 pass
             if update: svupdate.append(self.__out[fltrs.index(ext)])
@@ -137,7 +138,9 @@ class atmos(dawgie.Algorithm):
                 vspc, sspc = crbcore.checksv(sv)
                 pass
 
-            if vfin and vxsl and vspc:
+            # pylint: disable=protected-access
+            prcd = trgedit.proceed(ds._tn(), ext, verbose=False)
+            if vfin and vxsl and vspc and prcd:
                 log.warning('--< CERBERUS ATMOS: %s >--', ext)
                 update = self._atmos(self.__fin.sv_as_dict()['parameters'],
                                      self.__xsl.sv_as_dict()[ext],
@@ -146,6 +149,7 @@ class atmos(dawgie.Algorithm):
                 pass
             else:
                 errstr = [m for m in [sfin, sxsl, sspc] if m is not None]
+                if not prcd: errstr = ['Kicked by edit.processme()']
                 self._failure(errstr[0])
                 pass
             if update: svupdate.append(self.__out[fltrs.index(ext)])

@@ -147,15 +147,18 @@ class CalibrateSV(dawgie.StateVector):
 class TimingSV(dawgie.StateVector):
     '''data.timing view'''
     def __init__(self, name):
-        '''__init__ ds'''
-        self._version_ = dawgie.VERSION(1,1,1)
+        '''1.2.0: GMR: Creates top level keys for each instrument'''
+        self._version_ = dawgie.VERSION(1,2,0)
         self.__name = name
+        # TOP LEVEL KEYS
         self['STATUS'] = excalibur.ValuesList()
+        self['STATUS'].append(False)
+        self['EXT'] = excalibur.ValuesDict()
+
         self['data'] = excalibur.ValuesDict()
         self['transit'] = excalibur.ValuesList()
         self['eclipse'] = excalibur.ValuesList()
         self['phasecurve'] = excalibur.ValuesList()
-        self['STATUS'].append(False)
         return
 
     def name(self):

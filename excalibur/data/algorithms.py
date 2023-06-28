@@ -17,11 +17,8 @@ import excalibur.system as sys
 import excalibur.system.algorithms as sysalg
 # ------------- ------------------------------------------------------
 # -- ALGO RUN OPTIONS -- ---------------------------------------------
-# FILTERS
 fltrs = (trgedit.activefilters.__doc__).split('\n')
 fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
-# KICK SPITZER FOR THE MOMENT
-fltrs = [f for f in fltrs if 'HST' in f]
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class collect(dawgie.Algorithm):
@@ -57,16 +54,20 @@ class collect(dawgie.Algorithm):
         valid, errstring = datcore.checksv(scrape)
         if valid:
             for key in create.keys(): self.__out[key] = create[key]
-
             for name in create['activefilters']['NAMES']:
                 ok = self._collect(name, scrape, self.__out)
                 update = update or ok
                 pass
             if update: ds.update()
-            else: raise dawgie.NoValidOutputDataError(f'No output created for DATA.{self.name()}')
+            else: self._raisenoout(self.name())
             pass
         else: self._failure(errstring)
         return
+
+    @staticmethod
+    def _raisenoout(myname):
+        '''No output exception'''
+        raise dawgie.NoValidOutputDataError(f'No output created for DATA.{myname}')
 
     @staticmethod
     def _collect(name, scrape, out):
@@ -121,9 +122,13 @@ class timing(dawgie.Algorithm):
         svupdate = []
         if vfin and vcol:
             for ext in validtype:
-                update = self._timing(fin, ext, col['activefilters'][ext],
-                                      self.__out[fltrs.index(ext)])
-                if update: svupdate.append(self.__out[fltrs.index(ext)])
+                # pylint: disable=protected-access
+                prcd = trgedit.proceed(ds._tn(), ext, verbose=False)
+                if prcd:
+                    update = self._timing(fin, ext, col['activefilters'][ext],
+                                          self.__out[fltrs.index(ext)])
+                    if update: svupdate.append(self.__out[fltrs.index(ext)])
+                    pass
                 pass
             pass
         else:
@@ -132,9 +137,13 @@ class timing(dawgie.Algorithm):
             pass
         self.__out = svupdate
         if self.__out.__len__() > 0: ds.update()
-        else: raise dawgie.NoValidOutputDataError(
-                f'No output created for DATA.{self.name()}')
+        else: self._raisenoout(self.name())
         return
+
+    @staticmethod
+    def _raisenoout(myname):
+        '''No output exception'''
+        raise dawgie.NoValidOutputDataError(f'No output created for DATA.{myname}')
 
     @staticmethod
     def _timing(fin, ext, colin, out):
@@ -192,23 +201,29 @@ class calibration(dawgie.Algorithm):
         for datatype in validtype:
             tim = self.__tim.sv_as_dict()[datatype]
             vtim, etim = datcore.checksv(tim)
-
-            if vfin and vcll and vtim:
+            # pylint: disable=protected-access
+            prcd = trgedit.proceed(ds._tn(), datatype, verbose=False)
+            if vfin and vcll and vtim and prcd:
                 # pylint: disable=protected-access
-                update = self._calib(fin,cll['activefilters'][datatype], tim, ds._tn(),
+                update = self._calib(fin, cll['activefilters'][datatype], tim, ds._tn(),
                                      datatype, self.__out[fltrs.index(datatype)])
                 if update: svupdate.append(self.__out[fltrs.index(datatype)])
                 pass
             else:
                 message = [m for m in [sfin, ecll, etim] if m is not None]
+                if not prcd: message = ['Kicked by edit.processme()']
                 self._failure(message[0])
                 pass
             pass
         self.__out = svupdate
         if self.__out.__len__() > 0: ds.update()
-        else: raise dawgie.NoValidOutputDataError(
-                f'No output created for DATA.{self.name()}')
+        else: self._raisenoout(self.name())
         return
+
+    @staticmethod
+    def _raisenoout(myname):
+        '''No output exception'''
+        raise dawgie.NoValidOutputDataError(f'No output created for DATA.{myname}')
 
     @staticmethod
     def _calib(fin, cll, tim, tid, flttype, out):

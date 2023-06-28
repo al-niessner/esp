@@ -62,7 +62,9 @@ class pcnormalization(dawgie.Algorithm):
             update = False
             vcal, scal = trncore.checksv(self.__cal.sv_as_dict()[ext])
             vtme, stme = trncore.checksv(self.__tme.sv_as_dict()[ext])
-            if vcal and vtme and vfin:
+            # pylint: disable=protected-access
+            prcd = trgedit.proceed(ds._tn(), ext, verbose=False)
+            if vcal and vtme and vfin and prcd:
                 log.warning('--< %s NORMALIZATION: %s >--', self._type.upper(), ext)
                 update = self._norm(self.__cal.sv_as_dict()[ext],
                                     self.__tme.sv_as_dict()[ext],
@@ -71,6 +73,7 @@ class pcnormalization(dawgie.Algorithm):
                 pass
             else:
                 errstr = [m for m in [scal, stme, sfin] if m is not None]
+                if not prcd: errstr = ['Kicked by edit.processme()']
                 self._failure(errstr[0])
                 pass
             if update: svupdate.append(self.__out[fltrs.index(ext)])
@@ -83,7 +86,8 @@ class pcnormalization(dawgie.Algorithm):
 
     def _norm(self, cal, tme, fin, index):
         if 'Spitzer' in fltrs[index]:
-            normed = phccore.norm_spitzer(cal, tme, fin, fltrs[index], self.__out[index], self._type)
+            normed = phccore.norm_spitzer(cal, tme, fin, fltrs[index],
+                                          self.__out[index], self._type)
         else:
             return True
         return normed
@@ -124,12 +128,15 @@ class pcwhitelight(dawgie.Algorithm):
             index = fltrs.index(ext)
             nrm = self._nrm.sv_as_dict()[ext]
             vnrm, snrm = trncore.checksv(nrm)
-            if vnrm and vfin:
+            # pylint: disable=protected-access
+            prcd = trgedit.proceed(ds._tn(), ext, verbose=False)
+            if vnrm and vfin and prcd:
                 log.warning('--< %s WHITE LIGHT: %s >--', self._type.upper(), ext)
                 update = self._whitelight(nrm, fin, self.__out[index], index)
                 pass
             else:
                 errstr = [m for m in [snrm, sfin] if m is not None]
+                if not prcd: errstr = ['Kicked by edit.processme()']
                 self._failure(errstr[0])
                 pass
             if update: svupdate.append(self.__out[index])

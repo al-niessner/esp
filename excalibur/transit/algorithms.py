@@ -22,9 +22,6 @@ import excalibur.target.edit as trgedit
 # FILTERS
 fltrs = (trgedit.activefilters.__doc__).split('\n')
 fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
-# fltrs = [f for f in fltrs if 'HST' not in f]
-fltrs = [f for f in fltrs if 'HST' in f]
-# fltrs = [f for f in fltrs if 'HST-STIS-CCD-G430' in f]
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class normalization(dawgie.Algorithm):
@@ -62,7 +59,9 @@ class normalization(dawgie.Algorithm):
             update = False
             vcal, scal = trncore.checksv(self.__cal.sv_as_dict()[ext])
             vtme, stme = trncore.checksv(self.__tme.sv_as_dict()[ext])
-            if vcal and vtme and vfin:
+            # pylint: disable=protected-access
+            prcd = trgedit.proceed(ds._tn(), ext, verbose=False)
+            if vcal and vtme and vfin and prcd:
                 log.warning('--< %s NORMALIZATION: %s >--', self._type.upper(), ext)
                 update = self._norm(self.__cal.sv_as_dict()[ext],
                                     self.__tme.sv_as_dict()[ext],
@@ -71,6 +70,7 @@ class normalization(dawgie.Algorithm):
                 pass
             else:
                 errstr = [m for m in [scal, stme, sfin] if m is not None]
+                if not prcd: errstr = ['Kicked by edit.processme()']
                 self._failure(errstr[0])
                 pass
             if update: svupdate.append(self.__out[fltrs.index(ext)])
@@ -147,7 +147,9 @@ class whitelight(dawgie.Algorithm):
                 except KeyError:
                     break
                 vnrm, snrm = trncore.checksv(nrm)
-                if vnrm and vfin:
+                # pylint: disable=protected-access
+                prcd = trgedit.proceed(ds._tn(), ext, verbose=False)
+                if vnrm and vfin and prcd:
                     log.warning('--< %s MERGING: %s >--', self._type.upper(), ext)
                     allnormdata.append(nrm)
                     allext.append(ext)
@@ -155,6 +157,7 @@ class whitelight(dawgie.Algorithm):
                     pass
                 else:
                     errstr = [m for m in [snrm, sfin] if m is not None]
+                    if not prcd: errstr = ['Kicked by edit.processme()']
                     self._failure(errstr[0])
                     pass
                 pass
@@ -162,6 +165,7 @@ class whitelight(dawgie.Algorithm):
                 try:
                     update = self._hstwhitelight(allnormdata, fin, self.__out[-1], allext)
                     if update: svupdate.append(self.__out[-1])
+                    pass
                 except TypeError:
                     log.warning('>-- HST orbit solution failed %s', self._type.upper())
                     pass
@@ -172,12 +176,15 @@ class whitelight(dawgie.Algorithm):
             index = fltrs.index(ext)
             nrm = self._nrm.sv_as_dict()[ext]
             vnrm, snrm = trncore.checksv(nrm)
-            if vnrm and vfin:
+            # pylint: disable=protected-access
+            prcd = trgedit.proceed(ds._tn(), ext, verbose=False)
+            if vnrm and vfin and prcd:
                 log.warning('--< %s WHITE LIGHT: %s >--', self._type.upper(), ext)
                 update = self._whitelight(nrm, fin, self.__out[index], ext)
                 pass
             else:
                 errstr = [m for m in [snrm, sfin] if m is not None]
+                if not prcd: errstr = ['Kicked by edit.processme()']
                 self._failure(errstr[0])
                 pass
             if update: svupdate.append(self.__out[index])
@@ -255,7 +262,9 @@ class spectrum(dawgie.Algorithm):
             update = False
             vnrm, snrm = trncore.checksv(self._nrm.sv_as_dict()[ext])
             vwht, swht = trncore.checksv(self._wht.sv_as_dict()[ext])
-            if vfin and vnrm and vwht:
+            # pylint: disable=protected-access
+            prcd = trgedit.proceed(ds._tn(), ext, verbose=False)
+            if vfin and vnrm and vwht and prcd:
                 log.warning('--< %s SPECTRUM: %s >--', self._type.upper(), ext)
                 update = self._spectrum(self.__fin.sv_as_dict()['parameters'],
                                         self._nrm.sv_as_dict()[ext],
@@ -264,25 +273,22 @@ class spectrum(dawgie.Algorithm):
                 pass
             else:
                 errstr = [m for m in [sfin, snrm, swht] if m is not None]
+                if not prcd: errstr = ['Kicked by edit.processme()']
                 self._failure(errstr[0])
                 pass
-
             if update: svupdate.append(self.__out[index])
             pass
-        # CALL TO THE MERGE SPECTRUM CODE
+
         log.warning('--< %s MERGED SPECTRUM: %s >--')
         merg = trncore.hstspectrum(self.__out, fltrs)
         # check if merg is True so you can put self.__out[-1] append to svupdate
         if merg: svupdate.append(self.__out[-1])
         self.__out = svupdate  # it will take all the elements that are not empty
         if self.__out: ds.update()
-        else: raise dawgie.NoValidOutputDataError(
+        else:
+            raise dawgie.NoValidOutputDataError(
                 f'No output created for {self._type.upper()}.{self.name()}')
         return
-
-#     def _hstspec(self, out):
-#         s = trncore.hstspectrum(self.__out, fltrs, verbose=False)
-#         return s
 
     def _spectrum(self, fin, nrm, wht, out, ext):
         '''Core code call'''

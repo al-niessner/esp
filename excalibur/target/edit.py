@@ -1,7 +1,47 @@
 '''target task inputs and parameter overwrite'''
 # -- IMPORTS -- ------------------------------------------------------
 import dawgie
+import logging; log = logging.getLogger(__name__)
 # ------------- ------------------------------------------------------
+# -- ACTIVE FILTERS -- -----------------------------------------------
+# DEFAULT OUTPUTS FOR DAWGIE, SHOULD HAVE ALL POSSIBLE COMBINATION THERE
+# FORMAT:
+# OBSERVATORY/INSTRUMENT/DETECTOR/FILTER/MODE
+# EXAMPLES:
+# HST-STIS-FUV.MAMA-G140M-STARE
+# Spitzer-IRAC-IR-36-SUB
+# Spitzer-IRAC-IR-45-SUB
+# HST-WFC3-IR-G141-SCAN
+# HST-WFC3-IR-G102-SCAN
+# HST-STIS-CCD-G750L-STARE
+# JWST-NIRISS-NIS-CLEAR-GR700XD
+def activefilters():
+    '''
+Spitzer-IRAC-IR-36-SUB
+Spitzer-IRAC-IR-45-SUB
+HST-WFC3-IR-G141-SCAN
+HST-WFC3-IR-G102-SCAN
+HST-STIS-CCD-G750L-STARE
+HST-STIS-CCD-G430L-STARE
+    '''
+    return
+
+def processme():
+    '''
+    - Empty list means everything goes through
+    - Include/Exclude ['a', 'b'] will include/exclude filter/target containing 'a' or 'b'
+    '''
+    out = {}
+    out['FILTER'] = {}
+    out['FILTER']['include'] = ['G141']
+    out['FILTER']['exclude'] = []
+    out['TARGET'] = {}
+    # Best to use a function call that returns a specific list
+    # if one wants to change the 'include' target content
+    out['TARGET']['include'] = []
+    out['TARGET']['exclude'] = ['HR 8799']
+    return out
+# ----------------------------- --------------------------------------
 # -- CREATE -- -------------------------------------------------------
 def createversion():
     '''
@@ -1287,27 +1327,6 @@ Wolf 503 : WOLF503
 XO-6 : XO6
 XO-7 : XO7
 pi Men : PIMEN
-    '''
-    return
-# -------------------- -----------------------------------------------
-# -- ACTIVE FILTERS -- -----------------------------------------------
-# OBSERVATORY/INSTRUMENT/DETECTOR/FILTER/MODE
-# HST-STIS-FUV.MAMA-G140M-STARE
-# Spitzer-IRAC-IR-36-SUB
-# Spitzer-IRAC-IR-45-SUB
-# HST-WFC3-IR-G141-SCAN
-# HST-WFC3-IR-G102-SCAN
-# HST-STIS-CCD-G750L-STARE
-# JWST-NIRISS-NIS-CLEAR-GR700XD
-
-def activefilters():
-    '''
-Spitzer-IRAC-IR-36-SUB
-Spitzer-IRAC-IR-45-SUB
-HST-WFC3-IR-G141-SCAN
-HST-WFC3-IR-G102-SCAN
-HST-STIS-CCD-G750L-STARE
-HST-STIS-CCD-G430L-STARE
     '''
     return
 # -------------------- -----------------------------------------------
@@ -2755,3 +2774,27 @@ overwrite[starID] =
 
     return overwrite
 # -------------------------------------------------------------------
+# -- PROCESS RULES -- -----------------------------------------------
+def proceed(name, ext, verbose=False):
+    '''
+    GMR: High level filtering
+    '''
+    out = True
+    rules = processme()
+    filterkeys = [r for r in ['include', 'exclude'] if rules['FILTER'][r]]
+    for thisrule in filterkeys:
+        trout = any(itm in ext for itm in rules['FILTER'][thisrule])
+        if 'exclude' in thisrule: trout = not trout
+        out = out and trout
+        if verbose: log.warning('>---- FILTER %s: %s %s', ext, thisrule, out)
+        pass
+    namekeys = [r for r in ['include', 'exclude'] if rules['TARGET'][r]]
+    for thisrule in namekeys:
+        trout = any(itm in name for itm in rules['TARGET'][thisrule])
+        if 'exclude' in thisrule: trout = not trout
+        out = out and trout
+        if verbose: log.warning('>---- TARGET %s: %s %s', name, thisrule, out)
+        pass
+    if verbose: log.warning('>-- PROCEED: %s', out)
+    return out
+# ------------------- -----------------------------------------------
