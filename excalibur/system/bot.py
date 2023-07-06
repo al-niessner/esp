@@ -15,3 +15,13 @@ class Actor(dawgie.Task):
         ]
     pass
 # --------- ----------------------------------------------------------
+
+class Agent(dawgie.Analysis):
+    '''Agent ds'''
+    def list(self)->[dawgie.Analyzer]:
+        '''list ds'''
+        return [
+            sysalg.population()
+        ]
+    pass
+# --------- ----------------------------------------------------------

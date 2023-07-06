@@ -4,6 +4,8 @@ import logging; log = logging.getLogger(__name__)
 
 import dawgie
 
+from collections import defaultdict
+
 import excalibur.system as sys
 import excalibur.system.core as syscore
 import excalibur.system.states as sysstates
@@ -13,6 +15,8 @@ import excalibur.target.edit as trgedit
 import excalibur.target.algorithms as trgalg
 
 from excalibur.system.consistency import consistency_checks
+from excalibur.target.targetlists import get_target_lists
+from excalibur.system.core import savesv
 
 # ------------- ------------------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
@@ -137,6 +141,101 @@ class finalize(dawgie.Algorithm):
     def _failure(errstr):
         '''Failure log'''
         log.warning('--< SYSTEM FINALIZE: %s >--', errstr)
+        return
+    pass
+# ---------------- ---------------------------------------------------
+
+class population(dawgie.Analyzer):
+    '''population ds'''
+    def __init__(self):
+        '''__init__ ds'''
+        self._version_ = dawgie.VERSION(1,0,3)
+        self.__fin = finalize()
+        self.__out = sysstates.PopulationSV('statistics')
+        return
+
+    def previous(self):
+        '''Input State Vectors: system.finalize'''
+        return [dawgie.ALG_REF(sys.task, self.__fin)]
+
+    def feedback(self):
+        '''feedback ds'''
+        return []
+
+    def name(self):
+        '''name ds'''
+        return 'population'
+
+    def traits(self)->[dawgie.SV_REF, dawgie.V_REF]:
+        '''traits ds'''
+        return [dawgie.SV_REF(sys.task, finalize(),
+                              finalize().state_vectors()[0])]
+
+    def state_vectors(self):
+        '''state_vectors ds'''
+        return [self.__out]
+
+    def run(self, aspects:dawgie.Aspect):
+        '''run ds'''
+
+        targetlists = get_target_lists()
+
+        # group together values by attribute
+        svname = 'system.finalize.parameters'
+
+        # save system-finalize results as .csv file (in /proj/data/spreadsheets/)
+        savesv(aspects, targetlists)
+
+        st_attrs = defaultdict(list)
+        pl_attrs = defaultdict(list)
+        st_attrs_roudier62 = defaultdict(list)
+        pl_attrs_roudier62 = defaultdict(list)
+
+        # for trgt in aspects:
+        for trgt in targetlists['active']:
+
+            system_data = aspects[trgt][svname]
+
+            # verify SV succeeded for target
+            if system_data['STATUS'][-1]:
+                # get stellar attributes
+                st_keys = system_data['starmdt']           # mandatory params
+                st_keys.extend(system_data['starnonmdt'])  # non-mandatory params
+                pl_keys = system_data['planetmdt']
+
+                for key in st_keys:
+                    st_attrs[key].append(system_data['priors'][key])
+
+                # get planetary attributes
+                for planet_letter in system_data['priors']['planets']:
+                    for key in pl_keys:
+                        pl_attrs[key].append(system_data['priors'][planet_letter][key])
+
+        #  *** second loop for second (overlapping) histogram ***
+        for trgt in targetlists['roudier62']:
+            system_data = aspects[trgt][svname]
+
+            # verify SV succeeded for target
+            if system_data['STATUS'][-1]:
+                st_keys = system_data['starmdt']           # mandatory params
+                st_keys.extend(system_data['starnonmdt'])  # non-mandatory params
+                pl_keys = system_data['planetmdt']
+
+                # get stellar attributes
+                for key in st_keys:
+                    st_attrs_roudier62[key].append(system_data['priors'][key])
+                # get planetary attributes
+                for planet_letter in system_data['priors']['planets']:
+                    for key in pl_keys:
+                        pl_attrs_roudier62[key].append(system_data['priors'][planet_letter][key])
+
+        # Add to SV
+        self.__out['data']['st_attrs'] = st_attrs
+        self.__out['data']['st_attrs_roudier62'] = st_attrs_roudier62
+        self.__out['data']['pl_attrs'] = pl_attrs
+        self.__out['data']['pl_attrs_roudier62'] = pl_attrs_roudier62
+        self.__out['STATUS'].append(True)
+        aspects.ds().update()
         return
     pass
 # ---------------- ---------------------------------------------------

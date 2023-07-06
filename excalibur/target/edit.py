@@ -73,7 +73,6 @@ GJ 1132 :
 GJ 1214 :
 GJ 1252 :
 GJ 3053 : LHS 1140
-GJ 3193 :
 GJ 3470 :
 GJ 436 :
 GJ 9827 :
@@ -103,7 +102,6 @@ HAT-P-41 :
 HAT-P-5 :
 HAT-P-6 :
 HAT-P-7 :
-HAT-P-70 :
 HAT-P-8 :
 HATS-28 :
 HATS-3 :
@@ -114,7 +112,6 @@ HD 149026 :
 HD 17156 :
 HD 185603 :
 HD 189733 :
-HD 191939 :
 HD 195689 :
 HD 197481 :
 HD 209458 :
@@ -122,9 +119,7 @@ HD 213885 :
 HD 219134 :
 HD 219666 :
 HD 23472 :
-HD 86226 :
 HD 97658 :
-HIP 41378 :
 HR 858 :
 K2-124 :
 K2-132 :
@@ -237,12 +232,7 @@ Qatar-2 :
 TIC 184892124 :
 TOI-175 :
 TOI-193 :
-TOI-1201 :
-TOI-1231 :
 TOI-270 :
-TOI-431 :
-TOI-561 :
-TOI-674 :
 TOI-700 :
 TOI-849 :
 TrES-1 :
@@ -267,7 +257,6 @@ WASP-140 :
 WASP-15 :
 WASP-16 :
 WASP-17 :
-WASP-178 :
 WASP-18 :
 WASP-19 :
 WASP-2 :
@@ -699,7 +688,7 @@ WASP-99 :
 Wolf 503 :
 XO-6 :
 XO-7 :
-pi Men :
+pi Men : HD 39091
     '''
     return
 # ----------------- --------------------------------------------------
@@ -753,7 +742,10 @@ HATS-7 : HATS7
 HD 106315 : HD106315
 HD 149026 : HD149026
 HD 17156 : HD17156
+HD 185603 : HD185603
 HD 189733 : HD189733
+HD 195689 : HD195689
+HD 197481 : HD197481
 HD 209458 : HD209458
 HD 213885 : HD213885
 HD 219134 : HD219134
@@ -864,12 +856,16 @@ Kepler-786 : KEPLER786
 Kepler-9 : KEPLER9
 Kepler-93 : KEPLER93
 Kepler-94 : KEPLER94
+KIC 12266812 : KIC12266812
 LHS 1140 : LHS1140
 LHS 3844 : LHS3844
 OGLE-TR-056 : OGLETR056
 OGLE-TR-10 : OGLETR10
 Qatar-1 : QATAR1
 Qatar-2 : QATAR2
+TIC 184892124 : TIC184892124
+TOI-175 : TOI175
+TOI-193 : TOI193
 TOI-270 : TOI270
 TOI-700 : TOI700
 TOI-849 : TOI849
@@ -2766,11 +2762,29 @@ overwrite[starID] =
         'R*_ref':'Default to solar radius',
         'M*':1.0, 'M*_uperr':0.25, 'M*_lowerr':-0.25,
         'M*_ref':'Default to solar mass',
+        # RHO* derivation (from R* and M*) comes before this, so we have to set it here
+        'RHO*':1.4, 'RHO*_uperr':0.25, 'RHO*_lowerr':-0.25,
+        'RHO*_ref':'Default to solar density',
+        # L* needed for teq (actually it's set below)
+        'L*':1.0, 'L*_uperr':0.25, 'L*_lowerr':-0.25,
+        'L*_ref':'Default to solar luminosity',
         # 'LOGG*':4.3, 'LOGG*_uperr':0.1, 'LOGG*_lowerr':-0.1,
         # 'LOGG*_ref':'Default to solar log(g)'}
         # Period is 3.87 days
+        # teq derivation (from L* and sma) comes before this, so we have to set it here
         'b':{'sma':0.05, 'sma_uperr':0.01, 'sma_lowerr':-0.01,
-             'sma_ref':'Assume solar mass'}}
+             'sma_ref':'Assume solar mass',
+             'teq':1245, 'teq_uperr':100, 'teq_lowerr:':100,
+             'teq_units':'[K]', 'teq_ref':'derived from L*,sma'}}
+
+    # this one is weird. there's a metallicity value in the Archive for 'c' but not for 'b'
+    overwrite['HD 63433'] = {
+        'FEH*':0.05, 'FEH*_uperr':0.05, 'FEH*_lowerr':-0.05,
+        'FEH*_units':'[dex]', 'FEH*_ref':'Dai et al. 2020'}
+
+    overwrite['TOI-1411'] = {
+        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
 
     return overwrite
 # -------------------------------------------------------------------

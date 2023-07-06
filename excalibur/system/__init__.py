@@ -12,3 +12,7 @@ import excalibur.system.bot as sysbot
 def task (prefix:str, ps_hint:int=0, runid:int=-1, target:str='__none__'):
     '''Factory'''
     return sysbot.Actor(prefix, ps_hint, runid, target)
+
+def analysis (prefix:str, ps_hint:int=0, runid:int=-1):
+    '''analysis ds'''
+    return sysbot.Agent(prefix, ps_hint, runid)

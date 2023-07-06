@@ -2,10 +2,13 @@
 # -- IMPORTS -- ------------------------------------------------------
 import dawgie
 
+import excalibur
+
 # import estimators
 from excalibur.ancillary.estimators import StEstimator, PlEstimator
 import excalibur.ancillary.estimators as ancestor
 
+import os
 import logging; log = logging.getLogger(__name__)
 
 SV_EXTS = ['_descr', '_units', '_uperr', '_lowerr', '_ref']
@@ -155,3 +158,90 @@ def estimate(fin, out):
                 out['data'][pl][est.name() + '_ref'] = est.ref()
     out['STATUS'].append(True)  # mark success
     return True
+
+# ---------------------------- ---------------------------------------
+def savesv(aspects, targetlists):
+    '''
+    save the results as a csv file in /proj/data/spreadsheets
+    '''
+
+    svname = 'ancillary.estimate.parameters'
+
+    RID = int(os.environ.get('RUNID', None))
+
+    # directory where the results are saved
+    saveDir = excalibur.context['data_dir'] + \
+        '/spreadsheets/RID' + f"{RID:03i}" + '/'
+    #    '/spreadsheets/RID' + str('%03i' %RID) + '/'
+    # print('saveDir:',saveDir)
+    if not os.path.exists(saveDir): os.mkdir(saveDir)
+
+    # file name where the results are saved
+    # outfileName = svname.replace('.','_') + '_RID' + str('%03i' %RID) + '.csv'
+    outfileName = svname.replace('.','_') + '_RID' + f"{RID:03i}" + '.csv'
+    # outfile = open(saveDir + outfileName,'w',encoding='ascii')
+    with open(saveDir + outfileName,'w',encoding='ascii') as outfile:
+
+        # (the list of extensions is hardcoded at the top of this file)
+        exts = SV_EXTS
+        # print('extensions:',exts)
+
+        # use 55 Cnc as an example, to make the list of parameters
+        ancillary_data = aspects['55 Cnc'][svname]
+        st_keys = [key for key in ancillary_data['data'].keys()
+                   if ((not key == 'planets') and
+                       (key not in ancillary_data['data']['planets']) and
+                       (not any(ext in key for ext in SV_EXTS)))]
+        # print('st_keys',st_keys)
+        pl_keys = [i for i in ancillary_data['data']['e'].keys()
+                   if not any(ext in i for ext in SV_EXTS)]
+        # print('pl_keys',pl_keys)
+
+        # don't print out the full description of the parameter; bulky and repetitive
+        exts.remove('_descr')
+        # these uncertainty fields aren't actually calculated
+        exts.remove('_lowerr')
+        exts.remove('_uperr')
+
+        # write the header row
+        outfile.write('star,planet,')
+        for key in st_keys:
+            print('key',key)
+            outfile.write(key + ',')
+            for ext in exts:
+                # stellar_type doesn't have units.  maybe add it in estimators.py
+                if key+ext != 'stellar_type_units' and \
+                   key+ext != 'T_corona_ref' and \
+                       key+ext != 'spTyp_units':
+                    outfile.write(key+ext + ',')
+        for key in pl_keys:
+            outfile.write(key + ',')
+            for ext in exts:
+                outfile.write(key+ext + ',')
+        outfile.write('\n')
+
+        # loop through each target, with one row per planet
+        for trgt in targetlists['active']:
+            ancillary_data = aspects[trgt][svname]
+
+            for planet_letter in ancillary_data['data']['planets']:
+                outfile.write(trgt + ',')
+                outfile.write(planet_letter + ',')
+
+                for key in st_keys:
+                    outfile.write(str(ancillary_data['data'][key]) + ',')
+                    for ext in exts:
+                        if key+ext != 'stellar_type_units' and \
+                           key+ext != 'T_corona_ref' and \
+                               key+ext != 'spTyp_units':
+                            outfile.write(str(ancillary_data['data'][key+ext]).replace(',',';') + ',')
+
+                for key in pl_keys:
+                    outfile.write(str(ancillary_data['data'][planet_letter][key]) + ',')
+                    for ext in exts:
+                        outfile.write(str(ancillary_data['data'][planet_letter][key+ext]).replace(',',';') + ',')
+
+                outfile.write('\n')
+    # outfile.close()
+
+    return

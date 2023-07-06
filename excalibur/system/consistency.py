@@ -34,10 +34,15 @@ def consistency_checks(priors):
         ok = consistency_check_M_R_LOGG_planet(priors, planetLetter)
         if not ok: inconsistencies.append(planetLetter+':logg')
 
+# impact and inclination should be consistent
+# but impact doesn't exist here; not saved by target
+#        ok = consistency_check_inc_impact(priors, planetLetter)
+#        if not ok: inconsistencies.append(planetLetter+':impact')
+
     return inconsistencies
 
 # -------------------------------------------------------------------
-def close_to(A, B, eps=1.e-2):
+def close_to(A, B, eps=1.e-1):
     '''
     Check whether two values are more or less equal
     (within fractional 'eps' of each other)

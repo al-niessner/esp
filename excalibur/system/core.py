@@ -1,6 +1,10 @@
 '''system core ds'''
 # -- IMPORTS -- ------------------------------------------------------
+import os
+import numpy as np
 import logging; log = logging.getLogger(__name__)
+
+import excalibur
 
 # import excalibur.target.edit as trgedit
 # overwrite = trgedit.ppar()
@@ -10,8 +14,9 @@ from excalibur.system.autofill import \
     fixZeroUncertainties, fillUncertainty, \
     derive_RHOstar_from_M_and_R, derive_SMA_from_P_and_Mstar, \
     derive_LOGGstar_from_R_and_M, derive_LOGGplanet_from_R_and_M, \
-    derive_Lstar_from_R_and_T, derive_Teqplanet_from_Lstar_and_sma
-import numpy as np
+    derive_Lstar_from_R_and_T, derive_Teqplanet_from_Lstar_and_sma, \
+    derive_inclination_from_impactParam
+
 # ------------- ------------------------------------------------------
 # -- SOLAR SYSTEM CONSTANTS -- ---------------------------------------
 def ssconstants(mks=False, cgs=False):
@@ -78,14 +83,18 @@ def buildsp(autofill, out):
     target = target[0]
     for p in autofill['starID'][target]['planets']: out['priors'][p] = {}
     out['priors']['planets'] = autofill['starID'][target]['planets'].copy()
+    # print('    PLANETS:',out['priors']['planets'])
     out['starkeys'].extend(autofill['starkeys'])
     out['planetkeys'].extend(autofill['planetkeys'])
     out['exts'].extend(autofill['exts'])
     # MANDATORY STELLAR PARAMETERS
     # out['starmdt'].extend(['R*', 'T*', 'FEH*', 'LOGG*', 'M*', 'RHO*', 'Hmag'])
-    out['starmdt'].extend(['R*', 'M*', 'LOGG*', 'RHO*', 'FEH*', 'Hmag', 'T*'])
+    # out['starmdt'].extend(['R*', 'M*', 'LOGG*', 'RHO*', 'FEH*', 'Hmag', 'T*'])
+    out['starmdt'].extend(['R*', 'M*', 'LOGG*', 'RHO*', 'FEH*', 'Hmag', 'T*', 'L*'])
     # NEW CATEGORY: PARAMS TO PASS THROUGH TO ANCILLARY, BUT THEY"RE NOT MANDATORY
-    out['starnonmdt'].extend(['spTyp', 'L*', 'AGE*'])
+    # out['starnonmdt'].extend(['spTyp', 'L*', 'AGE*'])
+    # change L* to mandatory (needed for planet T_eq)
+    out['starnonmdt'].extend(['spTyp', 'AGE*'])
     # AWKWARD: non-mandatory has to be included in 'starmdt' or it won't display
     out['starmdt'].extend(out['starnonmdt'])
     # MANDATORY PLANET PARAMETERS
@@ -124,7 +133,6 @@ def buildsp(autofill, out):
             autofill['starID'][target][p]['sma_lowerr'] = sma_lowerr_derived
             autofill['starID'][target][p]['sma_uperr'] = sma_uperr_derived
             autofill['starID'][target][p]['sma_ref'] = sma_ref_derived
-            # exit('test2')
 
     # use stellar mass and radius to fill in blank stellar log-g
     logg_derived, logg_lowerr_derived, logg_uperr_derived, logg_ref_derived = \
@@ -138,7 +146,6 @@ def buildsp(autofill, out):
         autofill['starID'][target]['LOGG*_lowerr'] = logg_lowerr_derived
         autofill['starID'][target]['LOGG*_uperr'] = logg_uperr_derived
         autofill['starID'][target]['LOGG*_ref'] = logg_ref_derived
-        # exit('test3')
 
     # use stellar radius and temperature to fill in blank stellar luminosity
     lstar_derived, lstar_lowerr_derived, lstar_uperr_derived, lstar_ref_derived = \
@@ -154,18 +161,21 @@ def buildsp(autofill, out):
         autofill['starID'][target]['L*_ref'] = lstar_ref_derived
 
     # use stellar luminosity and planet orbit to derive planet temperature
-    teq_derived, teq_lowerr_derived, teq_uperr_derived, teq_ref_derived = \
-        derive_Teqplanet_from_Lstar_and_sma(autofill['starID'][target],p)
-    if autofill['starID'][target][p]['teq'] != teq_derived:
-        # print('teq before ',autofill['starID'][target][p]['teq'])
-        # print('teq derived',teq_derived)
-        # print('teq_ref derived',teq_ref_derived)
-        # print('teq_ref before ',autofill['starID'][target][p]['teq_ref'])
-        autofill['starID'][target][p]['teq'] = teq_derived
-        autofill['starID'][target][p]['teq_lowerr'] = teq_lowerr_derived
-        autofill['starID'][target][p]['teq_uperr'] = teq_uperr_derived
-        autofill['starID'][target][p]['teq_ref'] = teq_ref_derived
-        autofill['starID'][target][p]['teq_units'] = ['[K]']*len(teq_derived)
+    for p in autofill['starID'][target]['planets']:
+        teq_derived, teq_lowerr_derived, teq_uperr_derived, teq_ref_derived = \
+            derive_Teqplanet_from_Lstar_and_sma(autofill['starID'][target],p)
+        # print('   planet:',p)
+        # print('teq derived',teq_derived, teq_lowerr_derived, teq_uperr_derived, teq_ref_derived)
+        if autofill['starID'][target][p]['teq'] != teq_derived:
+            # print('teq before ',autofill['starID'][target][p]['teq'])
+            # print('teq derived',teq_derived)
+            # print('teq_ref derived',teq_ref_derived)
+            # print('teq_ref before ',autofill['starID'][target][p]['teq_ref'])
+            autofill['starID'][target][p]['teq'] = teq_derived
+            autofill['starID'][target][p]['teq_lowerr'] = teq_lowerr_derived
+            autofill['starID'][target][p]['teq_uperr'] = teq_uperr_derived
+            autofill['starID'][target][p]['teq_ref'] = teq_ref_derived
+            autofill['starID'][target][p]['teq_units'] = ['[K]']*len(teq_derived)
 
     # use planet mass and radius to fill in blank planetary log-g
     for p in autofill['starID'][target]['planets']:
@@ -187,9 +197,23 @@ def buildsp(autofill, out):
         autofill['starID'][target][p]['logg_uperr'] = logg_uperr_derived
         autofill['starID'][target][p]['logg_ref'] = logg_ref_derived
         autofill['starID'][target][p]['logg_units'] = ['log10[cm.s-2]']*len(logg_derived)
-        # exit('test4')
 
-    # loop over both the mandatory and non-mandatry parameters
+    # use the impact parameter (and R*, a_p) to fill in blank inclinations
+    for p in autofill['starID'][target]['planets']:
+        inc_derived, inc_lowerr_derived, inc_uperr_derived, inc_ref_derived = \
+                derive_inclination_from_impactParam(autofill['starID'][target],p)
+        # if autofill['starID'][target][p]['inc'] != inc_derived:
+        #    print('inc before ',autofill['starID'][target][p]['inc'])
+        #    print('inc derived',inc_derived)
+        #    print('inc_ref derived',inc_ref_derived)
+        #    print('inc_ref before ',autofill['starID'][target][p]['inc_ref'])
+        autofill['starID'][target][p]['inc'] = inc_derived
+        autofill['starID'][target][p]['inc_lowerr'] = inc_lowerr_derived
+        autofill['starID'][target][p]['inc_uperr'] = inc_uperr_derived
+        autofill['starID'][target][p]['inc_ref'] = inc_ref_derived
+        autofill['starID'][target][p]['inc_units'] = ['[degree]']*len(inc_derived)
+
+    # loop over both the mandatory and non-mandatory parameters
     # for lbl in out['starmdt']+out['starnonmdt']:
     for lbl in out['starmdt']:
         try:
@@ -228,6 +252,25 @@ def buildsp(autofill, out):
                 out['needed'].append(lbl)
             pass
         pass
+
+    # if star luminosity is missing, assume M^4
+    #   5/29/23 note that this conditional is never true.  could delete this
+    if 'L*' in out['needed']:
+        if out['priors']['M*'].__len__() > 0:
+            Lstar = float(out['priors']['M*'])**4
+            print('Note: setting L* = ',Lstar)
+            # out['priors']['ecc'] = str('%6.2f' %Lstar)
+            out['priors']['ecc'] = f"{Lstar:6.2f}"
+            out['priors']['L*_units'] = '[Lsun]'
+            out['priors']['L*_ref'] = 'set to M*^4'
+            # (this will set uncertainty to 10%)
+            out['priors']['L*_uperr'],_ = fillUncertainty('L*',Lstar,'','uperr')
+            out['priors']['L*_lowerr'],_ = fillUncertainty('L*',Lstar,'','lowerr')
+            out['autofill'].append('default:L*')
+            out['autofill'].append('default:L*_uperr')
+            out['autofill'].append('default:L*_lowerr')
+            index = out['needed'].index('L*')
+            out['needed'].pop(index)
 
     ssc = ssconstants(cgs=True)
     for p in out['priors']['planets']:
@@ -310,35 +353,6 @@ def buildsp(autofill, out):
             out['autofill'].append('default:'+p+':ecc_uperr')
             out['autofill'].append('default:'+p+':ecc_lowerr')
 
-        pincnd = (p+':inc') in out['needed']
-        psmain = (p+':sma') not in out['needed']
-        rstarin = 'R*' not in out['needed']
-        if pincnd and psmain and rstarin:
-            values = autofill['starID'][target][p]['impact'].copy()
-            uperrs = autofill['starID'][target][p]['impact_uperr'].copy()
-            lowerrs = autofill['starID'][target][p]['impact_lowerr'].copy()
-            refs = autofill['starID'][target][p]['impact_ref'].copy()
-            value,uperr,lowerr,ref = bestValue(values,uperrs,lowerrs,refs)
-            if value.__len__() > 0:
-                # exit('THIS SHOULDNT BE NEEDED ANYMORE3')
-                print('THIS SHOULDNT BE NEEDED ANYMORE3')
-                sininc = float(value)*(out['priors']['R*'])*ssc['Rsun/AU']/(out['priors'][p]['sma'])
-                inc = 9e1 - np.arcsin(sininc)*18e1/np.pi
-                out['priors'][p]['inc'] = inc
-                out['autofill'].append('fromImpactParam:'+p+':inc')
-                index = out['needed'].index(p+':inc')
-                out['needed'].pop(index)
-                strval = autofill['starID'][target][p]['inc_units'].copy()
-                out['priors'][p]['inc_units'] = strval[-1]
-                out['priors'][p]['inc_ref'] = 'System Prior Auto Fill'
-                fillValue,autofilled = fillUncertainty('inc',inc,'','uperr')
-                out['priors'][p]['inc_uperr'] = fillValue
-                if autofilled: out['autofill'].append('errorEstimate:'+p+':inc_uperr')
-                fillValue,autofilled = fillUncertainty('inc',inc,'','lowerr')
-                out['priors'][p]['inc_lowerr'] = fillValue
-                if autofilled: out['autofill'].append('errorEstimate:'+p+':inc_lowerr')
-                pass
-            pass
         # if planet inclination is missing, assume 90 degrees
         if p+':inc' in out['needed']:
             inc = 90e0
@@ -379,7 +393,7 @@ def buildsp(autofill, out):
                 pass
             pass
         pass
-    # print('needed,pneeded',out['needed'],out['pneeded'])
+
     for p in out['ignore']:
         dropIndices = []
         for value in out['needed']:
@@ -393,10 +407,8 @@ def buildsp(autofill, out):
             # have to pop off the list in reverse order
             dropIndices.reverse()
             for index in dropIndices:
-                # print('index',index)
                 out['needed'].pop(index)
         pass
-    # print('needed,pneeded',out['needed'],out['pneeded'])
     starneed = False
     for p in out['needed']:
         if ':' not in p: starneed = True
@@ -526,5 +538,74 @@ G. ROUDIER: Completes/Overrides parameters using target/edit.py
         pass
     return forced
 # ---------------------------- ---------------------------------------
+def savesv(aspects, targetlists):
+    '''
+    save the results as a csv file in /proj/data/spreadsheets
+    '''
+    svname = 'system.finalize.parameters'
 
-# Kepler-37 e is still showing in view, even when ignored for lack of M,logg
+    RID = int(os.environ.get('RUNID', None))
+
+    # directory where the results are saved
+    saveDir = excalibur.context['data_dir'] + \
+        '/spreadsheets/RID' + f"{RID:03i}" + '/'
+    #   '/spreadsheets/RID' + str('%03i' %RID) + '/'
+    # print('saveDir:',saveDir)
+    if not os.path.exists(saveDir): os.mkdir(saveDir)
+
+    # file name where the results are saved
+    # outfileName = svname.replace('.','_') + '_RID' + str('%03i' %RID) + '.csv'
+    outfileName = svname.replace('.','_') + '_RID' + f"{RID:03i}" + '.csv'
+    # outfile = open(saveDir + outfileName,'w',encoding='ascii')
+    with open(saveDir + outfileName,'w',encoding='ascii') as outfile:
+
+        # 55 Cnc is used as an example, to get the default header
+        system_data = aspects['55 Cnc'][svname]
+        st_keys = system_data['starmdt']           # start with mandatory params
+        # also include non-mandatory params?
+        #  no actually they've already been added in. (see 'awkward' above)
+        # st_keys.extend(system_data['starnonmdt'])
+        # print('st_keys',st_keys)
+        pl_keys = system_data['planetmdt']
+        # print('pl_keys',pl_keys)
+
+        # this extension info is not needed for value histograms, but is required for full data dump
+        exts = system_data['exts']
+        # print('extensions:',exts)
+
+        # write the header row
+        outfile.write('star,planet,')
+        for key in st_keys:
+            outfile.write(key + ',')
+            for ext in exts:
+                outfile.write(key+ext + ',')
+        for key in pl_keys:
+            outfile.write(key + ',')
+            for ext in exts:
+                outfile.write(key+ext + ',')
+        outfile.write('\n')
+
+        # loop through each target, with one row per planet
+        for trgt in targetlists['active']:
+            system_data = aspects[trgt][svname]
+
+            for planet_letter in system_data['priors']['planets']:
+                outfile.write(trgt + ',')
+                outfile.write(planet_letter + ',')
+
+                for key in st_keys:
+                    outfile.write(str(system_data['priors'][key]) + ',')
+                    for ext in exts:
+                        outfile.write(str(system_data['priors'][key+ext]).replace(',',';') + ',')
+
+                for key in pl_keys:
+                    outfile.write(str(system_data['priors'][planet_letter][key]) + ',')
+                    for ext in exts:
+                        outfile.write(str(system_data['priors'][planet_letter][key+ext]).replace(',',';') + ',')
+
+                outfile.write('\n')
+    # jenkins requires with-open, so close isn't needed anymore
+    # instead there's a bunch of dumbass indentation. thanks so much jenkins!
+    # outfile.close()
+
+    return

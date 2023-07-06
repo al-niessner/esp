@@ -4,6 +4,7 @@ RUN set -ex && \
     apt-get update && \
     apt-get install -y \
             curl \
+	    gfortran \
             git \
             graphviz \
             haveged \
@@ -40,6 +41,7 @@ RUN set -ex && \
                           scipy==1.7.3 \
                           scikit-learn==1.1.0 \
                           service_identity \
+                          taurex_ace \
                           taurex && \
    rm -rf ${HOME}/.cache && \
    mkdir /.theano && chmod 777 /.theano && \

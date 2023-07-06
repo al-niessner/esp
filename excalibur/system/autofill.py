@@ -65,6 +65,13 @@ def fillUncertainty(param,param_value,param_uncertainty,error_type):
                 # set uncertainty to 10% for planet radius, semi-major axis, mass
                 #   same for stellar radius, mass, density, luminosity
                 fillvalue = float(param_value) * 1.e-1
+            elif param=='AGE*':
+                # age is generally not well known.  have at least 50% uncertainty
+                fillvalue = float(param_value) * 0.5
+            elif param=='teq':
+                # planet equilibrium temperature to maybe 10%?
+                #  (error should really be derived from errors on L*,a_p)
+                fillvalue = float(param_value) * 1.e-1
             else:
                 # fallback option is to set uncertainty to 10%
                 fillvalue = float(param_value) * 1.e-1
@@ -556,6 +563,73 @@ def derive_Teqplanet_from_Lstar_and_sma(starInfo, planetLetter):
     return Teq_derived, Teq_lowerr_derived, Teq_uperr_derived, Teq_ref_derived
 
 # -------------------------------------------------------------------
+def derive_inclination_from_impactParam(starInfo, planetLetter):
+    '''
+    If planet inclination is blank, calculate it from impact param, star radius, semi-major axis
+    '''
+
+    # get Rsun definition
+    sscmks = syscore.ssconstants(cgs=True)
+
+    inc_derived = []
+    inc_lowerr_derived = []
+    inc_uperr_derived = []
+    inc_ref_derived = []
+
+    for Rstar,Rstarerr1,Rstarerr2, sma,smaerr1,smaerr2, impact,impacterr1,impacterr2, \
+        inc,incerr1,incerr2,incref in zip(
+            starInfo['R*'],starInfo['R*_lowerr'],starInfo['R*_uperr'],
+            starInfo[planetLetter]['sma'],
+            starInfo[planetLetter]['sma_lowerr'],
+            starInfo[planetLetter]['sma_uperr'],
+            starInfo[planetLetter]['impact'],
+            starInfo[planetLetter]['impact_lowerr'],
+            starInfo[planetLetter]['impact_uperr'],
+            starInfo[planetLetter]['inc'],
+            starInfo[planetLetter]['inc_lowerr'],
+            starInfo[planetLetter]['inc_uperr'],
+            starInfo[planetLetter]['inc_ref']):
+
+        # check for blank inclination
+        #  (but only update it if impact, R*, and sma are all defined)
+        if inc=='' and Rstar!='' and sma!='' and impact!='':
+
+            cosinc = float(impact) * float(Rstar)*sscmks['Rsun/AU'] / float(sma)
+
+            # ok TOI-2669 is weird (inc=76degrees) because the star is puffy (4.1 RSun)
+            # print('R* (RSun)',out['priors']['R*'])
+            # print('R* (AU)',out['priors']['R*']*sscmks['Rsun/AU'])
+            # print('ap (AU)',out['priors'][p]['sma'])
+            newinc = numpy.arccos(cosinc) * 180/numpy.pi
+            # print('inclination derived from impact parameter:',newinc)
+
+            inc_derived.append(f'{newinc:6.4f}')
+            inc_ref_derived.append('derived from impact parameter')
+
+            # also fill in the uncertainty on inc, based on impact,R*,sma uncertainties
+            if Rstarerr1=='' or smaerr1=='' or impacterr1=='':
+                inc_lowerr_derived.append('')
+            else:
+                cosincfractionalError1 = -numpy.sqrt((float(Rstarerr1)/float(Rstar))**2 +
+                                                     (float(impacterr1)/float(impact))**2 +
+                                                     (float(smaerr1)/float(sma))**2)
+                inc_lowerr_derived.append(f'{(cosincfractionalError1 * 180/numpy.pi):6.4f}')
+            if Rstarerr2=='' or smaerr2=='' or impacterr2=='':
+                inc_uperr_derived.append('')
+            else:
+                cosincfractionalError2 = numpy.sqrt((float(Rstarerr2)/float(Rstar))**2 +
+                                                    (float(impacterr2)/float(impact))**2 +
+                                                    (float(smaerr2)/float(sma))**2)
+                inc_uperr_derived.append(f'{(cosincfractionalError2 * 180/numpy.pi):6.4f}')
+        else:
+            inc_derived.append(inc)
+            inc_lowerr_derived.append(incerr1)
+            inc_uperr_derived.append(incerr2)
+            inc_ref_derived.append(incref)
+
+    return inc_derived, inc_lowerr_derived, inc_uperr_derived, inc_ref_derived
+
+# -------------------------------------------------------------------
 def fixZeroUncertainties(starInfo, starParam, planetParam):
     '''
     If any uncertainty is zero, remove it.  We don't want chi-squared=infinity
@@ -569,9 +643,9 @@ def fixZeroUncertainties(starInfo, starParam, planetParam):
                    str(starInfo[param+'_lowerr'][i]).__len__() > 0:
                     if float(starInfo[param+'_uperr'][i])==0 or \
                        float(starInfo[param+'_lowerr'][i])==0:
-                        print('zero uncertainty fixed',i,param,
-                              starInfo[param+'_uperr'][i],
-                              starInfo[param+'_lowerr'][i])
+                        # print('zero uncertainty fixed',i,param,
+                        #       starInfo[param+'_uperr'][i],
+                        #       starInfo[param+'_lowerr'][i])
                         starInfo[param+'_uperr'][i] = ''
                         starInfo[param+'_lowerr'][i] = ''
 
@@ -587,9 +661,9 @@ def fixZeroUncertainties(starInfo, starParam, planetParam):
                         #       float(starInfo[planet][param+'_lowerr'][i]))
                         if float(starInfo[planet][param+'_uperr'][i])==0 or \
                            float(starInfo[planet][param+'_lowerr'][i])==0:
-                            print('zero uncertainty fixed',i,planet+':'+param,
-                                  starInfo[planet][param+'_uperr'][i],
-                                  starInfo[planet][param+'_lowerr'][i])
+                            # print('zero uncertainty fixed',i,planet+':'+param,
+                            #       starInfo[planet][param+'_uperr'][i],
+                            #       starInfo[planet][param+'_lowerr'][i])
                             starInfo[planet][param+'_uperr'][i] = ''
                             starInfo[planet][param+'_lowerr'][i] = ''
 
