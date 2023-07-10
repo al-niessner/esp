@@ -666,6 +666,8 @@ G. ROUDIER: Cerberus retrievial
         out['data'][p]['SPECTRUM'] = np.array(spc['data'][p]['ES'])
         out['data'][p]['ERRORS'] = np.array(spc['data'][p]['ESerr'])
         out['data'][p]['VALID'] = cleanup
+        #  big problem!!! this line was missing!  added 7/9/23
+        out['STATUS'].append(True)
         am = True
         pass
     return am

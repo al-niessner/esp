@@ -544,18 +544,27 @@ def savesv(aspects, targetlists):
     '''
     svname = 'system.finalize.parameters'
 
-    RID = int(os.environ.get('RUNID', None))
+    # RID = int(os.environ.get('RUNID', None))
+    RID = os.environ.get('RUNID', None)
+    # print('RID',RID)
+    if RID:
+        RID = f'{int(RID):03}'
+    else:
+        RID = '666'
+    # print('RID',RID)
 
     # directory where the results are saved
-    saveDir = excalibur.context['data_dir'] + \
-        '/spreadsheets/RID' + f"{RID:03i}" + '/'
+    saveDir = excalibur.context['data_dir'] + '/spreadsheets/RID'+RID + '/'
+    # saveDir = excalibur.context['data_dir'] + \
+    #    '/spreadsheets/RID' + f"{RID:03i}" + '/'
     #   '/spreadsheets/RID' + str('%03i' %RID) + '/'
     # print('saveDir:',saveDir)
     if not os.path.exists(saveDir): os.mkdir(saveDir)
 
     # file name where the results are saved
     # outfileName = svname.replace('.','_') + '_RID' + str('%03i' %RID) + '.csv'
-    outfileName = svname.replace('.','_') + '_RID' + f"{RID:03i}" + '.csv'
+    # outfileName = svname.replace('.','_') + '_RID' + f"{RID:03i}" + '.csv'
+    outfileName = svname.replace('.','_') + '_RID'+RID + '.csv'
     # outfile = open(saveDir + outfileName,'w',encoding='ascii')
     with open(saveDir + outfileName,'w',encoding='ascii') as outfile:
 

@@ -167,18 +167,26 @@ def savesv(aspects, targetlists):
 
     svname = 'ancillary.estimate.parameters'
 
-    RID = int(os.environ.get('RUNID', None))
+    # RID = int(os.environ.get('RUNID', None))
+    RID = os.environ.get('RUNID', None)
+    # print('RID',RID)
+    if RID:
+        RID = f'{int(RID):03}'
+    else:
+        RID = '666'
+    # print('RID',RID)
 
     # directory where the results are saved
-    saveDir = excalibur.context['data_dir'] + \
-        '/spreadsheets/RID' + f"{RID:03i}" + '/'
+    saveDir = excalibur.context['data_dir'] + '/spreadsheets/RID'+RID + '/'
+    #    '/spreadsheets/RID' + f"{RID:03i}" + '/'
     #    '/spreadsheets/RID' + str('%03i' %RID) + '/'
     # print('saveDir:',saveDir)
     if not os.path.exists(saveDir): os.mkdir(saveDir)
 
     # file name where the results are saved
     # outfileName = svname.replace('.','_') + '_RID' + str('%03i' %RID) + '.csv'
-    outfileName = svname.replace('.','_') + '_RID' + f"{RID:03i}" + '.csv'
+    # outfileName = svname.replace('.','_') + '_RID' + f"{RID:03i}" + '.csv'
+    outfileName = svname.replace('.','_') + '_RID'+RID + '.csv'
     # outfile = open(saveDir + outfileName,'w',encoding='ascii')
     with open(saveDir + outfileName,'w',encoding='ascii') as outfile:
 
@@ -206,7 +214,7 @@ def savesv(aspects, targetlists):
         # write the header row
         outfile.write('star,planet,')
         for key in st_keys:
-            print('key',key)
+            # print('key',key)
             outfile.write(key + ',')
             for ext in exts:
                 # stellar_type doesn't have units.  maybe add it in estimators.py

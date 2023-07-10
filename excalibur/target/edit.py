@@ -23,6 +23,7 @@ HST-WFC3-IR-G141-SCAN
 HST-WFC3-IR-G102-SCAN
 HST-STIS-CCD-G750L-STARE
 HST-STIS-CCD-G430L-STARE
+Ariel-sim
     '''
     return
 
@@ -33,7 +34,7 @@ def processme():
     '''
     out = {}
     out['FILTER'] = {}
-    out['FILTER']['include'] = ['G141']
+    out['FILTER']['include'] = ['G141', 'Ariel-sim']
     out['FILTER']['exclude'] = []
     out['TARGET'] = {}
     # Best to use a function call that returns a specific list

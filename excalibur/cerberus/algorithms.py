@@ -16,12 +16,16 @@ import excalibur.taurex.algorithms as taualg
 import excalibur.transit as trn
 import excalibur.transit.algorithms as trnalg
 import excalibur.target.edit as trgedit
+# import excalibur.ariel as ariel
+from excalibur import ariel
+import excalibur.ariel.algorithms as arielalg
 # ------------- ------------------------------------------------------
 # -- ALGOS RUN OPTIONS -- --------------------------------------------
 # FILTERS
 fltrs = (trgedit.activefilters.__doc__).split('\n')
 fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
 fltrs.append('STIS-WFC3')
+# fltrs.append('Ariel-sim')  # don't add here; it's already in target/edit/activefilters
 # ----------------------- --------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class xslib(dawgie.Algorithm):
@@ -31,6 +35,7 @@ class xslib(dawgie.Algorithm):
         self._version_ = crbcore.myxsecsversion()
         self.__spc = trnalg.spectrum()
         self.__tau = taualg.TransitSpectrumInjection()
+        self.__arielsim = arielalg.sim_spectrum()
         self.__out = [crbstates.xslibSV(ext) for ext in fltrs]
         return
 
@@ -41,7 +46,8 @@ class xslib(dawgie.Algorithm):
     def previous(self):
         '''Input State Vectors: transit.spectrum'''
         return [dawgie.ALG_REF(trn.task, self.__spc),
-                dawgie.ALG_REF(tau.task, self.__tau)]
+                dawgie.ALG_REF(tau.task, self.__tau),
+                dawgie.ALG_REF(ariel.task, self.__arielsim)]
 
     def state_vectors(self):
         '''Output State Vectors: cerberus.xslib'''
@@ -56,12 +62,16 @@ class xslib(dawgie.Algorithm):
             if ext in self.__tau.sv_as_dict():
                 sv = self.__tau.sv_as_dict()[ext]
                 vspc, sspc = crbcore.checksv(sv)
-            else: vspc = False
+            else:
+                vspc = False
 
             if not vspc:
-                sv = self.__spc.sv_as_dict()[ext]
-                vspc, sspc = crbcore.checksv(sv)
-                pass
+                if ext=='Ariel-sim':
+                    sv = self.__arielsim.sv_as_dict()['parameters']
+                    vspc, sspc = crbcore.checksv(sv)
+                else:
+                    sv = self.__spc.sv_as_dict()[ext]
+                    vspc, sspc = crbcore.checksv(sv)
 
             # pylint: disable=protected-access
             prcd = trgedit.proceed(ds._tn(), ext, verbose=False)
@@ -76,6 +86,12 @@ class xslib(dawgie.Algorithm):
             if update: svupdate.append(self.__out[fltrs.index(ext)])
             pass
         self.__out = svupdate
+
+        # clear out the False STATUS flags
+        #  this helped during debugging; not sure it is still necessary
+        # for i in range(len(self.__out)):
+        #     self.__out[i]['STATUS'].remove(False)
+
         if self.__out: ds.update()
         else: raise dawgie.NoValidOutputDataError(
                 f'No output created for CERBERUS.{self.name()}')
@@ -102,6 +118,7 @@ class atmos(dawgie.Algorithm):
         self.__fin = sysalg.finalize()
         self.__xsl = xslib()
         self.__tau = taualg.TransitSpectrumInjection()
+        self.__arielsim = arielalg.sim_spectrum()
         self.__out = [crbstates.atmosSV(ext) for ext in fltrs]
         return
 
@@ -114,7 +131,8 @@ class atmos(dawgie.Algorithm):
         return [dawgie.ALG_REF(trn.task, self.__spc),
                 dawgie.ALG_REF(sys.task, self.__fin),
                 dawgie.ALG_REF(crb.task, self.__xsl),
-                dawgie.ALG_REF(tau.task, self.__tau)]
+                dawgie.ALG_REF(tau.task, self.__tau),
+                dawgie.ALG_REF(ariel.task, self.__arielsim)]
 
     def state_vectors(self):
         '''Output State Vectors: cerberus.atmos'''
@@ -134,9 +152,12 @@ class atmos(dawgie.Algorithm):
             else: vspc = False
 
             if not vspc:
-                sv = self.__spc.sv_as_dict()[ext]
-                vspc, sspc = crbcore.checksv(sv)
-                pass
+                if ext=='Ariel-sim':
+                    sv = self.__arielsim.sv_as_dict()['parameters']
+                    vspc, sspc = crbcore.checksv(sv)
+                else:
+                    sv = self.__spc.sv_as_dict()[ext]
+                    vspc, sspc = crbcore.checksv(sv)
 
             # pylint: disable=protected-access
             prcd = trgedit.proceed(ds._tn(), ext, verbose=False)
