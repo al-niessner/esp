@@ -23,7 +23,6 @@ HST-WFC3-IR-G141-SCAN
 HST-WFC3-IR-G102-SCAN
 HST-STIS-CCD-G750L-STARE
 HST-STIS-CCD-G430L-STARE
-Ariel-sim
     '''
     return
 
@@ -40,7 +39,12 @@ def processme():
     # Best to use a function call that returns a specific list
     # if one wants to change the 'include' target content
     out['TARGET']['include'] = []
-    out['TARGET']['exclude'] = ['HR 8799']
+    out['TARGET']['exclude'] = ['HR 8799',
+                                'GJ 3193',
+                                'HIP 41378',  # this is K2-93
+                                'HD 185603', 'HD 195689', 'HD 197481',
+                                'KIC 12266812', 'TIC 184892124',
+                                'TOI-175', 'TOI-193']
     return out
 # ----------------------------- --------------------------------------
 # -- CREATE -- -------------------------------------------------------

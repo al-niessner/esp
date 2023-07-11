@@ -183,9 +183,6 @@ class population(dawgie.Analyzer):
         # group together values by attribute
         svname = 'system.finalize.parameters'
 
-        # save system-finalize results as .csv file (in /proj/data/spreadsheets/)
-        savesv(aspects, targetlists)
-
         st_attrs = defaultdict(list)
         pl_attrs = defaultdict(list)
         st_attrs_roudier62 = defaultdict(list)
@@ -236,6 +233,10 @@ class population(dawgie.Analyzer):
         self.__out['data']['pl_attrs_roudier62'] = pl_attrs_roudier62
         self.__out['STATUS'].append(True)
         aspects.ds().update()
+
+        # save system-finalize results as .csv file (in /proj/data/spreadsheets/)
+        savesv(aspects, targetlists)
+
         return
     pass
 # ---------------- ---------------------------------------------------

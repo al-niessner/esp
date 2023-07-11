@@ -2,7 +2,6 @@
 # -- IMPORTS -- ------------------------------------------------------
 import numpy
 import excalibur.system.core as syscore
-
 # ----------------- --------------------------------------------------
 # -- FILL BLANK UNCERTAINTY FIELD ------------------------------------
 def fillUncertainty(param,param_value,param_uncertainty,error_type):
@@ -16,11 +15,10 @@ def fillUncertainty(param,param_value,param_uncertainty,error_type):
     # print(param_uncertainty)
 
     autofilled = False
-    try:
-        fillvalue = float(param_uncertainty)
+    try: fillvalue = float(param_uncertainty)
     except ValueError:
         autofilled = True
-        dawgieStupidity = False
+        huh = False
         if param=='spTyp':
             # (spectral type isn't mandatory, so probably never comes here)
             fillvalue = ''
@@ -43,9 +41,8 @@ def fillUncertainty(param,param_value,param_uncertainty,error_type):
         elif param=='FEH*':
             # for metallicity, fallback uncertainty is 0.1 dex
             fillvalue = 0.1
-        else:
-            dawgieStupidity = True
-        if dawgieStupidity:
+        else: huh = True
+        if huh:
             if param in ['LOGG*','logg']:
                 # for planet or stellar log-g, fallback uncertainty is 0.1 dex
                 fillvalue = 0.1
@@ -76,18 +73,16 @@ def fillUncertainty(param,param_value,param_uncertainty,error_type):
                 # fallback option is to set uncertainty to 10%
                 fillvalue = float(param_value) * 1.e-1
                 print('another PARAM:',param)
-
-        # make sure that the upper error is positive and the lower is negative
-        if error_type=='uperr':
-            fillvalue = abs(fillvalue)
-        elif error_type=='lowerr':
-            fillvalue = -abs(fillvalue)
-        else:
+                pass
             pass
+        # make sure that the upper error is positive and the lower is negative
+        if error_type=='uperr': fillvalue = abs(fillvalue)
+        elif error_type=='lowerr': fillvalue = -abs(fillvalue)
+        else:
             # exit('ERROR: unknown error_type')
-
+            pass
+        pass
     return fillvalue,autofilled
-
 # ----------------- --------------------------------------------------
 # -- SELECT THE BEST PARAMETER VALUE FROM VARIOUS ARCHIVE VALUES -----
 def bestValue(values,uperrs,lowerrs,refs):

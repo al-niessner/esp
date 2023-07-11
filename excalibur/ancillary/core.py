@@ -191,7 +191,7 @@ def savesv(aspects, targetlists):
     with open(saveDir + outfileName,'w',encoding='ascii') as outfile:
 
         # (the list of extensions is hardcoded at the top of this file)
-        exts = SV_EXTS
+        exts = SV_EXTS.copy()
         # print('extensions:',exts)
 
         # use 55 Cnc as an example, to make the list of parameters

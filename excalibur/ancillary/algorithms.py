@@ -93,9 +93,6 @@ class population(dawgie.Analyzer):
         # group together values by attribute
         svname = 'ancillary.estimate.parameters'
 
-        # save system-finalize results as a .csv file (in /proj/data/spreadsheets/)
-        savesv(aspects, targetlists)
-
         st_attrs = defaultdict(list)
         pl_attrs = defaultdict(list)
         # include a second set of attributes, for comparison within each histogram
@@ -113,10 +110,12 @@ class population(dawgie.Analyzer):
             # verify SV succeeded for target
             if tr_data['STATUS'][-1] or 'planets' in tr_data['data']:
                 # get stellar attributes
-                st_keys = [i for i in tr_data['data'].keys()
-                           if is_st_key(i, tr_data['data']['planets'])]
-                for key in st_keys:
-                    st_attrs[key].append(tr_data['data'][key])
+                #  only include the basic data, no extensions
+                for key in tr_data['data'].keys():
+                    if (not key == 'planets') and \
+                       (key not in tr_data['data']['planets']) and \
+                       (not any(ext in key for ext in anccore.SV_EXTS)):
+                        st_attrs[key].append(tr_data['data'][key])
                 # get planetary attributes
                 for pl in tr_data['data']['planets']:
                     pl_keys = [i for i in tr_data['data'][pl].keys()
@@ -133,10 +132,12 @@ class population(dawgie.Analyzer):
             # verify SV succeeded for target
             if tr_data['STATUS'][-1] or 'planets' in tr_data['data']:
                 # get stellar attributes
-                st_keys = [i for i in tr_data['data'].keys()
-                           if is_st_key(i, tr_data['data']['planets'])]
-                for key in st_keys:
-                    st_attrs_roudier62[key].append(tr_data['data'][key])
+                #  only include the basic data, no extensions
+                for key in tr_data['data'].keys():
+                    if (not key == 'planets') and \
+                       (key not in tr_data['data']['planets']) and \
+                       (not any(ext in key for ext in anccore.SV_EXTS)):
+                        st_attrs_roudier62[key].append(tr_data['data'][key])
                 # get planetary attributes
                 for pl in tr_data['data']['planets']:
                     pl_keys = [i for i in tr_data['data'][pl].keys()
@@ -152,13 +153,10 @@ class population(dawgie.Analyzer):
         self.__out['data']['sample'] = target_sample
         self.__out['STATUS'].append(True)
         aspects.ds().update()
+
+        # save system-finalize results as a .csv file (in /proj/data/spreadsheets/)
+        savesv(aspects, targetlists)
+
         return
     pass
 # ---------------- ---------------------------------------------------
-# -- HELPER FUNCTIONS -- ---------------------------------------------
-def is_st_key(key, planets):
-    '''Helper function to determine if SV key is for stellar estimate value'''
-    # GMR: Using lazy gen here otherwise the new pylint is not happy
-    return (not key == 'planets') and (key not in planets) \
-            and (not any(ext in key for ext in anccore.SV_EXTS))
-# ---------------------- ---------------------------------------------

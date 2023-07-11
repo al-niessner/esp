@@ -703,7 +703,7 @@ def crbmodel(mixratio, rayleigh, cloudtp, rp0, orbp, xsecs, qtgrid,
         pass
     else: mmw, fH2, fHe = getmmw(mixratio)
     mmw = mmw*cst.m_p  # [kg]
-    Hs = cst.Boltzmann*temp/(mmw*1e-2*(10.**orbp[pnet]['logg']))  # [m]
+    Hs = cst.Boltzmann*temp/(mmw*1e-2*(10.**float(orbp[pnet]['logg'])))  # [m]
     for press, dpress in zip(p[:-1], dp):
         rdz = abs(Hs/2.*np.log(1. + dpress/press))
         if addz: dz.append(addz[-1]/2. + rdz)

@@ -25,7 +25,7 @@ import excalibur.ariel.algorithms as arielalg
 fltrs = (trgedit.activefilters.__doc__).split('\n')
 fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
 fltrs.append('STIS-WFC3')
-# fltrs.append('Ariel-sim')  # don't add here; it's already in target/edit/activefilters
+fltrs.append('Ariel-sim')
 # ----------------------- --------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class xslib(dawgie.Algorithm):

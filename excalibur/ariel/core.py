@@ -94,6 +94,8 @@ def simulate_spectrum(target, system_dict, out):
     star = BlackbodyStar(temperature=system_params['T*'],
                          radius=system_params['R*'])
 
+    completed_at_least_one_planet = False
+
     atmosModels = []
     for planetLetter in system_params['planets']:
 
@@ -101,223 +103,226 @@ def simulate_spectrum(target, system_dict, out):
         # there is a separate SNR file for each planet
         ariel_instrument = load_ariel_instrument(target+' '+planetLetter)
 
-        # define the planet based on mass & radius
-        planet = Planet(planet_radius=system_params[planetLetter]['rp'],
-                        planet_mass=system_params[planetLetter]['mass'])
+        if ariel_instrument:
+            # define the planet based on mass & radius
+            planet = Planet(planet_radius=system_params[planetLetter]['rp'],
+                            planet_mass=system_params[planetLetter]['mass'])
 
-        # set the planet's vertical temperature profile
-        temperature_profile = Guillot2010(
-            T_irr=float(system_params[planetLetter]['teq']))
+            # set the planet's vertical temperature profile
+            temperature_profile = Guillot2010(
+                T_irr=float(system_params[planetLetter]['teq']))
 
-        # planet metallicity is from an assumed mass-metallicity relation
-        #  with scatter included
-        # planet metallicity should be defined relative to the stellar metallicity
-        metallicity_star = system_params['FEH*']
-        M_p = system_params[planetLetter]['mass']
-        includeMetallicityDispersion = True
-        if includeMetallicityDispersion:
-            metallicity_planet = massMetalRelationDisp(metallicity_star, M_p)
-        else:
-            metallicity_planet = massMetalRelation(metallicity_star, M_p)
-        # it seems that Taurex wants a linear value for metallicity, not the usual dex
-        metallicity = 10.**(metallicity_star + metallicity_planet)
+            # planet metallicity is from an assumed mass-metallicity relation
+            #  with scatter included
+            # planet metallicity should be defined relative to the stellar metallicity
+            metallicity_star = system_params['FEH*']
+            M_p = system_params[planetLetter]['mass']
+            includeMetallicityDispersion = True
+            if includeMetallicityDispersion:
+                metallicity_planet = massMetalRelationDisp(metallicity_star, M_p)
+            else:
+                metallicity_planet = massMetalRelation(metallicity_star, M_p)
+            # it seems that Taurex wants a linear value for metallicity, not the usual dex
+            metallicity = 10.**(metallicity_star + metallicity_planet)
 
-        # planet C/O ratio is assumed to be solar
-        #  (this number is the default in ACEChemistry, so it actually has no effect)
-        co_ratio = 0.54951
-        # actually, let's consider a distribution of C/O, as done for FINESSE
-        co_ratio = randomCtoO()
+            # planet C/O ratio is assumed to be solar
+            #  (this number is the default in ACEChemistry, so it actually has no effect)
+            co_ratio = 0.54951
+            # actually, let's consider a distribution of C/O, as done for FINESSE
+            co_ratio = randomCtoO()
 
-        # this is the old version copied from taurex task
-        chemistry = TaurexChemistry(fill_gases=['H2','He'],ratio=0.172)
-        water = ConstantGas('H2O', mix_ratio=1.2e-4*metallicity)
-        chemistry.addGas(water)
+            # this is the old version copied from taurex task
+            chemistry = TaurexChemistry(fill_gases=['H2','He'],ratio=0.172)
+            water = ConstantGas('H2O', mix_ratio=1.2e-4*metallicity)
+            chemistry.addGas(water)
 
-        # new version is preferred, but needs a sysadmin pip-install
-        if ACEimported:
-            chemistry = ACEChemistry(metallicity=metallicity,
-                                     co_ratio=co_ratio)
+            # new version is preferred, but needs a sysadmin pip-install
+            if ACEimported:
+                chemistry = ACEChemistry(metallicity=metallicity,
+                                         co_ratio=co_ratio)
 
-        # create an atmospheric model based on the above parameters
-        tm = TransmissionModel(star=star,
-                               planet=planet,
-                               temperature_profile=temperature_profile,
-                               chemistry=chemistry,
-                               atm_min_pressure=1e0,
-                               atm_max_pressure=1e6,
-                               nlayers=30)
-        # add some more physics
-        tm.add_contribution(AbsorptionContribution())
-        tm.add_contribution(CIAContribution(cia_pairs=['H2-H2','H2-He']))
-        tm.add_contribution(RayleighContribution())
+            # create an atmospheric model based on the above parameters
+            tm = TransmissionModel(star=star,
+                                   planet=planet,
+                                   temperature_profile=temperature_profile,
+                                   chemistry=chemistry,
+                                   atm_min_pressure=1e0,
+                                   atm_max_pressure=1e6,
+                                   nlayers=30)
+            # add some more physics
+            tm.add_contribution(AbsorptionContribution())
+            tm.add_contribution(CIAContribution(cia_pairs=['H2-H2','H2-He']))
+            tm.add_contribution(RayleighContribution())
 
-        # include Clouds!
-        #  (don't forget to save the cloud parameters down below)
-        P_mbar = 1.
-        P_pascals = P_mbar * 100
-        tm.add_contribution(SimpleCloudsContribution(clouds_pressure=P_pascals))
+            # include Clouds!
+            #  (don't forget to save the cloud parameters down below)
+            P_mbar = 1.
+            P_pascals = P_mbar * 100
+            tm.add_contribution(SimpleCloudsContribution(clouds_pressure=P_pascals))
 
-        # tau = 0.3
-        # Pmin_mbar = 0.1
-        # Pmax_mbar = 10.
-        # Pmin_pascals = Pmin_mbar * 100
-        # Pmax_pascals = Pmin_mbar * 100
-        # tm.add_contribution(FlatMieContribution(
-        #    flat_mix_ratio=tau,
-        #    flat_bottomP=Pmax_pascals,
-        #    flat_topP=Pmin_pascals))
+            # tau = 0.3
+            # Pmin_mbar = 0.1
+            # Pmax_mbar = 10.
+            # Pmin_pascals = Pmin_mbar * 100
+            # Pmax_pascals = Pmin_mbar * 100
+            # tm.add_contribution(FlatMieContribution(
+            #    flat_mix_ratio=tau,
+            #    flat_bottomP=Pmax_pascals,
+            #    flat_topP=Pmin_pascals))
 
-        tm.build()
-        atmosModel = tm.model()
-        atmosModels.append(atmosModel)
+            tm.build()
+            atmosModel = tm.model()
+            atmosModels.append(atmosModel)
 
-        wn,fluxDepth = atmosModel[:2]
-        wavelength_um = 1e4 / wn
+            wn,fluxDepth = atmosModel[:2]
+            wavelength_um = 1e4 / wn
 
-        # REBIN to the Ariel spectral resolution
-        fluxDepth_rebin = []
-        wavelength_um_rebin = []
-        for wavelow,wavehigh in zip(ariel_instrument['wavelow'],
-                                    ariel_instrument['wavehigh']):
-            thisWaveBin = np.where((wavelength_um >= wavelow) &
-                                   (wavelength_um <= wavehigh))
-            fluxDepth_rebin.append(np.average(fluxDepth[thisWaveBin]))
-            wavelength_um_rebin.append(np.average(wavelength_um[thisWaveBin]))
-        wavelength_um_rebin = np.array(wavelength_um_rebin)
-        fluxDepth_rebin = np.array(fluxDepth_rebin)
+            # REBIN to the Ariel spectral resolution
+            fluxDepth_rebin = []
+            wavelength_um_rebin = []
+            for wavelow,wavehigh in zip(ariel_instrument['wavelow'],
+                                        ariel_instrument['wavehigh']):
+                thisWaveBin = np.where((wavelength_um >= wavelow) &
+                                       (wavelength_um <= wavehigh))
+                fluxDepth_rebin.append(np.average(fluxDepth[thisWaveBin]))
+                wavelength_um_rebin.append(np.average(wavelength_um[thisWaveBin]))
+            wavelength_um_rebin = np.array(wavelength_um_rebin)
+            fluxDepth_rebin = np.array(fluxDepth_rebin)
 
-        # RESCALE THE SNR FILE based on #-of-transits, multiplicative factor, and noise floor
-        # 1) scale the noise with a multiplicative factor
-        uncertainties = (noise_factor * ariel_instrument['noise'])
+            # RESCALE THE SNR FILE based on #-of-transits, multiplicative factor, and noise floor
+            # 1) scale the noise with a multiplicative factor
+            uncertainties = (noise_factor * ariel_instrument['noise'])
 
-        # 2) read in the number of observing epochs.  reduce noise by sqrt(N)
-        if target+' '+planetLetter in observing_plan:
-            numberofTransits = observing_plan[target+' '+planetLetter]
-        else:
-            # default to a single transit observation, if it's not in the Edwards Ariel list
-            numberofTransits = 1
-        uncertainties /= np.sqrt(float(numberofTransits))
+            # 2) read in the number of observing epochs.  reduce noise by sqrt(N)
+            if target+' '+planetLetter in observing_plan:
+                numberofTransits = observing_plan[target+' '+planetLetter]
+            else:
+                # default to a single transit observation, if it's not in the Edwards Ariel list
+                numberofTransits = 1
+            uncertainties /= np.sqrt(float(numberofTransits))
 
-        # 3) apply a noise floor (e.g. 50 ppm)
-        uncertainties[np.where(uncertainties < noise_floor_ppm/1.e6)] = noise_floor_ppm/1.e6
+            # 3) apply a noise floor (e.g. 50 ppm)
+            uncertainties[np.where(uncertainties < noise_floor_ppm/1.e6)] = noise_floor_ppm/1.e6
 
-        # add observational noise to the true spectrum
-        fluxDepth_observed = fluxDepth_rebin + np.random.normal(scale=uncertainties)
+            # add observational noise to the true spectrum
+            fluxDepth_observed = fluxDepth_rebin + np.random.normal(scale=uncertainties)
 
-        # SAVE THE RESULTS; MATCH TO WHATEVER FORMAT CERBERUS WANTS
+            # SAVE THE RESULTS; MATCH TO WHATEVER FORMAT CERBERUS WANTS
 
-        # put the ariel spectrum into standard 'data' format, same as any other spectrum
-        #  this is redundant with above, but it avoids special cases within cerberus
-        # oh wait a second.  ES and ESerr are actually supposed to be radii, not transit depth
-        #  need to take a sqrt of them
-        out['data'][planetLetter] = {
-            'WB':wavelength_um_rebin,
-            'ES':np.sqrt(fluxDepth_observed),
-            'ESerr':0.5 * uncertainties / np.sqrt(fluxDepth_observed)}
+            # put the ariel spectrum into standard 'data' format, same as any other spectrum
+            #  this is redundant with above, but it avoids special cases within cerberus
+            # oh wait a second.  ES and ESerr are actually supposed to be radii, not transit depth
+            #  need to take a sqrt of them
+            out['data'][planetLetter] = {
+                'WB':wavelength_um_rebin,
+                'ES':np.sqrt(fluxDepth_observed),
+                'ESerr':0.5 * uncertainties / np.sqrt(fluxDepth_observed)}
 
-        # cerberus also wants the scale height, to normalize the spectrum
-        #  (copy over some code for this from transit/core)
-        sscmks = syscore.ssconstants(mks=True)
-        eqtemp = system_params['T*']*np.sqrt(system_params['R*']*sscmks['Rsun/AU']/
-                                             (2.*system_params[planetLetter]['sma']))
-        pgrid = np.arange(np.log(10.)-15., np.log(10.)+15./100, 15./99)
-        pgrid = np.exp(pgrid)
-        pressure = pgrid[::-1]
-        mixratio, fH2, fHe = crbutil.crbce(pressure, eqtemp)
-        mmw, fH2, fHe = crbutil.getmmw(mixratio, protosolar=False, fH2=fH2, fHe=fHe)
-        mmw = mmw * cst.m_p  # [kg]
-        Hs = cst.Boltzmann * eqtemp / (mmw*1e-2*(10.**float(system_params[planetLetter]['logg'])))  # [m]
-        Hs = Hs / (system_params['R*']*sscmks['Rsun'])
-        out['data'][planetLetter]['Hs'] = Hs
+            # cerberus also wants the scale height, to normalize the spectrum
+            #  (copy over some code for this from transit/core)
+            sscmks = syscore.ssconstants(mks=True)
+            eqtemp = system_params['T*']*np.sqrt(system_params['R*']*sscmks['Rsun/AU']/
+                                                 (2.*system_params[planetLetter]['sma']))
+            pgrid = np.arange(np.log(10.)-15., np.log(10.)+15./100, 15./99)
+            pgrid = np.exp(pgrid)
+            pressure = pgrid[::-1]
+            mixratio, fH2, fHe = crbutil.crbce(pressure, eqtemp)
+            mmw, fH2, fHe = crbutil.getmmw(mixratio, protosolar=False, fH2=fH2, fHe=fHe)
+            mmw = mmw * cst.m_p  # [kg]
+            Hs = cst.Boltzmann * eqtemp / (mmw*1e-2*(10.**float(system_params[planetLetter]['logg'])))  # [m]
+            Hs = Hs / (system_params['R*']*sscmks['Rsun'])
+            out['data'][planetLetter]['Hs'] = Hs
 
-        # also save target,planet name, for plotting (in states.py)
-        out['target'].append(target)
-        out['planets'].append(planetLetter)
-        # and save the spectrum?  this is redundant with 'data' above, but truth is new
-        out['spectrum'][planetLetter] = {
-            'wavelength_um':wavelength_um_rebin,
-            'wavebinsize':ariel_instrument['wavebinsize'],
-            'fluxDepth_truth':fluxDepth_rebin,
-            'fluxDepth_observed':fluxDepth_observed,
-            'uncertainty':uncertainties}
-        # also save the parameters used to create the spectrum. some could be useful
-        # should save both truth and values with errors added in (NOT DONE)
-        out['spectrum_params'][planetLetter] = {
-            'R*': system_params['R*'],
-            'T*': system_params['T*'],
-            'Rp':system_params[planetLetter]['rp'],
-            'Teq':system_params[planetLetter]['teq'],
-            'Mp':system_params[planetLetter]['mass'],
-            'metallicity':metallicity,
-            'C/O':co_ratio,
-            'clouds':'working on it'}
+            # also save target,planet name, for plotting (in states.py)
+            out['target'].append(target)
+            out['planets'].append(planetLetter)
+            # and save the spectrum?  this is redundant with 'data' above, but truth is new
+            out['spectrum'][planetLetter] = {
+                'wavelength_um':wavelength_um_rebin,
+                'wavebinsize':ariel_instrument['wavebinsize'],
+                'fluxDepth_truth':fluxDepth_rebin,
+                'fluxDepth_observed':fluxDepth_observed,
+                'uncertainty':uncertainties}
+            # also save the parameters used to create the spectrum. some could be useful
+            # should save both truth and values with errors added in (NOT DONE)
+            out['spectrum_params'][planetLetter] = {
+                'R*': system_params['R*'],
+                'T*': system_params['T*'],
+                'Rp':system_params[planetLetter]['rp'],
+                'Teq':system_params[planetLetter]['teq'],
+                'Mp':system_params[planetLetter]['mass'],
+                'metallicity':metallicity,
+                'C/O':co_ratio,
+                'clouds':'working on it'}
 
-        # convert to percentage depth (just for plotting, not for the saved results)
-        fluxDepth_rebin = 100 * fluxDepth_rebin
-        fluxDepth_observed = 100 * fluxDepth_observed
-        uncertainties = 100 * uncertainties
+            # convert to percentage depth (just for plotting, not for the saved results)
+            fluxDepth_rebin = 100 * fluxDepth_rebin
+            fluxDepth_observed = 100 * fluxDepth_observed
+            uncertainties = 100 * uncertainties
 
-        # PLOT THE SPECTRA
-        myfig, ax = plt.subplots(figsize=(6,4))
-        plt.title('Ariel : '+target+' '+planetLetter, fontsize=16)
-        plt.xlabel(str('Wavelength [$\\mu m$]'), fontsize=14)
-        plt.ylabel(str('$(R_p/R_*)^2$ [%]'), fontsize=14)
+            # PLOT THE SPECTRA
+            myfig, ax = plt.subplots(figsize=(6,4))
+            plt.title('Ariel : '+target+' '+planetLetter, fontsize=16)
+            plt.xlabel(str('Wavelength [$\\mu m$]'), fontsize=14)
+            plt.ylabel(str('$(R_p/R_*)^2$ [%]'), fontsize=14)
 
-        # plot the true (model) spectrum
-        plt.plot(wavelength_um_rebin, fluxDepth_rebin,
-                 color='k',ls='-',lw=1,
-                 zorder=2, label='truth')
-        # plot the simulated data points
-        plt.scatter(wavelength_um_rebin, fluxDepth_observed,
-                    marker='o',s=20, color='None',edgecolor='k',
-                    zorder=3, label='data')
-        plt.errorbar(wavelength_um_rebin, fluxDepth_observed, yerr=uncertainties,
-                     linestyle='None',lw=0.2, color='grey', zorder=1)
+            # plot the true (model) spectrum
+            plt.plot(wavelength_um_rebin, fluxDepth_rebin,
+                     color='k',ls='-',lw=1,
+                     zorder=2, label='truth')
+            # plot the simulated data points
+            plt.scatter(wavelength_um_rebin, fluxDepth_observed,
+                        marker='o',s=20, color='None',edgecolor='k',
+                        zorder=3, label='data')
+            plt.errorbar(wavelength_um_rebin, fluxDepth_observed, yerr=uncertainties,
+                         linestyle='None',lw=0.2, color='grey', zorder=1)
 
-        plt.xlim(0.,8.)
-        plt.legend()
+            plt.xlim(0.,8.)
+            plt.legend()
 
-        # add a scale-height-normalized flux scale on the right axis
-        Hs = out['data'][planetLetter]['Hs']
-        ax2 = ax.twinx()
-        ax2.set_ylabel('$\\Delta$ [H]')
-        axmin, axmax = ax.get_ylim()
-        rpmed = np.sqrt(np.nanmedian(1.e-2*fluxDepth_rebin))
-        if axmin > 0:
-            ax2.set_ylim((np.sqrt(1e-2*axmin) - rpmed)/Hs,
-                         (np.sqrt(1e-2*axmax) - rpmed)/Hs)
-        else:
-            print('TROUBLE!! y-axis not scaled by H!!')
+            # add a scale-height-normalized flux scale on the right axis
+            Hs = out['data'][planetLetter]['Hs']
+            ax2 = ax.twinx()
+            ax2.set_ylabel('$\\Delta$ [H]')
+            axmin, axmax = ax.get_ylim()
+            rpmed = np.sqrt(np.nanmedian(1.e-2*fluxDepth_rebin))
+            if axmin > 0:
+                ax2.set_ylim((np.sqrt(1e-2*axmin) - rpmed)/Hs,
+                             (np.sqrt(1e-2*axmax) - rpmed)/Hs)
+            else:
+                print('TROUBLE!! y-axis not scaled by H!!')
 
-        myfig.tight_layout()
+            myfig.tight_layout()
 
-        # RID = int(os.environ.get('RUNID', None))
-        RID = os.environ.get('RUNID', None)
-        # print('RID',RID)
-        if RID:
-            RID = f'{int(RID):03}'
-        else:
-            RID = '666'
-        # print('RID',RID)
+            # RID = int(os.environ.get('RUNID', None))
+            RID = os.environ.get('RUNID', None)
+            # print('RID',RID)
+            if RID:
+                RID = f'{int(RID):03}'
+            else:
+                RID = '666'
+            # print('RID',RID)
 
-        # plotDir = excalibur.context['data_dir'] + f"/ariel/RID{RID:03i}"
-        # plotDir = excalibur.context['data_dir'] + f"/ariel/RID{RID:03}"
-        plotDir = excalibur.context['data_dir'] + '/ariel/RID' + RID
-        if not os.path.exists(plotDir): os.mkdir(plotDir)
+            # plotDir = excalibur.context['data_dir'] + f"/ariel/RID{RID:03i}"
+            # plotDir = excalibur.context['data_dir'] + f"/ariel/RID{RID:03}"
+            plotDir = excalibur.context['data_dir'] + '/ariel/RID' + RID
+            if not os.path.exists(plotDir): os.mkdir(plotDir)
 
-        plt.savefig(plotDir +
-                    '/ariel_taurexAtmos_' + target+'_'+planetLetter + '.png')
+            plt.savefig(plotDir +
+                        '/ariel_taurexAtmos_' + target+'_'+planetLetter + '.png')
 
-        # DUAL SAVE - above is saving as a file, below is saved as state vector
-        plt.title('Ariel : '+target+' '+planetLetter+'; sv save for RUNID='+RID,
-                  fontsize=16)
-        buf = io.BytesIO()
-        myfig.savefig(buf, format='png')
-        out['data'][planetLetter]['plot_simspectrum'] = buf.getvalue()
+            # REDUNDANT SAVE - above saves to disk; below saves as state vector
+            # plt.title('Ariel : '+target+' '+planetLetter+'; sv save for RUNID='+RID,
+            #           fontsize=16)
+            buf = io.BytesIO()
+            myfig.savefig(buf, format='png')
+            out['data'][planetLetter]['plot_simspectrum'] = buf.getvalue()
 
-        plt.close(myfig)
+            plt.close(myfig)
 
-    out['STATUS'].append(True)
+            completed_at_least_one_planet = True
+
+    if completed_at_least_one_planet: out['STATUS'].append(True)
 
     return True
 # ------------------------- ------------------------------------------
