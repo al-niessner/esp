@@ -189,7 +189,8 @@ class population(dawgie.Analyzer):
         pl_attrs_roudier62 = defaultdict(list)
 
         # for trgt in aspects:
-        for trgt in targetlists['active']:
+        # for trgt in targetlists['active']:
+        for trgt in filter(lambda tgt: 'STATUS' in aspects[tgt][svname], targetlists['active']):
 
             system_data = aspects[trgt][svname]
 
@@ -209,7 +210,8 @@ class population(dawgie.Analyzer):
                         pl_attrs[key].append(system_data['priors'][planet_letter][key])
 
         #  *** second loop for second (overlapping) histogram ***
-        for trgt in targetlists['roudier62']:
+        # for trgt in targetlists['roudier62']:
+        for trgt in filter(lambda tgt: 'STATUS' in aspects[tgt][svname], targetlists['roudier62']):
             system_data = aspects[trgt][svname]
 
             # verify SV succeeded for target

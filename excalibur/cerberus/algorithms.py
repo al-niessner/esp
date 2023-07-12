@@ -183,8 +183,12 @@ class atmos(dawgie.Algorithm):
 
     def _atmos(self, fin, xsl, spc, index, ext):
         '''Core code call'''
+        if ext=='Ariel-sim':
+            MCMC_chain_length = 1000
+        else:
+            MCMC_chain_length = 15000
         am = crbcore.atmos(fin, xsl, spc, self.__out[index], ext,
-                           mclen=int(15e3),
+                           mclen=MCMC_chain_length,
                            sphshell=True, verbose=False)  # singlemod='TEC' after mclen
         return am
 

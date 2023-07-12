@@ -204,7 +204,15 @@ def simulate_spectrum(target, system_dict, out):
             # 3) apply a noise floor (e.g. 50 ppm)
             uncertainties[np.where(uncertainties < noise_floor_ppm/1.e6)] = noise_floor_ppm/1.e6
 
-            # add observational noise to the true spectrum
+            # ADD OBSERVATIONAL NOISE TO THE TRUE SPECTRUM
+
+            # first set the random seed as a function of target name
+            #  (otherwise all spectra have identical noise realizations!)
+            intFromTarget = 1
+            for char in target+' '+planetLetter:
+                intFromTarget = (123 * intFromTarget + ord(char)) % 1000000
+            np.random.seed(intFromTarget)
+
             fluxDepth_observed = fluxDepth_rebin + np.random.normal(scale=uncertainties)
 
             # SAVE THE RESULTS; MATCH TO WHATEVER FORMAT CERBERUS WANTS

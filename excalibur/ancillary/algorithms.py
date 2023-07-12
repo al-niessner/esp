@@ -102,48 +102,61 @@ class population(dawgie.Analyzer):
         # for trgt in aspects:
         #    target_sample = '__all__'
         # Only consider the 'active' stars, not aliases/misspellings/dropped/etc
-        for trgt in targetlists['active']:
+
+        # print('len',len(targetlists['active']))
+        # print('len',filter(lambda tgt: 'STATUS' in aspects[tgt][svname], targetlists['active']))
+        # i = 0
+        # for a in filter(lambda tgt: 'STATUS' in aspects[tgt][svname], targetlists['active']):
+        #    #print(a)
+        #    i += 1
+        # print('len for real',i)
+        # exit()
+
+        # for trgt in targetlists['active']:
+        for trgt in filter(lambda tgt: 'STATUS' in aspects[tgt][svname], targetlists['active']):
+
             target_sample = 'active'
 
-            tr_data = aspects[trgt][svname]
+            anc_data = aspects[trgt][svname]
 
             # verify SV succeeded for target
-            if tr_data['STATUS'][-1] or 'planets' in tr_data['data']:
+            if anc_data['STATUS'][-1] or 'planets' in anc_data['data']:
                 # get stellar attributes
                 #  only include the basic data, no extensions
-                for key in tr_data['data'].keys():
+                for key in anc_data['data'].keys():
                     if (not key == 'planets') and \
-                       (key not in tr_data['data']['planets']) and \
+                       (key not in anc_data['data']['planets']) and \
                        (not any(ext in key for ext in anccore.SV_EXTS)):
-                        st_attrs[key].append(tr_data['data'][key])
+                        st_attrs[key].append(anc_data['data'][key])
                 # get planetary attributes
-                for pl in tr_data['data']['planets']:
-                    pl_keys = [i for i in tr_data['data'][pl].keys()
+                for pl in anc_data['data']['planets']:
+                    pl_keys = [i for i in anc_data['data'][pl].keys()
                                if not any(ext in i for ext in anccore.SV_EXTS)]
                     for key in pl_keys:
-                        pl_attrs[key].append(tr_data['data'][pl][key])
+                        pl_attrs[key].append(anc_data['data'][pl][key])
 
         # Loop through a second group of targets.  (this subset will be overplotted in the histos)
-        for trgt in targetlists['roudier62']:
+        # for trgt in targetlists['roudier62']:
+        for trgt in filter(lambda tgt: 'STATUS' in aspects[tgt][svname], targetlists['roudier62']):
             target_sample = 'roudier62'
 
-            tr_data = aspects[trgt][svname]
+            anc_data = aspects[trgt][svname]
 
             # verify SV succeeded for target
-            if tr_data['STATUS'][-1] or 'planets' in tr_data['data']:
+            if anc_data['STATUS'][-1] or 'planets' in anc_data['data']:
                 # get stellar attributes
                 #  only include the basic data, no extensions
-                for key in tr_data['data'].keys():
+                for key in anc_data['data'].keys():
                     if (not key == 'planets') and \
-                       (key not in tr_data['data']['planets']) and \
+                       (key not in anc_data['data']['planets']) and \
                        (not any(ext in key for ext in anccore.SV_EXTS)):
-                        st_attrs_roudier62[key].append(tr_data['data'][key])
+                        st_attrs_roudier62[key].append(anc_data['data'][key])
                 # get planetary attributes
-                for pl in tr_data['data']['planets']:
-                    pl_keys = [i for i in tr_data['data'][pl].keys()
+                for pl in anc_data['data']['planets']:
+                    pl_keys = [i for i in anc_data['data'][pl].keys()
                                if not any(ext in i for ext in anccore.SV_EXTS)]
                     for key in pl_keys:
-                        pl_attrs_roudier62[key].append(tr_data['data'][pl][key])
+                        pl_attrs_roudier62[key].append(anc_data['data'][pl][key])
 
         # Add to SV
         self.__out['data']['st_attrs'] = st_attrs
