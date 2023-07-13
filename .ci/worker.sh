@@ -8,4 +8,4 @@ docker run \
        --network host \
        -u $UID:$GROUPS \
        -v /proj/sdp/data:/proj/data -v ${HOME}/.gnupg:/proj/gnupg \
-       esp_worker:latest > /dev/null
+       esp_worker:latest -i $1 > /dev/null
