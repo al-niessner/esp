@@ -104,42 +104,51 @@ def simulate_spectrum(target, system_dict, out):
         ariel_instrument = load_ariel_instrument(target+' '+planetLetter)
 
         if ariel_instrument:
+
+            # asdf : LATER : add in uncertainty scatter to these model parameters
+            model_params = {
+                'R*':system_params['R*'],
+                'T*':system_params['T*'],
+                'Rp':system_params[planetLetter]['rp'],
+                'Teq':system_params[planetLetter]['teq'],
+                'Mp':system_params[planetLetter]['mass']}
+
             # define the planet based on mass & radius
-            planet = Planet(planet_radius=system_params[planetLetter]['rp'],
-                            planet_mass=system_params[planetLetter]['mass'])
+            planet = Planet(planet_radius=model_params['Rp'],
+                            planet_mass=model_params['Mp'])
 
             # set the planet's vertical temperature profile
             temperature_profile = Guillot2010(
-                T_irr=float(system_params[planetLetter]['teq']))
+                T_irr=float(model_params['Teq']))
 
             # planet metallicity is from an assumed mass-metallicity relation
             #  with scatter included
             # planet metallicity should be defined relative to the stellar metallicity
             metallicity_star = system_params['FEH*']
-            M_p = system_params[planetLetter]['mass']
+            M_p = model_params['Mp']
             includeMetallicityDispersion = True
             if includeMetallicityDispersion:
                 metallicity_planet = massMetalRelationDisp(metallicity_star, M_p)
             else:
                 metallicity_planet = massMetalRelation(metallicity_star, M_p)
             # it seems that Taurex wants a linear value for metallicity, not the usual dex
-            metallicity = 10.**(metallicity_star + metallicity_planet)
+            model_params['metallicity'] = 10.**(metallicity_star + metallicity_planet)
 
             # planet C/O ratio is assumed to be solar
             #  (this number is the default in ACEChemistry, so it actually has no effect)
-            co_ratio = 0.54951
+            model_params['C/O'] = 0.54951
             # actually, let's consider a distribution of C/O, as done for FINESSE
-            co_ratio = randomCtoO()
+            model_params['C/O'] = randomCtoO()
 
             # this is the old version copied from taurex task
             chemistry = TaurexChemistry(fill_gases=['H2','He'],ratio=0.172)
-            water = ConstantGas('H2O', mix_ratio=1.2e-4*metallicity)
+            water = ConstantGas('H2O', mix_ratio=1.2e-4*model_params['metallicity'])
             chemistry.addGas(water)
 
             # new version is preferred, but needs a sysadmin pip-install
             if ACEimported:
-                chemistry = ACEChemistry(metallicity=metallicity,
-                                         co_ratio=co_ratio)
+                chemistry = ACEChemistry(metallicity=model_params['metallicity'],
+                                         co_ratio=model_params['C/O'])
 
             # create an atmospheric model based on the above parameters
             tm = TransmissionModel(star=star,
@@ -158,7 +167,10 @@ def simulate_spectrum(target, system_dict, out):
             #  (don't forget to save the cloud parameters down below)
             P_mbar = 1.
             P_pascals = P_mbar * 100
-            tm.add_contribution(SimpleCloudsContribution(clouds_pressure=P_pascals))
+            if P_pascals==666:
+                tm.add_contribution(SimpleCloudsContribution(clouds_pressure=P_pascals))
+            # model_params['clouds'] = '1mbar'
+            model_params['clouds'] = 'none'
 
             # tau = 0.3
             # Pmin_mbar = 0.1
@@ -229,7 +241,8 @@ def simulate_spectrum(target, system_dict, out):
             # cerberus also wants the scale height, to normalize the spectrum
             #  (copy over some code for this from transit/core)
             sscmks = syscore.ssconstants(mks=True)
-            eqtemp = system_params['T*']*np.sqrt(system_params['R*']*sscmks['Rsun/AU']/
+            #  NOTE : sma is system, but should be model value.  EDIT LATER?
+            eqtemp = model_params['T*']*np.sqrt(model_params['R*']*sscmks['Rsun/AU']/
                                                  (2.*system_params[planetLetter]['sma']))
             pgrid = np.arange(np.log(10.)-15., np.log(10.)+15./100, 15./99)
             pgrid = np.exp(pgrid)
@@ -237,53 +250,62 @@ def simulate_spectrum(target, system_dict, out):
             mixratio, fH2, fHe = crbutil.crbce(pressure, eqtemp)
             mmw, fH2, fHe = crbutil.getmmw(mixratio, protosolar=False, fH2=fH2, fHe=fHe)
             mmw = mmw * cst.m_p  # [kg]
+            #  NOTE : logg is system, but should be model value.  EDIT LATER
             Hs = cst.Boltzmann * eqtemp / (mmw*1e-2*(10.**float(system_params[planetLetter]['logg'])))  # [m]
-            Hs = Hs / (system_params['R*']*sscmks['Rsun'])
+            Hs = Hs / (model_params['R*']*sscmks['Rsun'])
+            # keep Hs as it's own param (not inside of system_ or model_param)
+            #  it has to be this way to match the formatting for regular spectra itk
             out['data'][planetLetter]['Hs'] = Hs
 
-            # also save target,planet name, for plotting (in states.py)
+            # save target,planet name, for plotting (in states.py)
             out['target'].append(target)
             out['planets'].append(planetLetter)
-            # and save the spectrum?  this is redundant with 'data' above, but truth is new
-            out['spectrum'][planetLetter] = {
+
+            # save the true spectrum (both raw and binned)
+            out['data'][planetLetter]['true_spectrum'] = {
+                'fluxDepth':fluxDepth_rebin,
                 'wavelength_um':wavelength_um_rebin,
-                'wavebinsize':ariel_instrument['wavebinsize'],
-                'fluxDepth_truth':fluxDepth_rebin,
-                'fluxDepth_observed':fluxDepth_observed,
-                'uncertainty':uncertainties}
-            # also save the parameters used to create the spectrum. some could be useful
-            # should save both truth and values with errors added in (NOT DONE)
-            out['spectrum_params'][planetLetter] = {
-                'R*': system_params['R*'],
-                'T*': system_params['T*'],
+                'fluxDepth_norebin':fluxDepth,
+                'wavelength_norebin':wavelength_um}
+
+            # save the parameters used to create the spectrum. some could be useful
+            # should save both observed value and truth with scatter added in
+            #  'system_params' = the info in system() task
+            #  'model_params' = what is actually used to create forward model
+            out['data'][planetLetter]['system_params'] = {
+                'R*':system_params['R*'],
+                'T*':system_params['T*'],
                 'Rp':system_params[planetLetter]['rp'],
                 'Teq':system_params[planetLetter]['teq'],
-                'Mp':system_params[planetLetter]['mass'],
-                'metallicity':metallicity,
-                'C/O':co_ratio,
-                'clouds':'working on it'}
+                'Mp':system_params[planetLetter]['mass']}
+            out['data'][planetLetter]['model_params'] = model_params
 
             # convert to percentage depth (just for plotting, not for the saved results)
+            fluxDepth = 100 * fluxDepth
             fluxDepth_rebin = 100 * fluxDepth_rebin
             fluxDepth_observed = 100 * fluxDepth_observed
             uncertainties = 100 * uncertainties
 
             # PLOT THE SPECTRA
             myfig, ax = plt.subplots(figsize=(6,4))
-            plt.title('Ariel : '+target+' '+planetLetter, fontsize=16)
+            plt.title('Ariel simulation : '+target+' '+planetLetter, fontsize=16)
             plt.xlabel(str('Wavelength [$\\mu m$]'), fontsize=14)
             plt.ylabel(str('$(R_p/R_*)^2$ [%]'), fontsize=14)
 
-            # plot the true (model) spectrum
+            # plot the true (model) spectrum - raw
+            plt.plot(wavelength_um, fluxDepth,
+                     color='palegoldenrod',ls='-',lw=0.1,
+                     zorder=1, label='truth raw')
+            # plot the true (model) spectrum - binned
             plt.plot(wavelength_um_rebin, fluxDepth_rebin,
                      color='k',ls='-',lw=1,
-                     zorder=2, label='truth')
+                     zorder=3, label='truth binned')
             # plot the simulated data points
             plt.scatter(wavelength_um_rebin, fluxDepth_observed,
                         marker='o',s=20, color='None',edgecolor='k',
-                        zorder=3, label='data')
+                        zorder=4, label='simulated data')
             plt.errorbar(wavelength_um_rebin, fluxDepth_observed, yerr=uncertainties,
-                         linestyle='None',lw=0.2, color='grey', zorder=1)
+                         linestyle='None',lw=0.2, color='grey', zorder=2)
 
             plt.xlim(0.,8.)
             plt.legend()

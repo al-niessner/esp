@@ -25,50 +25,75 @@ def fillUncertainty(param,param_value,param_uncertainty,error_type):
         elif param=='T*':
             # for stellar temperature, 100 K uncertainty as default
             fillvalue = 100
+            fillvalue = 150
+            fillvalue = 185  # 90-percentile; 95-percentile is 200
         elif param=='inc':
             # inclination should be pretty close to 90degrees
             #  let's try 5deg uncertainty
             fillvalue = 5
+            fillvalue = 1.93  # 90-percentile; 95-percentile is 2.7
             # make sure inclination range stays within 0-90 degrees
             # actually no, allow inclination to go 0-180, as in the Archive
             # if param_value + fillvalue > 90: fillvalue = 90 - param_value
         elif param=='ecc':
             # for eccentricity, set uncertainty to 20%, with a minimum of 0.1
             fillvalue = numpy.max([float(param_value) * 2.e-1, 0.1])
+            fillvalue = 0.145  # 90-percentile; 95-percentile is 0.185
         elif param=='omega':
             # for argument of periastron, set a large uncertainty (120 degrees)
             fillvalue = 120
         elif param=='FEH*':
             # for metallicity, fallback uncertainty is 0.1 dex
             fillvalue = 0.1
+            fillvalue = 0.2
+            fillvalue = 0.295  # 90-percentile; 95-percentile is 0.3
         else: huh = True
         if huh:
             if param in ['LOGG*','logg']:
                 # for planet or stellar log-g, fallback uncertainty is 0.1 dex
                 fillvalue = 0.1
+                fillvalue = 0.2
+                fillvalue = 0.3  # 90-percentile; 95-percentile is 0.3
             elif param=='Hmag':
                 # 0.1 dex for H band magnitude (for Kepler-1651)
                 fillvalue = 0.1
             elif param=='period':
                 # orbital period should be known pretty well. how about 1%?
                 fillvalue = float(param_value) * 1.e-2
+                fillvalue = float(param_value) * 1.e-4
+                fillvalue = float(param_value) * 1.5e-5  # 90-percentile; 95-percentile is 2.7e-5
             elif param=='t0':
                 # T_0 is known to much much better than 10%
                 #   set it to 10% of the period?
                 #   problem though - period is not passed in here
                 # for now, set it to 1 hour uncertainty
                 fillvalue = 1./24.
+                fillvalue = 0.01
+                fillvalue = 0.0076  # 90-percentile; 95-percentile is 0.01
             elif param in ['rp','sma','mass','R*','M*','RHO*','L*']:
                 # set uncertainty to 10% for planet radius, semi-major axis, mass
                 #   same for stellar radius, mass, density, luminosity
                 fillvalue = float(param_value) * 1.e-1
+                if param in ['rp']:
+                    fillvalue = float(param_value) / 3.
+                    fillvalue = float(param_value) * 0.392  # 90-percentile; 95-percentile is 0.50
+                elif param in ['sma']:
+                    fillvalue = float(param_value) / 20.
+                    fillvalue = float(param_value) * 0.053  # 90-percentile; 95-percentile is 0.093
+                elif param in ['mass']:
+                    fillvalue = float(param_value) / 5
+                    fillvalue = float(param_value) * 0.44  # 90-percentile; 95-percentile is 0.66
+                elif param in ['R*']:
+                    fillvalue = float(param_value) / 5
+                    fillvalue = float(param_value) * 0.36  # 90-percentile; 95-percentile is 0.45
             elif param=='AGE*':
                 # age is generally not well known.  have at least 50% uncertainty
                 fillvalue = float(param_value) * 0.5
             elif param=='teq':
                 # planet equilibrium temperature to maybe 10%?
                 #  (error should really be derived from errors on L*,a_p)
-                fillvalue = float(param_value) * 1.e-1
+                # a_p error is 5%, so 10% here should be very conservative
+                fillvalue = float(param_value) / 10.
             else:
                 # fallback option is to set uncertainty to 10%
                 fillvalue = float(param_value) * 1.e-1

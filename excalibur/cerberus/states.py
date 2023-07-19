@@ -163,3 +163,43 @@ class atmosSV(dawgie.StateVector):
         return
     pass
 # -------- -----------------------------------------------------------
+class resSV(dawgie.StateVector):
+    '''cerberus.results view'''
+    def __init__(self, name):
+        '''__init__ ds'''
+        self._version_ = dawgie.VERSION(1,0,0)
+        self.__name = name
+        self['STATUS'] = excalibur.ValuesList()
+        self['target'] = excalibur.ValuesList()
+        self['planets'] = excalibur.ValuesList()
+        self['data'] = excalibur.ValuesDict()
+        self['STATUS'].append(False)
+        return
+
+    def name(self):
+        '''name ds'''
+        return self.__name
+
+    def view(self, visitor:dawgie.Visitor)->None:
+        '''view ds'''
+        if self['STATUS'][-1]:
+            for target,planetLetter in zip(self['target'],self['planets']):
+                for savedresult in self['data'][planetLetter].keys():
+                    if 'plot' in savedresult:
+                        if savedresult=='plot_spectrum':
+                            plotlabel = 'best-fit spectrum'
+                        elif savedresult=='plot_corner':
+                            plotlabel = 'corner plot'
+                        elif savedresult=='plot_vsprior':
+                            plotlabel = 'improvement past prior'
+                        elif savedresult=='plot_walkerevol':
+                            plotlabel = 'walker evolution'
+                        else:
+                            plotlabel = 'unknown plottype plot'
+                        textlabel = '--------- ' + plotlabel + \
+                            ' for '+target+' '+planetLetter + ' ---------'
+                        visitor.add_image('...', textlabel,
+                                          self['data'][planetLetter][savedresult])
+        return
+
+# -------- -----------------------------------------------------------

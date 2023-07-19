@@ -26,6 +26,10 @@ fltrs = (trgedit.activefilters.__doc__).split('\n')
 fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
 fltrs.append('STIS-WFC3')
 fltrs.append('Ariel-sim')
+
+# --- TEMPORARY FOCUS ON JUST THE ARIEL SIMULATIONS ---
+fltrs = ['Ariel-sim']
+
 # ----------------------- --------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class xslib(dawgie.Algorithm):
@@ -162,11 +166,17 @@ class atmos(dawgie.Algorithm):
             # pylint: disable=protected-access
             prcd = trgedit.proceed(ds._tn(), ext, verbose=False)
             if vfin and vxsl and vspc and prcd:
-                log.warning('--< CERBERUS ATMOS: %s >--', ext)
-                update = self._atmos(self.__fin.sv_as_dict()['parameters'],
-                                     self.__xsl.sv_as_dict()[ext],
-                                     sv,
-                                     fltrs.index(ext), ext)
+                # *** drop a bunch of targets during testing ***
+                if ds._tn().startswith('K') or ds._tn().startswith('T') \
+                   or ds._tn().startswith('W'):
+                    log.warning('--< CERBERUS ATMOS SKIP: %s >--', ext)
+                    update = False
+                else:
+                    log.warning('--< CERBERUS ATMOS: %s >--', ext)
+                    update = self._atmos(self.__fin.sv_as_dict()['parameters'],
+                                         self.__xsl.sv_as_dict()[ext],
+                                         sv,
+                                         fltrs.index(ext), ext)
                 pass
             else:
                 errstr = [m for m in [sfin, sxsl, sspc] if m is not None]
@@ -185,8 +195,11 @@ class atmos(dawgie.Algorithm):
         '''Core code call'''
         if ext=='Ariel-sim':
             MCMC_chain_length = 1000
+            MCMC_chain_length = 5000
+            # MCMC_chain_length = 10
         else:
             MCMC_chain_length = 15000
+        print(' calling atmos from cerb-alg-atmos  chain len=',MCMC_chain_length)
         am = crbcore.atmos(fin, xsl, spc, self.__out[index], ext,
                            mclen=MCMC_chain_length,
                            sphshell=True, verbose=False)  # singlemod='TEC' after mclen
@@ -255,6 +268,85 @@ class release(dawgie.Algorithm):
     def _failure(errstr):
         '''Failure log'''
         log.warning('--< CERBERUS RELEASE: %s >--', errstr)
+        return
+    pass
+# ---------------- ---------------------------------------------------
+
+class results(dawgie.Algorithm):
+    '''
+    Plot the best-fit spectrum, to see how well it fits the data
+    Plot the corner plot, to see how well each parameter is constrained
+    '''
+    def __init__(self):
+        '''__init__ ds'''
+        self._version_ = crbcore.resultsversion()
+        self.__fin = sysalg.finalize()
+        self.__xsl = xslib()
+        self.__atm = atmos()
+        self.__out = [crbstates.resSV(filt) for filt in fltrs]
+        return
+
+    def name(self):
+        '''Database name for subtask extension'''
+        return 'results'
+
+    def previous(self):
+        '''Input State Vectors: cerberus.atmos'''
+        return [dawgie.ALG_REF(sys.task, self.__fin),
+                dawgie.ALG_REF(crb.task, self.__xsl),
+                dawgie.ALG_REF(crb.task, self.__atm)]
+
+    def state_vectors(self):
+        '''Output State Vectors: cerberus.results'''
+        return self.__out
+
+    def run(self, ds, ps):
+        '''Top level algorithm call'''
+
+        svupdate = []
+        vfin, sfin = crbcore.checksv(self.__fin.sv_as_dict()['parameters'])
+
+        filts = ['HST-WFC3-IR-G141-SCAN']
+        filts = ['Ariel-sim']
+        # filts = ['HST-WFC3-IR-G141-SCAN', 'Ariel-sim']
+
+        update = False
+        if vfin:
+            for filt in filts:
+                log.warning('--< CERBERUS RESULTS: %s >--', filt)
+                # pylint: disable=protected-access
+                vxsl, _ = crbcore.checksv(self.__xsl.sv_as_dict()[filt])
+                vatm, satm = crbcore.checksv(self.__atm.sv_as_dict()[filt])
+                if vxsl and vatm:
+                    update = self._results(ds._tn(), filt,
+                                           self.__fin.sv_as_dict()['parameters'],
+                                           self.__xsl.sv_as_dict()[filt]['data'],
+                                           self.__atm.sv_as_dict()[filt]['data'],
+                                           fltrs.index(filt))
+                else:
+                    errstr = [m for m in [satm] if m is not None]
+                    self._failure(errstr[0])
+        else:
+            errstr = [m for m in [sfin] if m is not None]
+            self._failure(errstr[0])
+
+        if update: svupdate.append(self.__out[fltrs.index(filt)])
+        self.__out = svupdate
+        if self.__out.__len__() > 0: ds.update()
+        else: raise dawgie.NoValidOutputDataError(
+                f'No output created for CERBERUS.{self.name()}')
+        return
+
+    def _results(self, trgt, filt, fin, xsl, atm, index):
+        '''Core code call'''
+        resout = crbcore.results(trgt, filt, fin, xsl, atm,
+                                 self.__out[index], verbose=False)
+        return resout
+
+    @staticmethod
+    def _failure(errstr):
+        '''Failure log'''
+        log.warning('--< CERBERUS RESULTS: %s >--', errstr)
         return
     pass
 # ---------------- ---------------------------------------------------

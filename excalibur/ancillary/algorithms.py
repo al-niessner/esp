@@ -115,7 +115,7 @@ class population(dawgie.Analyzer):
         # for trgt in targetlists['active']:
         for trgt in filter(lambda tgt: 'STATUS' in aspects[tgt][svname], targetlists['active']):
 
-            target_sample = 'active'
+            # target_sample = 'active'
 
             anc_data = aspects[trgt][svname]
 
@@ -138,7 +138,7 @@ class population(dawgie.Analyzer):
         # Loop through a second group of targets.  (this subset will be overplotted in the histos)
         # for trgt in targetlists['roudier62']:
         for trgt in filter(lambda tgt: 'STATUS' in aspects[tgt][svname], targetlists['roudier62']):
-            target_sample = 'roudier62'
+            # target_sample = 'roudier62'
 
             anc_data = aspects[trgt][svname]
 
@@ -163,7 +163,7 @@ class population(dawgie.Analyzer):
         self.__out['data']['pl_attrs'] = pl_attrs
         self.__out['data']['st_attrs_roudier62'] = st_attrs_roudier62
         self.__out['data']['pl_attrs_roudier62'] = pl_attrs_roudier62
-        self.__out['data']['sample'] = target_sample
+        # self.__out['data']['sample'] = target_sample
         self.__out['STATUS'].append(True)
         aspects.ds().update()
 

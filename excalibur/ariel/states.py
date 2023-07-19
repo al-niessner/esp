@@ -21,8 +21,8 @@ class PriorsSV(dawgie.StateVector):
         self['target'] = excalibur.ValuesList()
         self['planets'] = excalibur.ValuesList()
         self['data'] = excalibur.ValuesDict()
-        self['spectrum'] = excalibur.ValuesDict()
-        self['spectrum_params'] = excalibur.ValuesDict()
+        # self['spectrum'] = excalibur.ValuesDict()
+        # self['spectrum_params'] = excalibur.ValuesDict()
         self['STATUS'].append(False)
         return
 
