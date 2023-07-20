@@ -2,6 +2,7 @@
 
 docker run \
        --detach \
+       --init \
        --rm \
        -e USER=$USER -e USERNAME=$USERNAME \
        --name ops_worker_$1 \
