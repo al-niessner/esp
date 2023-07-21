@@ -233,8 +233,8 @@ class Flag_Summary_SV(dawgie.StateVector):
                     'mean_rsdm': 'Average RSDM'
                 },
                 'thresh_vals':{
-                    'gold': 5,
-                    'red': 20
+                    'gold': 8.804,
+                    'red': 13.818
                 }
             },
             'perc_rejected': {
@@ -244,8 +244,8 @@ class Flag_Summary_SV(dawgie.StateVector):
                 },
                 'thresh_vals':{
                     'green': 0,
-                    'gold': 40,
-                    'red': 80
+                    'gold': 31.844,
+                    'red': 52.166
                 }
             },
             'median_error': {

@@ -6,18 +6,15 @@ import dawgie
 import excalibur.data.core as datcore
 import excalibur.system.core as syscore
 import excalibur.util.cerberus as crbutil
+from excalibur.util import elca
 import excalibur.transit.core
 
-import re
 import io
 import copy
-import requests
 import logging
 import random
 import lmfit as lm
 import matplotlib.pyplot as plt
-from matplotlib.ticker import MaxNLocator, NullLocator
-from matplotlib.ticker import ScalarFormatter
 
 # pylint: disable=import-error
 from ultranest import ReactiveNestedSampler
@@ -27,11 +24,8 @@ log = logging.getLogger(__name__)
 pymc3log = logging.getLogger('pymc3')
 pymc3log.setLevel(logging.ERROR)
 
-from scipy.interpolate import griddata
-from scipy.ndimage import gaussian_filter
-from scipy.optimize import least_squares, brentq, curve_fit
+from scipy.optimize import least_squares, brentq
 import scipy.constants as cst
-from scipy import spatial
 from scipy.signal import savgol_filter
 from scipy.stats import gaussian_kde
 
@@ -2299,442 +2293,6 @@ def fastspec(fin, nrm, wht, ext, selftype,
     if alphanum < np.nanmedian(ESerr)/2e0: alphanum = np.nanmedian(ESerr)/2e0
     alpha = alphanum/np.nanmedian(ESerr)
     return priorspec, alpha
-# ------------------- ------------------------------------------------
-# ----------------- --------------------------------------------------
-def corner(xs, bins=20, arange=None, weights=None, color="k", hist_bin_factor=1,
-           smooth=None, smooth1d=None, levels=None,
-           labels=None, label_kwargs=None,
-           titles=None, title_kwargs=None,
-           truths=None, truth_color="#4682b4",
-           scale_hist=False, quantiles=None, verbose=False, fig=None,
-           max_n_ticks=5, top_ticks=False, use_math_text=False, reverse=False,
-           hist_kwargs=None, **hist2d_kwargs):
-    '''
-    A fork of corner.py but altered to support a scatter function when plotting
-    this allowing the data points to be color coded to a likehood or chi-square value.
-    '''
-    if quantiles is None: quantiles = []
-    if title_kwargs is None: title_kwargs = {}
-    if label_kwargs is None: label_kwargs = {}
-    if titles is None: titles = []
-    if levels is None: levels = [1]
-    # Try filling in labels from pandas.DataFrame columns.
-    if labels is None:
-        try:
-            labels = xs.columns
-        except AttributeError:
-            pass
-        pass
-
-    # Deal with 1D sample lists.
-    xs = np.atleast_1d(xs)
-    if len(xs.shape) == 1:
-        xs = np.atleast_2d(xs)
-    else:
-        assert len(xs.shape) == 2, "The input sample array must be 1- or 2-D."
-        xs = xs.T
-    assert xs.shape[0] <= xs.shape[1], "I don't believe that you want more " \
-                                       "dimensions than samples!"
-
-    # Parse the weight array.
-    if weights is not None:
-        weights = np.asarray(weights)
-        if weights.ndim != 1:
-            raise ValueError("Weights must be 1-D")
-        if xs.shape[1] != weights.shape[0]:
-            raise ValueError("Lengths of weights must match number of samples")
-
-    # Parse the parameter ranges.
-    if arange is None:
-        if "extents" in hist2d_kwargs:
-            logging.info("Deprecated keyword argument 'extents'. "
-                         "Use 'range' instead.")
-            arange = hist2d_kwargs.pop("extents")
-        else:
-            arange = [[x.min(), x.max()] for x in xs]
-            # Check for parameters that never change.
-            m = np.array([e[0] == e[1] for e in arange], dtype=bool)
-            if np.any(m):
-                # GMR: I m not touching this. Where does this code come from?
-                # pylint: disable=consider-using-f-string
-                raise ValueError(("It looks like the parameter(s) in "
-                                  "column(s) {0} have no dynamic range. "
-                                  "Please provide a `range` argument.")
-                                 .format(", ".join(map(
-                                     "{0}".format, np.arange(len(m))[m]))))
-
-    else:
-        # If any of the extents are percentiles, convert them to ranges.
-        # Also make sure it's a normal list.
-        arange = list(arange)
-        for i, _ in enumerate(arange):
-            try:
-                _, _ = arange[i]
-            except TypeError:
-                q = [0.5 - 0.5*arange[i], 0.5 + 0.5*arange[i]]
-                arange[i] = quantile(xs[i], q, weights=weights)
-
-    if len(arange) != xs.shape[0]:
-        raise ValueError("Dimension mismatch between samples and range")
-
-    # Parse the bin specifications.
-    try:
-        bins = [int(bins) for _ in arange]
-    except TypeError as dood:
-        if len(bins) != len(arange):
-            raise ValueError("Dimension mismatch between bins and arange") from dood
-        pass
-    try:
-        hist_bin_factor = [float(hist_bin_factor) for _ in arange]
-    except TypeError as dood:
-        if len(hist_bin_factor) != len(range):
-            raise ValueError("Dimension mismatch between hist_bin_factor and "
-                             "range") from dood
-
-    # Some magic numbers for pretty axis layout.
-    K = len(xs)
-    factor = 2.0           # size of one side of one panel
-    if reverse:
-        lbdim = 0.2 * factor   # size of left/bottom margin
-        trdim = 0.5 * factor   # size of top/right margin
-    else:
-        lbdim = 0.5 * factor   # size of left/bottom margin
-        trdim = 0.2 * factor   # size of top/right margin
-    whspace = 0.05         # w/hspace size
-    plotdim = factor * K + factor * (K - 1.) * whspace
-    dim = lbdim + plotdim + trdim
-
-    # Create a new figure if one wasn't provided.
-    if fig is None:
-        fig, axes = plt.subplots(K, K, figsize=(dim, dim))
-    else:
-        try: axes = np.array(fig.axes).reshape((K, K))
-        except:
-            # GMR: Wildcard except nothing I can or want do for this
-            # pylint: disable=raise-missing-from
-            raise ValueError(f"""Provided figure has {len(fig.axes)} axes, but data has
-                             dimensions K={K}""")
-        pass
-
-    # Format the figure.
-    lb = lbdim / dim
-    tr = (lbdim + plotdim) / dim
-    fig.subplots_adjust(left=lb, bottom=lb, right=tr, top=tr,
-                        wspace=whspace, hspace=whspace)
-
-    # Set up the default histogram keywords.
-    if hist_kwargs is None:
-        hist_kwargs = {}
-    hist_kwargs["color"] = hist_kwargs.get("color", color)
-    if smooth1d is None:
-        hist_kwargs["histtype"] = hist_kwargs.get("histtype", "step")
-
-    for i, x in enumerate(xs):
-        # Deal with masked arrays.
-        if hasattr(x, "compressed"):
-            x = x.compressed()
-
-        if np.shape(xs)[0] == 1:
-            ax = axes
-        else:
-            if reverse:
-                ax = axes[K-i-1, K-i-1]
-            else:
-                ax = axes[i, i]
-        # Plot the histograms.
-        if smooth1d is None:
-            bins_1d = int(max(1, np.round(hist_bin_factor[i] * bins[i])))
-            n, _, _ = ax.hist(x, bins=bins_1d, weights=weights,
-                              range=np.sort(arange[i]), **hist_kwargs)
-        else:
-            if gaussian_filter is None:
-                raise ImportError("Please install scipy for smoothing")
-            n, b = np.histogram(x, bins=bins[i], weights=weights,
-                                range=np.sort(arange[i]))
-            n = gaussian_filter(n, smooth1d)
-            x0 = np.array(list(zip(b[:-1], b[1:]))).flatten()
-            y0 = np.array(list(zip(n, n))).flatten()
-            ax.plot(x0, y0, **hist_kwargs)
-
-        if truths is not None and truths[i] is not None:
-            ax.axvline(truths[i], color=truth_color)
-
-        # Plot quantiles if wanted.
-        qlen = len(quantiles)
-        if qlen > 0:
-            qvalues = quantile(x, quantiles, weights=weights)
-            for q in qvalues:
-                ax.axvline(q, ls="dashed", color=color)
-
-            if verbose:
-                print("Quantiles:")
-                # print([item for item in zip(quantiles, qvalues)])
-                print(list(zip(quantiles, qvalues)))
-
-        # pylint: disable=len-as-condition
-        if len(titles):
-            ax.set_title(titles[i], **title_kwargs)
-
-        # Set up the axes.
-        ax.set_xlim(arange[i])
-        if scale_hist:
-            maxn = np.max(n)
-            ax.set_ylim(-0.1 * maxn, 1.1 * maxn)
-        else:
-            ax.set_ylim(0, 1.1 * np.max(n))
-        ax.set_yticklabels([])
-        if max_n_ticks == 0:
-            ax.xaxis.set_major_locator(NullLocator())
-            ax.yaxis.set_major_locator(NullLocator())
-        else:
-            ax.xaxis.set_major_locator(MaxNLocator(max_n_ticks, prune="lower"))
-            ax.yaxis.set_major_locator(NullLocator())
-
-        if i < K - 1:
-            if top_ticks:
-                ax.xaxis.set_ticks_position("top")
-                _ = [l.set_rotation(45) for l in ax.get_xticklabels()]
-            else:
-                ax.set_xticklabels([])
-        else:
-            if reverse:
-                ax.xaxis.tick_top()
-            _ = [l.set_rotation(45) for l in ax.get_xticklabels()]
-            if labels is not None:
-                if reverse:
-                    ax.set_title(labels[i], y=1.25, **label_kwargs)
-                else:
-                    ax.set_xlabel(labels[i], **label_kwargs)
-
-            # use MathText for axes ticks
-            ax.xaxis.set_major_formatter(
-                ScalarFormatter(useMathText=use_math_text))
-
-        for j, y in enumerate(xs):
-            if np.shape(xs)[0] == 1:
-                ax = axes
-            else:
-                if reverse:
-                    ax = axes[K-i-1, K-j-1]
-                else:
-                    ax = axes[i, j]
-            if j > i:
-                ax.set_frame_on(False)
-                ax.set_xticks([])
-                ax.set_yticks([])
-                continue
-            if j == i:
-                continue
-
-            # Deal with masked arrays.
-            if hasattr(y, "compressed"):
-                y = y.compressed()
-
-            # pylint: disable=unexpected-keyword-arg
-            hist2d(y, x, ax=ax, range=[arange[j], arange[i]], weights=weights,
-                   smooth=smooth, bins=[bins[j], bins[i]], levels=levels,
-                   **hist2d_kwargs)
-
-            if truths is not None:
-                if truths[i] is not None and truths[j] is not None:
-                    ax.plot(truths[j], truths[i], "s", color=truth_color)
-                if truths[j] is not None:
-                    ax.axvline(truths[j], color=truth_color)
-                if truths[i] is not None:
-                    ax.axhline(truths[i], color=truth_color)
-
-            if max_n_ticks == 0:
-                ax.xaxis.set_major_locator(NullLocator())
-                ax.yaxis.set_major_locator(NullLocator())
-            else:
-                ax.xaxis.set_major_locator(MaxNLocator(max_n_ticks,
-                                                       prune="lower"))
-                ax.yaxis.set_major_locator(MaxNLocator(max_n_ticks,
-                                                       prune="lower"))
-
-            if i < K - 1:
-                ax.set_xticklabels([])
-            else:
-                if reverse:
-                    ax.xaxis.tick_top()
-                for l in ax.get_xticklabels():
-                    l.set_rotation(45)
-                if labels is not None:
-                    ax.set_xlabel(labels[j], **label_kwargs)
-                    if reverse:
-                        ax.xaxis.set_label_coords(0.5, 1.4)
-                    else:
-                        ax.xaxis.set_label_coords(0.5, -0.3)
-
-                # use MathText for axes ticks
-                ax.xaxis.set_major_formatter(
-                    ScalarFormatter(useMathText=use_math_text))
-
-            if j > 0:
-                ax.set_yticklabels([])
-            else:
-                if reverse:
-                    ax.yaxis.tick_right()
-                for l in ax.get_yticklabels():
-                    l.set_rotation(45)
-                if labels is not None:
-                    if reverse:
-                        ax.set_ylabel(labels[i], rotation=-90, **label_kwargs)
-                        ax.yaxis.set_label_coords(1.3, 0.5)
-                    else:
-                        ax.set_ylabel(labels[i], **label_kwargs)
-                        ax.yaxis.set_label_coords(-0.3, 0.5)
-
-                # use MathText for axes ticks
-                ax.yaxis.set_major_formatter(
-                    ScalarFormatter(useMathText=use_math_text))
-
-    return fig
-
-def quantile(x, q, weights=None):
-    """
-    Compute sample quantiles with support for weighted samples.
-
-    Note
-    ----
-    When ``weights`` is ``None``, this method simply calls numpy's percentile
-    function with the values of ``q`` multiplied by 100.
-
-    Parameters
-    ----------
-    x : array_like[nsamples,]
-       The samples.
-
-    q : array_like[nquantiles,]
-       The list of quantiles to compute. These should all be in the range
-       ``[0, 1]``.
-
-    weights : Optional[array_like[nsamples,]]
-        An optional weight corresponding to each sample. These
-
-    Returns
-    -------
-    quantiles : array_like[nquantiles,]
-        The sample quantiles computed at ``q``.
-
-    Raises
-    ------
-    ValueError
-        For invalid quantiles; ``q`` not in ``[0, 1]`` or dimension mismatch
-        between ``x`` and ``weights``.
-
-    """
-    x = np.atleast_1d(x)
-    q = np.atleast_1d(q)
-
-    if np.any(q < 0.0) or np.any(q > 1.0):
-        raise ValueError("Quantiles must be between 0 and 1")
-
-    if weights is None: return np.percentile(x, list(100.0 * q))
-
-    weights = np.atleast_1d(weights)
-    if len(x) != len(weights):
-        raise ValueError("Dimension mismatch: len(weights) != len(x)")
-    idx = np.argsort(x)
-    sw = weights[idx]
-    cdf = np.cumsum(sw)[:-1]
-    cdf /= cdf[-1]
-    cdf = np.append(0, cdf)
-    return np.interp(q, cdf, x[idx]).tolist()
-
-# pylint: disable=unused-argument
-def hist2d(x, y, arange=None, levels=(2,),
-           ax=None, plot_datapoints=True, plot_contours=True,
-           contour_kwargs=None, data_kwargs=None, **kwargs):
-    '''hist2d ds'''
-    if ax is None:
-        ax = plt.gca()
-
-    if plot_datapoints:
-        if data_kwargs is None: data_kwargs = {}
-        data_kwargs["s"] = data_kwargs.get("s", 2.0)
-        data_kwargs["alpha"] = data_kwargs.get("alpha", 0.2)
-        ax.scatter(x, y, marker="o", zorder=-1, rasterized=True, **data_kwargs)
-
-    # Plot the contour edge colors.
-    if plot_contours:
-        if contour_kwargs is None: contour_kwargs = {}
-
-        # mask data in range + chi2
-        maskx = (x > arange[0][0]) & (x < arange[0][1])
-        masky = (y > arange[1][0]) & (y < arange[1][1])
-        mask = maskx & masky & (data_kwargs['c'] < data_kwargs['vmax']*1.2)
-
-        # approx posterior + smooth
-        xg, yg = np.meshgrid(np.linspace(x[mask].min(),x[mask].max(),50), np.linspace(y[mask].min(),y[mask].max(),50))
-        cg = griddata(np.vstack([x[mask],y[mask]]).T, data_kwargs['c'][mask], (xg,yg), method='nearest', rescale=True)
-        scg = gaussian_filter(cg,sigma=2)
-
-        # plot
-        ax.contour(xg, yg, scg*np.nanmin(cg)/np.nanmin(scg), levels, **contour_kwargs, vmin=data_kwargs['vmin'], vmax=data_kwargs['vmax'])
-    ax.set_xlim(arange[0])
-    ax.set_ylim(arange[1])
-
-#######################################################
-def eclipse(times, values):
-    '''eclipse ds'''
-    tme = eclipse_mid_time(values['per'], values['ars'], values['ecc'], values['inc'], values['omega'], values['tmid'])
-    model = pytransit([0,0,0,0],
-                      values['rprs']*values['fpfs']**0.5, values['per'], values['ars'],
-                      values['ecc'], values['inc'], values['omega']+180,
-                      tme, times, method='claret', precision=3)
-    return model
-
-def brightness(time, values):
-    '''brightness ds'''
-    # compute mid-eclipse time
-    tme = eclipse_mid_time(values['per'], values['ars'], values['ecc'], values['inc'], values['omega'], values['tmid'])
-
-    # compute phase based on mid-eclipse
-    phase = (time - tme)/values['per']
-
-    # brightness amplitude variation
-    bdata = values['c1']*np.cos(2*np.pi*phase) + values['c2']*np.sin(2*np.pi*phase) + values['c3']*np.cos(4*np.pi*phase) + values['c4']*np.sin(4*np.pi*phase)
-
-    # offset so eclipse is around 1 in norm flux
-    c0 = values['fpfs']*values['rprs']**2 - (values['c1'] + values['c3'])
-    return 1+c0+bdata
-
-def phasecurve(time, values):
-    '''phasecurve ds'''
-    # transit time series
-    tdata = transit(time, values)
-
-    # eclipse (similar to transit but with 0 Ld and 180+omega)
-    edata = eclipse(time, values)
-
-    # brightness variation
-    bdata = brightness(time, values)
-
-    # combine models
-    pdata = tdata*bdata*edata
-
-    # mask in-eclipse data
-    emask = ~np.floor(edata).astype(bool)
-
-    # offset data to be at 1 (TODO inspect this line)
-    pdata[emask] = edata[emask]+values['fpfs']*values['rprs']**2
-    return pdata
-
-def time_bin(time, flux, dt=1./(60*24)):
-    '''average data into bins of dt from start to finish'''
-    bins = int(np.floor((max(time) - min(time))/dt))
-    bflux = np.zeros(bins)
-    btime = np.zeros(bins)
-    bstds = np.zeros(bins)
-    for i in range(bins):
-        mask = (time >= (min(time)+i*dt)) & (time < (min(time)+(i+1)*dt))
-        if mask.sum() > 0:
-            bflux[i] = np.nanmean(flux[mask])
-            btime[i] = np.nanmean(time[mask])
-            bstds[i] = np.nanstd(flux[mask])/(1+mask.sum())**0.5
-    zmask = (bflux==0) | (btime==0) | np.isnan(bflux) | np.isnan(btime)
-    return btime[~zmask], bflux[~zmask], bstds[~zmask]
 
 ##########################################################
 # phasecurve, eclipse, and transit fitting algorithm with
@@ -2763,15 +2321,15 @@ class pc_fitter():
         boundarray = np.array([self.bounds[k] for k in freekeys])
 
         # trim data around predicted transit/eclipse time
-        self.gw, self.nearest = gaussian_weights(self.syspars, neighbors=self.neighbors)
+        self.gw, self.nearest = elca.gaussian_weights(self.syspars, neighbors=self.neighbors)
 
         def lc2min(pars):
             # pylint: disable=invalid-unary-operand-type
             for i, _ in enumerate(pars):
                 self.prior[freekeys[i]] = pars[i]
-            lightcurve = phasecurve(self.time, self.prior)
+            lightcurve = elca.phasecurve(self.time, self.prior)
             detrended = self.data/lightcurve
-            wf = weightedflux(detrended, self.gw, self.nearest)
+            wf = elca.weightedflux(detrended, self.gw, self.nearest)
             model = lightcurve*wf
             return ((self.data-model)/self.dataerr)**2
 
@@ -2796,16 +2354,16 @@ class pc_fitter():
         bounddiff = np.diff(boundarray,1).reshape(-1)
 
         # trim data around predicted transit/eclipse time
-        self.gw, self.nearest = gaussian_weights(self.syspars, neighbors=self.neighbors)
+        self.gw, self.nearest = elca.gaussian_weights(self.syspars, neighbors=self.neighbors)
 
         def lc2min_transit(pars):
             '''lc2min_transit ds'''
             # pylint: disable=invalid-unary-operand-type
             for i, _ in enumerate(pars):
                 self.prior[freekeys[i]] = pars[i]
-            lightcurve = transit(self.time, self.prior)
+            lightcurve = elca.transit(self.time, self.prior)
             detrended = self.data/lightcurve
-            wf = weightedflux(detrended, self.gw, self.nearest)
+            wf = elca.weightedflux(detrended, self.gw, self.nearest)
             model = lightcurve*wf
             return -np.sum(((self.data-model)/self.dataerr)**2)
 
@@ -2814,9 +2372,9 @@ class pc_fitter():
             # pylint: disable=invalid-unary-operand-type
             for i, _ in enumerate(pars):
                 self.prior[freekeys[i]] = pars[i]
-            lightcurve = phasecurve(self.time, self.prior)
+            lightcurve = elca.phasecurve(self.time, self.prior)
             detrended = self.data/lightcurve
-            wf = weightedflux(detrended, self.gw, self.nearest)
+            wf = elca.weightedflux(detrended, self.gw, self.nearest)
             model = lightcurve*wf
             return -np.sum(((self.data-model)/self.dataerr)**2)
 
@@ -2871,9 +2429,9 @@ class pc_fitter():
         '''create_fit_variables ds'''
         # pylint: disable=attribute-defined-outside-init
         self.phase = (self.time - self.parameters['tmid']) / self.parameters['per']
-        self.transit = phasecurve(self.time, self.parameters)
+        self.transit = elca.phasecurve(self.time, self.parameters)
         detrended = self.data / self.transit
-        self.wf = weightedflux(detrended, self.gw, self.nearest)
+        self.wf = elca.weightedflux(detrended, self.gw, self.nearest)
         self.model = self.transit*self.wf
         self.detrended = self.data/self.wf
         self.detrendederr = self.dataerr
@@ -2889,7 +2447,7 @@ class pc_fitter():
         ax_res = plt.subplot2grid((4,5), (3,0), colspan=5, rowspan=1)
         axs = [ax_lc, ax_res]
 
-        bt, bf, _ = time_bin(self.time, self.detrended, bin_dt)
+        bt, bf, _ = elca.time_bin(self.time, self.detrended, bin_dt)
         bp = (bt-self.parameters['tmid'])/self.parameters['per']
 
         if phase:
@@ -2914,7 +2472,7 @@ class pc_fitter():
             else:
                 axs[0].errorbar(self.time, self.detrended, yerr=np.std(self.residuals)/np.median(self.data), ls='none', marker='.', color='black', zorder=1, alpha=0.025)
 
-        bt, br, _ = time_bin(self.time, self.residuals/np.median(self.data)*1e6, bin_dt)
+        bt, br, _ = elca.time_bin(self.time, self.residuals/np.median(self.data)*1e6, bin_dt)
         bp = (bt-self.parameters['tmid'])/self.parameters['per']
 
         if phase:
@@ -2991,26 +2549,26 @@ class pc_fitter():
             labels.append(flabels.get(key, key))
 
         chi2 = self.results['weighted_samples']['logl']*-2
-        fig = corner(self.results['weighted_samples']['points'],
-                     labels=labels,
-                     bins=int(np.sqrt(self.results['samples'].shape[0])),
-                     range=ranges,
-                     plot_contours=True,
-                     levels=[chi2[mask1].max(), chi2[mask2].max(), chi2[mask3].max()],
-                     plot_density=False,
-                     titles=titles,
-                     data_kwargs={
-                         'c':chi2,
-                         'vmin':np.percentile(chi2[mask3],1),
-                         'vmax':np.percentile(chi2[mask3],99),
-                         'cmap':'viridis'
-                     },
-                     label_kwargs={
-                         'labelpad':15,
-                     },
-                     hist_kwargs={
-                         'color':'black',
-                     })
+        fig = elca.corner(self.results['weighted_samples']['points'],
+                            labels=labels,
+                            bins=int(np.sqrt(self.results['samples'].shape[0])),
+                            range=ranges,
+                            plot_contours=True,
+                            levels=[chi2[mask1].max(), chi2[mask2].max(), chi2[mask3].max()],
+                            plot_density=False,
+                            titles=titles,
+                            data_kwargs={
+                                'c':chi2,
+                                'vmin':np.percentile(chi2[mask3],1),
+                                'vmax':np.percentile(chi2[mask3],99),
+                                'cmap':'viridis'
+                            },
+                            label_kwargs={
+                                'labelpad':15,
+                            },
+                            hist_kwargs={
+                                'color':'black',
+                            })
         return fig, None
 
     def plot_btempcurve(self, bandpass='IRAC 3.6um'):
@@ -3022,11 +2580,11 @@ class pc_fitter():
 
         phase = (self.time-self.parameters['tmid'])/self.parameters['per']
         bin_dt = 10./24./60.
-        bt, bf, _ = time_bin(self.time, self.detrended, bin_dt)
+        bt, bf, _ = elca.time_bin(self.time, self.detrended, bin_dt)
         bp = (bt-self.parameters['tmid'])/self.parameters['per']
-        bt, br, _ = time_bin(self.time, self.residuals, bin_dt)
+        bt, br, _ = elca.time_bin(self.time, self.residuals, bin_dt)
 
-        bcurve = brightness(bt,self.parameters)
+        bcurve = elca.brightness(bt,self.parameters)
         ogfpfs = self.parameters['fpfs']
         tbcurve = np.ones(bcurve.shape)
         for i,bc in enumerate(bcurve):
@@ -3282,26 +2840,6 @@ def norm_spitzer(cal, tme, fin, out, selftype, debug=False):
 
     return normed
 
-def get_ld(priors, band='Spit36'):
-    '''
-    Query the web for limb darkening coefficients in the Spitzer bandpass
-    Problem with LDTK + Spitzer: https://github.com/hpparvi/ldtk/issues/11
-    '''
-    url = 'http://astroutils.astronomy.ohio-state.edu/exofast/quadld.php'
-
-    form = {
-        'action':url,
-        'pname':'Select Planet',
-        'bname':band,
-        'teff':priors['T*'],
-        'feh':priors['FEH*'],
-        'logg':priors['LOGG*']
-    }
-    session = requests.Session()
-    res = session.post(url,data=form)
-    lin,quad = re.findall(r"\d+\.\d+",res.text)
-    return float(lin), float(quad)
-
 def sigma_clip(ogdata,dt):
     '''sigma_clip ds'''
     mdata = savgol_filter(ogdata, dt, 2)
@@ -3371,634 +2909,6 @@ def solveme(M, e, eps):
         pass
     return E
 
-################################################
-# PyLightcurve "mini" - https://github.com/ucl-exoplanets/pylightcurve
-
-# coefficients from https://pomax.github.io/bezierinfo/legendre-gauss.html
-
-gauss0 = [
-    [1.0000000000000000, -0.5773502691896257],
-    [1.0000000000000000, 0.5773502691896257]
-]
-
-gauss10 = [
-    [0.2955242247147529, -0.1488743389816312],
-    [0.2955242247147529, 0.1488743389816312],
-    [0.2692667193099963, -0.4333953941292472],
-    [0.2692667193099963, 0.4333953941292472],
-    [0.2190863625159820, -0.6794095682990244],
-    [0.2190863625159820, 0.6794095682990244],
-    [0.1494513491505806, -0.8650633666889845],
-    [0.1494513491505806, 0.8650633666889845],
-    [0.0666713443086881, -0.9739065285171717],
-    [0.0666713443086881, 0.9739065285171717]
-]
-
-gauss20 = [
-    [0.1527533871307258, -0.0765265211334973],
-    [0.1527533871307258, 0.0765265211334973],
-    [0.1491729864726037, -0.2277858511416451],
-    [0.1491729864726037, 0.2277858511416451],
-    [0.1420961093183820, -0.3737060887154195],
-    [0.1420961093183820, 0.3737060887154195],
-    [0.1316886384491766, -0.5108670019508271],
-    [0.1316886384491766, 0.5108670019508271],
-    [0.1181945319615184, -0.6360536807265150],
-    [0.1181945319615184, 0.6360536807265150],
-    [0.1019301198172404, -0.7463319064601508],
-    [0.1019301198172404, 0.7463319064601508],
-    [0.0832767415767048, -0.8391169718222188],
-    [0.0832767415767048, 0.8391169718222188],
-    [0.0626720483341091, -0.9122344282513259],
-    [0.0626720483341091, 0.9122344282513259],
-    [0.0406014298003869, -0.9639719272779138],
-    [0.0406014298003869, 0.9639719272779138],
-    [0.0176140071391521, -0.9931285991850949],
-    [0.0176140071391521, 0.9931285991850949],
-]
-
-gauss30 = [
-    [0.1028526528935588, -0.0514718425553177],
-    [0.1028526528935588, 0.0514718425553177],
-    [0.1017623897484055, -0.1538699136085835],
-    [0.1017623897484055, 0.1538699136085835],
-    [0.0995934205867953, -0.2546369261678899],
-    [0.0995934205867953, 0.2546369261678899],
-    [0.0963687371746443, -0.3527047255308781],
-    [0.0963687371746443, 0.3527047255308781],
-    [0.0921225222377861, -0.4470337695380892],
-    [0.0921225222377861, 0.4470337695380892],
-    [0.0868997872010830, -0.5366241481420199],
-    [0.0868997872010830, 0.5366241481420199],
-    [0.0807558952294202, -0.6205261829892429],
-    [0.0807558952294202, 0.6205261829892429],
-    [0.0737559747377052, -0.6978504947933158],
-    [0.0737559747377052, 0.6978504947933158],
-    [0.0659742298821805, -0.7677774321048262],
-    [0.0659742298821805, 0.7677774321048262],
-    [0.0574931562176191, -0.8295657623827684],
-    [0.0574931562176191, 0.8295657623827684],
-    [0.0484026728305941, -0.8825605357920527],
-    [0.0484026728305941, 0.8825605357920527],
-    [0.0387991925696271, -0.9262000474292743],
-    [0.0387991925696271, 0.9262000474292743],
-    [0.0287847078833234, -0.9600218649683075],
-    [0.0287847078833234, 0.9600218649683075],
-    [0.0184664683110910, -0.9836681232797472],
-    [0.0184664683110910, 0.9836681232797472],
-    [0.0079681924961666, -0.9968934840746495],
-    [0.0079681924961666, 0.9968934840746495]
-]
-
-gauss40 = [
-    [0.0775059479784248, -0.0387724175060508],
-    [0.0775059479784248, 0.0387724175060508],
-    [0.0770398181642480, -0.1160840706752552],
-    [0.0770398181642480, 0.1160840706752552],
-    [0.0761103619006262, -0.1926975807013711],
-    [0.0761103619006262, 0.1926975807013711],
-    [0.0747231690579683, -0.2681521850072537],
-    [0.0747231690579683, 0.2681521850072537],
-    [0.0728865823958041, -0.3419940908257585],
-    [0.0728865823958041, 0.3419940908257585],
-    [0.0706116473912868, -0.4137792043716050],
-    [0.0706116473912868, 0.4137792043716050],
-    [0.0679120458152339, -0.4830758016861787],
-    [0.0679120458152339, 0.4830758016861787],
-    [0.0648040134566010, -0.5494671250951282],
-    [0.0648040134566010, 0.5494671250951282],
-    [0.0613062424929289, -0.6125538896679802],
-    [0.0613062424929289, 0.6125538896679802],
-    [0.0574397690993916, -0.6719566846141796],
-    [0.0574397690993916, 0.6719566846141796],
-    [0.0532278469839368, -0.7273182551899271],
-    [0.0532278469839368, 0.7273182551899271],
-    [0.0486958076350722, -0.7783056514265194],
-    [0.0486958076350722, 0.7783056514265194],
-    [0.0438709081856733, -0.8246122308333117],
-    [0.0438709081856733, 0.8246122308333117],
-    [0.0387821679744720, -0.8659595032122595],
-    [0.0387821679744720, 0.8659595032122595],
-    [0.0334601952825478, -0.9020988069688743],
-    [0.0334601952825478, 0.9020988069688743],
-    [0.0279370069800234, -0.9328128082786765],
-    [0.0279370069800234, 0.9328128082786765],
-    [0.0222458491941670, -0.9579168192137917],
-    [0.0222458491941670, 0.9579168192137917],
-    [0.0164210583819079, -0.9772599499837743],
-    [0.0164210583819079, 0.9772599499837743],
-    [0.0104982845311528, -0.9907262386994570],
-    [0.0104982845311528, 0.9907262386994570],
-    [0.0045212770985332, -0.9982377097105593],
-    [0.0045212770985332, 0.9982377097105593],
-]
-
-gauss50 = [
-    [0.0621766166553473, -0.0310983383271889],
-    [0.0621766166553473, 0.0310983383271889],
-    [0.0619360674206832, -0.0931747015600861],
-    [0.0619360674206832, 0.0931747015600861],
-    [0.0614558995903167, -0.1548905899981459],
-    [0.0614558995903167, 0.1548905899981459],
-    [0.0607379708417702, -0.2160072368760418],
-    [0.0607379708417702, 0.2160072368760418],
-    [0.0597850587042655, -0.2762881937795320],
-    [0.0597850587042655, 0.2762881937795320],
-    [0.0586008498132224, -0.3355002454194373],
-    [0.0586008498132224, 0.3355002454194373],
-    [0.0571899256477284, -0.3934143118975651],
-    [0.0571899256477284, 0.3934143118975651],
-    [0.0555577448062125, -0.4498063349740388],
-    [0.0555577448062125, 0.4498063349740388],
-    [0.0537106218889962, -0.5044581449074642],
-    [0.0537106218889962, 0.5044581449074642],
-    [0.0516557030695811, -0.5571583045146501],
-    [0.0516557030695811, 0.5571583045146501],
-    [0.0494009384494663, -0.6077029271849502],
-    [0.0494009384494663, 0.6077029271849502],
-    [0.0469550513039484, -0.6558964656854394],
-    [0.0469550513039484, 0.6558964656854394],
-    [0.0443275043388033, -0.7015524687068222],
-    [0.0443275043388033, 0.7015524687068222],
-    [0.0415284630901477, -0.7444943022260685],
-    [0.0415284630901477, 0.7444943022260685],
-    [0.0385687566125877, -0.7845558329003993],
-    [0.0385687566125877, 0.7845558329003993],
-    [0.0354598356151462, -0.8215820708593360],
-    [0.0354598356151462, 0.8215820708593360],
-    [0.0322137282235780, -0.8554297694299461],
-    [0.0322137282235780, 0.8554297694299461],
-    [0.0288429935805352, -0.8859679795236131],
-    [0.0288429935805352, 0.8859679795236131],
-    [0.0253606735700124, -0.9130785566557919],
-    [0.0253606735700124, 0.9130785566557919],
-    [0.0217802431701248, -0.9366566189448780],
-    [0.0217802431701248, 0.9366566189448780],
-    [0.0181155607134894, -0.9566109552428079],
-    [0.0181155607134894, 0.9566109552428079],
-    [0.0143808227614856, -0.9728643851066920],
-    [0.0143808227614856, 0.9728643851066920],
-    [0.0105905483836510, -0.9853540840480058],
-    [0.0105905483836510, 0.9853540840480058],
-    [0.0067597991957454, -0.9940319694320907],
-    [0.0067597991957454, 0.9940319694320907],
-    [0.0029086225531551, -0.9988664044200710],
-    [0.0029086225531551, 0.9988664044200710]
-]
-
-gauss60 = [
-    [0.0519078776312206, -0.0259597723012478],
-    [0.0519078776312206, 0.0259597723012478],
-    [0.0517679431749102, -0.0778093339495366],
-    [0.0517679431749102, 0.0778093339495366],
-    [0.0514884515009809, -0.1294491353969450],
-    [0.0514884515009809, 0.1294491353969450],
-    [0.0510701560698556, -0.1807399648734254],
-    [0.0510701560698556, 0.1807399648734254],
-    [0.0505141845325094, -0.2315435513760293],
-    [0.0505141845325094, 0.2315435513760293],
-    [0.0498220356905502, -0.2817229374232617],
-    [0.0498220356905502, 0.2817229374232617],
-    [0.0489955754557568, -0.3311428482684482],
-    [0.0489955754557568, 0.3311428482684482],
-    [0.0480370318199712, -0.3796700565767980],
-    [0.0480370318199712, 0.3796700565767980],
-    [0.0469489888489122, -0.4271737415830784],
-    [0.0469489888489122, 0.4271737415830784],
-    [0.0457343797161145, -0.4735258417617071],
-    [0.0457343797161145, 0.4735258417617071],
-    [0.0443964787957871, -0.5186014000585697],
-    [0.0443964787957871, 0.5186014000585697],
-    [0.0429388928359356, -0.5622789007539445],
-    [0.0429388928359356, 0.5622789007539445],
-    [0.0413655512355848, -0.6044405970485104],
-    [0.0413655512355848, 0.6044405970485104],
-    [0.0396806954523808, -0.6449728284894770],
-    [0.0396806954523808, 0.6449728284894770],
-    [0.0378888675692434, -0.6837663273813555],
-    [0.0378888675692434, 0.6837663273813555],
-    [0.0359948980510845, -0.7207165133557304],
-    [0.0359948980510845, 0.7207165133557304],
-    [0.0340038927249464, -0.7557237753065856],
-    [0.0340038927249464, 0.7557237753065856],
-    [0.0319212190192963, -0.7886937399322641],
-    [0.0319212190192963, 0.7886937399322641],
-    [0.0297524915007889, -0.8195375261621458],
-    [0.0297524915007889, 0.8195375261621458],
-    [0.0275035567499248, -0.8481719847859296],
-    [0.0275035567499248, 0.8481719847859296],
-    [0.0251804776215212, -0.8745199226468983],
-    [0.0251804776215212, 0.8745199226468983],
-    [0.0227895169439978, -0.8985103108100460],
-    [0.0227895169439978, 0.8985103108100460],
-    [0.0203371207294573, -0.9200784761776275],
-    [0.0203371207294573, 0.9200784761776275],
-    [0.0178299010142077, -0.9391662761164232],
-    [0.0178299010142077, 0.9391662761164232],
-    [0.0152746185967848, -0.9557222558399961],
-    [0.0152746185967848, 0.9557222558399961],
-    [0.0126781664768160, -0.9697017887650528],
-    [0.0126781664768160, 0.9697017887650528],
-    [0.0100475571822880, -0.9810672017525982],
-    [0.0100475571822880, 0.9810672017525982],
-    [0.0073899311633455, -0.9897878952222218],
-    [0.0073899311633455, 0.9897878952222218],
-    [0.0047127299269536, -0.9958405251188381],
-    [0.0047127299269536, 0.9958405251188381],
-    [0.0020268119688738, -0.9992101232274361],
-    [0.0020268119688738, 0.9992101232274361],
-]
-
-gauss_table = [np.swapaxes(gauss0, 0, 1), np.swapaxes(gauss10, 0, 1), np.swapaxes(gauss20, 0, 1),
-               np.swapaxes(gauss30, 0, 1), np.swapaxes(gauss40, 0, 1), np.swapaxes(gauss50, 0, 1),
-               np.swapaxes(gauss60, 0, 1)]
-
-
-def gauss_numerical_integration(f, x1, x2, precision, *f_args):
-    '''gauss_numerical_integration ds'''
-    x1, x2 = (x2 - x1) / 2, (x2 + x1) / 2
-
-    return x1 * np.sum(gauss_table[precision][0][:, None] *
-                       f(x1[None, :] * gauss_table[precision][1][:, None] + x2[None, :], *f_args), 0)
-
-
-def sample_function(f, precision=3):
-    '''sample_function ds'''
-    def sampled_function(x12_array, *args):
-        '''sampled_function ds'''
-        x1_array, x2_array = x12_array
-
-        return gauss_numerical_integration(f, x1_array, x2_array, precision, *list(args))
-
-    return sampled_function
-
-
-# orbit
-def planet_orbit(period, sma_over_rs, eccentricity, inclination, periastron, mid_time, time_array, ww=0):
-    '''planet_orbit ds'''
-    # pylint: disable=no-member
-    inclination = inclination * np.pi / 180.0
-    periastron = periastron * np.pi / 180.0
-    ww = ww * np.pi / 180.0
-
-    if eccentricity == 0 and ww == 0:
-        vv = 2 * np.pi * (time_array - mid_time) / period
-        bb = sma_over_rs * np.cos(vv)
-        return [bb * np.sin(inclination), sma_over_rs * np.sin(vv), - bb * np.cos(inclination)]
-
-    if periastron < np.pi / 2:
-        aa = 1.0 * np.pi / 2 - periastron
-    else:
-        aa = 5.0 * np.pi / 2 - periastron
-    bb = 2 * np.arctan(np.sqrt((1 - eccentricity) / (1 + eccentricity)) * np.tan(aa / 2))
-    if bb < 0:
-        bb += 2 * np.pi
-    mid_time = float(mid_time) - (period / 2.0 / np.pi) * (bb - eccentricity * np.sin(bb))
-    m = (time_array - mid_time - np.int_((time_array - mid_time) / period) * period) * 2.0 * np.pi / period
-    u0 = m
-    stop = False
-    u1 = 0
-    for _ in range(10000):  # setting a limit of 1k iterations - arbitrary limit
-        u1 = u0 - (u0 - eccentricity * np.sin(u0) - m) / (1 - eccentricity * np.cos(u0))
-        stop = (np.abs(u1 - u0) < 10 ** (-7)).all()
-        if stop:
-            break
-        u0 = u1
-        pass
-
-    if not stop:
-        raise RuntimeError('Failed to find a solution in 10000 loops')
-
-    vv = 2 * np.arctan(np.sqrt((1 + eccentricity) / (1 - eccentricity)) * np.tan(u1 / 2))
-    #
-    rr = sma_over_rs * (1 - (eccentricity ** 2)) / (np.ones_like(vv) + eccentricity * np.cos(vv))
-    aa = np.cos(vv + periastron)
-    bb = np.sin(vv + periastron)
-    x = rr * bb * np.sin(inclination)
-    y = rr * (-aa * np.cos(ww) + bb * np.sin(ww) * np.cos(inclination))
-    z = rr * (-aa * np.sin(ww) - bb * np.cos(ww) * np.cos(inclination))
-
-    return [x, y, z]
-
-
-def planet_star_projected_distance(period, sma_over_rs, eccentricity, inclination, periastron, mid_time, time_array):
-    '''planet_star_projected_distance ds'''
-    position_vector = planet_orbit(period, sma_over_rs, eccentricity, inclination, periastron, mid_time, time_array)
-
-    return np.sqrt(position_vector[1] * position_vector[1] + position_vector[2] * position_vector[2])
-
-
-def planet_phase(period, mid_time, time_array):
-    '''planet_phase ds'''
-    return (time_array - mid_time)/period
-
-
-# flux drop
-
-
-def integral_r_claret(limb_darkening_coefficients, r):
-    '''integral_r_claret ds'''
-    a1, a2, a3, a4 = limb_darkening_coefficients
-    mu44 = 1.0 - r * r
-    mu24 = np.sqrt(mu44)
-    mu14 = np.sqrt(mu24)
-    return - (2.0 * (1.0 - a1 - a2 - a3 - a4) / 4) * mu44 \
-           - (2.0 * a1 / 5) * mu44 * mu14 \
-           - (2.0 * a2 / 6) * mu44 * mu24 \
-           - (2.0 * a3 / 7) * mu44 * mu24 * mu14 \
-           - (2.0 * a4 / 8) * mu44 * mu44
-
-
-def num_claret(r, limb_darkening_coefficients, rprs, z):
-    '''num_claret ds'''
-    # pylint: disable=no-member
-    a1, a2, a3, a4 = limb_darkening_coefficients
-    rsq = r * r
-    mu44 = 1.0 - rsq
-    mu24 = np.sqrt(mu44)
-    mu14 = np.sqrt(mu24)
-    return ((1.0 - a1 - a2 - a3 - a4) + a1 * mu14 + a2 * mu24 + a3 * mu24 * mu14 + a4 * mu44) \
-        * r * np.arccos(np.minimum((-rprs ** 2 + z * z + rsq) / (2.0 * z * r), 1.0))
-
-
-def integral_r_f_claret(limb_darkening_coefficients, rprs, z, r1, r2, precision=3):
-    '''integral_r_f_claret ds'''
-    return gauss_numerical_integration(num_claret, r1, r2, precision, limb_darkening_coefficients, rprs, z)
-
-def integral_r_zero(_, r):
-    '''integral definitions for zero method'''
-    musq = 1 - r * r
-    return (-1.0 / 6) * musq * 3.0
-
-
-def num_zero(r, _, rprs, z):
-    '''num_zero ds'''
-    # pylint: disable=no-member
-    rsq = r * r
-    return r * np.arccos(np.minimum((-rprs ** 2 + z * z + rsq) / (2.0 * z * r), 1.0))
-
-
-def integral_r_f_zero(limb_darkening_coefficients, rprs, z, r1, r2, precision=3):
-    '''integral_r_f_zero ds'''
-    return gauss_numerical_integration(num_zero, r1, r2, precision, limb_darkening_coefficients, rprs, z)
-
-
-# integral definitions for linear method
-def integral_r_linear(limb_darkening_coefficients, r):
-    '''integral_r_linear ds'''
-    a1 = limb_darkening_coefficients[0]
-    musq = 1 - r * r
-    return (-1.0 / 6) * musq * (3.0 + a1 * (-3.0 + 2.0 * np.sqrt(musq)))
-
-
-def num_linear(r, limb_darkening_coefficients, rprs, z):
-    '''num_linear ds'''
-    # pylint: disable=no-member
-    a1 = limb_darkening_coefficients[0]
-    rsq = r * r
-    return (1.0 - a1 * (1.0 - np.sqrt(1.0 - rsq))) \
-        * r * np.arccos(np.minimum((-rprs ** 2 + z * z + rsq) / (2.0 * z * r), 1.0))
-
-
-def integral_r_f_linear(limb_darkening_coefficients, rprs, z, r1, r2, precision=3):
-    '''integral_r_f_linear ds'''
-    return gauss_numerical_integration(num_linear, r1, r2, precision, limb_darkening_coefficients, rprs, z)
-
-
-# integral definitions for quadratic method
-
-def integral_r_quad(limb_darkening_coefficients, r):
-    '''integral_r_quad ds'''
-    a1, a2 = limb_darkening_coefficients[:2]
-    musq = 1 - r * r
-    mu = np.sqrt(musq)
-    return (1.0 / 12) * (-4.0 * (a1 + 2.0 * a2) * mu * musq + 6.0 * (-1 + a1 + a2) * musq + 3.0 * a2 * musq * musq)
-
-
-def num_quad(r, limb_darkening_coefficients, rprs, z):
-    '''num_quad ds'''
-    # pylint: disable=no-member
-    a1, a2 = limb_darkening_coefficients[:2]
-    rsq = r * r
-    cc = 1.0 - np.sqrt(1.0 - rsq)
-    return (1.0 - a1 * cc - a2 * cc * cc) \
-        * r * np.arccos(np.minimum((-rprs ** 2 + z * z + rsq) / (2.0 * z * r), 1.0))
-
-
-def integral_r_f_quad(limb_darkening_coefficients, rprs, z, r1, r2, precision=3):
-    '''integral_r_f_quad ds'''
-    return gauss_numerical_integration(num_quad, r1, r2, precision, limb_darkening_coefficients, rprs, z)
-
-# integral definitions for square root method
-
-def integral_r_sqrt(limb_darkening_coefficients, r):
-    '''integral_r_sqrt ds'''
-    a1, a2 = limb_darkening_coefficients[:2]
-    musq = 1 - r * r
-    mu = np.sqrt(musq)
-    return ((-2.0 / 5) * a2 * np.sqrt(mu) - (1.0 / 3) * a1 * mu + (1.0 / 2) * (-1 + a1 + a2)) * musq
-
-
-def num_sqrt(r, limb_darkening_coefficients, rprs, z):
-    '''num_sqrt ds'''
-    # pylint: disable=no-member
-    a1, a2 = limb_darkening_coefficients[:2]
-    rsq = r * r
-    mu = np.sqrt(1.0 - rsq)
-    return (1.0 - a1 * (1 - mu) - a2 * (1.0 - np.sqrt(mu))) \
-        * r * np.arccos(np.minimum((-rprs ** 2 + z * z + rsq) / (2.0 * z * r), 1.0))
-
-
-def integral_r_f_sqrt(limb_darkening_coefficients, rprs, z, r1, r2, precision=3):
-    '''integral_r_f_sqrt ds'''
-    return gauss_numerical_integration(num_sqrt, r1, r2, precision, limb_darkening_coefficients, rprs, z)
-
-
-# dictionaries containing the different methods,
-# if you define a new method, include the functions in the dictionary as well
-
-integral_r = {
-    'claret': integral_r_claret,
-    'linear': integral_r_linear,
-    'quad': integral_r_quad,
-    'sqrt': integral_r_sqrt,
-    'zero': integral_r_zero
-}
-
-integral_r_f = {
-    'claret': integral_r_f_claret,
-    'linear': integral_r_f_linear,
-    'quad': integral_r_f_quad,
-    'sqrt': integral_r_f_sqrt,
-    'zero': integral_r_f_zero,
-}
-
-def integral_centred(method, limb_darkening_coefficients, rprs, ww1, ww2):
-    '''integral_centred ds'''
-    return (integral_r[method](limb_darkening_coefficients, rprs) - integral_r[method](limb_darkening_coefficients, 0.0)) * np.abs(ww2 - ww1)
-
-def integral_plus_core(method, limb_darkening_coefficients, rprs, z, ww1, ww2, precision=3):
-    '''integral_plus_core ds'''
-    # pylint: disable=len-as-condition,no-member
-    if len(z) == 0: return z
-    rr1 = z * np.cos(ww1) + np.sqrt(np.maximum(rprs ** 2 - (z * np.sin(ww1)) ** 2, 0))
-    rr1 = np.clip(rr1, 0, 1)
-    rr2 = z * np.cos(ww2) + np.sqrt(np.maximum(rprs ** 2 - (z * np.sin(ww2)) ** 2, 0))
-    rr2 = np.clip(rr2, 0, 1)
-    w1 = np.minimum(ww1, ww2)
-    r1 = np.minimum(rr1, rr2)
-    w2 = np.maximum(ww1, ww2)
-    r2 = np.maximum(rr1, rr2)
-    parta = integral_r[method](limb_darkening_coefficients, 0.0) * (w1 - w2)
-    partb = integral_r[method](limb_darkening_coefficients, r1) * w2
-    partc = integral_r[method](limb_darkening_coefficients, r2) * (-w1)
-    partd = integral_r_f[method](limb_darkening_coefficients, rprs, z, r1, r2, precision=precision)
-    return parta + partb + partc + partd
-
-def integral_minus_core(method, limb_darkening_coefficients, rprs, z, ww1, ww2, precision=3):
-    '''integral_minus_core ds'''
-    # pylint: disable=len-as-condition,no-member
-    if len(z) == 0: return z
-    rr1 = z * np.cos(ww1) - np.sqrt(np.maximum(rprs ** 2 - (z * np.sin(ww1)) ** 2, 0))
-    rr1 = np.clip(rr1, 0, 1)
-    rr2 = z * np.cos(ww2) - np.sqrt(np.maximum(rprs ** 2 - (z * np.sin(ww2)) ** 2, 0))
-    rr2 = np.clip(rr2, 0, 1)
-    w1 = np.minimum(ww1, ww2)
-    r1 = np.minimum(rr1, rr2)
-    w2 = np.maximum(ww1, ww2)
-    r2 = np.maximum(rr1, rr2)
-    parta = integral_r[method](limb_darkening_coefficients, 0.0) * (w1 - w2)
-    partb = integral_r[method](limb_darkening_coefficients, r1) * (-w1)
-    partc = integral_r[method](limb_darkening_coefficients, r2) * w2
-    partd = integral_r_f[method](limb_darkening_coefficients, rprs, z, r1, r2, precision=precision)
-    return parta + partb + partc - partd
-
-
-def transit_flux_drop(limb_darkening_coefficients, rp_over_rs, z_over_rs, method='claret', precision=3):
-    '''transit_flux_drop ds'''
-    # pylint: disable=len-as-condition,no-member
-    z_over_rs = np.where(z_over_rs < 0, 1.0 + 100.0 * rp_over_rs, z_over_rs)
-    z_over_rs = np.maximum(z_over_rs, 10**(-10))
-
-    # cases
-    zsq = z_over_rs * z_over_rs
-    sum_z_rprs = z_over_rs + rp_over_rs
-    dif_z_rprs = rp_over_rs - z_over_rs
-    sqr_dif_z_rprs = zsq - rp_over_rs ** 2
-    case0 = np.where((z_over_rs == 0) & (rp_over_rs <= 1))
-    case1 = np.where((z_over_rs < rp_over_rs) & (sum_z_rprs <= 1))
-    casea = np.where((z_over_rs < rp_over_rs) & (sum_z_rprs > 1) & (dif_z_rprs < 1))
-    caseb = np.where((z_over_rs < rp_over_rs) & (sum_z_rprs > 1) & (dif_z_rprs > 1))
-    case2 = np.where((z_over_rs == rp_over_rs) & (sum_z_rprs <= 1))
-    casec = np.where((z_over_rs == rp_over_rs) & (sum_z_rprs > 1))
-    case3 = np.where((z_over_rs > rp_over_rs) & (sum_z_rprs < 1))
-    case4 = np.where((z_over_rs > rp_over_rs) & (sum_z_rprs == 1))
-    case5 = np.where((z_over_rs > rp_over_rs) & (sum_z_rprs > 1) & (sqr_dif_z_rprs < 1))
-    case6 = np.where((z_over_rs > rp_over_rs) & (sum_z_rprs > 1) & (sqr_dif_z_rprs == 1))
-    case7 = np.where((z_over_rs > rp_over_rs) & (sum_z_rprs > 1) & (sqr_dif_z_rprs > 1) & (-1 < dif_z_rprs))
-    plus_case = np.concatenate((case1[0], case2[0], case3[0], case4[0], case5[0], casea[0], casec[0]))
-    minus_case = np.concatenate((case3[0], case4[0], case5[0], case6[0], case7[0]))
-    star_case = np.concatenate((case5[0], case6[0], case7[0], casea[0], casec[0]))
-
-    # cross points
-    ph = np.arccos(np.clip((1.0 - rp_over_rs ** 2 + zsq) / (2.0 * z_over_rs), -1, 1))
-    theta_1 = np.zeros(len(z_over_rs))
-    ph_case = np.concatenate((case5[0], casea[0], casec[0]))
-    theta_1[ph_case] = ph[ph_case]
-    theta_2 = np.arcsin(np.minimum(rp_over_rs / z_over_rs, 1))
-    theta_2[case1] = np.pi
-    theta_2[case2] = np.pi / 2.0
-    theta_2[casea] = np.pi
-    theta_2[casec] = np.pi / 2.0
-    theta_2[case7] = ph[case7]
-
-    # flux_upper
-    plusflux = np.zeros(len(z_over_rs))
-    plusflux[plus_case] = integral_plus_core(method, limb_darkening_coefficients, rp_over_rs, z_over_rs[plus_case],
-                                             theta_1[plus_case], theta_2[plus_case], precision=precision)
-    if len(case0[0]) > 0:
-        plusflux[case0] = integral_centred(method, limb_darkening_coefficients, rp_over_rs, 0.0, np.pi)
-    if len(caseb[0]) > 0:
-        plusflux[caseb] = integral_centred(method, limb_darkening_coefficients, 1, 0.0, np.pi)
-
-    # flux_lower
-    minsflux = np.zeros(len(z_over_rs))
-    minsflux[minus_case] = integral_minus_core(method, limb_darkening_coefficients, rp_over_rs,
-                                               z_over_rs[minus_case], 0.0, theta_2[minus_case], precision=precision)
-
-    # flux_star
-    starflux = np.zeros(len(z_over_rs))
-    starflux[star_case] = integral_centred(method, limb_darkening_coefficients, 1, 0.0, ph[star_case])
-
-    # flux_total
-    total_flux = integral_centred(method, limb_darkening_coefficients, 1, 0.0, 2.0 * np.pi)
-
-    return 1 - (2.0 / total_flux) * (plusflux + starflux - minsflux)
-
-# transit
-def pytransit(limb_darkening_coefficients, rp_over_rs, period, sma_over_rs, eccentricity, inclination, periastron, mid_time, time_array, method='claret', precision=3):
-    '''pytransit ds'''
-
-    position_vector = planet_orbit(period, sma_over_rs, eccentricity, inclination, periastron, mid_time, time_array)
-
-    projected_distance = np.where(position_vector[0] < 0, 1.0 + 5.0 * rp_over_rs,
-                                  np.sqrt(position_vector[1] * position_vector[1] + position_vector[2] * position_vector[2]))
-
-    return transit_flux_drop(limb_darkening_coefficients, rp_over_rs, projected_distance,
-                             method=method, precision=precision)
-
-def eclipse_mid_time(period, sma_over_rs, eccentricity, inclination, periastron, mid_time):
-    '''eclipse_mid_time ds'''
-    test_array = np.arange(0, period, 0.001)
-    xx, yy, _ = planet_orbit(period, sma_over_rs, eccentricity, inclination, periastron, mid_time,
-                             test_array + mid_time)
-
-    test1 = np.where(xx < 0)
-    yy = yy[test1]
-    test_array = test_array[test1]
-
-    aprox = test_array[np.argmin(np.abs(yy))]
-
-    def function_to_fit(x, t):
-        '''function_to_fit ds'''
-        _, yy, _ = planet_orbit(period, sma_over_rs, eccentricity, inclination,
-                                periastron, mid_time, np.array(mid_time + t))
-        return yy
-
-    popt, *_ = curve_fit(function_to_fit, [0], [0], p0=[aprox])
-
-    return mid_time + popt[0]
-
-def transit(times, values):
-    '''transit ds'''
-    return pytransit([values['u0'], values['u1'], values['u2'], values['u3']],
-                     values['rprs'], values['per'], values['ars'],
-                     values['ecc'], values['inc'], values['omega'],
-                     values['tmid'], times, method='claret', precision=3)
-################################################
-
-def weightedflux(flux,gw,nearest):
-    '''weightedflux ds'''
-    return np.sum(flux[nearest]*gw,axis=-1)
-
-def gaussian_weights(X, w=None, neighbors=50, feature_scale=1000):
-    '''gaussian_weights ds'''
-    if isinstance(w, type(None)): w = np.ones(X.shape[1])
-    Xm = (X - np.median(X,0))*w
-    kdtree = spatial.cKDTree(Xm*feature_scale)
-    nearest = np.zeros((X.shape[0],neighbors))
-    gw = np.zeros((X.shape[0],neighbors),dtype=float)
-    for point in range(X.shape[0]):
-        ind = kdtree.query(kdtree.data[point],neighbors+1)[1][1:]
-        dX = Xm[ind] - Xm[point]
-        Xstd = np.std(dX,0)
-        gX = np.exp(-dX**2/(2*Xstd**2))
-        gwX = np.product(gX,1)
-        gw[point,:] = gwX/gwX.sum()
-        nearest[point,:] = ind
-    gw[np.isnan(gw)] = 0.01
-    return gw, nearest.astype(int)
-
 def eclipse_ratio(priors,p='b',f='IRAC 3.6um', verbose=True):
     '''eclipse_ratio ds'''
     Te = priors['T*']*(1-0.1)**0.25 * np.sqrt(0.5/priors[p]['ars'])
@@ -4049,6 +2959,7 @@ def lightcurve_jwst_niriss(nrm, fin, out, selftype, _fltr, hstwhitelight_sv, met
     '''
     K. PEARSON: white light curve fit for orbital solution
     '''
+
     wl = False
     priors = fin['priors'].copy()
     ssc = syscore.ssconstants()
@@ -4184,13 +3095,6 @@ def lightcurve_jwst_niriss(nrm, fin, out, selftype, _fltr, hstwhitelight_sv, met
             out['data'][p][ec]['flux'] = aper
             out['data'][p][ec]['err'] = aper_err
             out['data'][p][ec]['ramp_num'] = rnum
-            try:
-                # keys specific to nested sampling
-                del myfit.results['bound']
-                out['data'][p][ec]['results'] = myfit.results
-                out['data'][p][ec]['quantiles'] = myfit.quantiles
-            except KeyError:
-                print('no nested values found')
             out['data'][p][ec]['model'] = myfit.model
             out['data'][p][ec]['transit'] = myfit.transit
             out['data'][p][ec]['residuals'] = myfit.residuals
@@ -4325,7 +3229,7 @@ def jwst_niriss_spectrum(nrm, fin, out, selftype, wht, method='lm'):
                     'ecc':priors[p]['ecc'],
                     'omega': priors[p].get('omega',0),
 
-                    # non-linear limb darkening TODO
+                    # non-linear limb darkening
                     'u0':0, 'u1':0, 'u2':0, 'u3':0,
 
                     # quadratic detrending model
@@ -4407,8 +3311,8 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
 
                 # compute phase + priors
                 smaors = priors[p]['sma']/priors['R*']/ssc['Rsun/AU']
-                smaors_up = (priors[p]['sma']+priors[p]['sma_uperr'])/(priors['R*']-abs(priors['R*_lowerr']))/ssc['Rsun/AU']
-                smaors_lo = (priors[p]['sma']-abs(priors[p]['sma_lowerr']))/(priors['R*']+priors['R*_uperr'])/ssc['Rsun/AU']
+                # smaors_up = (priors[p]['sma']+priors[p]['sma_uperr'])/(priors['R*']-abs(priors['R*_lowerr']))/ssc['Rsun/AU']
+                # smaors_lo = (priors[p]['sma']-abs(priors[p]['sma_lowerr']))/(priors['R*']+priors['R*_uperr'])/ssc['Rsun/AU']
 
                 # to do: update duration for eccentric orbits
                 # https://arxiv.org/pdf/1001.2010.pdf eq 16
@@ -4419,7 +3323,10 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                 tmid = priors[p]['period']*event + priors[p]['t0']
 
                 # mask out data by event type
-                pmask = (phase > event-1.5*tdur/priors[p]['period']) & (phase < event+1.5*tdur/priors[p]['period'])
+                if selftype == 'transit':
+                    pmask = (phase > event-1.5*tdur/priors[p]['period']) & (phase < event+1.5*tdur/priors[p]['period'])
+                elif selftype == 'eclipse':
+                    pmask = (phase > event-2.5*tdur/priors[p]['period']) & (phase < event+2.5*tdur/priors[p]['period'])
 
                 # extract aperture photometry data
                 subt = nrm['data'][p]['TIME'][pmask]
@@ -4427,7 +3334,7 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                 aper_err = np.sqrt(aper)
 
                 priors[p]['ars'] = smaors
-                fpfs = eclipse_ratio(priors, p, fltr)
+                # fpfs = eclipse_ratio(priors, p, fltr)
 
                 tpars = {
                     # Star
@@ -4439,9 +3346,6 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                     'tmid':tmid,
                     'per': priors[p]['period'],
                     'inc': priors[p]['inc'],
-
-                    # eclipse
-                    'fpfs': fpfs,
                     'omega': priors['b'].get('omega',0),
                     'ecc': priors['b']['ecc'],
 
@@ -4452,8 +3356,14 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                     'u3':priors[p].get('u3',0),
 
                     # phase curve amplitudes
-                    'c0':0, 'c1':0, 'c2':0, 'c3':0, 'c4':0
+                    'c0':0, 'c1':0, 'c2':0, 'c3':0, 'c4':0,
+                    # 'fpfs': fpfs,
                 }
+
+                try:
+                    tpars['inc'] = hstwhitelight_sv['data'][p]['mcpost']['mean']['inc']
+                except KeyError:
+                    tpars['inc'] = priors[p]['inc']
 
                 # remove first 30 min of data after any big gaps, ramp
                 tmask = np.ones(subt.shape).astype(bool)
@@ -4489,24 +3399,38 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
 
                 # 10 minute time scale
                 nneighbors = int(10./24./60./np.mean(np.diff(subt)))
+                nneighbors = min(200, nneighbors)
                 print("N neighbors:",nneighbors)
                 print("N datapoints:", len(subt))
 
                 # define free parameters
                 if selftype == 'transit':
                     mybounds = {
-                        'rprs':[0,1.25*tpars['rprs']],
+                        'rprs':[0,1.5*tpars['rprs']],
                         'tmid':[tmid-0.01,tmid+0.01],
-                        'ars':[smaors_lo,smaors_up]
+                        # 'ars':[smaors_lo,smaors_up]
+                        'inc':[tpars['inc']-3, max(90, tpars['inc']+3)]
                     }
-                    myfit = pc_fitter(subt, aper, aper_err, tpars, mybounds, syspars, neighbors=nneighbors)
+                    myfit = elca.lc_fitter(subt, aper, aper_err, syspars, tpars, mybounds, neighbors=nneighbors, max_ncalls=1e5, verbose=False)
                 elif selftype == 'eclipse':
                     mybounds = {
                         'rprs':[0,0.5*tpars['rprs']],
                         'tmid':[tme-0.01,tme+0.01],
-                        'ars':[smaors_lo,smaors_up]
+                        'inc':[tpars['inc']-3, max(90, tpars['inc']+3)]
+                        # 'ars':[smaors_lo,smaors_up],
                     }
-                    myfit = pc_fitter(subt, aper, aper_err, tpars, mybounds, syspars, neighbors=nneighbors)
+
+                    # zero out limb darkening
+                    tpars['u0'] = 0
+                    tpars['u1'] = 0
+                    tpars['u2'] = 0
+                    tpars['u3'] = 0
+
+                    # modify to get proper duration
+                    tpars['omega'] = priors['b'].get('omega',0)+180
+
+                    # fit the eclipse
+                    myfit = elca.lc_fitter(subt, aper, aper_err, syspars, tpars, mybounds, neighbors=nneighbors, max_ncalls=1e5, verbose=False)
 
                 # copy best fit parameters and uncertainties
                 for k in myfit.bounds.keys():
@@ -4601,7 +3525,7 @@ def jwst_lightcurve(sv, savedir=None, suptitle=''):
     ax_res = plt.subplot2grid((4,5), (3,0), colspan=5, rowspan=1)
     axs = [ax_lc, ax_res]
 
-    bt, bf, _ = time_bin(sv['time'], sv['detrended'])
+    bt, bf, _ = elca.time_bin(sv['time'], sv['detrended'])
 
     axs[0].errorbar(sv['time'],  sv['detrended'], yerr=np.std(sv['residuals'])/np.median(sv['flux']), ls='none', marker='.', color='black', zorder=1, alpha=0.5)
     axs[0].plot(bt,bf,'c.',alpha=0.5,zorder=2)
@@ -4611,7 +3535,7 @@ def jwst_lightcurve(sv, savedir=None, suptitle=''):
     axs[0].grid(True,ls='--')
 
     axs[1].plot(sv['time'], sv['residuals']/np.median(sv['flux'])*1e6, 'k.', alpha=0.5)
-    bt, br, _ = time_bin(sv['time'], sv['residuals']/np.median(sv['flux'])*1e6)
+    bt, br, _ = elca.time_bin(sv['time'], sv['residuals']/np.median(sv['flux'])*1e6)
     axs[1].plot(bt,br,'c.',alpha=0.5,zorder=2)
     axs[1].set_xlabel("Time [day]")
     axs[1].set_ylabel("Residuals [ppm]")

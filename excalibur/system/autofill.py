@@ -688,3 +688,31 @@ def fixZeroUncertainties(starInfo, starParam, planetParam):
                             starInfo[planet][param+'_lowerr'][i] = ''
 
     return starInfo
+
+# -------------------------------------------------------------------
+def checkValidData(starInfo, starParam, planetParam):
+    '''
+    Verify that the needed parameters exist in the incoming target state vector
+    '''
+
+    missingParams = []
+
+    for param in starParam:
+        if param not in starInfo.keys(): missingParams.append(param)
+        # if param!='spTyp':    # spectral type doesnt have error bars, but actually they are here ok
+        if param+'_uperr' not in starInfo.keys(): missingParams.append(param+'_uperr')
+        if param+'_lowerr' not in starInfo.keys(): missingParams.append(param+'_lowerr')
+
+    for param in planetParam:
+        if param!='logg':   # planet logg is derived later; not loaded from Exoplanet Archive
+            for planet in starInfo['planets']:
+                if param not in starInfo[planet].keys(): missingParams.append(planet+':'+param)
+                if param+'_uperr' not in starInfo[planet].keys():
+                    missingParams.append(planet+':'+param+'_uperr')
+                if param+'_lowerr' not in starInfo[planet].keys():
+                    missingParams.append(planet+':'+param+'_lowerr')
+
+    if missingParams:
+        # print('missing parameters in the target state vector:',missingParams)
+        return False
+    return True

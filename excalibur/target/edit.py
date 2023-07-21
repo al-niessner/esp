@@ -33,14 +33,14 @@ def processme():
     '''
     out = {}
     out['FILTER'] = {}
-    out['FILTER']['include'] = ['G141', 'Ariel-sim']
-    out['FILTER']['exclude'] = []
+    out['FILTER']['include'] = ['Spitzer', 'Ariel-sim']
+    out['FILTER']['exclude'] = ['HST']
     out['TARGET'] = {}
     # Best to use a function call that returns a specific list
     # if one wants to change the 'include' target content
     out['TARGET']['include'] = []
     out['TARGET']['exclude'] = ['HR 8799',
-                                'GJ 3193',
+                                'GJ 3193',  # doesn't exist in the Exoplanet Archive
                                 'HIP 41378',  # this is K2-93
                                 'HD 185603', 'HD 195689', 'HD 197481',
                                 'KIC 12266812', 'TIC 184892124',
@@ -169,6 +169,7 @@ KELT-3 :
 KELT-7 :
 KELT-9 :
 Kepler-10 :
+Kepler-11 :
 Kepler-102 :
 Kepler-104 :
 Kepler-1083 :
@@ -802,6 +803,7 @@ KELT-3 : KELT3
 KELT-7 : KELT7
 KELT-9 : KELT9
 Kepler-10 : KEPLER10
+Kepler-11 : KEPLER11
 Kepler-102 : KEPLER102
 Kepler-104 : KEPLER104
 Kepler-1083 : KEPLER1083
@@ -2803,6 +2805,7 @@ def proceed(name, ext, verbose=False):
     filterkeys = [r for r in ['include', 'exclude'] if rules['FILTER'][r]]
     for thisrule in filterkeys:
         trout = any(itm in ext for itm in rules['FILTER'][thisrule])
+        if ext=='any filter': trout=True
         if 'exclude' in thisrule: trout = not trout
         out = out and trout
         if verbose: log.warning('>---- FILTER %s: %s %s', ext, thisrule, out)

@@ -11,7 +11,7 @@ import excalibur
 
 from excalibur.system.autofill import \
     bestValue, estimate_mass_from_radius, \
-    fixZeroUncertainties, fillUncertainty, \
+    checkValidData, fixZeroUncertainties, fillUncertainty, \
     derive_RHOstar_from_M_and_R, derive_SMA_from_P_and_Mstar, \
     derive_LOGGstar_from_R_and_M, derive_LOGGplanet_from_R_and_M, \
     derive_Lstar_from_R_and_T, derive_Teqplanet_from_Lstar_and_sma, \
@@ -101,6 +101,13 @@ def buildsp(autofill, out):
     # out['planetmdt'].extend(['inc', 'period', 'ecc', 'rp', 't0', 'sma', 'mass', 'logg'])
     # out['planetmdt'].extend(['rp', 'mass', 'logg', 'sma', 'period', 't0', 'inc', 'ecc', 'omega'])
     out['planetmdt'].extend(['rp', 'mass', 'logg', 'teq', 'sma', 'period', 't0', 'inc', 'ecc', 'omega'])
+
+    # verify that all needed fields exist in the incoming target state vector
+    # (some older crap targets don't have everything, e.g. SWEEPS-11 missing Hmag_uperr)
+    valid = checkValidData(autofill['starID'][target],
+                           out['starmdt'],
+                           out['planetmdt'])
+    if not valid: return False
 
     # some uncertainties are zero, e.g. lots of e=0+-0
     #  remove the zeros (will be filled in below with fillUncertainty())

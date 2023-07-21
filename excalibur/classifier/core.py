@@ -364,8 +364,8 @@ def rsdm(transit_spectrum, out):
             flag_val = 0
             flag_descrip = ""
 
-            green_upper_bound = 5
-            yellow_upper_bound = 20
+            green_upper_bound = 8.804
+            yellow_upper_bound = 13.818
 
             if avg_rsdpn >= yellow_upper_bound:
                 flag_val = 2
@@ -429,8 +429,8 @@ def perc_rejected(transit_spectrum, out):
         flag_val = 0
         flag_descrip = ""
 
-        green_upper_bound = 40
-        yellow_upper_bound = 80
+        green_upper_bound = 31.844
+        yellow_upper_bound = 52.166
 
         if perc_rejected_value >= yellow_upper_bound:
             flag_val = 2

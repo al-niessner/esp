@@ -47,10 +47,15 @@ class validate(dawgie.Algorithm):
         update = False
         autofill = self.__autofill.sv_as_dict()['parameters']
         valid, errstring = syscore.checksv(autofill)
-        if valid: update = self._validate(autofill, self.__out)
-        else: self._failure(errstring)
+        # pylint: disable=protected-access
+        prcd = trgedit.proceed(ds._tn(), 'any filter', verbose=False)
+        if valid and prcd:
+            update = self._validate(autofill, self.__out)
+        else:
+            if not prcd: errstring = ['Kicked by edit.processme()']
+            self._failure(errstring)
         if update: ds.update()
-        else: raise dawgie.NoValidOutputDataError(
+        elif valid: raise dawgie.NoValidOutputDataError(
                 f'No output created for SYSTEM.{self.name()}')
         return
 
@@ -93,8 +98,10 @@ class finalize(dawgie.Algorithm):
         update = False
         val = self.__val.sv_as_dict()['parameters']
         valid, errstring = syscore.checksv(val)
-        overwrite = trgedit.ppar()
-        if valid:
+        # pylint: disable=protected-access
+        prcd = trgedit.proceed(ds._tn(), 'any filter', verbose=False)
+        if valid and prcd:
+            overwrite = trgedit.ppar()
             for key in val: self.__out[key] = val.copy()[key]
             # pylint: disable=protected-access
             if ds._tn() in overwrite:
@@ -110,24 +117,26 @@ class finalize(dawgie.Algorithm):
                 log.warning('>-- MISSING DICT INFO')
                 log.warning('>-- ADD KEY TO TARGET/EDIT.PY PPAR()')
                 pass
+
+            # consistency checks
+            inconsistencies = consistency_checks(self.__out['priors'])
+            for inconsistency in inconsistencies:
+                self.__out['autofill'].append('inconsistent:'+inconsistency)
+
+            # log warnings moved to the very end (previously were before forcepar)
+            log.warning('>-- FORCE PARAMETER: %s', str(self.__out['PP'][-1]))
+            log.warning('>-- MISSING MANDATORY PARAMETERS: %s', str(self.__out['needed']))
+            log.warning('>-- MISSING PLANET PARAMETERS: %s', str(self.__out['pneeded']))
+            log.warning('>-- PLANETS IGNORED: %s', str(self.__out['ignore']))
+            log.warning('>-- INCONSISTENCIES: %s', str(inconsistencies))
+            log.warning('>-- AUTOFILL: %s', str(self.__out['autofill']))
             pass
-        else: self._failure(errstring)
-
-        # consistency checks
-        inconsistencies = consistency_checks(self.__out['priors'])
-        for inconsistency in inconsistencies:
-            self.__out['autofill'].append('inconsistent:'+inconsistency)
-
-        # log warnings moved to the very end (previously were before forcepar)
-        log.warning('>-- FORCE PARAMETER: %s', str(self.__out['PP'][-1]))
-        log.warning('>-- MISSING MANDATORY PARAMETERS: %s', str(self.__out['needed']))
-        log.warning('>-- MISSING PLANET PARAMETERS: %s', str(self.__out['pneeded']))
-        log.warning('>-- PLANETS IGNORED: %s', str(self.__out['ignore']))
-        log.warning('>-- INCONSISTENCIES: %s', str(inconsistencies))
-        log.warning('>-- AUTOFILL: %s', str(self.__out['autofill']))
+        else:
+            if not prcd: errstring = ['Kicked by edit.processme()']
+            self._failure(errstring)
 
         if update: ds.update()
-        else: raise dawgie.NoValidOutputDataError(
+        elif valid: raise dawgie.NoValidOutputDataError(
                 f'No output created for SYSTEM.{self.name()}')
         return
 

@@ -711,7 +711,7 @@ def targetlist_roudier62():
 
 def targetlist_junk():
     '''
-    targets that are just just (mis-spellings, etc)
+    targets that are just junk (mis-spellings, etc)
     '''
 
     targets = [

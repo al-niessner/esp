@@ -60,33 +60,41 @@ class PopulationSV(dawgie.StateVector):
 
     def view(self, visitor:dawgie.Visitor)->None:
         '''view ds'''
-        to_process = [('----------------------Stellar Population Distributions----------------------',
-                       self['data']['st_attrs'], self['data']['st_attrs_roudier62'], False),
-                      ('---------------------Planetary Population Distributions---------------------',
-                       self['data']['pl_attrs'], self['data']['pl_attrs_roudier62'], True)]
-        for title, attrs, attrs_roudier62, is_planet in to_process:
-            visitor.add_primitive(title)
-            for key in attrs:
-                estimator = get_estimator(key, is_planet)
-                if estimator is not None and estimator.plot() == 'bar':
-                    counts = Counter(attrs[key])
-                    counts2 = Counter(attrs_roudier62[key])
-                    if estimator.scale():
-                        ancplot.barplot(key,
-                                        estimator.scale(), [counts[i] for i in estimator.scale()],
-                                        estimator.scale(), [counts2[i] for i in estimator.scale()],
-                                        visitor)
+
+        debugDir = excalibur.context['data_dir'] + '/bryden/'
+        # testout = open(debugDir+'debugAncHisto.txt','w',encoding='ascii')
+        with open(debugDir+'debugAncHisto.txt','w',encoding='ascii') as testout:
+
+            to_process = [('----------------------Stellar Population Distributions----------------------',
+                           self['data']['st_attrs'], self['data']['st_attrs_roudier62'], False),
+                          ('---------------------Planetary Population Distributions---------------------',
+                           self['data']['pl_attrs'], self['data']['pl_attrs_roudier62'], True)]
+            for title, attrs, attrs_roudier62, is_planet in to_process:
+                visitor.add_primitive(title)
+                testout.write(title + '\n')
+                for key in attrs:
+                    testout.write(key + '\n')
+                    estimator = get_estimator(key, is_planet)
+                    if estimator is not None and estimator.plot() == 'bar':
+                        counts = Counter(attrs[key])
+                        counts2 = Counter(attrs_roudier62[key])
+                        if estimator.scale():
+                            ancplot.barplot(key,
+                                            estimator.scale(), [counts[i] for i in estimator.scale()],
+                                            estimator.scale(), [counts2[i] for i in estimator.scale()],
+                                            visitor)
+                        else:
+                            ancplot.barplot(key,
+                                            counts.keys(), counts.values(),
+                                            counts2.keys(), counts2.values(),
+                                            visitor)
                     else:
-                        ancplot.barplot(key,
-                                        counts.keys(), counts.values(),
-                                        counts2.keys(), counts2.values(),
-                                        visitor)
-                else:
-                    ancplot.distrplot(key, attrs[key], attrs_roudier62[key],
-                                      visitor, estimator.units())
+                        ancplot.distrplot(key, attrs[key], attrs_roudier62[key],
+                                          visitor, estimator.units())
+                        pass
                     pass
                 pass
-            pass
+        # testout.close()
         return
     pass
 # -------- -----------------------------------------------------------
