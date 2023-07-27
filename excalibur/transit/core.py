@@ -2401,14 +2401,14 @@ class pc_fitter():
 
         if self.verbose:
             if 'fpfs' in freekeys:
-                self.results = ReactiveNestedSampler(freekeys, lc2min_phasecurve, prior_transform_phasecurve).run(max_ncalls=5e5)
+                self.results = ReactiveNestedSampler(freekeys, lc2min_phasecurve, prior_transform_phasecurve).run(max_ncalls=2e5)
             else:
-                self.results = ReactiveNestedSampler(freekeys, lc2min_transit, prior_transform_basic).run(max_ncalls=5e5)
+                self.results = ReactiveNestedSampler(freekeys, lc2min_transit, prior_transform_basic).run(max_ncalls=2e5)
         else:
             if 'fpfs' in freekeys:
-                self.results = ReactiveNestedSampler(freekeys, lc2min_phasecurve, prior_transform_phasecurve).run(max_ncalls=5e5, show_status=self.verbose, viz_callback=self.verbose)
+                self.results = ReactiveNestedSampler(freekeys, lc2min_phasecurve, prior_transform_phasecurve).run(max_ncalls=2e5, show_status=self.verbose, viz_callback=self.verbose)
             else:
-                self.results = ReactiveNestedSampler(freekeys, lc2min_transit, prior_transform_basic).run(max_ncalls=5e5, show_status=self.verbose, viz_callback=self.verbose)
+                self.results = ReactiveNestedSampler(freekeys, lc2min_transit, prior_transform_basic).run(max_ncalls=2e5, show_status=self.verbose, viz_callback=self.verbose)
 
         self.errors = {}
         self.quantiles = {}
@@ -2552,10 +2552,9 @@ class pc_fitter():
         fig = elca.corner(self.results['weighted_samples']['points'],
                             labels=labels,
                             bins=int(np.sqrt(self.results['samples'].shape[0])),
-                            range=ranges,
+                            plot_range=ranges,
                             plot_contours=True,
                             levels=[chi2[mask1].max(), chi2[mask2].max(), chi2[mask3].max()],
-                            plot_density=False,
                             titles=titles,
                             data_kwargs={
                                 'c':chi2,
@@ -2795,7 +2794,13 @@ def norm_spitzer(cal, tme, fin, out, selftype, debug=False):
             # mask out orbit
             omask = np.round(phase) == i
             dt = np.nanmean(np.diff(out['data'][p]['TIME'][omask]))*24*60
+            if np.isnan(dt):
+                continue
+            if dt == 0:
+                continue
+
             ndt = int(7/dt)*2+1
+            ndt = max(25, ndt)
 
             # aperture selection
             stds = []
@@ -3270,6 +3275,12 @@ def jwst_niriss_spectrum(nrm, fin, out, selftype, wht, method='lm'):
                 out['data'][p][ec]['std'].append(np.std(myfit.residuals))
                 out['data'][p][ec]['residuals'].append(myfit.residuals)
 
+                # state vectors for classifer
+                z, _phase = datcore.time2z(subt, tpars['inc'], tpars['tmid'], tpars['ars'], tpars['per'], tpars['ecc'])
+                out['data'][p][ec]['postsep'] = z
+                out['data'][p][ec]['allwhite'] = myfit.detrended
+                out['data'][p][ec]['postlc'] = myfit.transit
+
             # copy format to match HST
             out['data'][p][ec]['ES'] = np.copy(out['data'][p][ec]['rprs'])
             out['data'][p][ec]['ESerr'] = np.copy(out['data'][p][ec]['rprs_err'])
@@ -3371,7 +3382,15 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                 smask = np.argsort(subt)
                 dts = np.diff(subt[smask])
                 dmask = dts > (2./(24*60))
+
+                if np.isnan(dts.mean()):
+                    continue
+                if dts.mean() == 0:
+                    continue
+
                 ndt = int(15./(24*60*dts.mean()))*2+1
+                ndt = max(25, ndt)
+
                 tmask[0:int(2*ndt)] = False  # mask first 30 minutes of data
 
                 # feature engineer a ramp correction
@@ -3411,7 +3430,7 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                         # 'ars':[smaors_lo,smaors_up]
                         'inc':[tpars['inc']-3, max(90, tpars['inc']+3)]
                     }
-                    myfit = elca.lc_fitter(subt, aper, aper_err, syspars, tpars, mybounds, neighbors=nneighbors, max_ncalls=1e5, verbose=False)
+                    myfit = elca.lc_fitter(subt, aper, aper_err, syspars, tpars, mybounds, neighbors=nneighbors, max_ncalls=2e5, verbose=False)
                 elif selftype == 'eclipse':
                     mybounds = {
                         'rprs':[0,0.5*tpars['rprs']],
@@ -3430,7 +3449,7 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                     tpars['omega'] = priors['b'].get('omega',0)+180
 
                     # fit the eclipse
-                    myfit = elca.lc_fitter(subt, aper, aper_err, syspars, tpars, mybounds, neighbors=nneighbors, max_ncalls=1e5, verbose=False)
+                    myfit = elca.lc_fitter(subt, aper, aper_err, syspars, tpars, mybounds, neighbors=nneighbors, max_ncalls=2e5, verbose=False)
 
                 # copy best fit parameters and uncertainties
                 for k in myfit.bounds.keys():
@@ -3464,26 +3483,20 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                 out['data'][p][ec]['plot_posterior'] = save_plot(myfit.plot_posterior)
                 out['data'][p][ec]['plot_pixelmap'] = save_plot(myfit.plot_pixelmap)
 
+                # state vectors for classifer
+                z, _phase = datcore.time2z(subt, tpars['inc'], tpars['tmid'], tpars['ars'], tpars['per'], tpars['ecc'])
+                out['data'][p][ec]['postsep'] = z
+                out['data'][p][ec]['allwhite'] = myfit.detrended
+                out['data'][p][ec]['postlc'] = myfit.transit
+
                 ec += 1
                 out['STATUS'].append(True)
                 wl = True
-
-                pass
             except NameError as e:
                 print("Error:",e)
-                out['data'][p].append({"error":e})
+                out['data'][p][ec].append({'error':e})
 
-                try:
-                    out['data'][p][ec]['aper_time'] = subt
-                    out['data'][p][ec]['aper_flux'] = aper
-                    out['data'][p][ec]['aper_err'] = aper_err
-                    out['data'][p][ec]['aper_xcent'] = wxa
-                    out['data'][p][ec]['aper_ycent'] = wya
-                    out['data'][p][ec]['aper_npp'] = npp
-                    out['data'][p][ec]['aper_pars'] = copy.deepcopy(tpars)
-                except NameError:
-                    pass
-                pass
+            pass
         pass
     return wl
 

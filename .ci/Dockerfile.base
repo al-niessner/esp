@@ -48,4 +48,4 @@ RUN set -ex && \
    mkdir -p /proj/data/ldtk && chmod 777 /proj/data/ldtk && \
    curl -o /bin/dcp.py https://raw.githubusercontent.com/al-niessner/DCP/master/dcp.py && \
    chmod 755 /bin/dcp.py && \
-   /usr/bin/pip3 install git+https://github.com/pearsonkyle/UltraNest.git
+   /usr/bin/pip3 install ultranest

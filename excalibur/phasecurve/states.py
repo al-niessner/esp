@@ -113,7 +113,6 @@ class WhiteLightSV(dawgie.StateVector):
                         visitor.add_image('...', ' ', self['data'][p][i]['plot_posterior'])
                         visitor.add_image('...', ' ', self['data'][p][i]['plot_pixelmap'])
                         # another centroid timeseries plot?
-                        pass
                     pass
                 pass
             pass
