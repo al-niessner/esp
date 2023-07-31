@@ -319,7 +319,7 @@ def plot_walkerEvolution(allkeys, alltraces, truth_params, prior_ranges,
         #            c='k',ls='--',zorder=4)
         ax.set_xlim(0,chainLength+1)
         ax.set_ylim(priorlo[iparam],priorhi[iparam])
-        ax.set_ylabel('MCMC step #', fontsize=14)
+        ax.set_xlabel('MCMC step #', fontsize=14)
         ax.set_ylabel(allkeys[iparam], fontsize=14)
     figure.tight_layout()
     plt.savefig(saveDir + 'walkerevol_'+filt+'_'+trgt+' '+p+'.png')
@@ -331,3 +331,89 @@ def plot_walkerEvolution(allkeys, alltraces, truth_params, prior_ranges,
     plot_as_state_vector = buf.getvalue()
     plt.close(figure)
     return plot_as_state_vector
+
+# --------------------------------------------------------------------
+def plot_fitsVStruths(truth_values, fit_values, fit_errors,
+                      saveDir):
+    ''' compare the retrieved values against the original inputs '''
+
+    plot_statevectors = []
+    for param in ['T', '[X/H]', '[C/O]']:
+
+        figure = plt.figure(figsize=(5,5))
+        ax = figure.add_subplot(1,1,1)
+
+        ax.scatter(truth_values[param],
+                   fit_values[param],
+                   facecolor='k',edgecolor='k', s=40, zorder=4)
+        ax.errorbar(truth_values[param],
+                    fit_values[param],
+                    yerr=fit_errors[param],
+                    fmt='.', color='k', zorder=2)
+
+        ax.set_xlabel(param+' truth', fontsize=14)
+        ax.set_ylabel(param+' fit', fontsize=14)
+
+        overallmin = min(ax.get_xlim()[0],ax.get_ylim()[0])
+        overallmax = max(ax.get_xlim()[1],ax.get_ylim()[1])
+
+        # plot equality as a dashed diagonal line
+        ax.plot([overallmin,overallmax],[overallmin,overallmax],
+                'k--', lw=1, zorder=1)
+
+        ax.set_xlim(overallmin,overallmax)
+        ax.set_ylim(overallmin,overallmax)
+        figure.tight_layout()
+
+        # ('display' doesn't work for pdf files)
+        plt.savefig(saveDir + 'fitVStruth_'+param.replace('/',':')+'.png')
+        # REDUNDANT SAVE - above saves to disk; below saves as state vector
+        buf = io.BytesIO()
+        figure.savefig(buf, format='png')
+        # out['data'][p]['plot_walkerevol'] = buf.getvalue()
+        plot_statevectors.append(buf.getvalue())
+        plt.close(figure)
+    return plot_statevectors
+# --------------------------------------------------------------------
+def plot_massVSmetals(truth_values, fit_values, fit_errors,
+                      saveDir):
+    ''' how well do we retrieve the input mass-metallicity relation? '''
+
+    figure = plt.figure(figsize=(5,5))
+    ax = figure.add_subplot(1,1,1)
+
+    masses = truth_values['Mp']
+    metals_true = truth_values['[X/H]']
+    metals_fit = fit_values['[X/H]']
+    metals_fiterr = fit_errors['[X/H]']
+
+    ax.scatter(masses, metals_true,
+               facecolor='w',edgecolor='grey', s=40, zorder=3)
+    ax.scatter(masses, metals_fit,
+               facecolor='k',edgecolor='k', s=40, zorder=4)
+    ax.errorbar(masses, metals_fit, yerr=metals_fiterr,
+                fmt='.', color='k', zorder=2)
+    ax.semilogx()
+
+    ax.set_xlabel('$M_p (M_{\\rm Jup})$', fontsize=14)
+    ax.set_ylabel('[X/H]$_p$', fontsize=14)
+
+    # plot the underlying distribution
+    # ax.plot([overallmin,overallmax],[overallmin,overallmax],
+    #        'k--', lw=1, zorder=1)
+
+    # *** TROUBLE - need to subtract off the stellar metallicity? ***
+
+    # ax.set_xlim()
+    # ax.set_ylim()
+    figure.tight_layout()
+
+    # ('display' doesn't work for pdf files)
+    plt.savefig(saveDir + 'massVSmetals.png')
+    # REDUNDANT SAVE - above saves to disk; below saves as state vector
+    buf = io.BytesIO()
+    figure.savefig(buf, format='png')
+    plot_massMetals = buf.getvalue()
+    plt.close(figure)
+
+    return plot_massMetals

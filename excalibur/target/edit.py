@@ -2805,7 +2805,6 @@ def proceed(name, ext, verbose=False):
     filterkeys = [r for r in ['include', 'exclude'] if rules['FILTER'][r]]
     for thisrule in filterkeys:
         trout = any(itm in ext for itm in rules['FILTER'][thisrule])
-        if ext=='any filter': trout=True
         if 'exclude' in thisrule: trout = not trout
         if ext=='any filter': trout=True
         out = out and trout

@@ -19,7 +19,9 @@ if fep: dawgie.util.set_ports(int(fep))
 dawgie.security.initialize(os.path.expandvars(os.path.expanduser
                                               (dawgie.context.gpg_home)))
 dawgie.db.reopen()
-excalibur.classifier.bot.Actor('classifier', 4, rid, tn).do()
-excalibur.classifier.bot.Agent('classifier', 4, rid).do()
+if tn == '':
+    excalibur.classifier.bot.Agent('classifier', 4, rid).do()
+else:
+    excalibur.classifier.bot.Actor('classifier', 4, rid, tn).do()
 dawgie.db.close()
 dawgie.security.finalize()

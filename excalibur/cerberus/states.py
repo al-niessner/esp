@@ -203,3 +203,37 @@ class resSV(dawgie.StateVector):
         return
 
 # -------- -----------------------------------------------------------
+class analysisSV(dawgie.StateVector):
+    '''PopulationSV ds'''
+    def __init__(self, name):
+        self._version_ = dawgie.VERSION(1,0,0)
+        self.__name = name
+        self['STATUS'] = excalibur.ValuesList()
+        self['data'] = excalibur.ValuesDict()
+        self['STATUS'].append(False)
+        return
+
+    def name(self):
+        '''name ds'''
+        return self.__name
+
+    def view(self, visitor:dawgie.Visitor)->None:
+        '''view ds'''
+        if self['STATUS'][-1]:
+            for savedresult in self['data'].keys():
+                if 'plot' in savedresult:
+                    if savedresult=='plot_fitT':
+                        plotlabel = 'T_eff : retrieved vs input values'
+                    elif savedresult=='plot_fitMetal':
+                        plotlabel = 'Metallicity : retrieved vs input values'
+                    elif savedresult=='plot_fitCO':
+                        plotlabel = 'C/O : retrieved vs input values'
+                    elif savedresult=='plot_massVmetals':
+                        plotlabel = 'Planet Mass vs Metallicity'
+                    else:
+                        plotlabel = 'unknown plottype plot'
+                    textlabel = '--------- ' + plotlabel + ' ---------'
+                    visitor.add_image('...', textlabel, self['data'][savedresult])
+        return
+
+# -------------------------------------------------------------------

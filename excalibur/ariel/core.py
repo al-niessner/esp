@@ -95,9 +95,16 @@ def simulate_spectrum(target, system_dict, out):
                          radius=system_params['R*'])
 
     completed_at_least_one_planet = False
-
     atmosModels = []
     for planetLetter in system_params['planets']:
+
+        # set the random seed as a function of target name
+        #  (otherwise all spectra have identical noise realizations!)
+        #  (also they would have the same C/O and metallicity offset!)
+        intFromTarget = 1
+        for char in target+' '+planetLetter:
+            intFromTarget = (123 * intFromTarget + ord(char)) % 1000000
+        np.random.seed(intFromTarget)
 
         # load in the wavelength bins and the noise model
         # there is a separate SNR file for each planet
@@ -132,6 +139,7 @@ def simulate_spectrum(target, system_dict, out):
             else:
                 metallicity_planet = massMetalRelation(metallicity_star, M_p)
             # it seems that Taurex wants a linear value for metallicity, not the usual dex
+            model_params['metallicity*'] = 10.**(metallicity_star)
             model_params['metallicity'] = 10.**(metallicity_star + metallicity_planet)
 
             # planet C/O ratio is assumed to be solar
@@ -217,14 +225,6 @@ def simulate_spectrum(target, system_dict, out):
             uncertainties[np.where(uncertainties < noise_floor_ppm/1.e6)] = noise_floor_ppm/1.e6
 
             # ADD OBSERVATIONAL NOISE TO THE TRUE SPECTRUM
-
-            # first set the random seed as a function of target name
-            #  (otherwise all spectra have identical noise realizations!)
-            intFromTarget = 1
-            for char in target+' '+planetLetter:
-                intFromTarget = (123 * intFromTarget + ord(char)) % 1000000
-            np.random.seed(intFromTarget)
-
             fluxDepth_observed = fluxDepth_rebin + np.random.normal(scale=uncertainties)
 
             # SAVE THE RESULTS; MATCH TO WHATEVER FORMAT CERBERUS WANTS
@@ -278,6 +278,7 @@ def simulate_spectrum(target, system_dict, out):
                 'Rp':system_params[planetLetter]['rp'],
                 'Teq':system_params[planetLetter]['teq'],
                 'Mp':system_params[planetLetter]['mass']}
+
             out['data'][planetLetter]['model_params'] = model_params
 
             # convert to percentage depth (just for plotting, not for the saved results)

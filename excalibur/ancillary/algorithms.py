@@ -167,7 +167,7 @@ class population(dawgie.Analyzer):
         self.__out['STATUS'].append(True)
         aspects.ds().update()
 
-        # save system-finalize results as a .csv file (in /proj/data/spreadsheets/)
+        # save ancillary-estimate results as a .csv file (in /proj/data/spreadsheets/)
         savesv(aspects, targetlists)
 
         return

@@ -3,7 +3,7 @@
 import logging; log = logging.getLogger(__name__)
 
 import numpy as np
-np.random.seed(123)
+# np.random.seed(123)
 
 # ______________________________________________________
 

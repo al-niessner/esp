@@ -18,6 +18,11 @@ if fep: dawgie.util.set_ports(int(fep))
 dawgie.security.initialize(os.path.expandvars(os.path.expanduser
                                               (dawgie.context.gpg_home)))
 dawgie.db.reopen()
-excalibur.cerberus.bot.Actor('cerberus', 4, rid, tn).do()
+
+if tn == '':
+    excalibur.cerberus.bot.Agent('cerberus', 4, rid).do()
+else:
+    excalibur.cerberus.bot.Actor('cerberus', 4, rid, tn).do()
+
 dawgie.db.close()
 dawgie.security.finalize()

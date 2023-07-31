@@ -5,10 +5,6 @@ import dawgie.context
 
 import logging; log = logging.getLogger(__name__)
 
-import excalibur.cerberus as crb
-import excalibur.cerberus.core as crbcore
-import excalibur.cerberus.states as crbstates
-
 import excalibur.system as sys
 import excalibur.system.algorithms as sysalg
 import excalibur.taurex as tau
@@ -16,9 +12,12 @@ import excalibur.taurex.algorithms as taualg
 import excalibur.transit as trn
 import excalibur.transit.algorithms as trnalg
 import excalibur.target.edit as trgedit
-# import excalibur.ariel as ariel
 from excalibur import ariel
 import excalibur.ariel.algorithms as arielalg
+import excalibur.cerberus as crb
+import excalibur.cerberus.core as crbcore
+import excalibur.cerberus.states as crbstates
+
 # ------------- ------------------------------------------------------
 # -- ALGOS RUN OPTIONS -- --------------------------------------------
 # FILTERS
@@ -149,6 +148,7 @@ class atmos(dawgie.Algorithm):
         for ext in fltrs:
             update = False
             vxsl, sxsl = crbcore.checksv(self.__xsl.sv_as_dict()[ext])
+            sxsl = 'missing XSL'
 
             if ext in self.__tau.sv_as_dict():
                 sv = self.__tau.sv_as_dict()[ext]
@@ -167,17 +167,15 @@ class atmos(dawgie.Algorithm):
             prcd = trgedit.proceed(ds._tn(), ext, verbose=False)
             if vfin and vxsl and vspc and prcd:
                 # *** drop a bunch of targets during testing ***
-                if ds._tn().startswith('K') or ds._tn().startswith('T') \
-                   or ds._tn().startswith('W'):
-                    log.warning('--< CERBERUS ATMOS SKIP: %s >--', ext)
-                    update = False
-                else:
-                    log.warning('--< CERBERUS ATMOS: %s >--', ext)
-                    update = self._atmos(self.__fin.sv_as_dict()['parameters'],
-                                         self.__xsl.sv_as_dict()[ext],
-                                         sv,
-                                         fltrs.index(ext), ext)
-                pass
+                # if ds._tn().startswith('K') or ds._tn().startswith('T') \
+                #   or ds._tn().startswith('W'):
+                #    log.warning('--< CERBERUS ATMOS SKIP (K,T,W temp): %s >--', ext)
+                #    update = False
+                # else:
+                log.warning('--< CERBERUS ATMOS: %s >--', ext)
+                update = self._atmos(self.__fin.sv_as_dict()['parameters'],
+                                     self.__xsl.sv_as_dict()[ext],
+                                     sv, fltrs.index(ext), ext)
             else:
                 errstr = [m for m in [sfin, sxsl, sspc] if m is not None]
                 if not prcd: errstr = ['Kicked by edit.processme()']
@@ -196,6 +194,7 @@ class atmos(dawgie.Algorithm):
         if ext=='Ariel-sim':
             MCMC_chain_length = 1000
             MCMC_chain_length = 5000
+            MCMC_chain_length = 2000
             # MCMC_chain_length = 10
         else:
             MCMC_chain_length = 15000
@@ -350,3 +349,65 @@ class results(dawgie.Algorithm):
         return
     pass
 # ---------------- ---------------------------------------------------
+
+class analysis(dawgie.Analyzer):
+    '''analysis ds'''
+    def __init__(self):
+        '''__init__ ds'''
+        self._version_ = crbcore.resultsversion()  # same version number as results
+        self.__fin = sysalg.finalize()
+        self.__xsl = xslib()
+        self.__atm = atmos()
+        # self.__out = crbstates.analysisSV('retrievalCheck')
+        self.__out = [crbstates.analysisSV(filt) for filt in fltrs]
+        return
+
+    def previous(self):
+        '''Input State Vectors: cerberus.atmos'''
+        return [dawgie.ALG_REF(sys.task, self.__fin),
+                dawgie.ALG_REF(crb.task, self.__xsl),
+                dawgie.ALG_REF(crb.task, self.__atm)]
+
+    def feedback(self):
+        '''feedback ds'''
+        return []
+
+    def name(self):
+        '''Database name for subtask extension'''
+        return 'analysis'
+
+    def traits(self)->[dawgie.SV_REF, dawgie.V_REF]:
+        '''traits ds'''
+        return [dawgie.SV_REF(crb.task, atmos(),
+                              atmos().state_vectors()[0])]
+
+    def state_vectors(self):
+        '''Output State Vectors: cerberus.results'''
+        return self.__out
+
+    def run(self, aspects:dawgie.Aspect):
+        '''Top level algorithm call'''
+        filts = ['Ariel-sim']
+        svupdate = []
+        for filt in filts:
+            update = self._analysis(aspects, fltrs.index(filt))
+            if update: svupdate.append(self.__out[fltrs.index(filt)])
+        self.__out = svupdate
+        if self.__out.__len__() > 0: aspects.ds().update()
+        else: raise dawgie.NoValidOutputDataError(
+                f'No output created for CERBERUS.{self.name()}')
+        return
+
+    def _analysis(self, aspects, index):
+        '''Core code call'''
+        resout = crbcore.analysis(aspects,
+                                  self.__out[index], verbose=False)
+        return resout
+
+    @staticmethod
+    def _failure(errstr):
+        '''Failure log'''
+        log.warning('--< CERBERUS ANALYSIS: %s >--', errstr)
+        return
+
+# -------------------------------------------------------------------

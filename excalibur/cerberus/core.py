@@ -5,6 +5,12 @@ import excalibur
 # pylint: disable=import-self
 import excalibur.cerberus.core
 import excalibur.system.core as syscore
+from excalibur.target.targetlists import get_target_lists
+# from excalibur.cerberus.core import savesv
+from excalibur.util.cerberus import crbce,getmmw
+from excalibur.cerberus.plotting import rebinData, plot_bestfit, \
+    plot_corner, plot_vsPrior, plot_walkerEvolution, \
+    plot_fitsVStruths, plot_massVSmetals
 
 import logging
 log = logging.getLogger(__name__)
@@ -16,16 +22,13 @@ import pymc3 as pm
 import numpy as np
 import matplotlib.image as img
 import matplotlib.pyplot as plt
+from collections import defaultdict
 
 import theano.tensor as tt
 import theano.compile.ops as tco
 
 import scipy.constants as cst
 from scipy.interpolate import interp1d as itp
-
-from excalibur.util.cerberus import crbce,getmmw
-from excalibur.cerberus.plotting import rebinData, plot_bestfit, \
-    plot_corner, plot_vsPrior, plot_walkerEvolution
 
 # -- GLOBAL CONTEXT FOR PYMC3 DETERMINISTICS ---------------------------------------------
 from collections import namedtuple
@@ -2225,3 +2228,104 @@ def results(trgt, filt, fin, xsl, atm, out, verbose=False):
     if completed_at_least_one_planet: out['STATUS'].append(True)
     return out['STATUS'][-1]
 # --------------------------------------------------------------------
+def analysis(aspects, out, verbose=False):
+    '''
+    Plot out the population analysis (retrieval vs truth, mass-metallicity, etc)
+    aspects: cross-target information
+    out [INPUT/OUTPUT]
+    verbose [OPTIONAL]: verbosity
+    '''
+    if verbose: print('cerberus/analysis...')
+
+    svname = 'cerberus.atmos'
+    filts = ['Ariel-sim']
+    targetlists = get_target_lists()
+
+    for filt in filts:
+        param_names = []
+        truth_values = defaultdict(list)
+        fit_values = defaultdict(list)
+        fit_errors = defaultdict(list)
+
+        # for trgt in filter(lambda tgt: 'STATUS' in aspects[tgt][svname+'.'+filt], targetlists['active']):
+        # JenkinsPEP8 needs this param outside loop
+        # svname_with_filter = svname+'.'+filt
+        # for trgt in filter(lambda tgt: 'STATUS' in aspects[tgt][svname_with_filter], targetlists['active']):
+        # nope! still not jenkins compatible. arg!
+        for trgt in targetlists['active']:
+            # print('target with valid data format for this filter:',trgt)
+
+            system_data = aspects[trgt][svname+'.'+filt]
+
+            # verify SV succeeded for target
+            if system_data['STATUS'][-1]:
+                for planetLetter in system_data['data'].keys():
+                    if 'TEC' not in system_data['data'][planetLetter]['MODELPARNAMES'].keys():
+                        print(' BIG PROBLEM theres no TEC model!')
+                    elif 'TRUTH_MODELPARAMS' not in system_data['data'][planetLetter].keys():
+                        print(' TEMP PROBLEM theres no truth info')
+                    else:
+
+                        alltraces = []
+                        allkeys = []
+                        for key in system_data['data'][planetLetter]['TEC']['MCTRACE']:
+                            alltraces.append(system_data['data'][planetLetter]['TEC']['MCTRACE'][key])
+
+                            if key=='TEC[0]': allkeys.append('[X/H]')
+                            elif key=='TEC[1]': allkeys.append('[C/O]')
+                            elif key=='TEC[2]': allkeys.append('[N/O]')
+                            else: allkeys.append(key)
+
+                        for key,trace in zip(allkeys,alltraces):
+                            if key not in param_names: param_names.append(key)
+                            fit_values[key].append(np.median(trace))
+                            lo = np.percentile(np.array(trace), 16)
+                            hi = np.percentile(np.array(trace), 84)
+                            fit_errors[key].append((hi-lo)/2)
+
+                        if isinstance(system_data['data'][planetLetter]['TRUTH_MODELPARAMS'], dict):
+                            truth_params = system_data['data'][planetLetter]['TRUTH_MODELPARAMS'].keys()
+                            # print('truth keys:',system_data['data'][planetLetter]['TRUTH_MODELPARAMS'].keys())
+                        else:
+                            truth_params = []
+                            print('CORRUPTED TRUTH (bad dict trouble)')
+
+                        for trueparam,fitparam in zip(['Teq','metallicity','C/O','Mp'],
+                                                      ['T','[X/H]','[C/O]','Mp']):
+                            if trueparam in truth_params:
+                                true_value = system_data['data'][planetLetter]['TRUTH_MODELPARAMS'][trueparam]
+                                # careful here: metallicity and C/O have to be converted to log-solar
+                                if trueparam=='metallicity':
+                                    true_value = np.log10(true_value)
+                                elif trueparam=='C/O':
+                                    true_value = np.log10(true_value/0.55)  # solar is C/O=0.55 ?
+                                truth_values[fitparam].append(true_value)
+                            else:
+                                truth_values[fitparam].append(666)
+                        # print('fits',dict(fit_values))
+                        # print('truths',dict(truth_values))
+                        # print()
+
+    # plot analysis of the results.  save as png and as state vector for states/view
+    saveDir = os.path.join(excalibur.context['data_dir'], 'bryden/')
+    # jenkins doesn't like to have a triple-packed return here because it's fussy
+    plotarray = plot_fitsVStruths(
+        truth_values, fit_values, fit_errors, saveDir)
+    fitTplot, fitMetalplot, fitCOplot = plotarray[0],plotarray[1],plotarray[2]
+    massMetalsplot = plot_massVSmetals(
+        truth_values, fit_values, fit_errors, saveDir)
+
+    # save the analysis as .csv file? (in /proj/data/spreadsheets/)
+    # savesv(aspects, targetlists)
+
+    # Add to SV
+    out['data']['params'] = param_names
+    out['data']['truths'] = dict(truth_values)
+    out['data']['values'] = dict(fit_values)
+    out['data']['errors'] = dict(fit_errors)
+    out['data']['plot_fitT'] = fitTplot
+    out['data']['plot_fitMetal'] = fitMetalplot
+    out['data']['plot_fitCO'] = fitCOplot
+    out['data']['plot_massVmetals'] = massMetalsplot
+    out['STATUS'].append(True)
+    return out['STATUS'][-1]
