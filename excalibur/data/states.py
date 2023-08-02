@@ -8,6 +8,8 @@ import excalibur
 
 import numpy as np
 import matplotlib.pyplot as plt
+import scipy
+import math
 # ------------- ------------------------------------------------------
 # -- CALIBRATE -- ----------------------------------------------------
 class CalibrateSV(dawgie.StateVector):
@@ -113,8 +115,15 @@ class CalibrateSV(dawgie.StateVector):
                 plt.close(myfig)
 
                 myfig = plt.figure()
-                plt.hist(allerr)
+                num_bins = int(math.sqrt(len(allerr)) / 10)
+                plt.hist(allerr, bins=num_bins)
                 plt.xlabel('Error Distribution [Noise Model Units]')
+                mean = np.nanmean(allerr)
+                stdev = np.nanstd(allerr)
+                skew = scipy.stats.skew(allerr)
+                stats_summary = "Mean: " + str(round(mean, 3)) + "\nStandard Deviation: " + str(round(stdev, 3)) + "\nSkewness: " + str(round(skew, 3))
+                ax = plt.gca()
+                plt.text(0.95,0.95, stats_summary, horizontalalignment='right', verticalalignment='top', transform=ax.transAxes)
                 buf = io.BytesIO()
                 myfig.savefig(buf, format='png')
                 visitor.add_image('...', ' ', buf.getvalue())

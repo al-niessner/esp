@@ -299,8 +299,7 @@ class Flag_Summary_SV(dawgie.StateVector):
 
                     if flag_algs_info[metric]['xscale'] == 'log':
                         b = 25
-                        if hist:  # just to work around pylint "Unused variable hist" warning
-                            hist, bins = np.histogram(points_to_plot, bins=b)
+                        hist, bins = np.histogram(points_to_plot, bins=b)
                         logbins = np.logspace(0,np.log10(bins[-1]),len(bins))
                         if hist:  # just to work around pylint "Unused variable hist" warning
                             plt.hist(points_to_plot, bins=logbins, edgecolor=edgecolor, color=color, alpha=0.8, zorder=3)

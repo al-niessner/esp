@@ -108,8 +108,8 @@ class WhiteLightSV(dawgie.StateVector):
                     # for each event
                     for i in range(len(self['data'][p])):
                         # plots are saved into sv
-                        visitor.add_image('...', ' ', self['data'][p][i]['plot_btempcurve'])
                         visitor.add_image('...', ' ', self['data'][p][i]['plot_bestfit'])
+                        visitor.add_image('...', ' ', self['data'][p][i]['plot_residual_fft'])
                         visitor.add_image('...', ' ', self['data'][p][i]['plot_posterior'])
                         visitor.add_image('...', ' ', self['data'][p][i]['plot_pixelmap'])
                         # another centroid timeseries plot?

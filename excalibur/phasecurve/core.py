@@ -7,6 +7,9 @@ import matplotlib.pyplot as plt
 
 import excalibur.system.core as syscore
 import excalibur.transit.core as trncore
+from scipy.stats import skew, kurtosis
+# from scipy.fft import fft, fftfreq
+from numpy.fft import fft, fftfreq
 
 from collections import namedtuple
 CONTEXT = namedtuple('CONTEXT', ['alt', 'ald', 'allz', 'orbp', 'commonoim', 'ecc',
@@ -229,11 +232,10 @@ def phasecurve_spitzer(nrm, fin, out, selftype, fltr):
                 'fpfs':[0,fpfs*3],
                 # 'omega':[priors[p]['omega']-25,priors[p]['omega']+25],
                 # 'ecc': [0,priors[p]['ecc']+0.1],
-
                 # 'c0':[-0.025,0.025], gets set in code
                 'c1':[0, 0.5*edepth],
                 'c2':[-0.15*edepth, 0.15*edepth]
-                }
+            }
 
             # 10 minute time scale
             nneighbors = int(10./24./60./np.mean(np.diff(subt)))
@@ -274,7 +276,69 @@ def phasecurve_spitzer(nrm, fin, out, selftype, fltr):
             out['data'][p][ec]['plot_bestfit'] = save_plot(myfit.plot_bestfit)
             out['data'][p][ec]['plot_posterior'] = save_plot(myfit.plot_posterior)
             out['data'][p][ec]['plot_pixelmap'] = save_plot(myfit.plot_pixelmap)
-            # out['data'][p][ec]['plot_btempcurve'] = save_plot(myfit.plot_btempcurve)
+
+            # estimates for photon noise
+            gain = 3.7
+            flux_conv = 0.1257
+            exptime = np.diff(subt).mean()*24*60*60
+            photons = (aper/flux_conv)*gain*exptime
+
+            # noise estimate in transit
+            photon_noise_timeseries = 1/np.sqrt(photons.mean())
+
+            # photon noise factor based on timeseries
+            res_std = np.round(np.std(myfit.residuals/np.median(aper)),7)
+            nf_timeseries = res_std / photon_noise_timeseries
+            raw_residual = aper/np.median(aper)-myfit.transit
+            nf_timeseries_raw = np.std(raw_residual) / photon_noise_timeseries
+
+            raw_residual = aper/np.median(aper) - myfit.transit
+            rel_residuals = myfit.residuals / np.median(aper)
+
+            # create plot for residual statistics
+            fig, ax = plt.subplots(3, figsize=(10,10))
+            binspace = np.linspace(-0.02,0.02,201)
+            raw_label = f"Mean: {np.mean(raw_residual,):.4f} \n"\
+                        f"Stdev: {np.std(raw_residual):.4f} \n"\
+                        f"Skew: {skew(raw_residual):.4f} \n"\
+                        f"Kurtosis: {kurtosis(raw_residual):.4f}\n"\
+                        f"Photon Noise: {nf_timeseries_raw:.2f}"
+            ax[0].hist(raw_residual, bins=binspace,label=raw_label,color=plt.cm.jet(0.25),alpha=0.5)
+            detrend_label = f"Mean: {np.mean(rel_residuals):.4f} \n"\
+                        f"Stdev: {np.std(rel_residuals):.4f} \n"\
+                        f"Skew: {skew(rel_residuals):.4f} \n"\
+                        f"Kurtosis: {kurtosis(rel_residuals):.4f}\n"\
+                        f"Photon Noise: {nf_timeseries:.2f}"
+            ax[0].hist(rel_residuals, bins=binspace, label=detrend_label, color=plt.cm.jet(0.75),alpha=0.5)
+            ax[0].set_xlabel('Relative Flux Residuals')
+            ax[0].legend(loc='best')
+            ax[1].scatter(subt, raw_residual, marker='.', label=f"Raw ({np.std(raw_residual,0)*100:.2f} %)",color=plt.cm.jet(0.25),alpha=0.25)
+            ax[1].scatter(subt, rel_residuals, marker='.', label=f"Detrended ({np.std(rel_residuals,0)*100:.2f} %)",color=plt.cm.jet(0.75),alpha=0.25)
+            ax[1].legend(loc='best')
+            ax[1].set_xlabel('Time [BJD]')
+            ax[0].set_title(f'Residual Statistics: {p} {selftype} {fltr}')
+            ax[1].set_ylabel("Relative Flux")
+
+            # compute fourier transform of raw_residual
+            N = len(raw_residual)
+            fft_raw = fft(raw_residual)
+            fft_res = fft(rel_residuals)
+            xf = fftfreq(len(raw_residual), d=np.diff(subt).mean()*24*60*60)[:N//2]
+            # fftraw = 2.0/N * np.abs(fft_raw[0:N//2])
+            ax[2].loglog(xf, 2.0/N * np.abs(fft_raw[0:N//2]),alpha=0.5,label='Raw',color=plt.cm.jet(0.25))
+            ax[2].loglog(xf, 2.0/N * np.abs(fft_res[0:N//2]),alpha=0.5,label='Detrended',color=plt.cm.jet(0.75))
+
+            ax[2].set_ylabel('Power')
+            ax[2].set_xlabel('Frequency [Hz]')
+            ax[2].legend()
+            ax[2].grid(True,ls='--')
+            plt.tight_layout()
+
+            # save plot to state vector
+            buf = io.BytesIO()
+            fig.savefig(buf, format='png')
+            plt.close(fig)
+            out['data'][p][ec]['plot_residual_fft'] = buf.getvalue()
 
             ec += 1
             out['STATUS'].append(True)

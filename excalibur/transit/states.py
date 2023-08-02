@@ -129,8 +129,10 @@ class WhiteLightSV(dawgie.StateVector):
                     for i in range(len(self['data'][p])):
                         # plots are saved into sv
                         visitor.add_image('...', ' ', self['data'][p][i]['plot_bestfit'])
+                        visitor.add_image('...', ' ', self['data'][p][i]['plot_residual_fft'])
                         visitor.add_image('...', ' ', self['data'][p][i]['plot_posterior'])
                         visitor.add_image('...', ' ', self['data'][p][i]['plot_pixelmap'])
+
             elif 'JWST' in self.__name:
                 # for each planet
                 for p in self['data'].keys():

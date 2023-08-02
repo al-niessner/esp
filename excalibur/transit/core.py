@@ -27,7 +27,9 @@ pymc3log.setLevel(logging.ERROR)
 from scipy.optimize import least_squares, brentq
 import scipy.constants as cst
 from scipy.signal import savgol_filter
-from scipy.stats import gaussian_kde
+from scipy.stats import gaussian_kde, skew, kurtosis
+# from scipy.fft import fft, fftfreq
+from numpy.fft import fft, fftfreq
 
 import theano.tensor as tt
 import theano.compile.ops as tco
@@ -2791,8 +2793,9 @@ def norm_spitzer(cal, tme, fin, out, selftype, debug=False):
         phase = (out['data'][p]['TIME'] - fin['priors'][p]['t0'])/fin['priors'][p]['period']
         badmask = np.zeros(out['data'][p]['TIME'].shape).astype(bool)
         for i in np.unique(tme['data'][p][selftype]):
+
             # mask out orbit
-            omask = np.round(phase) == i
+            omask = np.floor(phase) == i  # do I need to round for positive?
             dt = np.nanmean(np.diff(out['data'][p]['TIME'][omask]))*24*60
             if np.isnan(dt):
                 continue
@@ -2800,7 +2803,7 @@ def norm_spitzer(cal, tme, fin, out, selftype, debug=False):
                 continue
 
             ndt = int(7/dt)*2+1
-            ndt = max(25, ndt)
+            ndt = max(51, ndt)
 
             # aperture selection
             stds = []
@@ -3404,8 +3407,11 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                 wya = nrm['data'][p]['WY'][pmask]
                 npp = nrm['data'][p]['NOISEPIXEL'][pmask]
 
-                # remove zeros
-                zmask = aper != 0
+                # remove zeros and nans
+                zmask = (aper != 0) & (aper_err != 0) & (~np.isnan(aper)) & (~np.isnan(aper_err))
+                if zmask.sum() < 10:
+                    continue
+
                 aper = aper[zmask]
                 aper_err = aper_err[zmask]
                 subt = subt[zmask]
@@ -3428,14 +3434,14 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                         'rprs':[0,1.5*tpars['rprs']],
                         'tmid':[tmid-0.01,tmid+0.01],
                         # 'ars':[smaors_lo,smaors_up]
-                        'inc':[tpars['inc']-3, max(90, tpars['inc']+3)]
+                        'inc':[tpars['inc']-3, min(90, tpars['inc']+3)]
                     }
                     myfit = elca.lc_fitter(subt, aper, aper_err, syspars, tpars, mybounds, neighbors=nneighbors, max_ncalls=2e5, verbose=False)
                 elif selftype == 'eclipse':
                     mybounds = {
                         'rprs':[0,0.5*tpars['rprs']],
                         'tmid':[tme-0.01,tme+0.01],
-                        'inc':[tpars['inc']-3, max(90, tpars['inc']+3)]
+                        'inc':[tpars['inc']-3, min(90, tpars['inc']+3)]
                         # 'ars':[smaors_lo,smaors_up],
                     }
 
@@ -3483,6 +3489,71 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                 out['data'][p][ec]['plot_posterior'] = save_plot(myfit.plot_posterior)
                 out['data'][p][ec]['plot_pixelmap'] = save_plot(myfit.plot_pixelmap)
 
+                # estimates for photon noise
+                gain = 3.7
+                flux_conv = 0.1257
+                exptime = np.diff(subt).mean()*24*60*60
+                photons = (aper/flux_conv)*gain*exptime
+
+                # noise estimate in transit
+                tmask = myfit.transit < 1
+                photon_noise_timeseries = 1/np.sqrt(photons.mean())
+
+                # photon noise factor based on timeseries
+                res_std = np.round(np.std(myfit.residuals/np.median(aper)),7)
+                nf_timeseries = res_std / photon_noise_timeseries
+                raw_residual = aper/np.median(aper)-myfit.transit
+                nf_timeseries_raw = np.std(raw_residual) / photon_noise_timeseries
+
+                raw_residual = aper/np.median(aper) - myfit.transit
+                rel_residuals = myfit.residuals / np.median(aper)
+
+                # create plot for residual statistics
+                fig, ax = plt.subplots(3, figsize=(10,10))
+                binspace = np.linspace(-0.02,0.02,201)
+                raw_label = f"Mean: {np.mean(raw_residual,):.4f} \n"\
+                            f"Stdev: {np.std(raw_residual):.4f} \n"\
+                            f"Skew: {skew(raw_residual):.4f} \n"\
+                            f"Kurtosis: {kurtosis(raw_residual):.4f}\n"\
+                            f"Photon Noise: {nf_timeseries_raw:.2f}"
+                ax[0].hist(raw_residual, bins=binspace,label=raw_label,color=plt.cm.jet(0.25),alpha=0.5)
+                detrend_label = f"Mean: {np.mean(rel_residuals):.4f} \n"\
+                            f"Stdev: {np.std(rel_residuals):.4f} \n"\
+                            f"Skew: {skew(rel_residuals):.4f} \n"\
+                            f"Kurtosis: {kurtosis(rel_residuals):.4f}\n"\
+                            f"Photon Noise: {nf_timeseries:.2f}"
+                ax[0].hist(rel_residuals, bins=binspace, label=detrend_label, color=plt.cm.jet(0.75),alpha=0.5)
+                ax[0].set_xlabel('Relative Flux Residuals')
+                ax[0].legend(loc='best')
+                ax[1].scatter(subt, raw_residual, marker='.', label=f"Raw ({np.std(raw_residual,0)*100:.2f} %)",color=plt.cm.jet(0.25),alpha=0.25)
+                ax[1].scatter(subt, rel_residuals, marker='.', label=f"Detrended ({np.std(rel_residuals,0)*100:.2f} %)",color=plt.cm.jet(0.75),alpha=0.25)
+                ax[1].legend(loc='best')
+                ax[1].set_xlabel('Time [BJD]')
+                ax[0].set_title(f'Residual Statistics: {p} {selftype} {fltr}')
+                ax[1].set_ylabel("Relative Flux")
+
+                # compute fourier transform of raw_residual
+                N = len(raw_residual)
+                fft_raw = fft(raw_residual)
+                fft_res = fft(rel_residuals)
+                xf = fftfreq(len(raw_residual), d=np.diff(subt).mean()*24*60*60)[:N//2]
+                # fftraw = 2.0/N * np.abs(fft_raw[0:N//2])
+                # future: square + integrate under the curve and normalize such that it equals time series variance
+                ax[2].loglog(xf, 2.0/N * np.abs(fft_raw[0:N//2]),alpha=0.5,label='Raw',color=plt.cm.jet(0.25))
+                ax[2].loglog(xf, 2.0/N * np.abs(fft_res[0:N//2]),alpha=0.5,label='Detrended',color=plt.cm.jet(0.75))
+
+                ax[2].set_ylabel('Power')
+                ax[2].set_xlabel('Frequency [Hz]')
+                ax[2].legend()
+                ax[2].grid(True,ls='--')
+                plt.tight_layout()
+
+                # save plot to state vector
+                buf = io.BytesIO()
+                fig.savefig(buf, format='png')
+                plt.close(fig)
+                out['data'][p][ec]['plot_residual_fft'] = buf.getvalue()
+
                 # state vectors for classifer
                 z, _phase = datcore.time2z(subt, tpars['inc'], tpars['tmid'], tpars['ars'], tpars['per'], tpars['ecc'])
                 out['data'][p][ec]['postsep'] = z
@@ -3494,6 +3565,7 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                 wl = True
             except NameError as e:
                 print("Error:",e)
+                out['data'][p].append({})
                 out['data'][p][ec].append({'error':e})
 
             pass
