@@ -292,15 +292,16 @@ class flags(dawgie.Algorithm):
         self.__out = [clsstates.Flags_SV('transit-'+ext) for ext in fltrs]
         self.__out.extend([clsstates.Flags_SV('eclipse-'+ext) for ext in fltrs])
 
-        # state vectors needed for flag algorithms:
-        self.__finalize = sysalg.finalize()
-        self.__spectrum = trnalg.spectrum()
-        self.__eclspectrum = eclalg.spectrum()
-        self.__whitelight = trnalg.whitelight()
-        self.__eclwhitelight = eclalg.whitelight()
+        # storing input state vectors in dictionary to avoid pylint "too-many-instance-attributes" warning
+        self.__state_vecs = {
+            'finalize':sysalg.finalize(),
+            'spectrum':trnalg.spectrum(),
+            'eclspectrum':eclalg.spectrum(),
+            'whitelight':trnalg.whitelight(),
+            'eclwhitelight':eclalg.whitelight(),
+            'data_calib':datalg.calibration()
+        }
 
-        # commented out to work around pylint "too-many-instance-attributes" warning:
-        # self.__data_calib = datalg.calibration()
         return
 
     def name(self):
@@ -309,12 +310,12 @@ class flags(dawgie.Algorithm):
 
     def previous(self):
         '''previous ds'''
-        return [dawgie.ALG_REF(sys.task, self.__finalize),
-                dawgie.ALG_REF(trn.task, self.__spectrum),
-                dawgie.ALG_REF(ecl.task, self.__eclspectrum),
-                dawgie.ALG_REF(trn.task, self.__whitelight),
-                dawgie.ALG_REF(ecl.task, self.__eclwhitelight),
-                dawgie.ALG_REF(dat.task, datalg.calibration())  # to work around pylint "too-many-instance-attributes" warning
+        return [dawgie.ALG_REF(sys.task, self.__state_vecs['finalize']),
+                dawgie.ALG_REF(trn.task, self.__state_vecs['spectrum']),
+                dawgie.ALG_REF(ecl.task, self.__state_vecs['eclspectrum']),
+                dawgie.ALG_REF(trn.task, self.__state_vecs['whitelight']),
+                dawgie.ALG_REF(ecl.task, self.__state_vecs['eclwhitelight']),
+                dawgie.ALG_REF(dat.task, self.__state_vecs['data_calib'])
                 ]
 
     def state_vectors(self):
@@ -325,22 +326,20 @@ class flags(dawgie.Algorithm):
         '''run ds'''
 
         svupdate = []
-        vfin, sfin = trncore.checksv(self.__finalize.sv_as_dict()['parameters'])
-
-        data_calib = datalg.calibration()
+        vfin, sfin = trncore.checksv(self.__state_vecs['finalize'].sv_as_dict()['parameters'])
 
         for ext in fltrs:
 
             # transit.spectrum
-            vsp, ssp = trncore.checksv(self.__spectrum.sv_as_dict()[ext])
-            e_vsp, e_ssp = trncore.checksv(self.__eclspectrum.sv_as_dict()[ext])
+            vsp, ssp = trncore.checksv(self.__state_vecs['spectrum'].sv_as_dict()[ext])
+            e_vsp, e_ssp = trncore.checksv(self.__state_vecs['eclspectrum'].sv_as_dict()[ext])
 
             # transit.whitelight
-            vwl, swl = trncore.checksv(self.__whitelight.sv_as_dict()[ext])
-            e_vwl, e_swl = trncore.checksv(self.__eclwhitelight.sv_as_dict()[ext])
+            vwl, swl = trncore.checksv(self.__state_vecs['whitelight'].sv_as_dict()[ext])
+            e_vwl, e_swl = trncore.checksv(self.__state_vecs['eclwhitelight'].sv_as_dict()[ext])
 
             # data.calibration
-            vdc, sdc = trncore.checksv(data_calib.sv_as_dict()[ext])
+            vdc, sdc = trncore.checksv(self.__state_vecs['data_calib'].sv_as_dict()[ext])
 
             # ======================  COUNT_POINTS_WL  ====================== #####
 
@@ -350,7 +349,7 @@ class flags(dawgie.Algorithm):
             if vwl and vfin:
                 log.warning('--< IN-TRANSIT POINT COUNT: %s >--', ext)
 
-                status = clscore.cpwl(self.__whitelight.sv_as_dict()[ext], self.__finalize.sv_as_dict()['parameters']['priors'], self.__out[fltrs.index(ext)])
+                status = clscore.cpwl(self.__state_vecs['whitelight'].sv_as_dict()[ext], self.__state_vecs['finalize'].sv_as_dict()['parameters']['priors'], self.__out[fltrs.index(ext)])
 
                 if status:
                     svupdate.append(self.__out[fltrs.index(ext)])
@@ -364,7 +363,7 @@ class flags(dawgie.Algorithm):
             if e_vwl and vfin:
                 log.warning('--< IN-ECLIPSE POINT COUNT: %s >--', ext)
 
-                status = clscore.cpwl(self.__eclwhitelight.sv_as_dict()[ext], self.__finalize.sv_as_dict()['parameters']['priors'], self.__out[len(fltrs)+fltrs.index(ext)])
+                status = clscore.cpwl(self.__state_vecs['eclwhitelight'].sv_as_dict()[ext], self.__state_vecs['finalize'].sv_as_dict()['parameters']['priors'], self.__out[len(fltrs)+fltrs.index(ext)])
 
                 if status:
                     svupdate.append(self.__out[len(fltrs)+fltrs.index(ext)])
@@ -385,7 +384,7 @@ class flags(dawgie.Algorithm):
             if vwl and vfin:
                 log.warning('--< TRANSIT LIGHT CURVE SYMMETRY: %s >--', ext)
 
-                status = clscore.symwl(self.__whitelight.sv_as_dict()[ext], self.__finalize.sv_as_dict()['parameters']['priors'], self.__out[fltrs.index(ext)])
+                status = clscore.symwl(self.__state_vecs['whitelight'].sv_as_dict()[ext], self.__state_vecs['finalize'].sv_as_dict()['parameters']['priors'], self.__out[fltrs.index(ext)])
 
                 if status:
                     svupdate.append(self.__out[fltrs.index(ext)])
@@ -399,7 +398,7 @@ class flags(dawgie.Algorithm):
             if e_vwl and vfin:
                 log.warning('--< ECLIPSE LIGHT CURVE SYMMETRY: %s >--', ext)
 
-                status = clscore.symwl(self.__eclwhitelight.sv_as_dict()[ext], self.__finalize.sv_as_dict()['parameters']['priors'], self.__out[fltrs.index(ext)])
+                status = clscore.symwl(self.__state_vecs['eclwhitelight'].sv_as_dict()[ext], self.__state_vecs['finalize'].sv_as_dict()['parameters']['priors'], self.__out[fltrs.index(ext)])
 
                 if status:
                     svupdate.append(self.__out[len(fltrs)+fltrs.index(ext)])
@@ -419,7 +418,7 @@ class flags(dawgie.Algorithm):
             if vsp and vfin:  # Q need to check for vfin here?
                 log.warning('--< IN-TRANSIT RSDM: %s >--', ext)
 
-                status = clscore.rsdm(self.__spectrum.sv_as_dict()[ext],
+                status = clscore.rsdm(self.__state_vecs['spectrum'].sv_as_dict()[ext],
                                        self.__out[fltrs.index(ext)])
 
                 if status:
@@ -434,7 +433,7 @@ class flags(dawgie.Algorithm):
             if e_vsp and vfin:
                 log.warning('--< IN-ECLIPSE RSDM: %s >--', ext)
 
-                status = clscore.rsdm(self.__eclspectrum.sv_as_dict()[ext],
+                status = clscore.rsdm(self.__state_vecs['eclspectrum'].sv_as_dict()[ext],
                                        self.__out[len(fltrs)+fltrs.index(ext)])
 
                 if status:
@@ -455,7 +454,7 @@ class flags(dawgie.Algorithm):
             if vsp and vfin:
                 log.warning('--< IN-TRANSIT PERCENT REJECTED: %s >--', ext)
 
-                status = clscore.perc_rejected(self.__spectrum.sv_as_dict()[ext], self.__out[fltrs.index(ext)])
+                status = clscore.perc_rejected(self.__state_vecs['spectrum'].sv_as_dict()[ext], self.__out[fltrs.index(ext)])
 
                 if status:
                     svupdate.append(self.__out[fltrs.index(ext)])
@@ -467,7 +466,7 @@ class flags(dawgie.Algorithm):
             if e_vsp and vfin:
                 log.warning('--< IN-ECLIPSE PERCENT REJECTED: %s >--', ext)
 
-                status = clscore.perc_rejected(self.__eclspectrum.sv_as_dict()[ext], self.__out[len(fltrs)+fltrs.index(ext)])
+                status = clscore.perc_rejected(self.__state_vecs['eclspectrum'].sv_as_dict()[ext], self.__out[len(fltrs)+fltrs.index(ext)])
 
                 if status:
                     svupdate.append(self.__out[len(fltrs)+fltrs.index(ext)])
@@ -487,7 +486,7 @@ class flags(dawgie.Algorithm):
             if vdc and vfin:
                 log.warning('--< DATA.CALIBRATION MEDIAN ERROR: %s >--', ext)
 
-                status = clscore.median_error(data_calib.sv_as_dict()[ext], self.__out[fltrs.index(ext)])
+                status = clscore.median_error(self.__state_vecs['data_calib'].sv_as_dict()[ext], self.__out[fltrs.index(ext)])
 
                 if status:
                     svupdate.append(self.__out[fltrs.index(ext)])
@@ -554,6 +553,7 @@ class flags(dawgie.Algorithm):
             # ==================================================== #####
 
         if self.__out:
+            print(self.__out)
             ds.update()
         else:
             log.warning('--< NO OUTPUT CREATED FOR CLASSIFIER.%s >--', self.name())

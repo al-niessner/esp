@@ -4,6 +4,7 @@ import dawgie
 import excalibur
 import matplotlib.pyplot as plt
 import io
+import numpy as np
 
 # -- SV -------------------------------------------------------------
 class PredictSV(dawgie.StateVector):
@@ -214,7 +215,18 @@ class Flag_Summary_SV(dawgie.StateVector):
                     'full': 'Number of points in full transit',
                     'total': 'Number of points in total transit',
                     'x_axis_label': 'Number of points'
-                }
+                },
+                'thresh_vals':{
+                    'full':{
+                        'yellow': 5,
+                        'red': 0
+                    },
+                    'total':{
+                        'yellow': 6,
+                        'red': 0
+                    }
+                },
+                'xscale': 'log'
             },
             'symmetry_wl': {
                 'suptitle': 'Light Curve Symmetry',
@@ -224,8 +236,10 @@ class Flag_Summary_SV(dawgie.StateVector):
                     'x_axis_label': 'Number of points'
                 },
                 'thresh_vals':{
-                    'red': 0
-                }
+                    'yellow': 0,
+                    'red': '-inf'
+                },
+                'xscale': 'log'
             },
             'rsdm': {
                 'suptitle': 'Residual Standard Deviation Metric (RSDM)',
@@ -233,9 +247,10 @@ class Flag_Summary_SV(dawgie.StateVector):
                     'mean_rsdm': 'Average RSDM'
                 },
                 'thresh_vals':{
-                    'gold': 8.804,
+                    'yellow': 8.804,
                     'red': 13.818
-                }
+                },
+                'xscale': 'log'
             },
             'perc_rejected': {
                 'suptitle': 'Spectral Channels Rejected',
@@ -243,10 +258,10 @@ class Flag_Summary_SV(dawgie.StateVector):
                     'percent_rejected_value': 'Percent Rejected'
                 },
                 'thresh_vals':{
-                    'green': 0,
-                    'gold': 31.844,
+                    'yellow': 31.844,
                     'red': 52.166
-                }
+                },
+                'xscale': 'linear'
             },
             'median_error': {
                 'suptitle': 'Median Error',
@@ -254,8 +269,10 @@ class Flag_Summary_SV(dawgie.StateVector):
                     'median_error_value': 'Median error'
                 },
                 'thresh_vals':{
-                    'gold': 2.5
-                }
+                    'yellow': 2.5,
+                    'red': 'inf'
+                },
+                'xscale': 'linear'
             }
         }
 
@@ -273,7 +290,23 @@ class Flag_Summary_SV(dawgie.StateVector):
                     points_to_plot = metric_info[subplot]
 
                     plt.subplot(1, len(metric_info), (count + 1))
-                    plt.hist(points_to_plot, edgecolor='navy', color='cornflowerblue')
+
+                    edgecolor = '#000'
+                    color = '#000'
+                    if 'thresh_vals' not in flag_algs_info[metric]:
+                        edgecolor = '#000a36'
+                        color='#5c6280'
+
+                    if flag_algs_info[metric]['xscale'] == 'log':
+                        b = 25
+                        if hist:  # just to work around pylint "Unused variable hist" warning
+                            hist, bins = np.histogram(points_to_plot, bins=b)
+                        logbins = np.logspace(0,np.log10(bins[-1]),len(bins))
+                        if hist:  # just to work around pylint "Unused variable hist" warning
+                            plt.hist(points_to_plot, bins=logbins, edgecolor=edgecolor, color=color, alpha=0.8, zorder=3)
+                        plt.xscale('log')
+                    else:  # xscale is set to linear by default.
+                        plt.hist(points_to_plot, edgecolor=edgecolor, color=color, alpha=0.8, zorder=3)
 
                     if 'x_axis_label' in flag_algs_info[metric]['subplot_titles']:
                         plt.xlabel(flag_algs_info[metric]['subplot_titles']['x_axis_label'])
@@ -283,10 +316,48 @@ class Flag_Summary_SV(dawgie.StateVector):
 
                     plt.suptitle(str(suptitle) + ' Across Targets')
 
+                    # get limits of graph's x-axis
+                    ax = plt.gca()
+                    xmin, xmax = ax.get_xlim()
+
                     # plot threshold lines
                     if 'thresh_vals' in flag_algs_info[metric]:
-                        for color in flag_algs_info[metric]['thresh_vals']:
-                            plt.axvline(flag_algs_info[metric]['thresh_vals'][color], color=color, linestyle='dashed', linewidth=1)
+
+                        if subplot in flag_algs_info[metric]['thresh_vals']:
+                            red_val = flag_algs_info[metric]['thresh_vals'][subplot]['red']
+                            yellow_val = flag_algs_info[metric]['thresh_vals'][subplot]['yellow']
+
+                        else:
+                            red_val = flag_algs_info[metric]['thresh_vals']['red']
+                            yellow_val = flag_algs_info[metric]['thresh_vals']['yellow']
+
+                        if red_val == '-inf':
+                            plt.axvline(yellow_val, color='#EAAA00', linestyle='dashed', linewidth=1, zorder=2)
+                            xmin, xmax = ax.get_xlim()
+                            plt.axvspan(xmin, yellow_val, color='#F6CD00', alpha=0.1, zorder=0)  # yellow
+                            xmin, xmax = ax.get_xlim()
+                            plt.axvspan(yellow_val, xmax, color='#00DA5B', alpha=0.1, zorder=0)   # green
+
+                        elif red_val == 'inf':
+                            plt.axvspan(xmin, yellow_val, color='#00DA5B', alpha=0.1, zorder=0)   # green
+                            xmin, xmax = ax.get_xlim()
+                            plt.axvspan(yellow_val, xmax, color='#F6CD00', alpha=0.1, zorder=0)  # yellow
+
+                        elif yellow_val < red_val:
+                            plt.axvspan(xmin, yellow_val, color='#00DA5B', alpha=0.1, zorder=0)   # green
+                            plt.axvspan(yellow_val, red_val, color='#F6CD00', alpha=0.1, zorder=0)   # yellow
+                            xmin, xmax = ax.get_xlim()
+                            plt.axvspan(red_val, xmax, color='#C72125', alpha=0.1, zorder=0)  # red
+                            plt.axvline(red_val, color='#C72125', linestyle='dashed', linewidth=1, zorder=2)
+
+                        elif yellow_val > red_val:
+                            plt.axvspan(yellow_val, xmax, color='#00DA5B', alpha=0.1, zorder=0)   # green
+                            plt.axvspan(red_val, yellow_val, color='#F6CD00', alpha=0.1, zorder=0)   # yellow
+                            plt.axvline(red_val, color='#C72125', linestyle='dashed', linewidth=1, zorder=2)
+                            xmin, xmax = ax.get_xlim()
+                            plt.axvspan(xmin, red_val, color='#C72125', alpha=0.1, zorder=0)  # red
+
+                        plt.axvline(yellow_val, color='#EAAA00', linestyle='dashed', linewidth=1, zorder=2)
 
                     if metric == 'median_error':
                         plt.ylabel('Number of targets')
