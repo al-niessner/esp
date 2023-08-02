@@ -5,8 +5,8 @@ import dawgie
 import excalibur.ancillary.algorithms as ancalg
 # ------------- ------------------------------------------------------
 # -- A&A -- ----------------------------------------------------------
-class Actor(dawgie.Analysis):
-    '''Actor ds'''
+class Agent(dawgie.Analysis):
+    '''Agent ds'''
     def list(self)->[dawgie.Analyzer]:
         '''list ds'''
         return [
@@ -14,8 +14,8 @@ class Actor(dawgie.Analysis):
         ]
     pass
 
-class Agent(dawgie.Task):
-    '''Agent ds'''
+class Actor(dawgie.Task):
+    '''Actor ds'''
     def list(self)->[dawgie.Task]:
         '''list ds'''
         return [

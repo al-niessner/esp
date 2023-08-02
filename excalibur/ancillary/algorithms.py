@@ -14,6 +14,10 @@ import excalibur.ancillary.states as ancstates
 import excalibur.system as sys
 import excalibur.system.algorithms as sysalg
 
+from excalibur.target.targetlists import get_target_lists
+
+from excalibur.ancillary.core import savesv
+
 # ------------- ------------------------------------------------------
 # -- ALGO RUN OPTIONS -- ---------------------------------------------
 # FILTERS
@@ -83,41 +87,89 @@ class population(dawgie.Analyzer):
 
     def run(self, aspects:dawgie.Aspect):
         '''run ds'''
-        # now group together values by attribute
+
+        targetlists = get_target_lists()
+
+        # group together values by attribute
         svname = 'ancillary.estimate.parameters'
+
         st_attrs = defaultdict(list)
         pl_attrs = defaultdict(list)
-        for trgt in aspects:
-            tr_data = aspects[trgt][svname]
+        # include a second set of attributes, for comparison within each histogram
+        st_attrs_roudier62 = defaultdict(list)
+        pl_attrs_roudier62 = defaultdict(list)
+
+        # for trgt in aspects:
+        #    target_sample = '__all__'
+        # Only consider the 'active' stars, not aliases/misspellings/dropped/etc
+
+        # print('len',len(targetlists['active']))
+        # print('len',filter(lambda tgt: 'STATUS' in aspects[tgt][svname], targetlists['active']))
+        # i = 0
+        # for a in filter(lambda tgt: 'STATUS' in aspects[tgt][svname], targetlists['active']):
+        #    #print(a)
+        #    i += 1
+        # print('len for real',i)
+        # exit()
+
+        # for trgt in targetlists['active']:
+        for trgt in filter(lambda tgt: 'STATUS' in aspects[tgt][svname], targetlists['active']):
+
+            # target_sample = 'active'
+
+            anc_data = aspects[trgt][svname]
+
             # verify SV succeeded for target
-            if tr_data['STATUS'][-1] or 'planets' in tr_data['data']:
+            if anc_data['STATUS'][-1] or 'planets' in anc_data['data']:
                 # get stellar attributes
-                st_keys = [i for i in tr_data['data'].keys()
-                           if is_st_key(i, tr_data['data']['planets'])]
-                for key in st_keys:
-                    st_attrs[key].append(tr_data['data'][key])
+                #  only include the basic data, no extensions
+                for key in anc_data['data'].keys():
+                    if (not key == 'planets') and \
+                       (key not in anc_data['data']['planets']) and \
+                       (not any(ext in key for ext in anccore.SV_EXTS)):
+                        st_attrs[key].append(anc_data['data'][key])
                 # get planetary attributes
-                for pl in tr_data['data']['planets']:
-                    pl_keys = [i for i in tr_data['data'][pl].keys()
+                for pl in anc_data['data']['planets']:
+                    pl_keys = [i for i in anc_data['data'][pl].keys()
                                if not any(ext in i for ext in anccore.SV_EXTS)]
                     for key in pl_keys:
-                        pl_attrs[key].append(tr_data['data'][pl][key])
-                        pass
-                    pass
-                pass
-            pass
+                        pl_attrs[key].append(anc_data['data'][pl][key])
+
+        # Loop through a second group of targets.  (this subset will be overplotted in the histos)
+        # for trgt in targetlists['roudier62']:
+        for trgt in filter(lambda tgt: 'STATUS' in aspects[tgt][svname], targetlists['roudier62']):
+            # target_sample = 'roudier62'
+
+            anc_data = aspects[trgt][svname]
+
+            # verify SV succeeded for target
+            if anc_data['STATUS'][-1] or 'planets' in anc_data['data']:
+                # get stellar attributes
+                #  only include the basic data, no extensions
+                for key in anc_data['data'].keys():
+                    if (not key == 'planets') and \
+                       (key not in anc_data['data']['planets']) and \
+                       (not any(ext in key for ext in anccore.SV_EXTS)):
+                        st_attrs_roudier62[key].append(anc_data['data'][key])
+                # get planetary attributes
+                for pl in anc_data['data']['planets']:
+                    pl_keys = [i for i in anc_data['data'][pl].keys()
+                               if not any(ext in i for ext in anccore.SV_EXTS)]
+                    for key in pl_keys:
+                        pl_attrs_roudier62[key].append(anc_data['data'][pl][key])
+
         # Add to SV
         self.__out['data']['st_attrs'] = st_attrs
         self.__out['data']['pl_attrs'] = pl_attrs
+        self.__out['data']['st_attrs_roudier62'] = st_attrs_roudier62
+        self.__out['data']['pl_attrs_roudier62'] = pl_attrs_roudier62
+        # self.__out['data']['sample'] = target_sample
         self.__out['STATUS'].append(True)
         aspects.ds().update()
+
+        # save ancillary-estimate results as a .csv file (in /proj/data/spreadsheets/)
+        savesv(aspects, targetlists)
+
         return
     pass
 # ---------------- ---------------------------------------------------
-# -- HELPER FUNCTIONS -- ---------------------------------------------
-def is_st_key(key, planets):
-    '''Helper function to determine if SV key is for stellar estimate value'''
-    # GMR: Using lazy gen here otherwise the new pylint is not happy
-    return (not key == 'planets') and (key not in planets) \
-            and (not any(ext in key for ext in anccore.SV_EXTS))
-# ---------------------- ---------------------------------------------

@@ -4,6 +4,7 @@ RUN set -ex && \
     apt-get update && \
     apt-get install -y \
             curl \
+	    gfortran \
             git \
             graphviz \
             haveged \
@@ -25,7 +26,7 @@ RUN set -ex && \
     /usr/bin/pip3 install arviz==0.12.0 \
                           astropy==5.2.2 \
 			  astroquery==0.4.6 \
-                          dawgie==1.4.0-rc8 \
+                          dawgie==1.4.1-rc6 \
                           dynesty==1.2.2 \
                           importlib_metadata==4.11.3 \
                           joblib==1.1.0 \
@@ -40,10 +41,11 @@ RUN set -ex && \
                           scipy==1.7.3 \
                           scikit-learn==1.1.0 \
                           service_identity \
+                          taurex_ace \
                           taurex && \
    rm -rf ${HOME}/.cache && \
    mkdir /.theano && chmod 777 /.theano && \
    mkdir -p /proj/data/ldtk && chmod 777 /proj/data/ldtk && \
    curl -o /bin/dcp.py https://raw.githubusercontent.com/al-niessner/DCP/master/dcp.py && \
    chmod 755 /bin/dcp.py && \
-   /usr/bin/pip3 install git+https://github.com/pearsonkyle/UltraNest.git
+   /usr/bin/pip3 install ultranest

@@ -14,14 +14,15 @@ To be reading this file, you have already untarred the release and are ready to 
 Here is a concrete version of the instructions that should work on any machine that has docker.
 
 1a. docker network create masops
-1b. docker pull postgres:13.3
-1c. docker run --rm --network masops --name postgres -e POSTGRES_PASSWORD=password -e POSTGRES_USER=sdppipded --detach postgres:13.3
+1b. docker pull postgres:15.3
+1c. docker run --rm --network masops --name postgres -e POSTGRES_PASSWORD=password -e POSTGRES_USER=sdppipded --detach postgres:15.3
 2. cd /release/path # unfortunately the only part that must remain abstract
 3. docker load -i server.docker.image
 4a. docker exec -i postgres createdb -U sdppipded ops
 4b. docker exec -i postgres psql -U sdppipded -d ops < db/interred.ops.00.bck
 5. edited docker run portion of run.sh to look like this:
     docker run --detach --rm \
+           --env MPLCONFIGDIR=/tmp \
 	   --env USER=$USER \
 	   --env USERNAME=$USERNAME \
 	   --name mausoleum \

@@ -1,4 +1,3 @@
-
 '''cerberus bot ds'''
 # -- IMPORTS -- ------------------------------------------------------
 import dawgie
@@ -13,7 +12,17 @@ class Actor(dawgie.Task):
         return [
             crbalg.xslib(),
             crbalg.atmos(),
-            crbalg.release()
+            # crbalg.release(),
+            crbalg.results()
         ]
     pass
-# ---------- ---------------------------------------------------------
+# -------------------------------------------------------------------
+class Agent(dawgie.Analysis):
+    '''Agent ds'''
+    def list(self)->[dawgie.Analyzer]:
+        '''list ds'''
+        return [
+            crbalg.analysis()
+        ]
+    pass
+# -------------------------------------------------------------------

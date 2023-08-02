@@ -23,7 +23,7 @@ then
     ssh mentor0 docker rmi -f esp_server:latest
     ssh mentor0 docker tag esp_server:${base_version} esp_server:latest
     #ssh mentor1 docker load -i ${tempfn}
-    ssh mentor2 docker load -i ${tempfn}
+    #ssh mentor2 docker load -i ${tempfn}
     ssh mentor3 docker load -i ${tempfn}
     ssh mentor4 docker load -i ${tempfn}
     ssh mentor5 docker load -i ${tempfn}
@@ -33,8 +33,8 @@ then
     ssh mentor0 docker image prune -f
     #ssh mentor1 docker container prune -f
     #ssh mentor1 docker image prune -f
-    ssh mentor2 docker container prune -f
-    ssh mentor2 docker image prune -f
+    #ssh mentor2 docker container prune -f
+    #ssh mentor2 docker image prune -f
     ssh mentor3 docker container prune -f
     ssh mentor3 docker image prune -f
     ssh mentor4 docker container prune -f

@@ -168,8 +168,8 @@ def phasecurve_spitzer(nrm, fin, out, selftype, fltr):
 
             # compute phase + priors
             smaors = priors[p]['sma']/priors['R*']/ssc['Rsun/AU']
-            smaors_up = (priors[p]['sma']+priors[p]['sma_uperr'])/(priors['R*']-abs(priors['R*_lowerr']))/ssc['Rsun/AU']
-            smaors_lo = (priors[p]['sma']-abs(priors[p]['sma_lowerr']))/(priors['R*']+priors['R*_uperr'])/ssc['Rsun/AU']
+            # smaors_up = (priors[p]['sma']+priors[p]['sma_uperr'])/(priors['R*']-abs(priors['R*_lowerr']))/ssc['Rsun/AU']
+            # smaors_lo = (priors[p]['sma']-abs(priors[p]['sma_lowerr']))/(priors['R*']+priors['R*_uperr'])/ssc['Rsun/AU']
             priors[p]['ars'] = smaors
 
             tmid = priors[p]['t0'] + event*priors[p]['period']
@@ -201,9 +201,6 @@ def phasecurve_spitzer(nrm, fin, out, selftype, fltr):
                 'tmid':tmid,
                 'per': priors[p]['period'],
                 'inc': priors[p]['inc'],
-
-                # eclipse
-                'fpfs': fpfs,
                 'omega': priors['b'].get('omega',0),
                 'ecc': priors['b']['ecc'],
 
@@ -214,7 +211,8 @@ def phasecurve_spitzer(nrm, fin, out, selftype, fltr):
                 'u3':priors[p].get('u3',0),
 
                 # phase curve amplitudes
-                'c0':0, 'c1':edepth*0.25, 'c2':0, 'c3':0, 'c4':0
+                'c0':0, 'c1':edepth*0.25, 'c2':0, 'c3':0, 'c4':0,
+                'fpfs': fpfs
             }
 
             # gather detrending parameters
@@ -227,9 +225,8 @@ def phasecurve_spitzer(nrm, fin, out, selftype, fltr):
             mybounds = {
                 'rprs':[0.5*rprs,1.5*rprs],
                 'tmid':[tmid-0.01,tmid+0.01],
-                'ars':[smaors_lo,smaors_up],
-
-                'fpfs':[0,fpfs*2],
+                'inc':[tpars['inc']-3, max(90, tpars['inc']+3)],
+                'fpfs':[0,fpfs*3],
                 # 'omega':[priors[p]['omega']-25,priors[p]['omega']+25],
                 # 'ecc': [0,priors[p]['ecc']+0.1],
 
@@ -240,11 +237,11 @@ def phasecurve_spitzer(nrm, fin, out, selftype, fltr):
 
             # 10 minute time scale
             nneighbors = int(10./24./60./np.mean(np.diff(subt)))
+            nneighbors = min(300, nneighbors)
             print(" N neighbors:",nneighbors)
             print(" N datapoints:", len(subt))
 
-            myfit = trncore.pc_fitter(subt, aper, aper_err, tpars, mybounds, syspars,
-                                      neighbors=nneighbors)
+            myfit = trncore.pc_fitter(subt, aper, aper_err, tpars, mybounds, syspars, neighbors=nneighbors, verbose=False)
 
             # copy best fit parameters and uncertainties
             for k in myfit.bounds.keys():
@@ -277,7 +274,7 @@ def phasecurve_spitzer(nrm, fin, out, selftype, fltr):
             out['data'][p][ec]['plot_bestfit'] = save_plot(myfit.plot_bestfit)
             out['data'][p][ec]['plot_posterior'] = save_plot(myfit.plot_posterior)
             out['data'][p][ec]['plot_pixelmap'] = save_plot(myfit.plot_pixelmap)
-            out['data'][p][ec]['plot_btempcurve'] = save_plot(myfit.plot_btempcurve)
+            # out['data'][p][ec]['plot_btempcurve'] = save_plot(myfit.plot_btempcurve)
 
             ec += 1
             out['STATUS'].append(True)

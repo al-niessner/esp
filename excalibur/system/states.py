@@ -3,6 +3,8 @@
 import dawgie
 
 import excalibur
+import excalibur.system.plot as sysplot
+
 # ------------- ------------------------------------------------------
 # -- SV -- -----------------------------------------------------------
 class PriorsSV(dawgie.StateVector):
@@ -96,3 +98,32 @@ class PriorsSV(dawgie.StateVector):
         return
     pass
 # -------- -----------------------------------------------------------
+class PopulationSV(dawgie.StateVector):
+    '''PopulationSV ds'''
+    def __init__(self, name):
+        self._version_ = dawgie.VERSION(2,0,0)
+        self.__name = name
+        self['STATUS'] = excalibur.ValuesList()
+        self['data'] = excalibur.ValuesDict()
+        self['STATUS'].append(False)
+        return
+
+    def name(self):
+        '''name ds'''
+        return self.__name
+
+    def view(self, visitor:dawgie.Visitor)->None:
+        '''view ds'''
+        to_process = [('----------------------Stellar Population Distributions----------------------',
+                       self['data']['st_attrs'], self['data']['st_attrs_roudier62'], False),
+                      ('---------------------Planetary Population Distributions---------------------',
+                       self['data']['pl_attrs'], self['data']['pl_attrs_roudier62'], True)]
+        # for title, attrs, attrs_roudier62,is_planet in to_process:
+        for title, attrs, attrs_roudier62,_ in to_process:
+            visitor.add_primitive(title)
+            for key in attrs:
+                sysplot.distrplot(key, attrs[key], attrs_roudier62[key], visitor, 'no units?')
+
+        return
+
+# -------------------------------------------------------------------

@@ -66,7 +66,7 @@ class alert(dawgie.Analyzer):
     pass
 
 class create(dawgie.Analyzer):
-    '''Creates a list of targets to be scraped from MAST'''
+    '''Creates a list of targets from edit.py'''
     def __init__(self):
         '''__init__ ds'''
         self._version_ = trgedit.createversion()

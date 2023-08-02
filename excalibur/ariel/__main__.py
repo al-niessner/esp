@@ -1,12 +1,13 @@
-'''transit __main__ ds'''
+'''ariel __main__ ds'''
 # -- IMPORTS -- ------------------------------------------------------
 import os
 
 import dawgie
 import dawgie.db
 import dawgie.security
+import dawgie.util
 
-import excalibur.transit.bot
+import excalibur.ariel.bot
 # ------------- ------------------------------------------------------
 fep = os.environ.get('FE_PORT', None)
 rid = int(os.environ.get('RUNID', None))
@@ -17,9 +18,6 @@ if fep: dawgie.util.set_ports(int(fep))
 dawgie.security.initialize(os.path.expandvars(os.path.expanduser
                                               (dawgie.context.gpg_home)))
 dawgie.db.reopen()
-if tn == '':
-    excalibur.transit.bot.Agent('transit', 4, rid).do()
-else:
-    excalibur.transit.bot.Actor('transit', 4, rid, tn).do()
+excalibur.ariel.bot.Actor('ariel', 4, rid, tn).do()
 dawgie.db.close()
 dawgie.security.finalize()

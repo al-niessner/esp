@@ -3,6 +3,7 @@
 if [ -z "$(docker ps -a | grep masoleum)" ]
 then
     docker run --detach --rm \
+           --env MPLCONFIGDIR=/tmp \
 	   --env USER=$USER \
 	   --env USERNAME=$USERNAME \
 	   --name mausoleum \

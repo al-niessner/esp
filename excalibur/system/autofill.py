@@ -2,7 +2,6 @@
 # -- IMPORTS -- ------------------------------------------------------
 import numpy
 import excalibur.system.core as syscore
-
 # ----------------- --------------------------------------------------
 # -- FILL BLANK UNCERTAINTY FIELD ------------------------------------
 def fillUncertainty(param,param_value,param_uncertainty,error_type):
@@ -16,71 +15,99 @@ def fillUncertainty(param,param_value,param_uncertainty,error_type):
     # print(param_uncertainty)
 
     autofilled = False
-    try:
-        fillvalue = float(param_uncertainty)
+    try: fillvalue = float(param_uncertainty)
     except ValueError:
         autofilled = True
-        dawgieStupidity = False
+        huh = False
         if param=='spTyp':
             # (spectral type isn't mandatory, so probably never comes here)
             fillvalue = ''
         elif param=='T*':
             # for stellar temperature, 100 K uncertainty as default
             fillvalue = 100
+            fillvalue = 150
+            fillvalue = 185  # 90-percentile; 95-percentile is 200
         elif param=='inc':
             # inclination should be pretty close to 90degrees
             #  let's try 5deg uncertainty
             fillvalue = 5
+            fillvalue = 1.93  # 90-percentile; 95-percentile is 2.7
             # make sure inclination range stays within 0-90 degrees
             # actually no, allow inclination to go 0-180, as in the Archive
             # if param_value + fillvalue > 90: fillvalue = 90 - param_value
         elif param=='ecc':
             # for eccentricity, set uncertainty to 20%, with a minimum of 0.1
             fillvalue = numpy.max([float(param_value) * 2.e-1, 0.1])
+            fillvalue = 0.145  # 90-percentile; 95-percentile is 0.185
         elif param=='omega':
             # for argument of periastron, set a large uncertainty (120 degrees)
             fillvalue = 120
         elif param=='FEH*':
             # for metallicity, fallback uncertainty is 0.1 dex
             fillvalue = 0.1
-        else:
-            dawgieStupidity = True
-        if dawgieStupidity:
+            fillvalue = 0.2
+            fillvalue = 0.295  # 90-percentile; 95-percentile is 0.3
+        else: huh = True
+        if huh:
             if param in ['LOGG*','logg']:
                 # for planet or stellar log-g, fallback uncertainty is 0.1 dex
                 fillvalue = 0.1
+                fillvalue = 0.2
+                fillvalue = 0.3  # 90-percentile; 95-percentile is 0.3
             elif param=='Hmag':
                 # 0.1 dex for H band magnitude (for Kepler-1651)
                 fillvalue = 0.1
             elif param=='period':
                 # orbital period should be known pretty well. how about 1%?
                 fillvalue = float(param_value) * 1.e-2
+                fillvalue = float(param_value) * 1.e-4
+                fillvalue = float(param_value) * 1.5e-5  # 90-percentile; 95-percentile is 2.7e-5
             elif param=='t0':
                 # T_0 is known to much much better than 10%
                 #   set it to 10% of the period?
                 #   problem though - period is not passed in here
                 # for now, set it to 1 hour uncertainty
                 fillvalue = 1./24.
+                fillvalue = 0.01
+                fillvalue = 0.0076  # 90-percentile; 95-percentile is 0.01
             elif param in ['rp','sma','mass','R*','M*','RHO*','L*']:
                 # set uncertainty to 10% for planet radius, semi-major axis, mass
                 #   same for stellar radius, mass, density, luminosity
                 fillvalue = float(param_value) * 1.e-1
+                if param in ['rp']:
+                    fillvalue = float(param_value) / 3.
+                    fillvalue = float(param_value) * 0.392  # 90-percentile; 95-percentile is 0.50
+                elif param in ['sma']:
+                    fillvalue = float(param_value) / 20.
+                    fillvalue = float(param_value) * 0.053  # 90-percentile; 95-percentile is 0.093
+                elif param in ['mass']:
+                    fillvalue = float(param_value) / 5
+                    fillvalue = float(param_value) * 0.44  # 90-percentile; 95-percentile is 0.66
+                elif param in ['R*']:
+                    fillvalue = float(param_value) / 5
+                    fillvalue = float(param_value) * 0.36  # 90-percentile; 95-percentile is 0.45
+            elif param=='AGE*':
+                # age is generally not well known.  have at least 50% uncertainty
+                fillvalue = float(param_value) * 0.5
+            elif param=='teq':
+                # planet equilibrium temperature to maybe 10%?
+                #  (error should really be derived from errors on L*,a_p)
+                # a_p error is 5%, so 10% here should be very conservative
+                fillvalue = float(param_value) / 10.
             else:
                 # fallback option is to set uncertainty to 10%
                 fillvalue = float(param_value) * 1.e-1
                 print('another PARAM:',param)
-
-        # make sure that the upper error is positive and the lower is negative
-        if error_type=='uperr':
-            fillvalue = abs(fillvalue)
-        elif error_type=='lowerr':
-            fillvalue = -abs(fillvalue)
-        else:
+                pass
             pass
+        # make sure that the upper error is positive and the lower is negative
+        if error_type=='uperr': fillvalue = abs(fillvalue)
+        elif error_type=='lowerr': fillvalue = -abs(fillvalue)
+        else:
             # exit('ERROR: unknown error_type')
-
+            pass
+        pass
     return fillvalue,autofilled
-
 # ----------------- --------------------------------------------------
 # -- SELECT THE BEST PARAMETER VALUE FROM VARIOUS ARCHIVE VALUES -----
 def bestValue(values,uperrs,lowerrs,refs):
@@ -556,6 +583,73 @@ def derive_Teqplanet_from_Lstar_and_sma(starInfo, planetLetter):
     return Teq_derived, Teq_lowerr_derived, Teq_uperr_derived, Teq_ref_derived
 
 # -------------------------------------------------------------------
+def derive_inclination_from_impactParam(starInfo, planetLetter):
+    '''
+    If planet inclination is blank, calculate it from impact param, star radius, semi-major axis
+    '''
+
+    # get Rsun definition
+    sscmks = syscore.ssconstants(cgs=True)
+
+    inc_derived = []
+    inc_lowerr_derived = []
+    inc_uperr_derived = []
+    inc_ref_derived = []
+
+    for Rstar,Rstarerr1,Rstarerr2, sma,smaerr1,smaerr2, impact,impacterr1,impacterr2, \
+        inc,incerr1,incerr2,incref in zip(
+            starInfo['R*'],starInfo['R*_lowerr'],starInfo['R*_uperr'],
+            starInfo[planetLetter]['sma'],
+            starInfo[planetLetter]['sma_lowerr'],
+            starInfo[planetLetter]['sma_uperr'],
+            starInfo[planetLetter]['impact'],
+            starInfo[planetLetter]['impact_lowerr'],
+            starInfo[planetLetter]['impact_uperr'],
+            starInfo[planetLetter]['inc'],
+            starInfo[planetLetter]['inc_lowerr'],
+            starInfo[planetLetter]['inc_uperr'],
+            starInfo[planetLetter]['inc_ref']):
+
+        # check for blank inclination
+        #  (but only update it if impact, R*, and sma are all defined)
+        if inc=='' and Rstar!='' and sma!='' and impact!='':
+
+            cosinc = float(impact) * float(Rstar)*sscmks['Rsun/AU'] / float(sma)
+
+            # ok TOI-2669 is weird (inc=76degrees) because the star is puffy (4.1 RSun)
+            # print('R* (RSun)',out['priors']['R*'])
+            # print('R* (AU)',out['priors']['R*']*sscmks['Rsun/AU'])
+            # print('ap (AU)',out['priors'][p]['sma'])
+            newinc = numpy.arccos(cosinc) * 180/numpy.pi
+            # print('inclination derived from impact parameter:',newinc)
+
+            inc_derived.append(f'{newinc:6.4f}')
+            inc_ref_derived.append('derived from impact parameter')
+
+            # also fill in the uncertainty on inc, based on impact,R*,sma uncertainties
+            if Rstarerr1=='' or smaerr1=='' or impacterr1=='':
+                inc_lowerr_derived.append('')
+            else:
+                cosincfractionalError1 = -numpy.sqrt((float(Rstarerr1)/float(Rstar))**2 +
+                                                     (float(impacterr1)/float(impact))**2 +
+                                                     (float(smaerr1)/float(sma))**2)
+                inc_lowerr_derived.append(f'{(cosincfractionalError1 * 180/numpy.pi):6.4f}')
+            if Rstarerr2=='' or smaerr2=='' or impacterr2=='':
+                inc_uperr_derived.append('')
+            else:
+                cosincfractionalError2 = numpy.sqrt((float(Rstarerr2)/float(Rstar))**2 +
+                                                    (float(impacterr2)/float(impact))**2 +
+                                                    (float(smaerr2)/float(sma))**2)
+                inc_uperr_derived.append(f'{(cosincfractionalError2 * 180/numpy.pi):6.4f}')
+        else:
+            inc_derived.append(inc)
+            inc_lowerr_derived.append(incerr1)
+            inc_uperr_derived.append(incerr2)
+            inc_ref_derived.append(incref)
+
+    return inc_derived, inc_lowerr_derived, inc_uperr_derived, inc_ref_derived
+
+# -------------------------------------------------------------------
 def fixZeroUncertainties(starInfo, starParam, planetParam):
     '''
     If any uncertainty is zero, remove it.  We don't want chi-squared=infinity
@@ -569,9 +663,9 @@ def fixZeroUncertainties(starInfo, starParam, planetParam):
                    str(starInfo[param+'_lowerr'][i]).__len__() > 0:
                     if float(starInfo[param+'_uperr'][i])==0 or \
                        float(starInfo[param+'_lowerr'][i])==0:
-                        print('zero uncertainty fixed',i,param,
-                              starInfo[param+'_uperr'][i],
-                              starInfo[param+'_lowerr'][i])
+                        # print('zero uncertainty fixed',i,param,
+                        #       starInfo[param+'_uperr'][i],
+                        #       starInfo[param+'_lowerr'][i])
                         starInfo[param+'_uperr'][i] = ''
                         starInfo[param+'_lowerr'][i] = ''
 
@@ -587,10 +681,38 @@ def fixZeroUncertainties(starInfo, starParam, planetParam):
                         #       float(starInfo[planet][param+'_lowerr'][i]))
                         if float(starInfo[planet][param+'_uperr'][i])==0 or \
                            float(starInfo[planet][param+'_lowerr'][i])==0:
-                            print('zero uncertainty fixed',i,planet+':'+param,
-                                  starInfo[planet][param+'_uperr'][i],
-                                  starInfo[planet][param+'_lowerr'][i])
+                            # print('zero uncertainty fixed',i,planet+':'+param,
+                            #       starInfo[planet][param+'_uperr'][i],
+                            #       starInfo[planet][param+'_lowerr'][i])
                             starInfo[planet][param+'_uperr'][i] = ''
                             starInfo[planet][param+'_lowerr'][i] = ''
 
     return starInfo
+
+# -------------------------------------------------------------------
+def checkValidData(starInfo, starParam, planetParam):
+    '''
+    Verify that the needed parameters exist in the incoming target state vector
+    '''
+
+    missingParams = []
+
+    for param in starParam:
+        if param not in starInfo.keys(): missingParams.append(param)
+        # if param!='spTyp':    # spectral type doesnt have error bars, but actually they are here ok
+        if param+'_uperr' not in starInfo.keys(): missingParams.append(param+'_uperr')
+        if param+'_lowerr' not in starInfo.keys(): missingParams.append(param+'_lowerr')
+
+    for param in planetParam:
+        if param!='logg':   # planet logg is derived later; not loaded from Exoplanet Archive
+            for planet in starInfo['planets']:
+                if param not in starInfo[planet].keys(): missingParams.append(planet+':'+param)
+                if param+'_uperr' not in starInfo[planet].keys():
+                    missingParams.append(planet+':'+param+'_uperr')
+                if param+'_lowerr' not in starInfo[planet].keys():
+                    missingParams.append(planet+':'+param+'_lowerr')
+
+    if missingParams:
+        # print('missing parameters in the target state vector:',missingParams)
+        return False
+    return True

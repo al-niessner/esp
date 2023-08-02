@@ -116,6 +116,7 @@ class FilterSV(dawgie.StateVector):
         self._version_ = dawgie.VERSION(1,1,1)
         self.__name = name
         self['STATUS'] = excalibur.ValuesList()
+        self['PROCESS'] = excalibur.ValuesDict()
         self['activefilters'] = excalibur.ValuesDict()
         self['STATUS'].append(False)
         return
