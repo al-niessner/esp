@@ -35,6 +35,7 @@ echo "work on data"
 cp .ci/inter.run.sh ${1}/run.sh
 cp .ci/inter.README.txt ${1}/README.txt
 cp -r /proj/sdp/ops/front-end/* ${1}/fe
+cp -r /proj/sdp/data/taurex ${1}
 echo "building tarfile ${1}.tgz"
 cd $(realpath ${1}/..)
 tar -czf ${1}.tgz $(basename ${1})
