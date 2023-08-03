@@ -8,8 +8,8 @@ import excalibur.util.cerberus as crbutil
 
 from excalibur.ariel.metallicity import \
     massMetalRelation, massMetalRelationDisp, randomCtoO
-from excalibur.ariel.ariel import load_ariel_instrument
-from excalibur.ariel.getNumberofTransits import make_numberofTransits_table
+from excalibur.ariel.arielInstrumentModel import load_ariel_instrument
+from excalibur.ariel.arielObservingPlan import make_numberofTransits_table
 
 import os
 import io
@@ -153,7 +153,7 @@ def simulate_spectrum(target, system_dict, out):
             water = ConstantGas('H2O', mix_ratio=1.2e-4*model_params['metallicity'])
             chemistry.addGas(water)
 
-            # new version is preferred, but needs a sysadmin pip-install
+            # new version with equilibrium chemistry is preferred
             if ACEimported:
                 chemistry = ACEChemistry(metallicity=model_params['metallicity'],
                                          co_ratio=model_params['C/O'])

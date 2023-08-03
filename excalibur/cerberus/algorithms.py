@@ -355,18 +355,18 @@ class analysis(dawgie.Analyzer):
     def __init__(self):
         '''__init__ ds'''
         self._version_ = crbcore.resultsversion()  # same version number as results
-        self.__fin = sysalg.finalize()
-        self.__xsl = xslib()
-        self.__atm = atmos()
+        # self.__fin = sysalg.finalize()
+        # self.__xsl = xslib()
+        # self.__atm = atmos()
         # self.__out = crbstates.analysisSV('retrievalCheck')
         self.__out = [crbstates.analysisSV(filt) for filt in fltrs]
         return
 
-    def previous(self):
-        '''Input State Vectors: cerberus.atmos'''
-        return [dawgie.ALG_REF(sys.task, self.__fin),
-                dawgie.ALG_REF(crb.task, self.__xsl),
-                dawgie.ALG_REF(crb.task, self.__atm)]
+    # def previous(self):
+    #    '''Input State Vectors: cerberus.atmos'''
+    #    return [dawgie.ALG_REF(sys.task, self.__fin),
+    #            dawgie.ALG_REF(crb.task, self.__xsl),
+    #            dawgie.ALG_REF(crb.task, self.__atm)]
 
     def feedback(self):
         '''feedback ds'''
@@ -382,7 +382,7 @@ class analysis(dawgie.Analyzer):
                               atmos().state_vectors()[0])]
 
     def state_vectors(self):
-        '''Output State Vectors: cerberus.results'''
+        '''Output State Vectors: cerberus.analysis'''
         return self.__out
 
     def run(self, aspects:dawgie.Aspect):
@@ -400,9 +400,9 @@ class analysis(dawgie.Analyzer):
 
     def _analysis(self, aspects, index):
         '''Core code call'''
-        resout = crbcore.analysis(aspects,
-                                  self.__out[index], verbose=False)
-        return resout
+        analysisout = crbcore.analysis(aspects,
+                                       self.__out[index], verbose=False)
+        return analysisout
 
     @staticmethod
     def _failure(errstr):
