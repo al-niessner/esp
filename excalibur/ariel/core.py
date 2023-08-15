@@ -9,7 +9,7 @@ import excalibur.util.cerberus as crbutil
 from excalibur.ariel.metallicity import \
     massMetalRelation, massMetalRelationDisp, randomCtoO
 from excalibur.ariel.arielInstrumentModel import load_ariel_instrument
-from excalibur.ariel.arielObservingPlan import make_numberofTransits_table
+from excalibur.ariel.arielObservingPlan import make_tier_table
 
 import os
 import io
@@ -17,14 +17,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.constants as cst
 
-# ACEChemistry is no longer part of taurex
-#  has to be pip-installed
-# the pip-install is done via the git-repository installation requirements:
-#  1) edit the esp/.ci/Dockerfile.base file to include taurex_ace
-#  2) run esp/.ci/step_00.sh to do the installation
-#  1b) go back and add gfortran to Dockerfile.base, if it's missing there
-#  3) run esp/.ci/deploy_04.sh to add it to devel
-#  4) restart the pipeline with the newly created devel image
 ACEimported = True
 # try:
 #     import taurex_ace
@@ -84,10 +76,11 @@ def simulate_spectrum(target, system_dict, out):
     '''
 
     # ** two key parameters for adjusting the instrument noise model **
-    noise_factor = 1./0.7
-    noise_floor_ppm = 50.
+    # no longer necessary; Ariel-rad already does these two steps
+    # noise_factor = 1./0.7
+    # noise_floor_ppm = 50.
 
-    observing_plan = make_numberofTransits_table()
+    observing_plan = make_tier_table()
 
     system_params = system_dict['priors']
 
@@ -163,8 +156,10 @@ def simulate_spectrum(target, system_dict, out):
                                    planet=planet,
                                    temperature_profile=temperature_profile,
                                    chemistry=chemistry,
-                                   atm_min_pressure=1e0,
-                                   atm_max_pressure=1e6,
+                                   # atm_min_pressure=1e0,
+                                   # atm_max_pressure=1e6,
+                                   atm_min_pressure=1e-3,  # 1 microbar is better; 1 mbar cuts off many lines
+                                   atm_max_pressure=1e4,   # switch atmos base to the 10-bar standard
                                    nlayers=30)
             # add some more physics
             tm.add_contribution(AbsorptionContribution())
@@ -211,18 +206,27 @@ def simulate_spectrum(target, system_dict, out):
 
             # RESCALE THE SNR FILE based on #-of-transits, multiplicative factor, and noise floor
             # 1) scale the noise with a multiplicative factor
-            uncertainties = (noise_factor * ariel_instrument['noise'])
+            # no longer necessary; Ariel-rad takes this into account
+            # uncertainties = (noise_factor * ariel_instrument['noise'])
+            uncertainties = ariel_instrument['noise']
 
             # 2) read in the number of observing epochs.  reduce noise by sqrt(N)
             if target+' '+planetLetter in observing_plan:
-                numberofTransits = observing_plan[target+' '+planetLetter]
+                visits = observing_plan[target+' '+planetLetter]['number of visits']
+                tier = observing_plan[target+' '+planetLetter]['tier']
             else:
-                # default to a single transit observation, if it's not in the Edwards Ariel list
-                numberofTransits = 1
-            uncertainties /= np.sqrt(float(numberofTransits))
+                # default to a single transit observation, if it's not in the Ariel list
+                # print(target+' '+planetLetter,'not found in the Ariel observing plan')
+                errstr = target+' '+planetLetter,'not found in observing plan'
+                log.warning('--< ARIEL SIM_SPECTRUM: %s >--', errstr)
+                visits = '1'
+                tier = '1'
+            print('# of visits:',visits,'  tier',tier,'  ',target+' '+planetLetter)
+            uncertainties /= np.sqrt(float(visits))
 
             # 3) apply a noise floor (e.g. 50 ppm)
-            uncertainties[np.where(uncertainties < noise_floor_ppm/1.e6)] = noise_floor_ppm/1.e6
+            # no longer necessary; Ariel-rad takes this into account
+            # uncertainties[np.where(uncertainties < noise_floor_ppm/1.e6)] = noise_floor_ppm/1.e6
 
             # ADD OBSERVATIONAL NOISE TO THE TRUE SPECTRUM
             fluxDepth_observed = fluxDepth_rebin + np.random.normal(scale=uncertainties)
@@ -268,6 +272,10 @@ def simulate_spectrum(target, system_dict, out):
                 'fluxDepth_norebin':fluxDepth,
                 'wavelength_norebin':wavelength_um}
 
+            # also save the Tier level and the number of visits; add these to the plot
+            out['data'][planetLetter]['tier'] = tier
+            out['data'][planetLetter]['visits'] = visits
+
             # save the parameters used to create the spectrum. some could be useful
             # should save both observed value and truth with scatter added in
             #  'system_params' = the info in system() task
@@ -289,7 +297,8 @@ def simulate_spectrum(target, system_dict, out):
 
             # PLOT THE SPECTRA
             myfig, ax = plt.subplots(figsize=(6,4))
-            plt.title('Ariel simulation : '+target+' '+planetLetter, fontsize=16)
+            plt.title('Ariel simulation : '+target+' '+planetLetter+' : Tier-'+tier+' '+visits+' visits',
+                      fontsize=16)
             plt.xlabel(str('Wavelength [$\\mu m$]'), fontsize=14)
             plt.ylabel(str('$(R_p/R_*)^2$ [%]'), fontsize=14)
 
@@ -317,11 +326,13 @@ def simulate_spectrum(target, system_dict, out):
             ax2.set_ylabel('$\\Delta$ [H]')
             axmin, axmax = ax.get_ylim()
             rpmed = np.sqrt(np.nanmedian(1.e-2*fluxDepth_rebin))
-            if axmin > 0:
+            if axmin >= 0:
                 ax2.set_ylim((np.sqrt(1e-2*axmin) - rpmed)/Hs,
                              (np.sqrt(1e-2*axmax) - rpmed)/Hs)
             else:
-                print('TROUBLE!! y-axis not scaled by H!!')
+                ax2.set_ylim((-np.sqrt(-1e-2*axmin) - rpmed)/Hs,
+                             (np.sqrt(1e-2*axmax) - rpmed)/Hs)
+                # print('TROUBLE!! y-axis not scaled by H!!')
 
             myfig.tight_layout()
 

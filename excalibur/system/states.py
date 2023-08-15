@@ -23,6 +23,7 @@ class PriorsSV(dawgie.StateVector):
         self['starmdt'] = excalibur.ValuesList()
         self['starnonmdt'] = excalibur.ValuesList()
         self['planetmdt'] = excalibur.ValuesList()
+        self['planetnonmdt'] = excalibur.ValuesList()
         self['starkeys'] = excalibur.ValuesList()
         self['planetkeys'] = excalibur.ValuesList()
         self['exts'] = excalibur.ValuesList()

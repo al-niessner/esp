@@ -650,6 +650,75 @@ def derive_inclination_from_impactParam(starInfo, planetLetter):
     return inc_derived, inc_lowerr_derived, inc_uperr_derived, inc_ref_derived
 
 # -------------------------------------------------------------------
+def derive_impactParam_from_inclination(starInfo, planetLetter):
+    '''
+    If planet impact parameter is blank, calculate it from inclination, star radius, semi-major axis
+    '''
+
+    # get Rsun definition
+    sscmks = syscore.ssconstants(cgs=True)
+
+    imp_derived = []
+    imp_lowerr_derived = []
+    imp_uperr_derived = []
+    imp_ref_derived = []
+
+    for Rstar,Rstarerr1,Rstarerr2, sma,smaerr1,smaerr2, inc,incerr1,incerr2, \
+        imp,imperr1,imperr2,impref in zip(
+            starInfo['R*'],starInfo['R*_lowerr'],starInfo['R*_uperr'],
+            starInfo[planetLetter]['sma'],
+            starInfo[planetLetter]['sma_lowerr'],
+            starInfo[planetLetter]['sma_uperr'],
+            starInfo[planetLetter]['inc'],
+            starInfo[planetLetter]['inc_lowerr'],
+            starInfo[planetLetter]['inc_uperr'],
+            starInfo[planetLetter]['impact'],
+            starInfo[planetLetter]['impact_lowerr'],
+            starInfo[planetLetter]['impact_uperr'],
+            starInfo[planetLetter]['impact_ref']):
+
+        # check for blank impact parameter
+        #  (but only update it if inclination, R*, and sma are all defined)
+        if imp=='' and Rstar!='' and sma!='' and inc!='':
+
+            cosinc = numpy.cos(float(inc) /180.*numpy.pi)
+            newimp = cosinc * float(sma) / float(Rstar)/sscmks['Rsun/AU']
+            # print()
+            # print(' cosinc',cosinc)
+            # print(' sma/R*',float(sma) / float(Rstar)/sscmks['Rsun/AU'])
+            # print('impact derived from inclination:',newimp)
+            newimp = numpy.abs(newimp)
+            # if newimp > 1: print('STRANGE impact parameter',newimp)
+            # if newimp > 1: newimp = 1
+            newimp = min(newimp, 1)
+
+            imp_derived.append(f'{newimp:6.4f}')
+            imp_ref_derived.append('derived from inclination')
+
+            # also fill in the uncertainty on impact param, based on inc,R*,sma uncertainties
+            if Rstarerr1=='' or smaerr1=='' or incerr1=='':
+                imp_lowerr_derived.append('')
+            else:
+                impfractionalError1 = -numpy.sqrt((float(Rstarerr1)/float(Rstar))**2 +
+                                                     (float(incerr1)/cosinc)**2 +
+                                                     (float(smaerr1)/float(sma))**2)
+                imp_lowerr_derived.append(f'{(impfractionalError1):6.4f}')
+            if Rstarerr2=='' or smaerr2=='' or incerr2=='':
+                imp_uperr_derived.append('')
+            else:
+                impfractionalError2 = numpy.sqrt((float(Rstarerr2)/float(Rstar))**2 +
+                                                    (float(incerr2)/cosinc)**2 +
+                                                    (float(smaerr2)/float(sma))**2)
+                imp_uperr_derived.append(f'{(impfractionalError2):6.4f}')
+        else:
+            imp_derived.append(imp)
+            imp_lowerr_derived.append(imperr1)
+            imp_uperr_derived.append(imperr2)
+            imp_ref_derived.append(impref)
+
+    return imp_derived, imp_lowerr_derived, imp_uperr_derived, imp_ref_derived
+
+# -------------------------------------------------------------------
 def fixZeroUncertainties(starInfo, starParam, planetParam):
     '''
     If any uncertainty is zero, remove it.  We don't want chi-squared=infinity
@@ -713,6 +782,10 @@ def checkValidData(starInfo, starParam, planetParam):
                     missingParams.append(planet+':'+param+'_lowerr')
 
     if missingParams:
+        # print()
+        # for planet in starInfo['planets']:
+        #     print(' target param check',starInfo[planet].keys())
+        # print()
         # print('missing parameters in the target state vector:',missingParams)
         return False
     return True

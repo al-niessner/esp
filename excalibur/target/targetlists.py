@@ -632,6 +632,12 @@ def targetlist_active():
         'XO-6',
         'XO-7',
         'pi Men',
+        'HATS-22',
+        'K2-30',
+        'Kepler-1308',
+        'Qatar-3',
+        'WASP-129',
+        'WASP-144',
     ]
     return targets
 # --------------------------------------------------------------------
@@ -734,6 +740,7 @@ def targetlist_junk():
         'TOI-150.01',
         'TOI-216.01',
         'TOI-216.02',
+        'Kepler-854',  # false-positive planet. was in the 2019 Ariel 1000planet list
     ]
 
     return targets

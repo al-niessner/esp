@@ -5,9 +5,11 @@ import logging; log = logging.getLogger(__name__)
 import os
 import numpy as np
 
+import h5py
+from astropy.io.misc.hdf5 import read_table_hdf5
+
 # ---------------------------- ---------------------------------------
-# def load_ariel_instrument(noise_model_filename='/proj/data/ariel/HD_189733_b_SNR_ARIEL.txt'):
-def load_ariel_instrument(target):
+def load_ariel_instrument_oldmethod(target):
     '''
     Load in a file that gives SNR as a function of wavelength
 
@@ -47,5 +49,53 @@ def load_ariel_instrument(target):
             'wavehigh':np.array(wavelength) + np.array(wavebinsize)/2.,
             'noise':1./np.array(SNR)
         }
+
+    return ariel_instrument
+# ---------------------------- ---------------------------------------
+def load_ariel_instrument(target):
+    '''
+    Load in the output from Ariel-Rad - uncertainty as a function of wavelength
+
+    This is different from the previous version above, in that there is a single file now,
+    not a separate file for each target.
+
+    H_mag brightness is already taken into account, but
+     number of observed transits is not taken into account.
+    '''
+
+    noise_model_dir = '/proj/data/ariel/'
+    # noise_model_filename = 'arielRad_02aug2023.h5'
+    # noise_model_filename = 'arielRad_07aug2023_mmwFixed.h5'
+    noise_model_filename = 'arielRad_07aug2023_mmwExcal.h5'
+
+    # all targets should have a file, but if not, return None
+    if not os.path.isfile(noise_model_dir + noise_model_filename):
+        print('NOTE: Ariel SNR file missing; failing to simulate spectrum',target)
+        ariel_instrument = None
+
+    else:
+        with h5py.File(noise_model_dir + noise_model_filename, 'r') as arielRad_results:
+
+            # use the 'SNR' key to determine the required number of transits
+            # print('results keys',arielRad_results.keys())
+
+            targets = arielRad_results['errorbars_evaluated'].keys()
+
+            if target not in targets:
+                print('NOTE: target not in Ariel SNR file; failing to simulate spectrum',target)
+                ariel_instrument = None
+
+            else:
+                noiseSpectrum = read_table_hdf5(arielRad_results['errorbars_evaluated'][target],
+                                                path='table')
+
+                ariel_instrument = {
+                    'wavelength':noiseSpectrum['Wavelength'].value,
+                    'wavelow':noiseSpectrum['LeftBinEdge'].value,
+                    'wavehigh':noiseSpectrum['RightBinEdge'].value,
+                    # 'wavebinsize':(noiseSpectrum['RightBinEdge'].value -
+                    #                noiseSpectrum['LeftBinEdge'].value),
+                    'noise':noiseSpectrum['NoiseOnTransitFloor'].value,
+                }
 
     return ariel_instrument

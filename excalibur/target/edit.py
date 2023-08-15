@@ -695,6 +695,12 @@ Wolf 503 :
 XO-6 :
 XO-7 :
 pi Men : HD 39091
+HATS-22 :
+K2-30 :
+Kepler-1308 :
+Qatar-3 :
+WASP-129 :
+WASP-144 :
     '''
     return
 # ----------------- --------------------------------------------------
@@ -1330,6 +1336,12 @@ Wolf 503 : WOLF503
 XO-6 : XO6
 XO-7 : XO7
 pi Men : PIMEN
+HATS-22 : HATS22
+K2-30 : K230
+Kepler-1308 : KEPLER1308
+Qatar-3 : QATAR3
+WASP-129 : WASP129
+WASP-144 : WASP144
     '''
     return
 # -------------------- -----------------------------------------------
@@ -2793,6 +2805,35 @@ overwrite[starID] =
         'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
         'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
 
+    # why isn't this in the archive?  non-hipparcos, but still..
+    overwrite['TRAPPIST-1'] = {
+        'dist':(1000./80.2123), 'dist_uperr':0.01, 'dist_lowerr':-0.01,
+        'dist_units':'[pc]', 'dist_ref':'Gaia EDR3'}
+    # had to use vizier for this one; not in simbad for some reason
+    overwrite['NGTS-10'] = {
+        'dist':(1000./3.8714), 'dist_uperr':12., 'dist_lowerr':-12.,
+        'dist_units':'[pc]', 'dist_ref':'Gaia EDR3'}
+    overwrite['Kepler-1314'] = {
+        'dist':(1000./7.0083), 'dist_uperr':2., 'dist_lowerr':-2.,
+        'dist_units':'[pc]', 'dist_ref':'Gaia EDR3'}
+    # also had to use vizier for this one
+    # it's in Gaia, but there's no parallax
+    # wikipedia has it at 980pc from 2011 schneider site from buchhave 2011 discovery paper
+    # the paper says it is from Girardi isochrone fitting
+    overwrite['Kepler-14'] = {
+        'dist':980., 'dist_uperr':100., 'dist_lowerr':-100.,
+        'dist_units':'[pc]', 'dist_ref':'Buchhave et al. 2011'}
+
+    # rather than filling in blank impact parameters here
+    #  make it a mandatory parameter and then fill with default in system/core
+    #  (same process as currently done for blank inclinations)
+    # overwrite['TOI-201'] = {'b':{
+    #    'impact':0., 'impact_uperr':0.5, 'impact_lowerr':-0.5,
+    #    'impact_units':'[R*]', 'impact_ref':'default'}}
+    # overwrite['WASP-110'] = {'b':{
+    #    'impact':0., 'impact_uperr':0.5, 'impact_lowerr':-0.5,
+    #    'impact_units':'[R*]', 'impact_ref':'default'}}
+
     return overwrite
 # -------------------------------------------------------------------
 # -- PROCESS RULES -- -----------------------------------------------
@@ -2804,7 +2845,9 @@ def proceed(name, ext, verbose=False):
     rules = processme()
     filterkeys = [r for r in ['include', 'exclude'] if rules['FILTER'][r]]
     for thisrule in filterkeys:
-        trout = any(itm in ext for itm in rules['FILTER'][thisrule])
+        # trout = any(itm is ext for itm in rules['FILTER'][thisrule])
+        # for some reason 'is' doesn't work.  try '==' and hope jenkins is ok
+        trout = any((itm==ext) for itm in rules['FILTER'][thisrule])
         if 'exclude' in thisrule: trout = not trout
         if ext=='any filter': trout=True
         out = out and trout
@@ -2812,7 +2855,8 @@ def proceed(name, ext, verbose=False):
         pass
     namekeys = [r for r in ['include', 'exclude'] if rules['TARGET'][r]]
     for thisrule in namekeys:
-        trout = any(itm in name for itm in rules['TARGET'][thisrule])
+        # trout = any(itm is name for itm in rules['TARGET'][thisrule])
+        trout = any((itm==name) for itm in rules['TARGET'][thisrule])
         if 'exclude' in thisrule: trout = not trout
         out = out and trout
         if verbose: log.warning('>---- TARGET %s: %s %s', name, thisrule, out)

@@ -110,7 +110,7 @@ def scrapeids(ds:dawgie.Dataset, out, web, genIDs=True):
     #  actually these additional references are only in the PSCompPars table, not the PS table
     # NO  sy_hmag_reflink (H magnitude reference can differ from the star param reference)
     # NO  sy_age_reflink  (age reference can differ from the star param reference)
-    cols = "hostname,pl_letter,rowupdate,st_refname,pl_refname,sy_pnum,pl_orbper,pl_orbpererr1,pl_orbpererr2,pl_orbsmax,pl_orbsmaxerr1,pl_orbsmaxerr2,pl_orbeccen,pl_orbeccenerr1,pl_orbeccenerr2,pl_orbincl,pl_orbinclerr1,pl_orbinclerr2,pl_bmassj,pl_bmassjerr1,pl_bmassjerr2,pl_radj,pl_radjerr1,pl_radjerr2,pl_dens,pl_denserr1,pl_denserr2,pl_eqt,pl_eqterr1,pl_eqterr2,pl_tranmid,pl_tranmiderr1,pl_tranmiderr2,pl_imppar,pl_impparerr1,pl_impparerr2,st_teff,st_tefferr1,st_tefferr2,st_mass,st_masserr1,st_masserr2,st_rad,st_raderr1,st_raderr2,st_lum,st_lumerr1,st_lumerr2,st_logg,st_loggerr1,st_loggerr2,st_dens,st_denserr1,st_denserr2,st_met,st_meterr1,st_meterr2,sy_hmag,sy_hmagerr1,sy_hmagerr2,st_age,st_ageerr1,st_ageerr2,pl_orblper,pl_orblpererr1,pl_orblpererr2,pl_trandep,pl_trandeperr1,pl_trandeperr2,pl_insol,pl_insolerr1,pl_insolerr2,pl_trandur,pl_trandurerr1,pl_trandurerr2,pl_ratdor,pl_ratdorerr1,pl_ratdorerr2,pl_ratror,pl_ratrorerr1,pl_ratrorerr2,sy_dist,sy_disterr1,sy_disterr2,st_spectype"
+    cols = "hostname,pl_letter,rowupdate,st_refname,pl_refname,sy_pnum,pl_orbper,pl_orbpererr1,pl_orbpererr2,pl_orbsmax,pl_orbsmaxerr1,pl_orbsmaxerr2,pl_orbeccen,pl_orbeccenerr1,pl_orbeccenerr2,pl_orbincl,pl_orbinclerr1,pl_orbinclerr2,pl_bmassj,pl_bmassjerr1,pl_bmassjerr2,pl_radj,pl_radjerr1,pl_radjerr2,pl_dens,pl_denserr1,pl_denserr2,pl_eqt,pl_eqterr1,pl_eqterr2,pl_tranmid,pl_tranmiderr1,pl_tranmiderr2,pl_imppar,pl_impparerr1,pl_impparerr2,st_teff,st_tefferr1,st_tefferr2,st_mass,st_masserr1,st_masserr2,st_rad,st_raderr1,st_raderr2,st_lum,st_lumerr1,st_lumerr2,st_logg,st_loggerr1,st_loggerr2,st_dens,st_denserr1,st_denserr2,st_met,st_meterr1,st_meterr2,sy_hmag,sy_hmagerr1,sy_hmagerr2,sy_kmag,sy_kmagerr1,sy_kmagerr2,st_age,st_ageerr1,st_ageerr2,pl_orblper,pl_orblpererr1,pl_orblpererr2,pl_trandep,pl_trandeperr1,pl_trandeperr2,pl_insol,pl_insolerr1,pl_insolerr2,pl_trandur,pl_trandurerr1,pl_trandurerr2,pl_ratdor,pl_ratdorerr1,pl_ratdorerr2,pl_ratror,pl_ratrorerr1,pl_ratrorerr2,sy_dist,sy_disterr1,sy_disterr2,st_spectype"
     uri_ipac_query = {
         "select": cols,
         "from": 'ps',
@@ -295,6 +295,8 @@ def autofill(ident, thistarget, out,
                     out['starID'][thistarget]['AGE*_ref'] = []
                     out['starID'][thistarget]['Hmag_units'] = []
                     out['starID'][thistarget]['Hmag_ref'] = []
+                    out['starID'][thistarget]['Kmag_units'] = []
+                    out['starID'][thistarget]['Kmag_ref'] = []
                     out['starID'][thistarget]['dist_units'] = []
                     out['starID'][thistarget]['dist_ref'] = []
                     out['starID'][thistarget]['spTyp'] = []
@@ -366,6 +368,7 @@ def autofill(ident, thistarget, out,
             out['starID'][thistarget]['RHO*_units'].append('[g.cm-3]')
             out['starID'][thistarget]['AGE*_units'].append('[Gyr]')
             out['starID'][thistarget]['Hmag_units'].append('[mag]')
+            out['starID'][thistarget]['Kmag_units'].append('[mag]')
             out['starID'][thistarget]['dist_units'].append('[pc]')
             out['starID'][thistarget]['spTyp_units'].append('')
             # spectral type doesn't have uncertainties. fill in here by hand
@@ -566,6 +569,9 @@ def translatekeys(header):
         elif 'sy_hmag' == thiskey: xclbrkey = 'Hmag'
         elif 'sy_hmagerr1' == thiskey: xclbrkey = 'Hmag_uperr'
         elif 'sy_hmagerr2' == thiskey: xclbrkey = 'Hmag_lowerr'
+        elif 'sy_kmag' == thiskey: xclbrkey = 'Kmag'
+        elif 'sy_kmagerr1' == thiskey: xclbrkey = 'Kmag_uperr'
+        elif 'sy_kmagerr2' == thiskey: xclbrkey = 'Kmag_lowerr'
         elif 'st_age' == thiskey: xclbrkey = 'AGE*'
         elif 'st_ageerr1' == thiskey: xclbrkey = 'AGE*_uperr'
         elif 'st_ageerr2' == thiskey: xclbrkey = 'AGE*_lowerr'

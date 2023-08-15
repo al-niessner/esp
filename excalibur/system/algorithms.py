@@ -55,7 +55,7 @@ class validate(dawgie.Algorithm):
             if not prcd: errstring = ['Kicked by edit.processme()']
             self._failure(errstring)
         if update: ds.update()
-        elif valid: raise dawgie.NoValidOutputDataError(
+        elif valid and prcd: raise dawgie.NoValidOutputDataError(
                 f'No output created for SYSTEM.{self.name()}')
         return
 
@@ -136,7 +136,7 @@ class finalize(dawgie.Algorithm):
             self._failure(errstring)
 
         if update: ds.update()
-        elif valid: raise dawgie.NoValidOutputDataError(
+        elif valid and prcd: raise dawgie.NoValidOutputDataError(
                 f'No output created for SYSTEM.{self.name()}')
         return
 
@@ -209,6 +209,7 @@ class population(dawgie.Analyzer):
                 st_keys = system_data['starmdt']           # mandatory params
                 st_keys.extend(system_data['starnonmdt'])  # non-mandatory params
                 pl_keys = system_data['planetmdt']
+                pl_keys.extend(system_data['planetnonmdt'])
 
                 for key in st_keys:
                     st_attrs[key].append(system_data['priors'][key])
@@ -228,6 +229,7 @@ class population(dawgie.Analyzer):
                 st_keys = system_data['starmdt']           # mandatory params
                 st_keys.extend(system_data['starnonmdt'])  # non-mandatory params
                 pl_keys = system_data['planetmdt']
+                pl_keys.extend(system_data['planetnonmdt'])
 
                 # get stellar attributes
                 for key in st_keys:

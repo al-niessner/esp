@@ -15,7 +15,7 @@ from excalibur.system.autofill import \
     derive_RHOstar_from_M_and_R, derive_SMA_from_P_and_Mstar, \
     derive_LOGGstar_from_R_and_M, derive_LOGGplanet_from_R_and_M, \
     derive_Lstar_from_R_and_T, derive_Teqplanet_from_Lstar_and_sma, \
-    derive_inclination_from_impactParam
+    derive_inclination_from_impactParam, derive_impactParam_from_inclination
 
 # ------------- ------------------------------------------------------
 # -- SOLAR SYSTEM CONSTANTS -- ---------------------------------------
@@ -94,13 +94,19 @@ def buildsp(autofill, out):
     # NEW CATEGORY: PARAMS TO PASS THROUGH TO ANCILLARY, BUT THEY"RE NOT MANDATORY
     # out['starnonmdt'].extend(['spTyp', 'L*', 'AGE*'])
     # change L* to mandatory (needed for planet T_eq)
-    out['starnonmdt'].extend(['spTyp', 'AGE*'])
+    # out['starnonmdt'].extend(['spTyp', 'AGE*'])
+    # 3 additional parameters needed for Ariel-RAD - distance, impact parameter, and transit duration
+    # also add in transit depth. may be useful for tracking down depth differences vs taurex
+    out['starnonmdt'].extend(['spTyp', 'AGE*', 'dist'])
     # AWKWARD: non-mandatory has to be included in 'starmdt' or it won't display
     out['starmdt'].extend(out['starnonmdt'])
     # MANDATORY PLANET PARAMETERS
     # out['planetmdt'].extend(['inc', 'period', 'ecc', 'rp', 't0', 'sma', 'mass', 'logg'])
     # out['planetmdt'].extend(['rp', 'mass', 'logg', 'sma', 'period', 't0', 'inc', 'ecc', 'omega'])
-    out['planetmdt'].extend(['rp', 'mass', 'logg', 'teq', 'sma', 'period', 't0', 'inc', 'ecc', 'omega'])
+    out['planetmdt'].extend(['rp', 'mass', 'logg', 'teq', 'sma', 'period', 't0',
+                             'inc', 'ecc', 'omega', 'impact'])
+    out['planetnonmdt'].extend(['trandur', 'trandepth'])
+    out['planetmdt'].extend(out['planetnonmdt'])
 
     # verify that all needed fields exist in the incoming target state vector
     # (some older crap targets don't have everything, e.g. SWEEPS-11 missing Hmag_uperr)
@@ -218,7 +224,23 @@ def buildsp(autofill, out):
         autofill['starID'][target][p]['inc_lowerr'] = inc_lowerr_derived
         autofill['starID'][target][p]['inc_uperr'] = inc_uperr_derived
         autofill['starID'][target][p]['inc_ref'] = inc_ref_derived
-        autofill['starID'][target][p]['inc_units'] = ['[degree]']*len(inc_derived)
+        autofill['starID'][target][p]['inc_units'] = ['[R*]']*len(inc_derived)
+
+    # (now the reverse)
+    # use the inclination (and R*, a_p) to fill in blank impact parameters
+    for p in autofill['starID'][target]['planets']:
+        imp_derived, imp_lowerr_derived, imp_uperr_derived, imp_ref_derived = \
+                derive_impactParam_from_inclination(autofill['starID'][target],p)
+        # if autofill['starID'][target][p]['impact'] != imp_derived:
+        #    print('imp before ',autofill['starID'][target][p]['impact'])
+        #    print('imp derived',imp_derived)
+        #    print('imp_ref derived',imp_ref_derived)
+        #    print('imp_ref before ',autofill['starID'][target][p]['impact_ref'])
+        autofill['starID'][target][p]['impact'] = imp_derived
+        autofill['starID'][target][p]['impact_lowerr'] = imp_lowerr_derived
+        autofill['starID'][target][p]['impact_uperr'] = imp_uperr_derived
+        autofill['starID'][target][p]['impact_ref'] = imp_ref_derived
+        autofill['starID'][target][p]['impact_units'] = ['[degree]']*len(imp_derived)
 
     # loop over both the mandatory and non-mandatory parameters
     # for lbl in out['starmdt']+out['starnonmdt']:
@@ -306,7 +328,9 @@ def buildsp(autofill, out):
             else:
                 out['priors'][p][lbl] = ''
                 for ext in out['exts']: out['priors'][p][lbl+ext] = ''
-                out['needed'].append(p+':'+lbl)
+                # don't add parameter to the 'missing' list if it is non-mandatory
+                if lbl not in out['planetnonmdt']:
+                    out['needed'].append(p+':'+lbl)
                 pass
             pass
 
@@ -387,6 +411,19 @@ def buildsp(autofill, out):
             out['autofill'].append('default:'+p+':omega')
             out['autofill'].append('default:'+p+':omega_uperr')
             out['autofill'].append('default:'+p+':omega_lowerr')
+
+        # if impact parameter is missing, assume 0
+        if p+':impact' in out['needed']:
+            out['priors'][p]['impact'] = 0
+            index = out['needed'].index(p+':impact')
+            out['needed'].pop(index)
+            out['priors'][p]['impact_units'] = '[R*]'
+            out['priors'][p]['impact_ref'] = 'default'
+            out['priors'][p]['impact_uperr'] = 0.5
+            out['priors'][p]['impact_lowerr'] = 0.5
+            out['autofill'].append('default:'+p+':impact')
+            out['autofill'].append('default:'+p+':impact_uperr')
+            out['autofill'].append('default:'+p+':impact_lowerr')
 
     for key in out['needed']:
         if ':' in key:
