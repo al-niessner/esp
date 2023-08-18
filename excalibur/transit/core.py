@@ -2792,10 +2792,18 @@ def norm_spitzer(cal, tme, fin, out, selftype, debug=False):
         # 3 sigma clip flux time series
         phase = (out['data'][p]['TIME'] - fin['priors'][p]['t0'])/fin['priors'][p]['period']
         badmask = np.zeros(out['data'][p]['TIME'].shape).astype(bool)
+
+        # estimate transit duration
+        ssc = syscore.ssconstants()
+        smaors = fin['priors'][p]['sma']/fin['priors']['R*']/ssc['Rsun/AU']
+        tdur = fin['priors'][p]['period']/(np.pi)/smaors
+        pdur = 1.75*tdur/fin['priors'][p]['period']
+
+        # loop over orbital epochs
         for i in np.unique(tme['data'][p][selftype]):
 
             # mask out orbit
-            omask = np.floor(phase) == i  # do I need to round for positive?
+            omask = (phase > (i-pdur)) & (phase < (i+pdur))
             dt = np.nanmean(np.diff(out['data'][p]['TIME'][omask]))*24*60
             if np.isnan(dt):
                 continue
@@ -3350,6 +3358,23 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                 priors[p]['ars'] = smaors
                 # fpfs = eclipse_ratio(priors, p, fltr)
 
+                # search priors for limb darkening
+                if '36' in fltr:
+                    pkey = 'Spitzer_IRAC1_subarray'
+                elif '45' in fltr:
+                    pkey = 'Spitzer_IRAC2_subarray'
+
+                if pkey in priors[p].keys():
+                    u0 = priors[p][pkey][0]
+                    u1 = priors[p][pkey][1]
+                    u2 = priors[p][pkey][2]
+                    u3 = priors[p][pkey][3]
+                else:
+                    u0 = 0
+                    u1 = 0
+                    u2 = 0
+                    u3 = 0
+
                 tpars = {
                     # Star
                     'T*':priors['T*'],
@@ -3364,10 +3389,11 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                     'ecc': priors['b']['ecc'],
 
                     # limb darkening (nonlinear - exotethys - pylightcurve)
-                    'u0':priors[p].get('u0',0),
-                    'u1':priors[p].get('u1',0),
-                    'u2':priors[p].get('u2',0),
-                    'u3':priors[p].get('u3',0),
+                    # precompute and add to priors in target.edit
+                    'u0':u0,
+                    'u1':u1,
+                    'u2':u2,
+                    'u3':u3,
 
                     # phase curve amplitudes
                     'c0':0, 'c1':0, 'c2':0, 'c3':0, 'c4':0,
@@ -3438,6 +3464,19 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                     }
                     myfit = elca.lc_fitter(subt, aper, aper_err, syspars, tpars, mybounds, neighbors=nneighbors, max_ncalls=2e5, verbose=False)
                 elif selftype == 'eclipse':
+
+                    # perform another round of sigma clipping
+                    photmask = ~np.isnan(sigma_clip(aper, nneighbors))
+                    wxmask = ~np.isnan(sigma_clip(wxa, nneighbors))
+                    wymask = ~np.isnan(sigma_clip(wya, nneighbors))
+                    nppmask = ~np.isnan(sigma_clip(npp, nneighbors))
+                    totalmask = photmask & wxmask & wymask & nppmask
+
+                    aper = aper[totalmask]
+                    aper_err = aper_err[totalmask]
+                    subt = subt[totalmask]
+                    syspars = syspars[totalmask]
+
                     mybounds = {
                         'rprs':[0,0.5*tpars['rprs']],
                         'tmid':[tme-0.01,tme+0.01],
@@ -3490,10 +3529,7 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                 out['data'][p][ec]['plot_pixelmap'] = save_plot(myfit.plot_pixelmap)
 
                 # estimates for photon noise
-                gain = 3.7
-                flux_conv = 0.1257
-                exptime = np.diff(subt).mean()*24*60*60
-                photons = (aper/flux_conv)*gain*exptime
+                photons = aper*1.0  # already converted to e in data task
 
                 # noise estimate in transit
                 tmask = myfit.transit < 1
@@ -3507,6 +3543,10 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
 
                 raw_residual = aper/np.median(aper) - myfit.transit
                 rel_residuals = myfit.residuals / np.median(aper)
+
+                # convert transit duration to seconds
+                tdur = myfit.duration_measured*24*60*60
+                tdur_freq = 1/tdur
 
                 # create plot for residual statistics
                 fig, ax = plt.subplots(3, figsize=(10,10))
@@ -3541,7 +3581,7 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                 # future: square + integrate under the curve and normalize such that it equals time series variance
                 ax[2].loglog(xf, 2.0/N * np.abs(fft_raw[0:N//2]),alpha=0.5,label='Raw',color=plt.cm.jet(0.25))
                 ax[2].loglog(xf, 2.0/N * np.abs(fft_res[0:N//2]),alpha=0.5,label='Detrended',color=plt.cm.jet(0.75))
-
+                ax[2].axvline(tdur_freq,ls='--',color='black',alpha=0.5)
                 ax[2].set_ylabel('Power')
                 ax[2].set_xlabel('Frequency [Hz]')
                 ax[2].legend()

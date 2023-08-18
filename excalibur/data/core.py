@@ -3506,11 +3506,16 @@ def spitzercal(clc, out):
                     if fits.data.ndim == 3: dcube = fits.data.copy()
 
                     # convert from ADU to e/s
-                    dcube *= float(fits.header.get('FLUXCONV',0.1257))
+                    dcube /= float(fits.header.get('FLUXCONV',0.1257))
                     dcube *= float(fits.header.get('GAIN',3.7))
 
                     idur = fits.header.get('ATIMEEND') - fits.header.get('AINTBEG')
                     nimgs = dcube.shape[0]
+                    exptime = idur/nimgs  # sec
+
+                    # convert from Mjy/sr to DN/s then to e/s and finally e
+                    dcube *= exptime
+
                     dt = idur/nimgs/(24*60*60)
                     dcube[np.isnan(dcube)] = 0
                     dcube[np.isinf(dcube)] = 0
