@@ -5,10 +5,14 @@ import dawgie
 import joblib
 import numpy as np
 import math
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+import torch
+import logging; log = logging.getLogger(__name__)
 
 import excalibur
 import excalibur.system.core as syscore
-# ------------- ------------------------------------------------------
+# -------------------------------------------------------------------
 def predversion():
     '''predversion ds'''
     return dawgie.VERSION(2,0,2)
@@ -100,33 +104,143 @@ def predict(transit_whitelight, transit_spectrum, priors, out):
     out['STATUS'].append(True)
     return True
 
+def lc_resid_classification_version():
+    '''lc_resid_classification_version ds'''
+    return dawgie.VERSION(1,0,0)
+
+def lc_resid_classification(transit_whitelight, ext, out):
+    '''
+    A. Arora
+    Classify the shape of an exoplanet's light curve residual
+    '''
+
+    def get_img(x, y):
+        '''
+        Returns image representation of scatter plot
+        '''
+        px = 1/plt.rcParams['figure.dpi']  # pixel in inches
+        plt.subplots(figsize=(350*px, 270*px))
+        plt.plot(x, y, '.', color='black')
+        y_lim = max(max(y), abs(min(y)))
+        x_lim = max(max(x), abs(min(x)))
+        if 'Spitzer' in ext:
+            plt.ylim(-2 * y_lim, 2 * y_lim)
+            plt.xlim(-x_lim, x_lim)
+        else:
+            plt.ylim(-2.5 * y_lim, 2.5 * y_lim)
+            if x_lim <= 4:
+                plt.xlim(-4, 4)
+            else:
+                plt.xlim(-x_lim, x_lim)
+        plt.axis('off')
+        fig = plt.gcf()
+        plt.close()
+        canvas = FigureCanvas(fig)
+        canvas.draw()
+        width, height = fig.get_size_inches() * fig.get_dpi()
+        img = np.frombuffer(canvas.tostring_rgb(), dtype='uint8').reshape(int(height), int(width), 3)
+        return img/255
+
+    for planet in transit_whitelight['data']:
+        if 'Spitzer' in ext:
+            initial_dict = transit_whitelight['data'][planet][0]
+        else:
+            initial_dict = transit_whitelight['data'][planet]
+
+        try:
+            sep = np.array(initial_dict['postsep'])
+            whitelight = np.array(initial_dict['allwhite'])
+            model = np.array(initial_dict['postlc'])
+        except AttributeError:
+            sep = []
+            whitelight = []
+            model = []
+            for p in initial_dict:
+                sep.extend(p['postsep'])
+                whitelight.append(p['allwhite'])
+                model.append(p['postlc'])
+                pass
+            pass
+
+        wl_flat = np.concatenate(whitelight).ravel() if 'Spitzer' not in ext else whitelight
+        magicdir = excalibur.context['data_dir']
+
+        if 'Spitzer' in ext:
+            mdl = torch.load(magicdir + '/aarora/spitzer_lc_model.pt')
+        else:
+            mdl = torch.load(magicdir + '/aarora/hubble_lc_model.pt')
+        mdl.eval()
+
+        img = get_img(sep, (wl_flat - model))
+        img = np.transpose([img], (0, 3, 1, 2))
+        # pylint: disable=E1101
+        train_img = torch.from_numpy(img)
+        output = mdl(train_img.float())
+        pred = torch.max(output.data, 1)[1].tolist()[0]
+
+        flags = {
+          0: 'yellow',
+          1: 'green',
+        }
+
+        flag_color = flags[pred]
+        flag_descrip = ''
+        if pred == 0:
+            flag_descrip += 'Light curve residual has a bad shape.'
+        else:
+            flag_descrip += 'Light curve residual is satisfactory.'
+
+        # avoid overwriting existing data
+        try:
+            out['data'][planet]['residual_shape'] = {}
+        except KeyError:
+            out['data'][planet] = {}
+            out['data'][planet]['residual_shape'] = {}
+
+        out['data'][planet]['residual_shape']['data'] = wl_flat
+        out['data'][planet]['residual_shape']['model'] = model
+        out['data'][planet]['residual_shape']['z'] = sep
+        out['data'][planet]['residual_shape']['flag_color'] = flag_color
+        out['data'][planet]['residual_shape']['flag_descrip'] = flag_descrip
+
+        pass
+
+    out['STATUS'].append(True)
+    return True
+
 def cpwlversion():
     '''cpwlversion ds'''
     return dawgie.VERSION(1,0,0)
 
 # cpwl stands for count points whitelight.
-def cpwl(transit_whitelight, priors, out):
+def cpwl(transit_whitelight, priors, ext, out):
     '''
     K. Mccarthy
     Counts points in transit curve
     '''
 
     for planet in transit_whitelight['data']:
+
+        if 'Spitzer' in ext:
+            initial_dict = transit_whitelight['data'][planet][0]
+        else:
+            initial_dict = transit_whitelight['data'][planet]
+
         try:
             # test = transit_whitelight['data'][planet].keys()
-            sep = (transit_whitelight['data'][planet]['postsep'])  # alternatively, could use orbital phase
-            whitelight = (np.array(transit_whitelight['data'][planet]['allwhite']))
+            sep = (initial_dict['postsep'])  # alternatively, could use orbital phase
+            whitelight = (np.array(initial_dict['allwhite']))
             pass
         except AttributeError:
             sep = []
             whitelight = []
-            for p in transit_whitelight['data'][planet]:
+            for p in initial_dict:
                 sep.extend(p['postsep'])
                 whitelight.append(p['allwhite'])
                 pass
             pass
 
-        wl_flat = np.concatenate(whitelight).ravel().tolist()
+        wl_flat = np.concatenate(whitelight).ravel().tolist() if 'Spitzer' not in ext else whitelight
 
         # each point is in [sep, wl] format.
         points = np.column_stack((np.array(sep), np.array(wl_flat)))
@@ -231,27 +345,33 @@ def symwlversion():
     return dawgie.VERSION(1,0,0)
 
 # symwl stands for symmetry whitelight.
-def symwl(transit_whitelight, priors, out):
+def symwl(transit_whitelight, priors, ext, out):
     '''
     K. McCarthy
     Check symmetry of light curve
     '''
 
     for planet in transit_whitelight['data']:
+
+        if 'Spitzer' in ext:
+            initial_dict = transit_whitelight['data'][planet][0]
+        else:
+            initial_dict = transit_whitelight['data'][planet]
+
         try:
-            sep = (transit_whitelight['data'][planet]['postsep'])  # (alternatively, could use orbital phase)
-            whitelight = (np.array(transit_whitelight['data'][planet]['allwhite']))
+            sep = (initial_dict['postsep'])  # (alternatively, could use orbital phase)
+            whitelight = (np.array(initial_dict['allwhite']))
             pass
         except AttributeError:
             sep = []
             whitelight = []
-            for p in transit_whitelight['data'][planet]:
+            for p in initial_dict:
                 sep.extend(p['postsep'])
                 whitelight.append(p['allwhite'])
                 pass
             pass
 
-        wl_flat = np.concatenate(whitelight).ravel().tolist()
+        wl_flat = np.concatenate(whitelight).ravel().tolist() if 'Spitzer' not in ext else whitelight
 
         # each point is in [sep, wl] format.
         points = np.column_stack((np.array(sep), np.array(wl_flat)))
@@ -278,7 +398,6 @@ def symwl(transit_whitelight, priors, out):
 
         # count the number of points outside of the transit on both sides
         for p in points:
-
             # outside 1st or 4th contact point
             if p[0] > z_4:
                 transit_points_after_4.append(p)
@@ -519,3 +638,76 @@ def median_error(data_calibration, out):
 
     out['STATUS'].append(True)
     return True
+# ---------------------------- ---------------------------------------
+def savesv(aspects, fltrs):
+    '''
+    save the results as a csv file in /proj/data/spreadsheets
+    '''
+    svname = 'classifier.flags'
+
+    RID = os.environ.get('RUNID', None)
+    if RID:
+        RID = f'{int(RID):03}'
+    else:
+        RID = '666'
+
+    # directory where the results are saved
+    saveDir = excalibur.context['data_dir'] + \
+        '/spreadsheets/RID' + RID + '/'
+    # print('saveDir:',saveDir)
+    if not os.path.exists(saveDir): os.mkdir(saveDir)
+
+    flag_types = ['count_points_wl','symmetry_wl',
+                  'rsdm','perc_rejected','residual_shape','overall_flag']
+
+    # file name where the results are saved
+    outfileName = svname.replace('.','_') + '_RID' + RID + '.csv'
+
+    with open(saveDir + outfileName,'w',encoding='ascii') as outfile:
+
+        # write the header row
+        outfile.write('star,planet,filter,')
+
+        for key in flag_types:
+            outfile.write(key + ',')
+        outfile.write('\n')
+
+        # loop through each target, with one row per planet
+        for trgt in aspects:
+            # loop through each filters
+            for fltr in fltrs:
+
+                transit_alg_fltr_name = svname + '.transit-' + str(fltr)
+
+                if transit_alg_fltr_name in aspects[trgt].keys():
+                    alg_flag_data = aspects[trgt][transit_alg_fltr_name]
+
+                    if alg_flag_data['STATUS'][-1]:
+                        for k in alg_flag_data['data'].keys():
+                            if k != 'median_error':
+                                planet_letter = k
+
+                                outfile.write(trgt + ',')
+                                outfile.write(planet_letter + ',')
+                                outfile.write(fltr + ',')
+
+                                colors = {}
+                                for flag_type in flag_types:
+                                    colors[flag_type] = '-'
+
+                                for alg_flag in alg_flag_data['data'][k]:
+                                    if alg_flag == 'overall_flag':
+                                        alg_flag_color = alg_flag_data['data'][k][alg_flag]
+                                    else:
+                                        alg_flag_color = alg_flag_data['data'][k][alg_flag]['flag_color']
+                                    colors[alg_flag] = alg_flag_color
+
+                                    if alg_flag not in flag_types:
+                                        print('ERROR: this flag type is not in the print out list', alg_flag)
+
+                                for flag_type in flag_types:
+                                    outfile.write(colors[flag_type] + ',')
+
+                                outfile.write('\n')
+
+    return

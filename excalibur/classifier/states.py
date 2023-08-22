@@ -5,6 +5,7 @@ import excalibur
 import matplotlib.pyplot as plt
 import io
 import numpy as np
+import logging; log = logging.getLogger(__name__)
 
 # -- SV -------------------------------------------------------------
 class PredictSV(dawgie.StateVector):
@@ -29,7 +30,7 @@ class PredictSV(dawgie.StateVector):
                 visitor.add_declaration('PLANET: ' + p)
                 visitor.add_declaration('PREDICTION: ' + str(self['data'][p]['prediction']))
 #                 allwhite = self['data'][p]['allwhite']
-#                 postlc = self['data'][p]['postlc']
+#                 postlight curve residual cl = self['data'][p]['postlc']
 #                 postsep = self['data'][p]['postsep']
 #                 myfig = plt.figure(figsize=(10, 6))
 #                 plt.title(p)
@@ -102,6 +103,14 @@ class Flags_SV(dawgie.StateVector):
                 'field_descriptions': {
                     'median_error_value': 'Median error'
                 }
+            },
+            'residual_shape': {
+                'title': 'Light Curve Residual Shape',
+                'field_descriptions': {
+                    'data': '',
+                    'model': '',
+                    'z': ''
+                }
             }
         }
 
@@ -118,19 +127,49 @@ class Flags_SV(dawgie.StateVector):
                     visitor.add_declaration("Overall Flag: " + str(self['data'][k]['overall_flag']))
 
                     for alg in self['data'][k].keys():
-
                         if alg != 'overall_flag':
                             visitor.add_declaration(str(flag_algs_info[alg]['title']).upper())
-
                             visitor.add_declaration("Flag: " + str(self['data'][k][alg]['flag_color']))
                             visitor.add_declaration("Flag Description: " + str(self['data'][k][alg]['flag_descrip']))
 
-                            for field in self['data'][k][alg].keys():
-                                if field not in ("flag_color", "flag_descrip"):
-                                    visitor.add_declaration(str(flag_algs_info[alg]['field_descriptions'][field]) + ": " + str(self['data'][k][alg][field]))
+                            if alg == 'residual_shape':
+                                model = self['data'][k][alg]['model']
+                                data = self['data'][k][alg]['data']
+                                z = self['data'][k][alg]['z']
+
+                                # Graph 1: data, model
+                                fig, ax = plt.subplots(1, 2, figsize=(10, 4))
+                                ax[0].set_title('Planet ' + str(k) + ': Whitelight Curve')
+                                ax[0].plot(z, data, '.', label='data')
+                                ax[0].plot(z, model, '.', label='model')
+                                ax[0].legend()
+                                ax[0].set_xlabel(str('z'))
+                                ax[0].set_ylabel(str('Normallized white light curve'))
+
+                                # Graph 2: data - model
+                                ax[1].set_title('Residual Curve')
+                                ax[1].axvline(1, alpha=0.25)
+                                ax[1].axvline(-1, alpha=0.25)
+                                ax[1].axhline(0, alpha=0.25)
+                                ax[1].plot(z, data - model, '.', color='black')
+                                ax[1].set_xlabel(str('z'))
+                                ax[1].set_ylabel(str('data - model'))
+                                y_lim = max(max(data-model), abs(min(data-model)))
+                                x_lim = max(max(z), abs(min(z)))
+                                ax[1].set_ylim(y_lim * -1.5, y_lim * 1.5)
+                                ax[1].set_xlim(x_lim * -1.25, x_lim * 1.25)
+                                plt.tight_layout(pad=3.0)
+                                buf = io.BytesIO()
+                                fig.savefig(buf, format='png')
+                                visitor.add_image('...', '', buf.getvalue())
+                                plt.close(fig)
+
+                            else:
+                                for field in self['data'][k][alg].keys():
+                                    if field not in ("flag_color", "flag_descrip"):
+                                        visitor.add_declaration(str(flag_algs_info[alg]['field_descriptions'][field]) + ": " + str(self['data'][k][alg][field]))
 
                 else:  # if it's a metric that's not planet-specific
-
                     visitor.add_declaration("_____")
 
                     visitor.add_declaration(str(flag_algs_info[k]['title']).upper())
@@ -166,15 +205,20 @@ class Flag_Summary_SV(dawgie.StateVector):
 
         if 'classifier_flags' in self['data']:
 
+            # first table displays all of the data quality metrics with the count of green, yellow, and red flags
+            # second table displays all of the target names associated with yellow/red flags
             flag_colors = ['green', 'yellow', 'red']
             vlabels = list(self['data']['classifier_flags'].keys())
-            hlabels = ['Data Quality Metric', 'Green', 'Yellow', 'Red']
+            hlabels_count = ['Data Quality Metric', 'Green', 'Yellow', 'Red']
+            hlabels_trgts = ['Data Quality Metric', 'Yellow', 'Red']
 
-            table = visitor.add_table(clabels=hlabels, rows=len(vlabels))
+            flag_count_table = visitor.add_table(clabels=hlabels_count, rows=len(vlabels))
+            flag_trgts_table = visitor.add_table(clabels=hlabels_trgts, rows=len(vlabels))
 
             # label rows with algorithm names
             for row, ele in enumerate(vlabels):
-                table.get_cell(row, 0).add_primitive(vlabels[row])
+                flag_count_table.get_cell(row, 0).add_primitive(vlabels[row])
+                flag_trgts_table.get_cell(row, 0).add_primitive(vlabels[row])
 
                 # to work around pylint "unused-variable" warning and "enumerate" requirement
                 if ele:
@@ -200,11 +244,15 @@ class Flag_Summary_SV(dawgie.StateVector):
                     table_column = i + 1  # add 1 to account for 'Data Quality Metric' header.
 
                     if color in alg_data:
-                        flag_count = alg_data[color]
-                        table.get_cell(a, table_column).add_primitive(flag_count)
+                        flag_count = alg_data[color][1]
+                        flag_count_table.get_cell(a, table_column).add_primitive(flag_count)
+                        if color in ('red', 'yellow'):
+                            flag_trgts = alg_data[color][0]
+                            flag_trgts_table.get_cell(a, table_column-1).add_primitive(flag_trgts)
                     else:
-                        table.get_cell(a, table_column).add_primitive(0)
-
+                        flag_count_table.get_cell(a, table_column).add_primitive(0)
+                        if color in ('red', 'yellow'):
+                            flag_trgts_table.get_cell(a, table_column-1).add_primitive('No targets with ' + str(color) + ' flags.')
             pass
 
         # note that 'gold' below refers to a yellow flag. the 'gold' matplotlib color to represent yellow.
@@ -278,7 +326,7 @@ class Flag_Summary_SV(dawgie.StateVector):
 
         if 'classifier_vals' in self['data']:
 
-            for metric in self['data']['classifier_vals']:
+            for metric in (metric for metric in self['data']['classifier_vals'] if metric != 'residual_shape'):
 
                 metric_info = self['data']['classifier_vals'][metric]
 
@@ -301,7 +349,8 @@ class Flag_Summary_SV(dawgie.StateVector):
                         b = 25
                         _, bins = np.histogram(points_to_plot, bins=b)
                         logbins = np.logspace(0,np.log10(bins[-1]),len(bins))
-                        plt.hist(points_to_plot, bins=logbins, edgecolor=edgecolor, color=color, alpha=0.8, zorder=3)
+                        log.warning(logbins)
+                        plt.hist(points_to_plot, bins=sorted(logbins), edgecolor=edgecolor, color=color, alpha=0.8, zorder=3)
                         plt.xscale('log')
                     else:  # xscale is set to linear by default.
                         plt.hist(points_to_plot, edgecolor=edgecolor, color=color, alpha=0.8, zorder=3)

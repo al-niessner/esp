@@ -43,10 +43,12 @@ RUN set -ex && \
                           scikit-learn==1.1.0 \
                           service_identity \
                           taurex_ace \
-                          taurex && \
+                          taurex \
+			  torchvision && \
    rm -rf ${HOME}/.cache && \
    mkdir /.theano && chmod 777 /.theano && \
    mkdir -p /proj/data/ldtk && chmod 777 /proj/data/ldtk && \
    curl -o /bin/dcp.py https://raw.githubusercontent.com/al-niessner/DCP/master/dcp.py && \
    chmod 755 /bin/dcp.py && \
    /usr/bin/pip3 install ultranest
+

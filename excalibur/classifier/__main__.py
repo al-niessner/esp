@@ -23,5 +23,6 @@ if tn == '':
     excalibur.classifier.bot.Agent('classifier', 4, rid).do()
 else:
     excalibur.classifier.bot.Actor('classifier', 4, rid, tn).do()
+
 dawgie.db.close()
 dawgie.security.finalize()
