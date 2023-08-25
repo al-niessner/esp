@@ -1,8 +1,11 @@
 '''target core ds'''
 # -- IMPORTS -- ------------------------------------------------------
 import os
-import shutil
 import re
+import shutil
+import json
+
+import requests
 import tempfile
 import subprocess
 import logging; log = logging.getLogger(__name__)
@@ -12,6 +15,7 @@ import dawgie.db
 
 import excalibur.target as trg
 import excalibur.target.edit as trgedit
+import excalibur.target.mast_api_utils as masttool
 
 import astropy.io.fits as pyfits
 import urllib.error
@@ -88,7 +92,8 @@ def scrapeids(ds:dawgie.Dataset, out, web, genIDs=True):
     for target in targets:
         parsedstr = target.split(':')
         parsedstr = [t.strip() for t in parsedstr]
-        out['starID'][parsedstr[0]] = {'planets':[], 'PID':[], 'aliases':[]}
+        out['starID'][parsedstr[0]] = {'planets':[], 'PID':[], 'aliases':[],
+                                       'observatory':[], 'datatable':[]}
         if parsedstr[1]:
             aliaslist = parsedstr[1].split(',')
             aliaslist = [a.strip() for a in aliaslist if a.strip()]
@@ -165,48 +170,93 @@ def autofillversion():
     '''
     return dawgie.VERSION(1,2,1)
 
-def autofill(ident, thistarget, out,
-             queryurl="https://archive.stsci.edu/hst/search.php?target=",
-             action="&action=Search&resolver=SIMBAD&radius=3.0",
-             outfmt="&outputformat=CSV&max_records=100000",
-             opt="&sci_aec=S"):
-    '''autofill ds'''
+def autofill(ident, thistarget, out, searchrad=0.2):
+    '''Queries MAST for available data and parses NEXSCI data into tables'''
 
-    out['starID'][thistarget] = ident['starID'][thistarget]
+    out['starID'][thistarget] = ident['starIDs']['starID'][thistarget]
     targetID = [thistarget]
 
     # AUTOFILL WITH MAST QUERY ---------------------------------------
-    solved = True
-    querytarget = thistarget.replace(' ', '+')
-    queryform = queryurl+querytarget+action+outfmt+opt
-    failure = ['target not resolved, continue\n\n', 'no rows found\n\n',
-               'target not resolved, continue', 'no rows found']
-    with urltrick(queryform) as temp: framelist = temp.decode('utf-8')
-    if framelist not in failure:
-        framelist = framelist.split('\n')
-        header = framelist[0].split(',')
-        pidindex = header.index('Proposal ID')
-        aliasindex = header.index('Target Name')
-        pidlist = []
-        aliaslist = []
-        for frame in framelist[2:-1]:
-            row = frame.split(',')
-            pidlist.append(row[pidindex])
-            aliaslist.append(row[aliasindex])
-            pass
-        pidlist = list(set(pidlist))
-        aliaslist = list(set(aliaslist))
-        out['starID'][thistarget]['aliases'].extend(aliaslist)
-        out['starID'][thistarget]['PID'].extend(pidlist)
+    solved = False
+    # Using new MAST API instead of handmade urlrequest
+    # 1 - solves for ra, dec
+    # Cannot rely on target_name since proposers gets too inventive
+    request = {'service':'Mast.Name.Lookup',
+               'params':{'input':thistarget, 'format':'json'}}
+    _h, outstr = masttool.mast_query(request)
+    outjson = json.loads(outstr)
+    if outjson['resolvedCoordinate']:
+        ra = outjson['resolvedCoordinate'][0]['ra']
+        dec = outjson['resolvedCoordinate'][0]['decl']
         solved = True
-        out['STATUS'].append(True)
         pass
-    solved = True  # target list autofill KP
+    # 2 - searches for observations
+    # Cant say I dont comment my code anymore
+    if solved:
+        request = {'service':'Mast.Caom.Cone',
+                   'params':{'ra':ra,
+                             'dec':dec,
+                             'radius':searchrad},
+                   'format':'json',
+                   'removenullcolumns':True,
+                   'removecache':True}
+        _h, outstr = masttool.mast_query(request)
+        outjson = json.loads(outstr)
+        pass
+    # 3 - activefilters filtering on TELESCOPE INSTRUMENT FILTER
+    targettable = []
+    platformlist = []
+    filters = ident['filters']['activefilters']['NAMES']
+    for obs in outjson['data']:
+        for f in filters:
+            if obs['obs_collection'] is not None:
+                pfcond = f.split('-')[0].upper() in obs['obs_collection']
+                pass
+            else: pfcond = False
+            if obs['instrument_name'] is not None:
+                nscond = f.split('-')[1] in obs['instrument_name']
+                pass
+            else: nscond = False
+            if (f.split('-')[0] not in ['Spitzer']) and (obs['filters'] is not None):
+                flcond = f.split('-')[3] in obs['filters']
+                pass
+            else:
+                sptzfl = None
+                if f.split('-')[3] in ['36']: sptzfl = 'IRAC1'
+                if f.split('-')[3] in ['45']: sptzfl = 'IRAC2'
+                if obs['filters'] is not None: flcond = sptzfl in obs['filters']
+                else: flcond = False
+                pass
+            if pfcond and nscond and flcond:
+                targettable.append(obs)
+                platformlist.append(obs['obs_collection'])
+                pass
+            pass
+        pass
+    if not targettable: solved = False
+    # Note: If we use data that are not known by MAST but are on disk
+    # this will also return False
+    # 4 - pid filtering
+    pidlist = []
+    aliaslist = []
+    obslist = []
+    for item, pf in zip(targettable, platformlist):
+        if item['proposal_id'] not in pidlist:
+            pidlist.append(item['proposal_id'])
+            aliaslist.append(item['target_name'])
+            obslist.append(pf)
+            pass
+        pass
+    out['starID'][thistarget]['aliases'].extend(aliaslist)
+    out['starID'][thistarget]['PID'].extend(pidlist)
+    out['starID'][thistarget]['observatory'].extend(obslist)
+    out['starID'][thistarget]['datatable'].extend(targettable)
+    out['STATUS'].append(solved)
 
     # AUTOFILL WITH NEXSCI EXOPLANET TABLE, DEFAULTS ONLY ---------------------------
     merged = False
-    targetID.extend(ident['starID'][thistarget]['aliases'])
-    response = ident['nexsciDefaults']
+    targetID.extend(ident['starIDs']['starID'][thistarget]['aliases'])
+    response = ident['starIDs']['nexsciDefaults']
     header = response[0].split(',')
     # list all keys contained in csv
     # using tuples of form (a, b) where a is the key name
@@ -379,7 +429,7 @@ def autofill(ident, thistarget, out,
         pass
 
     # AUTOFILL WITH NEXSCI FULL TABLE, INCLUDING NON-DEFAULTS ----------------------------
-    response = ident['nexsciFulltable']
+    response = ident['starIDs']['nexsciFulltable']
     header = response[0].split(',')
     matchkey = translatekeys(header)
     for line in response:
@@ -642,6 +692,85 @@ def mast(selfstart, out, dbs, queryurl, mirror,
         pass
     ingested = found and new
     return ingested
+
+def mastapi(tfl, out, dbs, download_url=None, hst_url=None, verbose=False):
+    '''Uses MAST API tools to download data'''
+    target = list(tfl['starID'].keys())[0]
+    obstable = tfl['starID'][target]['datatable']
+    obsids = [o['obsid'] for o in obstable]
+    allsci = []
+    allurl = []
+    allmiss = []
+    for o in obsids[:2]:
+        request = {'service':'Mast.Caom.Products', 'params':{'obsid':o}, 'format':'json'}
+        _h, datastr = masttool.mast_query(request)
+        data = json.loads(datastr)
+        dtlvl = None
+        clblvl = None
+        obscol = ''
+        thisurl = ''
+        if 'SPITZER' in data['data'][0].get("obs_collection", None).upper():
+            # Relying on disk data for now.
+            obscol = 'SPITZER'
+            dtlvl = 'SEE WITH KYLE'
+            clblvl = 666
+            thisurl = 'https:do.not.dl.for.now'
+            pass
+        if 'JWST' in data['data'][0].get("obs_collection", None):
+            obscol = 'JWST'
+            dtlvl = 'CALINTS'
+            clblvl = 2
+            thisurl = download_url
+            pass
+        if 'HST' in data['data'][0].get("obs_collection", None):
+            obscol = 'HST'
+            dtlvl = 'FLT'  # No comment on mast api missing ima files. See HST hack below.
+            clblvl = 2
+            thisurl = hst_url
+            pass
+        scidata = [x for x in data['data'] if
+                   (x.get("productType", None) == 'SCIENCE') and
+                   (x.get("dataRights", None) == 'PUBLIC') and
+                   (x.get("calib_level", None) == clblvl) and
+                   (x.get("productSubGroupDescription", None) == dtlvl)]
+        allsci.extend(scidata)
+        allmiss.extend([obscol]*len(scidata))
+        allurl.extend([thisurl]*len(scidata))
+        if verbose: log.warning('%s: %s', o, len(scidata))
+        pass
+    tempdir = tempfile.mkdtemp(dir=dawgie.context.data_stg,
+                               prefix=target.replace(' ', '')+'_')
+    for irow, row in enumerate(allsci):
+        # HST: mast api hack
+        if allmiss[irow] in ['HST']:
+            thisobsid = row['productFilename'].split('_')[-2]
+            if row['project'] in ['CALSTIS']:
+                thisobsid = thisobsid.upper()+'%2F'+thisobsid+'_flt.fits'
+                pass
+            else: thisobsid = thisobsid.upper()+'Q%2F'+thisobsid+'q_ima.fits'
+            fileout = os.path.join(tempdir, os.path.basename(thisobsid))
+            shellcom = "'".join(["curl -s -L -X GET ",
+                                 allurl[irow]+"product_name="+thisobsid,
+                                 " --output ",
+                                 fileout,
+                                 ""])
+            subprocess.run(shellcom, shell=True, check=False)
+            pass
+        # JWST
+        elif allmiss[irow] in ['JWST']:
+            payload = {"uri":row['dataURI']}
+            resp = requests.get(allurl[irow], params=payload)
+            fileout = os.path.join(tempdir, os.path.basename(row['productFilename']))
+            with open(fileout,'wb') as flt: flt.write(resp.content)
+            pass
+        # DO NOTHING
+        else: pass
+        if verbose: log.warning('>-- %s %s', os.path.getsize(fileout), fileout)
+        pass
+    locations = [tempdir]
+    new = dbscp(locations, dbs, out)
+    shutil.rmtree(tempdir, True)
+    return new
 # ---------- ---------------------------------------------------------
 # -- DISK -- ---------------------------------------------------------
 def disk(selfstart, out, diskloc, dbs):
@@ -679,7 +808,7 @@ def disk(selfstart, out, diskloc, dbs):
     return merge
 # ---------- ---------------------------------------------------------
 # -- DBS COPY -- -----------------------------------------------------
-def dbscp(locations, dbs, out):
+def dbscp(locations, dbs, out, verbose=True):
     '''Format data into SV'''
     copied = False
     imalist = None
@@ -707,12 +836,10 @@ def dbscp(locations, dbs, out):
         filedict['loc'] = fitsfile
         with pyfits.open(fitsfile) as pf:
             mainheader = pf[0].header
-
             # HST
             if 'SCI' in mainheader.get('FILETYPE',''):
                 keys = [k for k in mainheader.keys() if k != '']
                 keys = list(set(keys))
-
                 if 'TELESCOP' in keys: filedict['observatory'] = mainheader['TELESCOP']
                 if 'INSTRUME' in keys: filedict['instrument'] = mainheader['INSTRUME']
                 if 'DETECTOR' in keys:
@@ -729,11 +856,11 @@ def dbscp(locations, dbs, out):
                 if filedict['instrument'] in ['STIS']:
                     filedict['filter'] = mainheader['OPT_ELEM']
                     pass
-
                 out['name'][mainheader['ROOTNAME']] = filedict
-
+                pass
             # Spitzer
-            elif 'spitzer' in mainheader.get('TELESCOP').lower() and 'sci' in mainheader.get('EXPTYPE').lower():
+            elif ('spitzer' in mainheader.get('TELESCOP').lower() and
+                  'sci' in mainheader.get('EXPTYPE').lower()):
                 filedict['observatory'] = mainheader.get('TELESCOP')
                 filedict['instrument'] = mainheader.get('INSTRUME')
                 filedict['mode'] = mainheader.get('READMODE')
@@ -743,18 +870,25 @@ def dbscp(locations, dbs, out):
                 else: filedict['filter'] = mainheader.get('CHNLNUM')
                 out['name'][str(mainheader.get('DPID'))] = filedict
                 pass
-
             # JWST
-            elif 'jwst' in mainheader.get('TELESCOP').lower():
-                # Add filter for science frames only
-                filedict['observatory'] = mainheader.get('TELESCOP').strip()
-                filedict['instrument'] = mainheader.get('INSTRUME').strip()
-                filedict['mode'] = mainheader.get('PUPIL').strip()  # maybe EXP_TYPE?
-                filedict['detector'] = mainheader.get('DETECTOR').strip()
-                filedict['filter'] = mainheader.get('FILTER').strip()
-                out['name'][mainheader.get("FILENAME")] = filedict
+            elif 'JWST' in mainheader.get('TELESCOP'):
+                filedict['observatory'] = mainheader.get('TELESCOP')
+                filedict['instrument'] = mainheader.get('INSTRUME')
+                filedict['detector'] = mainheader.get('DETECTOR')
+                filedict['filter'] = mainheader.get('FILTER')
+                if mainheader.get('PUPIL'): filedict['mode'] = mainheader.get('PUPIL')
+                else: filedict['mode'] = mainheader.get('GRATING', '')
+                key = mainheader.get("FILENAME").split('.')[0]
+                out['name'][key] = filedict
+                if verbose: log.warning('--< %s: %s %s %s %s %s',
+                                        key,
+                                        filedict['observatory'],
+                                        filedict['instrument'],
+                                        filedict['detector'],
+                                        filedict['filter'],
+                                        filedict['mode'])
                 pass
-
+            pass
         mastout = os.path.join(dbs, md5+'_'+sha)
         onmast = os.path.isfile(mastout)
         if not onmast:
@@ -764,6 +898,5 @@ def dbscp(locations, dbs, out):
         copied = True
         out['STATUS'].append(True)
         pass
-
     return copied
 # -------------- -----------------------------------------------------

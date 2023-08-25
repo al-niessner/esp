@@ -4,17 +4,23 @@ import dawgie
 import logging; log = logging.getLogger(__name__)
 # ------------- ------------------------------------------------------
 # -- ACTIVE FILTERS -- -----------------------------------------------
-# DEFAULT OUTPUTS FOR DAWGIE, SHOULD HAVE ALL POSSIBLE COMBINATION THERE
 # FORMAT:
 # OBSERVATORY/INSTRUMENT/DETECTOR/FILTER/MODE
-# EXAMPLES:
-# HST-STIS-FUV.MAMA-G140M-STARE
+# SPITZER:
 # Spitzer-IRAC-IR-36-SUB
 # Spitzer-IRAC-IR-45-SUB
+# HST:
 # HST-WFC3-IR-G141-SCAN
 # HST-WFC3-IR-G102-SCAN
 # HST-STIS-CCD-G750L-STARE
+# HST-STIS-CCD-G430L-STARE
+# JWST:
 # JWST-NIRISS-NIS-CLEAR-GR700XD
+# JWST-NIRCAM-NRCALONG-F322W2-GRISMR
+# JWST-NIRCAM-IMAGE-F210M-WLP8
+# JWST-NIRSPEC-NRS-F290LP-G395H
+# JWST-NIRSPEC-NRS-CLEAR-PRISM
+
 def activefilters():
     '''
 Spitzer-IRAC-IR-36-SUB
@@ -23,18 +29,26 @@ HST-WFC3-IR-G141-SCAN
 HST-WFC3-IR-G102-SCAN
 HST-STIS-CCD-G750L-STARE
 HST-STIS-CCD-G430L-STARE
+JWST-NIRISS-NIS-CLEAR-GR700XD
+JWST-NIRCAM-NRCALONG-F322W2-GRISMR
+JWST-NIRCAM-IMAGE-F210M-WLP8
+JWST-NIRSPEC-NRS-F290LP-G395H
+JWST-NIRSPEC-NRS-CLEAR-PRISM
     '''
     return
-
+# ----------------------------- --------------------------------------
+# -- PROCESS RULES -- ------------------------------------------------
 def processme():
     '''
     - Empty list means everything goes through
-    - Include/Exclude ['a', 'b'] will include/exclude filter/target containing 'a' or 'b'
+    - Include/Exclude ['a', 'b'] will include/exclude filter/target including 'a' or 'b'
+    -- FILTER: partial match
+    -- TARGET: exact match
     '''
     out = {}
     out['FILTER'] = {}
-    out['FILTER']['include'] = ['Spitzer', 'Ariel-sim']
-    out['FILTER']['exclude'] = ['HST']
+    out['FILTER']['include'] = []
+    out['FILTER']['exclude'] = []
     out['TARGET'] = {}
     # Best to use a function call that returns a specific list
     # if one wants to change the 'include' target content
@@ -46,7 +60,35 @@ def processme():
                                 'KIC 12266812', 'TIC 184892124',
                                 'TOI-175', 'TOI-193']
     return out
-# ----------------------------- --------------------------------------
+
+def proceed(name, ext=None, verbose=False):
+    '''
+    GMR: High level filtering
+    '''
+    out = True
+    rules = processme()
+    filterkeys = [r for r in ['include', 'exclude'] if rules['FILTER'][r]]
+    if ext:
+        for thisrule in filterkeys:
+            # partial name matching for filters, such that 'HST' matches all HST filters
+            trout = any(itm in ext for itm in rules['FILTER'][thisrule])
+            if 'exclude' in thisrule: trout = not trout
+            if ext=='any filter': trout=True
+            out = out and trout
+            if verbose: log.warning('>---- FILTER %s: %s %s', ext, thisrule, out)
+            pass
+        pass
+    namekeys = [r for r in ['include', 'exclude'] if rules['TARGET'][r]]
+    for thisrule in namekeys:
+        # exact name matching for targets, otherwise TOI-175 removes TOI-1759
+        trout = any(itm is name for itm in rules['TARGET'][thisrule])
+        if 'exclude' in thisrule: trout = not trout
+        out = out and trout
+        if verbose: log.warning('>---- TARGET %s: %s %s', name, thisrule, out)
+        pass
+    if verbose: log.warning('>-- PROCEED: %s', out)
+    return out
+# ------------------- ------------------------------------------------
 # -- CREATE -- -------------------------------------------------------
 def createversion():
     '''
@@ -2836,30 +2878,3 @@ overwrite[starID] =
 
     return overwrite
 # -------------------------------------------------------------------
-# -- PROCESS RULES -- -----------------------------------------------
-def proceed(name, ext, verbose=False):
-    '''
-    GMR: High level filtering
-    '''
-    out = True
-    rules = processme()
-    filterkeys = [r for r in ['include', 'exclude'] if rules['FILTER'][r]]
-    for thisrule in filterkeys:
-        # partial name matching for filters, such that 'HST' matches all HST filters
-        trout = any(itm in ext for itm in rules['FILTER'][thisrule])
-        if 'exclude' in thisrule: trout = not trout
-        if ext=='any filter': trout=True
-        out = out and trout
-        if verbose: log.warning('>---- FILTER %s: %s %s', ext, thisrule, out)
-        pass
-    namekeys = [r for r in ['include', 'exclude'] if rules['TARGET'][r]]
-    for thisrule in namekeys:
-        # exact name matching for targets, otherwise TOI-175 removes TOI-1759
-        trout = any(itm is name for itm in rules['TARGET'][thisrule])
-        if 'exclude' in thisrule: trout = not trout
-        out = out and trout
-        if verbose: log.warning('>---- TARGET %s: %s %s', name, thisrule, out)
-        pass
-    if verbose: log.warning('>-- PROCEED: %s', out)
-    return out
-# ------------------- -----------------------------------------------

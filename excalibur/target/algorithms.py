@@ -24,6 +24,9 @@ diskloc = os.path.join(excalibur.context['data_dir'], 'sci')
 queryform = 'https://archive.stsci.edu/hst/search.php?target='
 mirror1 = 'http://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/data/pub/HSTCA/'
 mirror2 = 'http://archives.esac.esa.int/ehst-sl-server/servlet/data-action?ARTIFACT_ID='
+# MAST API
+durl = 'https://mast.stsci.edu/api/v0.1/Download/file?'
+hsturl = 'https://mast.stsci.edu/search/hst/api/v0.1/retrieve_product?'
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class alert(dawgie.Analyzer):
@@ -119,10 +122,13 @@ class autofill(dawgie.Algorithm):
     def run(self, ds, ps):
         '''Top level algorithm call'''
         update = False
-        crt = self.__create.sv_as_dict()['starIDs']
-        valid, errstring = trgcore.checksv(crt)
+        crt = self.__create.sv_as_dict()
+        valid, errstring = trgcore.checksv(crt['starIDs'])
         # pylint: disable=protected-access
-        if valid and ds._tn() in crt['starID']: update = self._autofill(crt, ds._tn())
+        prc = trgedit.proceed(ds._tn())
+        if valid and (ds._tn() in crt['starIDs']['starID']) and prc:
+            update = self._autofill(crt, ds._tn())
+            pass
         else: self._failure(errstring)
         if update: ds.update()
         else: raise dawgie.NoValidOutputDataError(
@@ -171,6 +177,8 @@ class scrape(dawgie.Algorithm):
         # update = False
         var_autofill = self.__autofill.sv_as_dict()['parameters']
         valid, errstring = trgcore.checksv(var_autofill)
+        # pylint: disable=protected-access
+        valid = valid and trgedit.proceed(ds._tn())
         # if valid: update = self._scrape(var_autofill, self.__out)
         if valid: _ = self._scrape(var_autofill, self.__out)
         else: self._failure(errstring)
@@ -181,18 +189,23 @@ class scrape(dawgie.Algorithm):
         # Let's not do an error crash though;
         # still finish off the target.scrape output,
         # even if there's no HST or Spitzer data
+
+        # GMR: This should be fixed now with a careful usage of proceed().
+        # Lets just make a note for now.
         ds.update()
         return
 
     @staticmethod
-    def _scrape(arg_autofill, out):
+    def _scrape(tfl, out):
         '''Core code call'''
         dbs = os.path.join(dawgie.context.data_dbs, 'mast')
         if not os.path.exists(dbs): os.makedirs(dbs)
         # Download from MAST
-        umast = trgcore.mast(arg_autofill, out, dbs, queryform, mirror1, alt=mirror2)
-        # Get data from diskloc
-        udisk = trgcore.disk(arg_autofill, out, diskloc, dbs)
+        umast = trgcore.mastapi(tfl, out, dbs,
+                                download_url=durl, hst_url=hsturl, verbose=False)
+        # Data on DISK
+        # udisk gets prioritized over umast for duplicates
+        udisk = trgcore.disk(tfl, out, diskloc, dbs)
         return udisk or umast
 
     @staticmethod
@@ -237,6 +250,6 @@ class regress(dawgie.Regression):
 
     def variables(self)->[dawgie.SV_REF, dawgie.V_REF]:
         '''variables ds'''
-        return [dawgie.SV_REF(trg.task,autofill(),autofill().state_vectors()[0])]
+        return [dawgie.SV_REF(trg.task,autofill(), autofill().state_vectors()[0])]
     pass
 # -------------------------------------------------------------------
