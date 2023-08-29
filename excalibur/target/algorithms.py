@@ -151,11 +151,10 @@ class autofill(dawgie.Algorithm):
 class scrape(dawgie.Algorithm):
     '''
     Download data or ingest data from disk
-    2.0.0: GMR: Code changes to use the new MAST API
     '''
     def __init__(self):
         '''__init__ ds'''
-        self._version_ = dawgie.VERSION(2,0,0)
+        self._version_ = trgcore.scrapeversion()
         self.__autofill = autofill()
         self.__out = trgstates.DatabaseSV('databases')
         return
@@ -174,24 +173,14 @@ class scrape(dawgie.Algorithm):
 
     def run(self, ds, ps):
         '''Top level algorithm call'''
-        # update = False
         var_autofill = self.__autofill.sv_as_dict()['parameters']
         valid, errstring = trgcore.checksv(var_autofill)
         # pylint: disable=protected-access
         valid = valid and trgedit.proceed(ds._tn())
-        # if valid: update = self._scrape(var_autofill, self.__out)
         if valid: _ = self._scrape(var_autofill, self.__out)
         else: self._failure(errstring)
-        # if update: ds.update()
-        # else: raise dawgie.NoValidOutputDataError(
-        #         f'No output created for TARGET.{self.name()}')
-        # If there's no fits data files, 'update' will return as False
-        # Let's not do an error crash though;
-        # still finish off the target.scrape output,
-        # even if there's no HST or Spitzer data
-
-        # GMR: This should be fixed now with a careful usage of proceed().
-        # Lets just make a note for now.
+        # GMR: always update.
+        # Sims / proceed() do not require data nor full set of system parameters.
         ds.update()
         return
 

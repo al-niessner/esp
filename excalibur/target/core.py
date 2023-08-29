@@ -168,7 +168,7 @@ def autofillversion():
     1.2.0: new Exoplanet Archive tables and TAP protocol
     1.2.1: non-default parameters included; only two Exoplanet Archive queries; RHO* filled in by R*,M*
     '''
-    return dawgie.VERSION(1,2,1)
+    return dawgie.VERSION(2,0,1)
 
 def autofill(ident, thistarget, out, searchrad=0.2):
     '''Queries MAST for available data and parses NEXSCI data into tables'''
@@ -202,55 +202,56 @@ def autofill(ident, thistarget, out, searchrad=0.2):
                    'removecache':True}
         _h, outstr = masttool.mast_query(request)
         outjson = json.loads(outstr)
-        pass
-    # 3 - activefilters filtering on TELESCOPE INSTRUMENT FILTER
-    targettable = []
-    platformlist = []
-    filters = ident['filters']['activefilters']['NAMES']
-    for obs in outjson['data']:
-        for f in filters:
-            if obs['obs_collection'] is not None:
-                pfcond = f.split('-')[0].upper() in obs['obs_collection']
-                pass
-            else: pfcond = False
-            if obs['instrument_name'] is not None:
-                nscond = f.split('-')[1] in obs['instrument_name']
-                pass
-            else: nscond = False
-            if (f.split('-')[0] not in ['Spitzer']) and (obs['filters'] is not None):
-                flcond = f.split('-')[3] in obs['filters']
-                pass
-            else:
-                sptzfl = None
-                if f.split('-')[3] in ['36']: sptzfl = 'IRAC1'
-                if f.split('-')[3] in ['45']: sptzfl = 'IRAC2'
-                if obs['filters'] is not None: flcond = sptzfl in obs['filters']
-                else: flcond = False
-                pass
-            if pfcond and nscond and flcond:
-                targettable.append(obs)
-                platformlist.append(obs['obs_collection'])
+
+        # 3 - activefilters filtering on TELESCOPE INSTRUMENT FILTER
+        targettable = []
+        platformlist = []
+        filters = ident['filters']['activefilters']['NAMES']
+        for obs in outjson['data']:
+            for f in filters:
+                if obs['obs_collection'] is not None:
+                    pfcond = f.split('-')[0].upper() in obs['obs_collection']
+                    pass
+                else: pfcond = False
+                if obs['instrument_name'] is not None:
+                    nscond = f.split('-')[1] in obs['instrument_name']
+                    pass
+                else: nscond = False
+                if (f.split('-')[0] not in ['Spitzer']) and (obs['filters'] is not None):
+                    flcond = f.split('-')[3] in obs['filters']
+                    pass
+                else:
+                    sptzfl = None
+                    if f.split('-')[3] in ['36']: sptzfl = 'IRAC1'
+                    if f.split('-')[3] in ['45']: sptzfl = 'IRAC2'
+                    if obs['filters'] is not None: flcond = sptzfl in obs['filters']
+                    else: flcond = False
+                    pass
+                if pfcond and nscond and flcond:
+                    targettable.append(obs)
+                    platformlist.append(obs['obs_collection'])
+                    pass
                 pass
             pass
-        pass
-    if not targettable: solved = False
-    # Note: If we use data that are not known by MAST but are on disk
-    # this will also return False
-    # 4 - pid filtering
-    pidlist = []
-    aliaslist = []
-    obslist = []
-    for item, pf in zip(targettable, platformlist):
-        if item['proposal_id'] not in pidlist:
-            pidlist.append(item['proposal_id'])
-            aliaslist.append(item['target_name'])
-            obslist.append(pf)
+        if not targettable: solved = False
+        # Note: If we use data that are not known by MAST but are on disk
+        # this will also return False
+        # 4 - pid filtering
+        pidlist = []
+        aliaslist = []
+        obslist = []
+        for item, pf in zip(targettable, platformlist):
+            if item['proposal_id'] not in pidlist:
+                pidlist.append(item['proposal_id'])
+                aliaslist.append(item['target_name'])
+                obslist.append(pf)
+                pass
             pass
+        out['starID'][thistarget]['aliases'].extend(aliaslist)
+        out['starID'][thistarget]['PID'].extend(pidlist)
+        out['starID'][thistarget]['observatory'].extend(obslist)
+        out['starID'][thistarget]['datatable'].extend(targettable)
         pass
-    out['starID'][thistarget]['aliases'].extend(aliaslist)
-    out['starID'][thistarget]['PID'].extend(pidlist)
-    out['starID'][thistarget]['observatory'].extend(obslist)
-    out['starID'][thistarget]['datatable'].extend(targettable)
     out['STATUS'].append(solved)
 
     # AUTOFILL WITH NEXSCI EXOPLANET TABLE, DEFAULTS ONLY ---------------------------
@@ -500,7 +501,9 @@ def autofill(ident, thistarget, out, searchrad=0.2):
         out['exts'].extend(['_uperr', '_lowerr', '_units', '_ref'])
         out['STATUS'].append(True)
         pass
-    status = solved and merged
+    # GMR: Some targets cannot be solved but we still need them for sims.
+    # Changing this condition to OR
+    status = solved or merged
     return status
 
 def clean_elem(elem):
@@ -638,6 +641,14 @@ def translatekeys(header):
         pass
     return matchlist
 # -------------- -----------------------------------------------------
+# -- SCRAPE -- -------------------------------------------------------
+def scrapeversion():
+    '''
+    2.0.0: GMR: Code changes to use the new MAST API
+    2.0.1: GMR: See #539 bugfixes after PR #546
+    '''
+    return dawgie.VERSION(2,0,1)
+# ------------ -------------------------------------------------------
 # -- MAST -- ---------------------------------------------------------
 def mast(selfstart, out, dbs, queryurl, mirror,
          alt=None,
@@ -702,41 +713,46 @@ def mastapi(tfl, out, dbs, download_url=None, hst_url=None, verbose=False):
     allurl = []
     allmiss = []
     for o in obsids[:2]:
+        donmast = False
         request = {'service':'Mast.Caom.Products', 'params':{'obsid':o}, 'format':'json'}
         _h, datastr = masttool.mast_query(request)
         data = json.loads(datastr)
+        if data['data']: donmast = True
         dtlvl = None
         clblvl = None
         obscol = ''
         thisurl = ''
-        if 'SPITZER' in data['data'][0].get("obs_collection", None).upper():
-            # Relying on disk data for now.
-            obscol = 'SPITZER'
-            dtlvl = 'SEE WITH KYLE'
-            clblvl = 666
-            thisurl = 'https:do.not.dl.for.now'
+        if donmast:
+            if 'SPITZER' in data['data'][0].get("obs_collection", None).upper():
+                # Relying on disk data for now.
+                obscol = 'SPITZER'
+                dtlvl = 'SEE WITH KYLE'
+                clblvl = 666
+                thisurl = 'https:do.not.dl.for.now'
+                pass
+            if 'JWST' in data['data'][0].get("obs_collection", None):
+                obscol = 'JWST'
+                dtlvl = 'CALINTS'
+                clblvl = 2
+                thisurl = download_url
+                pass
+            if 'HST' in data['data'][0].get("obs_collection", None):
+                obscol = 'HST'
+                # No comment on mast api missing ima files. See HST hack below.
+                dtlvl = 'FLT'
+                clblvl = 2
+                thisurl = hst_url
+                pass
+            scidata = [x for x in data['data'] if
+                       (x.get("productType", None) == 'SCIENCE') and
+                       (x.get("dataRights", None) == 'PUBLIC') and
+                       (x.get("calib_level", None) == clblvl) and
+                       (x.get("productSubGroupDescription", None) == dtlvl)]
+            allsci.extend(scidata)
+            allmiss.extend([obscol]*len(scidata))
+            allurl.extend([thisurl]*len(scidata))
+            if verbose: log.warning('%s: %s', o, len(scidata))
             pass
-        if 'JWST' in data['data'][0].get("obs_collection", None):
-            obscol = 'JWST'
-            dtlvl = 'CALINTS'
-            clblvl = 2
-            thisurl = download_url
-            pass
-        if 'HST' in data['data'][0].get("obs_collection", None):
-            obscol = 'HST'
-            dtlvl = 'FLT'  # No comment on mast api missing ima files. See HST hack below.
-            clblvl = 2
-            thisurl = hst_url
-            pass
-        scidata = [x for x in data['data'] if
-                   (x.get("productType", None) == 'SCIENCE') and
-                   (x.get("dataRights", None) == 'PUBLIC') and
-                   (x.get("calib_level", None) == clblvl) and
-                   (x.get("productSubGroupDescription", None) == dtlvl)]
-        allsci.extend(scidata)
-        allmiss.extend([obscol]*len(scidata))
-        allurl.extend([thisurl]*len(scidata))
-        if verbose: log.warning('%s: %s', o, len(scidata))
         pass
     tempdir = tempfile.mkdtemp(dir=dawgie.context.data_stg,
                                prefix=target.replace(' ', '')+'_')
@@ -808,7 +824,7 @@ def disk(selfstart, out, diskloc, dbs):
     return merge
 # ---------- ---------------------------------------------------------
 # -- DBS COPY -- -----------------------------------------------------
-def dbscp(locations, dbs, out, verbose=True):
+def dbscp(locations, dbs, out, verbose=False):
     '''Format data into SV'''
     copied = False
     imalist = None
