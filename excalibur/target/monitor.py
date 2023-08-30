@@ -25,19 +25,24 @@ def _diff (vl):
 
 def _outlier (vl):
     '''Finds whether first element of vl is within 5 sigma of other elems'''
+    # 1 or more element of vl is an empty string there '' and that triggers bad things
     if 1 < len (vl):
-        vl = [float(v) for v in vl]
+        # Cheap fix attempt with try except
+        try:
+            vl = [float(v) for v in vl]
 
-        if math.isnan(vl[0]):
-            is_outlier = False
-        else:
-            vl_prev = numpy.array(vl[1:])
-            vl_prev = vl_prev[~numpy.isnan(vl_prev)]  # clear all nans
-            if len(vl_prev) > 1:
-                mean = numpy.mean(vl_prev)
-                std = numpy.std(vl_prev)
-                is_outlier = abs(vl[0]-mean)>5*std
-            else: is_outlier = False
+            if math.isnan(vl[0]): is_outlier = False
+            else:
+                vl_prev = numpy.array(vl[1:])
+                vl_prev = vl_prev[~numpy.isnan(vl_prev)]  # clear all nans
+                if len(vl_prev) > 1:
+                    mean = numpy.mean(vl_prev)
+                    std = numpy.std(vl_prev)
+                    is_outlier = abs(vl[0]-mean)>5*std
+                else: is_outlier = False
+                pass
+            pass
+        except ValueError: is_outlier = False
     else: is_outlier = False  # only 1 or 0 elems; no outlier can exist
     return is_outlier
 
@@ -104,7 +109,8 @@ def regress (planet:{},rids:[],tl:{str:{str:{str:object}}})->({str:float},{str:[
             pass
         pass
     # last = dict([(pp, _diff (vl)) for pp,vl in planet.items()])
-    print (planet.items())
+    # I believe this might have been a debug thingy, commenting the print statement
+    # print (planet.items())
     last = {pp:_diff (vl) for pp, vl in planet.items()}
     # outliers = dict([(pp, _outlier (vl)) for pp,vl in planet.items()])
     outliers = {pp:_outlier (vl) for pp, vl in planet.items()}

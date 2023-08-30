@@ -18,7 +18,6 @@ import excalibur.target.edit as trgedit
 import excalibur.target.mast_api_utils as masttool
 
 import astropy.io.fits as pyfits
-import urllib.error
 import urllib.request as urlrequest
 # ------------- ------------------------------------------------------
 # -- URLTRICK -- -----------------------------------------------------
@@ -167,6 +166,7 @@ def autofillversion():
     1.1.5: added Hmag, L*; fixed FEH* problems
     1.2.0: new Exoplanet Archive tables and TAP protocol
     1.2.1: non-default parameters included; only two Exoplanet Archive queries; RHO* filled in by R*,M*
+    2.0.1: requests are now using MAST api
     '''
     return dawgie.VERSION(2,0,1)
 
@@ -209,27 +209,29 @@ def autofill(ident, thistarget, out, searchrad=0.2):
         filters = ident['filters']['activefilters']['NAMES']
         for obs in outjson['data']:
             for f in filters:
-                if obs['obs_collection'] is not None:
-                    pfcond = f.split('-')[0].upper() in obs['obs_collection']
-                    pass
-                else: pfcond = False
-                if obs['instrument_name'] is not None:
-                    nscond = f.split('-')[1] in obs['instrument_name']
-                    pass
-                else: nscond = False
-                if (f.split('-')[0] not in ['Spitzer']) and (obs['filters'] is not None):
-                    flcond = f.split('-')[3] in obs['filters']
-                    pass
-                else:
-                    sptzfl = None
-                    if f.split('-')[3] in ['36']: sptzfl = 'IRAC1'
-                    if f.split('-')[3] in ['45']: sptzfl = 'IRAC2'
-                    if obs['filters'] is not None: flcond = sptzfl in obs['filters']
-                    else: flcond = False
-                    pass
-                if pfcond and nscond and flcond:
-                    targettable.append(obs)
-                    platformlist.append(obs['obs_collection'])
+                if trgedit.proceed(thistarget, ext=f):
+                    if obs['obs_collection'] is not None:
+                        pfcond = f.split('-')[0].upper() in obs['obs_collection']
+                        pass
+                    else: pfcond = False
+                    if obs['instrument_name'] is not None:
+                        nscond = f.split('-')[1] in obs['instrument_name']
+                        pass
+                    else: nscond = False
+                    if (f.split('-')[0] not in ['Spitzer']) and (obs['filters'] is not None):
+                        flcond = f.split('-')[3] in obs['filters']
+                        pass
+                    else:
+                        sptzfl = None
+                        if f.split('-')[3] in ['36']: sptzfl = 'IRAC1'
+                        if f.split('-')[3] in ['45']: sptzfl = 'IRAC2'
+                        if obs['filters'] is not None: flcond = sptzfl in obs['filters']
+                        else: flcond = False
+                        pass
+                    if pfcond and nscond and flcond:
+                        targettable.append(obs)
+                        platformlist.append(obs['obs_collection'])
+                        pass
                     pass
                 pass
             pass
@@ -650,60 +652,6 @@ def scrapeversion():
     return dawgie.VERSION(2,0,1)
 # ------------ -------------------------------------------------------
 # -- MAST -- ---------------------------------------------------------
-def mast(selfstart, out, dbs, queryurl, mirror,
-         alt=None,
-         action='&action=Search&resolver=SIMBAD&radius=3.0',
-         outfmt='&outputformat=CSV&max_records=100000',
-         opt='&sci_aec=S'):
-    '''Query and download from MAST'''
-    found = False
-    temploc = dawgie.context.data_stg
-    targetID = list(selfstart['starID'].keys())
-    querytarget = targetID[0].replace(' ', '+')
-    targetID.extend(selfstart['starID'][targetID[0]]['aliases'])
-    queryform = queryurl + querytarget + action + outfmt + opt
-    with urlrequest.urlopen(queryform) as temp:
-        framelist = temp.read().decode('utf-8').split('\n')
-        pass
-    namelist = []
-    instlist = []
-    for frame in framelist:
-        row = frame.split(',')
-        row = [v.strip() for v in row if v]
-        if len(row) > 2:
-            if row[1] in targetID:
-                namelist.append(row[0].lower())
-                instlist.append(row[8])
-                found = True
-                pass
-            pass
-        pass
-    if found:
-        tempdir = tempfile.mkdtemp(dir=temploc, prefix=targetID[0])
-        ignname = []
-        igninst = []
-        for name, inst in zip(namelist, instlist):
-            ext = '_flt.fits'
-            if inst in ['WFC3', 'NICMOS']: ext = '_ima.fits'
-            outfile = os.path.join(tempdir, name+ext)
-            try: urlrequest.urlretrieve(mirror+name+ext, outfile)
-            except(urllib.error.ContentTooShortError, urllib.error.URLError):
-                log.warning('>-- Mirror1 %s %s %s', name, ext, 'NOT FOUND')
-                try: urlrequest.urlretrieve(alt+name.upper()+ext.upper(), outfile)
-                except (urllib.error.ContentTooShortError, urllib.error.HTTPError):
-                    log.warning('>-- Mirror2 %s %s %s', name, ext, 'NOT FOUND')
-                    ignname.append(name)
-                    igninst.append(inst)
-                    pass
-                pass
-            pass
-        locations = [tempdir]
-        new = dbscp(locations, dbs, out)
-        shutil.rmtree(tempdir, True)
-        pass
-    ingested = found and new
-    return ingested
-
 def mastapi(tfl, out, dbs, download_url=None, hst_url=None, verbose=False):
     '''Uses MAST API tools to download data'''
     target = list(tfl['starID'].keys())[0]
@@ -779,7 +727,7 @@ def mastapi(tfl, out, dbs, download_url=None, hst_url=None, verbose=False):
             fileout = os.path.join(tempdir, os.path.basename(row['productFilename']))
             with open(fileout,'wb') as flt: flt.write(resp.content)
             pass
-        # DO NOTHING
+        # SPITZER DO NOTHING FOR NOW DL IS TOO LONG
         else: pass
         if verbose: log.warning('>-- %s %s', os.path.getsize(fileout), fileout)
         pass

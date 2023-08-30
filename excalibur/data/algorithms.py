@@ -49,14 +49,17 @@ class collect(dawgie.Algorithm):
     def run(self, ds, ps):
         '''Top level algorithm call'''
         update = False
-        create = self.__create.sv_as_dict()['filters']
+        create = self.__create.sv_as_dict()
         scrape = self.__scrape.sv_as_dict()['databases']
         valid, errstring = datcore.checksv(scrape)
         if valid:
-            for key in create.keys(): self.__out[key] = create[key]
-            for name in create['activefilters']['NAMES']:
-                ok = self._collect(name, scrape, self.__out)
-                update = update or ok
+            for key in create['filters'].keys(): self.__out[key] = create['filters'][key]
+            for name in create['filters']['activefilters']['NAMES']:
+                prc = trgedit.proceed(list(create['starIDs']['starID'])[0], ext=name)
+                if prc:
+                    ok = self._collect(name, scrape, self.__out)
+                    update = update or ok
+                    pass
                 pass
             if update: ds.update()
             else: self._raisenoout(self.name())

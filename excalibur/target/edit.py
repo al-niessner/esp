@@ -99,8 +99,9 @@ def createversion():
     1.6.0: Added a few FEH* values and one Hmag; removed some redundant settings
     1.7.0: Added confirmed planets in Ariel target list
     1.7.1: WFC3 targets 2023
+    1.8.0: JWST filters
     '''
-    return dawgie.VERSION(1,7,0)
+    return dawgie.VERSION(1,8,0)
 # ------------ -------------------------------------------------------
 # -- TARGET LIST -- --------------------------------------------------
 # FIRST COL HAS TO BE SOLVABLE BY

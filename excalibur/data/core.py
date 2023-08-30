@@ -90,7 +90,7 @@ def timing(force, ext, clc, out, verbose=False):
     dbs = os.path.join(dawgie.context.data_dbs, 'mast')
     data = {'LOC':[], 'SCANANGLE':[], 'TIME':[], 'EXPLEN':[]}
     # LOAD DATA ------------------------------------------------------
-    if 'jwst' in ext.lower():
+    if 'JWST' in ext:
         for loc in sorted(clc['LOC']):
             fullloc = os.path.join(dbs, loc)
             with pyfits.open(fullloc) as hdulist:
@@ -98,18 +98,11 @@ def timing(force, ext, clc, out, verbose=False):
                 ftime = []
                 exptime = []
                 for hdu in hdulist:
-                    if "primary" in hdu.name.lower():
-                        # keywords for NIRISS
-                        start = hdu.header.get("TIME-BJD")
-                        ngroup = hdu.header.get("ngroups",1)
-                        dtgroup = hdu.header.get("tgroup") / (24*60*60.)
-                        # nframe = fits.header.get("nframes",1)
-                        # dtframe = fits.header.get("tframes")
-                        # https://jwst-docs.stsci.edu/near-infrared-imager-and-slitless-spectrograph/niriss-instrumentation/niriss-detector-overview/niriss-detector-readout-patterns
-                        # Future handle multiple frames
-                        data['TIME'].extend([start + i*dtgroup for i in range(ngroup)])
-                        data['EXPLEN'].extend([dtgroup]*ngroup)
+                    if "SCI" in hdu.name:
                         data['LOC'].append(loc)
+                        data['TIME'].extend([hdu.header.get('MJD-AVG')])  # [MJD]
+                        data['EXPLEN'].extend([hdu.header.get('XPOSURE')])  # [s]
+                        data['SCANANGLE'].extend([hdu.header.get('PA_V3')])  # [deg]
                         pass
                     pass
                 pass
