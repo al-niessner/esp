@@ -62,7 +62,7 @@ class sim_spectrum(dawgie.Algorithm):
     @staticmethod
     def _simSpectrum(target, system_dict, out):
         '''Core code call'''
-        filled = arielcore.simulate_spectrum(target, system_dict, out)
+        filled = arielcore.simulate_spectra(target, system_dict, out)
         return filled
 
     @staticmethod

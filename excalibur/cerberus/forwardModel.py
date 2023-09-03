@@ -162,7 +162,6 @@ G. ROUDIER: Builds optical depth matrix
             # THIS HAS TO BE FIXED
             # if elem not in xmollist:
             if not xmollist:
-                # print('TOP')
                 # HITEMP/HITRAN ROTHMAN ET AL. 2010 --------------------------------------
                 sigma, lsig = absorb(xsecs[elem], qtgrid[elem], temp, p, mmr,
                                      lbroadening, lshifting, wgrid, debug=False)
@@ -172,9 +171,7 @@ G. ROUDIER: Builds optical depth matrix
                 sigma = sigma*1e-4  # m^2/mol
                 pass
             else:
-                # print('BOTT')
                 # EXOMOL HILL ET AL. 2013 ------------------------------------------------
-                # print('xsec shape',xsecs[elem].shape)
                 sigma, lsig = getxmolxs(temp, xsecs[elem])
                 sigma = np.array(sigma)   # cm^2/mol
                 if True in sigma < 0: sigma[sigma < 0] = 0e0
@@ -537,7 +534,6 @@ G. ROUDIER: Wrapper around EXOMOL Cerberus library
     '''
     sigma = np.array([thisspl(temp) for thisspl in xsecs['SPL']])
     nu = np.array(xsecs['SPLNU'])
-    # print('# of nu in getmolxs',len(nu))
     select = np.argsort(nu)
     nu = nu[select]
     sigma = sigma[select]
@@ -647,7 +643,6 @@ def clearfmcerberus(*crbinputs):
     '''
     Wrapper around Cerberus forward model - NO CLOUDS!
     '''
-    # print(' running a NO-CLOUDS forward model')
     ctp = 3.    # cloud deck is very deep - 1000 bars
     hza = -10.  # small number means essentially no haze
     hzloc = 0.

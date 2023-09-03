@@ -34,6 +34,9 @@ def consistency_checks(priors):
         ok = consistency_check_M_R_LOGG_planet(priors, planetLetter)
         if not ok: inconsistencies.append(planetLetter+':logg')
 
+        ok = consistency_check_Teq_sma_Lstar(priors, planetLetter)
+        if not ok: inconsistencies.append(planetLetter+':Teq')
+
 # impact and inclination should be consistent
 # but impact doesn't exist here; not saved by target
 #        ok = consistency_check_inc_impact(priors, planetLetter)
@@ -209,6 +212,27 @@ def consistency_check_R_T_Lstar(starInfo):
         Lcheck = R**2 * (T/sscmks['Tsun'])**4   # (solar units)
         # print('ccheck  L,Lcheck',float(L),Lcheck)
         if not close_to(float(L),Lcheck):
+            consistent = False
+
+    return consistent
+# -------------------------------------------------------------------
+def consistency_check_Teq_sma_Lstar(starInfo, planetLetter):
+    '''
+    Verify that the planet equilibrium temperature matches it's stellar radiation
+    '''
+
+    L = starInfo['L*']
+    Teq = starInfo[planetLetter]['teq']
+    sma = starInfo[planetLetter]['sma']
+    # print('ccheck M P sma',M,P,sma)
+
+    consistent = True
+    if L=='' or Teq=='' or sma=='':
+        print('ccheck PASS: one of the Teq/L/sma fields is missing')
+    else:
+        TeqCheck = 278.3 * float(L)**0.25 / float(sma)**0.5
+        print('ccheck  Teq',Teq,TeqCheck)
+        if not close_to(float(Teq),TeqCheck):
             consistent = False
 
     return consistent

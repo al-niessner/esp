@@ -42,7 +42,11 @@ def massMetalRelation(logmetStar, Mp):
     intercept = 0.5  # metallicity for Jupiter mass
 
     logmet = intercept + slope*np.log10(Mp)
-    logmet = min(maxMetal,logmet)
+    # change so that it can handle an array of masses (from cerberus/plotting)
+    if isinstance(Mp,float):
+        logmet = min(maxMetal,logmet)
+    else:
+        logmet[np.where(logmet > maxMetal)] = maxMetal
     logmet += logmetStar
 
     return logmet

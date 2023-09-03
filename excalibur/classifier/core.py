@@ -657,8 +657,8 @@ def savesv(aspects, fltrs):
     # print('saveDir:',saveDir)
     if not os.path.exists(saveDir): os.mkdir(saveDir)
 
-    flag_types = ['count_points_wl','symmetry_wl',
-                  'rsdm','perc_rejected','residual_shape','overall_flag']
+    flag_types = ['count_points_wl','symmetry_wl','rsdm','perc_rejected',
+                  'median_error','residual_shape','overall_flag']
 
     # file name where the results are saved
     outfileName = svname.replace('.','_') + '_RID' + RID + '.csv'
@@ -683,31 +683,35 @@ def savesv(aspects, fltrs):
                     alg_flag_data = aspects[trgt][transit_alg_fltr_name]
 
                     if alg_flag_data['STATUS'][-1]:
-                        for k in alg_flag_data['data'].keys():
-                            if k != 'median_error':
+                        for k in alg_flag_data['data'].keys():  # k is either planet letter or median_error
+                            if k == 'median_error':
+                                # skip the weirdo one that's not associated with a specific planet
+                                pass
+                            else:
                                 planet_letter = k
-
-                                outfile.write(trgt + ',')
-                                outfile.write(planet_letter + ',')
-                                outfile.write(fltr + ',')
 
                                 colors = {}
                                 for flag_type in flag_types:
                                     colors[flag_type] = '-'
-
+                                if 'median_error' in alg_flag_data['data'].keys():
+                                    # add in the weirdo one that's not associated with a specific planet
+                                    colors['median_error'] = alg_flag_data['data']['median_error']['flag_color']
                                 for alg_flag in alg_flag_data['data'][k]:
                                     if alg_flag == 'overall_flag':
                                         alg_flag_color = alg_flag_data['data'][k][alg_flag]
                                     else:
                                         alg_flag_color = alg_flag_data['data'][k][alg_flag]['flag_color']
+
                                     colors[alg_flag] = alg_flag_color
 
                                     if alg_flag not in flag_types:
-                                        print('ERROR: this flag type is not in the print out list', alg_flag)
+                                        log.warning('--< UNEXPECTED FLAG TYPE >-- %s', alg_flag)
 
+                                outfile.write(trgt + ',')
+                                outfile.write(planet_letter + ',')
+                                outfile.write(fltr + ',')
                                 for flag_type in flag_types:
                                     outfile.write(colors[flag_type] + ',')
-
                                 outfile.write('\n')
 
     return

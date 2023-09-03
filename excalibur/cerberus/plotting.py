@@ -8,6 +8,9 @@ import corner
 import numpy as np
 import matplotlib.pyplot as plt
 
+# import excalibur
+from excalibur.ariel.metallicity import massMetalRelation
+
 # --------------------------------------------------------------------
 def rebinData(transitdata, binsize=4):
     '''
@@ -333,7 +336,7 @@ def plot_walkerEvolution(allkeys, alltraces, truth_params, prior_ranges,
     return plot_as_state_vector
 
 # --------------------------------------------------------------------
-def plot_fitsVStruths(truth_values, fit_values, fit_errors,
+def plot_fitsVStruths(truth_values, fit_values, fit_errors, prior_ranges,
                       saveDir):
     ''' compare the retrieved values against the original inputs '''
 
@@ -343,26 +346,75 @@ def plot_fitsVStruths(truth_values, fit_values, fit_errors,
         figure = plt.figure(figsize=(5,5))
         ax = figure.add_subplot(1,1,1)
 
-        ax.scatter(truth_values[param],
-                   fit_values[param],
-                   facecolor='k',edgecolor='k', s=40, zorder=4)
-        ax.errorbar(truth_values[param],
-                    fit_values[param],
-                    yerr=fit_errors[param],
-                    fmt='.', color='k', zorder=2)
+        for truth,fit,error in zip(truth_values[param],
+                                   fit_values[param],
+                                   fit_errors[param]):
+
+            # check whether there is any real information beyond the prior
+            # let's say you have to improve uncertainty by a factor of 2
+            # but note that the original 1-sigma uncertainty is ~2/3 of prior range
+            # oh wait also note that errorbar is one-sided, so another factor of 2
+            minInfo = 0.5 * 0.68 * 0.5
+            newInfo = False
+            if param=='T':
+                priorRangeFactor = prior_ranges[param][1] / prior_ranges[param][0]
+                # prior is normally set to 0.75-1.5 times Teq
+                if error < minInfo * (priorRangeFactor-1) * 0.75*truth:
+                    newInfo = True
+            else:
+                priorRangeDiff = prior_ranges[param][1] - prior_ranges[param][0]
+                if error < minInfo * priorRangeDiff:
+                    newInfo = True
+#                if param=='[X/H]':
+#                    print('met,fit,err',truth,fit,error,
+#                          prior_ranges[param][1] - prior_ranges[param][0],newInfo)
+            if newInfo:
+                clr = 'k'
+                lwid = 1
+                zord = 4
+                ptsiz = 40
+            else:
+                clr = 'grey'
+                lwid = 0.5
+                zord = 2
+                ptsiz = 20
+            ax.scatter(truth, fit,
+                       facecolor=clr,edgecolor=clr, s=ptsiz, zorder=zord+1)
+            ax.errorbar(truth, fit, yerr=error,
+                        fmt='.', color=clr, lw=lwid, zorder=zord)
+        # previous was plotting them all at once; now it's one point at a time
+        # ax.scatter(truth_values[param],
+        #           fit_values[param],
+        #           facecolor=clr,edgecolor=clr, s=40, zorder=zord+1)
+        # ax.errorbar(truth_values[param],
+        #            fit_values[param],
+        #            yerr=fit_errors[param],
+        #            fmt='.', color=clr, lw=lwid, zorder=zord)
 
         ax.set_xlabel(param+' truth', fontsize=14)
         ax.set_ylabel(param+' fit', fontsize=14)
 
-        overallmin = min(ax.get_xlim()[0],ax.get_ylim()[0])
+        xrange = ax.get_xlim()
+        # overallmin = min(ax.get_xlim()[0],ax.get_ylim()[0])
         overallmax = max(ax.get_xlim()[1],ax.get_ylim()[1])
 
         # plot equality as a dashed diagonal line
-        ax.plot([overallmin,overallmax],[overallmin,overallmax],
-                'k--', lw=1, zorder=1)
+        ax.plot([-10,10000],[-10,10000],'k--', lw=1, zorder=1)
+        if param=='T':  # show T prior (from 0.75 to 1.5 times Teq)
+            ax.plot([-10,10000],[-10*0.75,10000*0.75],'k:', lw=1, zorder=1)
+            ax.plot([-10,10000],[-10*1.5,10000*1.5],'k:', lw=1, zorder=1)
 
-        ax.set_xlim(overallmin,overallmax)
-        ax.set_ylim(overallmin,overallmax)
+        # ax.set_xlim(overallmin,overallmax)
+        # ax.set_ylim(overallmin,overallmax)
+        if param=='T':  # the prior for T varies between targets
+            ax.set_xlim(0,overallmax)
+            ax.set_ylim(0,overallmax)
+        else:
+            # actually, don't use prior range for X/H and X/O on x-axis
+            # ax.set_xlim(prior_ranges[param][0],prior_ranges[param][1])
+            ax.set_xlim(xrange)
+            ax.set_ylim(prior_ranges[param][0],prior_ranges[param][1])
+
         figure.tight_layout()
 
         # ('display' doesn't work for pdf files)
@@ -375,7 +427,7 @@ def plot_fitsVStruths(truth_values, fit_values, fit_errors,
         plt.close(figure)
     return plot_statevectors
 # --------------------------------------------------------------------
-def plot_massVSmetals(truth_values, fit_values, fit_errors,
+def plot_massVSmetals(truth_values, fit_values, fit_errors, prior_ranges,
                       saveDir):
     ''' how well do we retrieve the input mass-metallicity relation? '''
 
@@ -387,26 +439,51 @@ def plot_massVSmetals(truth_values, fit_values, fit_errors,
     metals_fit = fit_values['[X/H]']
     metals_fiterr = fit_errors['[X/H]']
 
-    ax.scatter(masses, metals_true,
-               facecolor='w',edgecolor='grey', s=40, zorder=3)
-    ax.scatter(masses, metals_fit,
-               facecolor='k',edgecolor='k', s=40, zorder=4)
-    ax.errorbar(masses, metals_fit, yerr=metals_fiterr,
-                fmt='.', color='k', zorder=2)
+    for mass,metaltrue,metalfit,metalerror in zip(masses,metals_true,metals_fit,metals_fiterr):
+        # check whether there is any real information beyond the prior
+        # let's say you have to improve uncertainty by a factor of 2
+        # but note that the original 1-sigma uncertainty is ~2/3 of prior range
+        # oh wait also note that errorbar is one-sided, so another factor of 2
+        minInfo = 0.5 * 0.68 * 0.5
+        priorRangeDiff = prior_ranges['[X/H]'][1] - prior_ranges['[X/H]'][0]
+        if metalerror < minInfo * priorRangeDiff:
+            clr = 'k'
+            lwid = 1
+            ptsiz = 40
+            zord = 5
+        else:
+            clr = 'grey'
+            lwid = 0.5
+            ptsiz = 20
+            zord = 2
+        ax.scatter(mass, metaltrue,
+                   facecolor='w',edgecolor=clr, s=ptsiz, zorder=zord+1)
+        ax.scatter(mass, metalfit,
+                   facecolor=clr,edgecolor=clr, s=ptsiz, zorder=zord+2)
+        ax.errorbar(mass, metalfit, yerr=metalerror,
+                    fmt='.', color=clr, lw=lwid, zorder=zord)
+    # ax.scatter(masses, metals_true,
+    #           facecolor='w',edgecolor='grey', s=40, zorder=3)
+    # ax.scatter(masses, metals_fit,
+    #           facecolor='k',edgecolor='k', s=40, zorder=4)
+    # ax.errorbar(masses, metals_fit, yerr=metals_fiterr,
+    #            fmt='.', color='k', zorder=2)
     ax.semilogx()
-
     ax.set_xlabel('$M_p (M_{\\rm Jup})$', fontsize=14)
     ax.set_ylabel('[X/H]$_p$', fontsize=14)
+    xrange = ax.get_xlim()
+    yrange = ax.get_ylim()
 
     # plot the underlying distribution
-    # ax.plot([overallmin,overallmax],[overallmin,overallmax],
-    #        'k--', lw=1, zorder=1)
+    masses = np.logspace(-5,3,100)
+    metals = massMetalRelation(0, masses)
+    ax.plot(masses,metals, 'k--', lw=1, zorder=1)
+
+    ax.set_xlim(xrange)
+    ax.set_ylim(yrange)
+    figure.tight_layout()
 
     # *** TROUBLE - need to subtract off the stellar metallicity? ***
-
-    # ax.set_xlim()
-    # ax.set_ylim()
-    figure.tight_layout()
 
     # ('display' doesn't work for pdf files)
     plt.savefig(saveDir + 'massVSmetals.png')

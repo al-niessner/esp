@@ -166,12 +166,6 @@ class atmos(dawgie.Algorithm):
             # pylint: disable=protected-access
             prcd = trgedit.proceed(ds._tn(), ext, verbose=False)
             if vfin and vxsl and vspc and prcd:
-                # *** drop a bunch of targets during testing ***
-                # if ds._tn().startswith('K') or ds._tn().startswith('T') \
-                #   or ds._tn().startswith('W'):
-                #    log.warning('--< CERBERUS ATMOS SKIP (K,T,W temp): %s >--', ext)
-                #    update = False
-                # else:
                 log.warning('--< CERBERUS ATMOS: %s >--', ext)
                 update = self._atmos(self.__fin.sv_as_dict()['parameters'],
                                      self.__xsl.sv_as_dict()[ext],
