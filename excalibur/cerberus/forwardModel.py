@@ -151,9 +151,15 @@ G. ROUDIER: Builds optical depth matrix
         for iz, thisz in enumerate(z):
             dl = np.sqrt((rp0 + zprime + dzprime)**2 - (rp0 + thisz)**2)
             dl[:iz] = 0e0
-            dl[iz:] = dl[iz:] - np.sqrt((rp0 + zprime[iz:])**2 - (rp0 + thisz)**2)
+            # oof nasty bug here!
+            #  sometimes equal terms are off by the instrument precision
+            #  so sqrt(1e15 - 1e15) = sqrt(-1) = NaN
+            # take absolute value, just to be sure there's no problem
+            # dl[iz:] = dl[iz:] - np.sqrt((rp0 + zprime[iz:])**2 - (rp0 + thisz)**2)
+            dl[iz:] = dl[iz:] - np.sqrt(np.abs((rp0 + zprime[iz:])**2 - (rp0 + thisz)**2))
             dlarray.append(dl)
             pass
+        # print('dlarray check in gettau',len(np.where(np.isnan(dlarray))[0]))
         dlarray = np.array(dlarray)
         # GAS ARRAY, ZPRIME VERSUS WAVELENGTH  -------------------------------------------
         for elem in mixratio:

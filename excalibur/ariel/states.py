@@ -40,10 +40,9 @@ class PriorsSV(dawgie.StateVector):
 
             target = self['data']['target']
 
-            for model in self['data']['models']:
-
-                if plotStateVector:
-                    for planetLetter in self['data']['planets']:
+            if plotStateVector:
+                for planetLetter in self['data']['planets']:
+                    for model in self['data']['models']:
                         # problem: for multiplanet systems, individual models may fail
                         # so there might be some missing planets here
                         # but there should be all models present, if any models present
@@ -53,16 +52,17 @@ class PriorsSV(dawgie.StateVector):
                                                   '------ simulated Ariel spectrum for '+target+' '+planetLetter+'  MODEL:'+model+' ------',
                                                   self['data'][planetLetter][model]['plot_simspectrum'])
 
-                else:
-                    # determine the most recent RID from subdir filenames
-                    arielPlotDir = excalibur.context['data_dir'] + '/ariel/'
-                    subdirs = os.listdir(arielPlotDir)
-                    bestsubdir = 'RID000'
-                    for subdir in subdirs:
-                        if subdir.startswith('RID') and len(subdir)==6 and \
-                           subdir > bestsubdir: bestsubdir = subdir
+            else:
+                # determine the most recent RID from subdir filenames
+                arielPlotDir = excalibur.context['data_dir'] + '/ariel/'
+                subdirs = os.listdir(arielPlotDir)
+                bestsubdir = 'RID000'
+                for subdir in subdirs:
+                    if subdir.startswith('RID') and len(subdir)==6 and \
+                       subdir > bestsubdir: bestsubdir = subdir
 
-                    for planetLetter in self['data']['planets']:
+                for planetLetter in self['data']['planets']:
+                    for model in self['data']['models']:
                         myfig = plt.figure()
                         plotDir = arielPlotDir + bestsubdir
                         plot2show = img.imread(os.path.join(

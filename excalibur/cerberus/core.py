@@ -68,8 +68,18 @@ def myxsecs(spc, out,
     G. ROUDIER: Builds Cerberus cross section library
     '''
     cs = False
+    planetLetters = []
     for p in spc['data'].keys():
+        if len(p)==1:  # filter out non-planetletter keywords, e.g. 'models','target'
+            planetLetters.append(p)
+    for p in planetLetters:
         out['data'][p] = {}
+
+        # model has to be specified, if there is a list of models
+        # if 'models' in spc['data'].keys():
+        #    arielModel = spc['data']['models'][0]  # arbitrary model choice; all have same WB grid
+        #    wgrid = np.array(spc['data'][p][arielModel]['WB'])
+        # else:
         wgrid = np.array(spc['data'][p]['WB'])
         qtgrid = gettpf(tips, knownspecies)
         library = {}
@@ -408,10 +418,9 @@ def atmos(fin, xsl, spc, out, ext,
           hazedir=os.path.join(excalibur.context['data_dir'], 'CERBERUS/HAZE'),
           singlemod=None, mclen=int(1e4), sphshell=False, verbose=False):
     '''
-G. ROUDIER: Cerberus retrievial
+    G. ROUDIER: Cerberus retrieval
     '''
     noClouds = False
-
     am = False
     orbp = fin['priors'].copy()
     ssc = syscore.ssconstants(mks=True)
@@ -443,22 +452,20 @@ G. ROUDIER: Cerberus retrievial
     for p in spc['data'].keys():
         # make sure that it really is a planet letter, not another dict key
         #  (ariel has other keys, e.g. 'target', 'planets', 'models')
-        if len(p) > 1:
-            log.warning('--< OK: skipping a planet letter that is actually a system keyword: %s >--',p)
-            pass
-        elif len(p)==1:
+        # if len(p) > 1:
+        #    log.warning('--< OK: skipping a planet letter that is actually a system keyword: %s >--',p)
+        #    pass
+        # elif len(p)==1:
+        if len(p)==1:
             if ext=='Ariel-sim':
                 if arielModel in spc['data'][p].keys():
                     inputData = spc['data'][p][arielModel]
                     # make sure that the wavelength is saved in usual location
                     # (the cerberus forward models expect it to come after [p])
-                    spc['data'][p]['WB'] = spc['data'][p][arielModel]['WB']
+                    # spc['data'][p]['WB'] = spc['data'][p][arielModel]['WB']
+                    inputData['WB'] = spc['data'][p]['WB']
 
                     noClouds = 'Noclouds' in arielModel
-                    # if 'Noclouds' in arielModel:
-                    #     noClouds = True
-                    # else:
-                    #    noClouds = False
                     # print('name of the forward model:',arielModel)
                     # print('noClouds for retrieved model:',noClouds)
                 else:
@@ -493,6 +500,8 @@ G. ROUDIER: Cerberus retrievial
             tspc = np.array(inputData['ES'])
             terr = np.array(inputData['ESerr'])
             twav = np.array(inputData['WB'])
+            # twav = np.array(spc['data'][p]['WB'])
+
             tspecerr = abs(tspc**2 - (tspc + terr)**2)
             tspectrum = tspc**2
             if 'STIS-WFC3' in ext:
@@ -749,6 +758,7 @@ G. ROUDIER: Cerberus retrievial
                     pass
             out['data'][p][model]['MCTRACE'] = mctrace
             out['data'][p][model]['prior_ranges'] = prior_ranges
+            # out['data'][p]['WAVELENGTH'] = np.array(spc['data'][p]['WB'])
             out['data'][p]['WAVELENGTH'] = np.array(inputData['WB'])
             out['data'][p]['SPECTRUM'] = np.array(inputData['ES'])
             out['data'][p]['ERRORS'] = np.array(inputData['ESerr'])

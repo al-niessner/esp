@@ -16,6 +16,7 @@ from excalibur.cerberus.core import myxsecs
 import os
 import io
 import sys
+# import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.constants as cst
@@ -53,6 +54,10 @@ def simulate_spectra(target, system_dict, out):
 
     system_params = system_dict['priors']
 
+    # maybe save/read the xslib file from disk.
+    # for debugging at least, since it's a lot faster that way
+    # xslibSaveDir = os.path.join(excalibur.context['data_dir'], 'bryden/')
+
     # specify which models should be calculated (use these as keys within data)
     atmosModels = ['cerberus', 'cerberusNoclouds',
                    'cerberuslowmmw', 'cerberuslowmmwNoclouds',
@@ -65,6 +70,8 @@ def simulate_spectra(target, system_dict, out):
     # atmosModels = ['cerberusNoclouds','cerberus',
     #               'cerberuslowmmw', 'cerberuslowmmwNoclouds']
     # atmosModels = ['cerberusNoclouds', 'taurexNoclouds', 'cerberus']
+    # atmosModels = ['cerberuslowmmw']
+    # atmosModels = ['cerberuslowmmwNoclouds']
     out['data']['models'] = atmosModels
     # save target,planet names, for plotting (in states.py)
     out['data']['target'] = target
@@ -146,7 +153,7 @@ def simulate_spectra(target, system_dict, out):
                 else:
                     # default to a single transit observation, if it's not in the Ariel list
                     # print(target+' '+planetLetter,'not found in the Ariel observing plan')
-                    errstr = target+' '+planetLetter,'not found in observing plan'
+                    errstr = target+' '+planetLetter+' not found in observing plan'
                     log.warning('--< ARIEL SIM_SPECTRUM: %s >--', errstr)
                     visits = '1'
                     tier = '1'
@@ -154,6 +161,15 @@ def simulate_spectra(target, system_dict, out):
                 uncertainties /= np.sqrt(float(visits))
 
                 created_xslib = False  # only calculate cross-sections once per planet
+                # try:
+                #    with open(xslibSaveDir+'saved_xslib.pkl', 'rb') as f:
+                #        xslib = pickle.load(f)
+                #    print('SUCCESSFULLY READ IN XSLIB FROM DISK')
+                #    created_xslib = True
+                # except:
+                #    # only calculate cross-sections once per planet
+                #    print('NO XSLIB ON DISK; CALCULATING FROM SCRATCH')
+                #    created_xslib = False
 
                 # ________LOOP OVER ALL SELECTED MODELS_______
                 for atmosModel in atmosModels:
@@ -196,12 +212,17 @@ def simulate_spectra(target, system_dict, out):
                             # print('CALCulating cross-sections START')
                             _ = myxsecs(tempspc, xslib)
                             # print('CALCulating cross-sections DONE')
-                            created_xslib = True
+                            # created_xslib = True
+
+                            # save xslib to disk
+                            # with open(xslibSaveDir+'saved_xslib.pkl', 'wb') as f:
+                            #     pickle.dump(xslib, f)
+
                         else:
                             # print('NOT recalculating xslib for additional cerberus models')
                             pass
 
-                        if 'NoClouds' in atmosModel:
+                        if 'Noclouds' in atmosModel:
                             cerbModel = makeCerberusAtmos(
                                 wavelength_um, model_params, xslib, planetLetter, clouds=False)
                         else:
@@ -210,7 +231,7 @@ def simulate_spectra(target, system_dict, out):
                         fluxDepth = cerbModel
 
                     elif 'taurex' in atmosModel:
-                        if 'NoClouds' in atmosModel:
+                        if 'Noclouds' in atmosModel:
                             taurexModel = makeTaurexAtmos(model_params, clouds=False)
                         else:
                             taurexModel = makeTaurexAtmos(model_params)
@@ -247,8 +268,10 @@ def simulate_spectra(target, system_dict, out):
                     #  need to take a sqrt of them
                     # careful2 - watch out for sqrt of negative numbers
                     signedSqrt = np.sign(fluxDepth_observed) * np.sqrt(np.abs(fluxDepth_observed))
+                    # move WB location down a level; it should be independent of atmosModel
+                    out['data'][planetLetter]['WB'] = wavelength_um_rebin
                     out['data'][planetLetter][atmosModel] = {
-                        'WB':wavelength_um_rebin,
+                        # 'WB':wavelength_um_rebin,
                         'ES':signedSqrt,
                         'ESerr':0.5 * uncertainties / signedSqrt}
                     # 'ES':np.sqrt(fluxDepth_observed),
@@ -308,12 +331,14 @@ def simulate_spectra(target, system_dict, out):
 
                     # plot the true (model) spectrum - raw
                     plt.plot(wavelength_um, fluxDepth,
-                             color='palegoldenrod',ls='-',lw=0.1,
+                             # color='palegoldenrod',ls='-',lw=0.1,
+                             color='palegoldenrod',ls='-',lw=1,
                              zorder=1, label='truth raw')
                     # plot the true (model) spectrum - binned
                     plt.plot(wavelength_um_rebin, fluxDepth_rebin,
                              color='k',ls='-',lw=1,
                              zorder=3, label='truth binned')
+                    yrange = plt.ylim()
                     # plot the simulated data points
                     plt.scatter(wavelength_um_rebin, fluxDepth_observed,
                                 marker='o',s=20, color='None',edgecolor='k',
@@ -321,7 +346,7 @@ def simulate_spectra(target, system_dict, out):
                     plt.errorbar(wavelength_um_rebin, fluxDepth_observed,
                                  yerr=uncertainties_percent,
                                  linestyle='None',lw=0.2, color='grey', zorder=2)
-
+                    plt.ylim(yrange)
                     plt.xlim(0.,8.)
                     plt.legend()
 
