@@ -1183,8 +1183,7 @@ def results(trgt, filt, fin, xsl, atm, out, verbose=False):
 
         # _______________CORNER PLOT________________
         out['data'][p]['plot_corner'] = plot_corner(allkeys, alltraces,
-                                                    prior_ranges,
-                                                    # truth_params,
+                                                    truth_params, prior_ranges,
                                                     filt, trgt, p, saveDir)
 
         # _______________VS-PRIOR PLOT________________

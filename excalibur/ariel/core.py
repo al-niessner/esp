@@ -67,15 +67,27 @@ def simulate_spectra(target, system_dict, out):
     # atmosModels = ['taurex', 'taurexNoclouds',
     #               'taurexlowmmw', 'taurexlowmmwNoclouds']
     # atmosModels = ['cerberusNoclouds']
+    # atmosModels = ['cerberusNoclouds','taurexNoclouds']
     # atmosModels = ['cerberusNoclouds','cerberus',
     #               'cerberuslowmmw', 'cerberuslowmmwNoclouds']
     # atmosModels = ['cerberusNoclouds', 'taurexNoclouds', 'cerberus']
     # atmosModels = ['cerberuslowmmw']
     # atmosModels = ['cerberuslowmmwNoclouds']
+    # atmosModels = ['cerberusNoclouds',
+    #               'cerberusNocloudsR1000',
+    #               'cerberusNocloudsR3000',
+    #               'cerberusNocloudsR6000',
+    #               'cerberusNocloudsR10000']
+    #               'cerberusNocloudsR10000',
+    #               'cerberusNocloudsR15000']
     out['data']['models'] = atmosModels
     # save target,planet names, for plotting (in states.py)
     out['data']['target'] = target
     out['data']['planets'] = system_params['planets']
+
+    # save the cross-section library from one model to the next (no need to re-calculate)
+    # but be careful, it has to be defined for each planet letter
+    xslib = {'data':{}, 'STATUS':[False]}
 
     completed_at_least_one_planet = False
     for planetLetter in system_params['planets']:
@@ -137,13 +149,14 @@ def simulate_spectra(target, system_dict, out):
                 # planet metallicity is from an assumed mass-metallicity relation
                 #  with scatter included
                 # planet metallicity should be defined relative to the stellar metallicity
-                metallicity_star = system_params['FEH*']
+                metallicity_star_dex = system_params['FEH*']
                 M_p = model_params['Mp']
                 includeMetallicityDispersion = True
                 if includeMetallicityDispersion:
-                    metallicity_planet = massMetalRelationDisp(metallicity_star, M_p)
+                    metallicity_planet_dex = massMetalRelationDisp(metallicity_star_dex, M_p)
                 else:
-                    metallicity_planet = massMetalRelation(metallicity_star, M_p)
+                    metallicity_planet_dex = massMetalRelation(metallicity_star_dex, M_p)
+                CtoO_planet = randomCtoO()  # this is linear C/O, not dex
 
                 # Load the instrument model and rescale based on #-of-transits
                 uncertainties = ariel_instrument['noise']
@@ -160,17 +173,6 @@ def simulate_spectra(target, system_dict, out):
                 # print('# of visits:',visits,'  tier',tier,'  ',target+' '+planetLetter)
                 uncertainties /= np.sqrt(float(visits))
 
-                created_xslib = False  # only calculate cross-sections once per planet
-                # try:
-                #    with open(xslibSaveDir+'saved_xslib.pkl', 'rb') as f:
-                #        xslib = pickle.load(f)
-                #    print('SUCCESSFULLY READ IN XSLIB FROM DISK')
-                #    created_xslib = True
-                # except:
-                #    # only calculate cross-sections once per planet
-                #    print('NO XSLIB ON DISK; CALCULATING FROM SCRATCH')
-                #    created_xslib = False
-
                 # ________LOOP OVER ALL SELECTED MODELS_______
                 for atmosModel in atmosModels:
                     # print()
@@ -181,55 +183,53 @@ def simulate_spectra(target, system_dict, out):
                         model_params['metallicity'] = 0.  # dex
                         model_params['C/O'] = 0.     # [C/O] (relative to solar)
                     else:
-                        model_params['metallicity*'] = metallicity_star
-                        model_params['metallicity'] = metallicity_star + metallicity_planet
+                        model_params['metallicity*'] = metallicity_star_dex
+                        model_params['metallicity'] = metallicity_star_dex + metallicity_planet_dex
 
                         # planet C/O ratio is assumed to be solar
                         #  (0.54951 is the default in ACEChemistry, so it actually has no effect)
                         # actually, let's consider a distribution of C/O, as done for FINESSE
-                        model_params['C/O'] = np.log10(randomCtoO()/0.54951)
+                        model_params['C/O'] = np.log10(CtoO_planet/0.54951)
 
                     if 'cerberus' in atmosModel:
-                        # calculate the unbinned model at high resolution
-                        Nhires = 10000
-                        Nhires = 1000
-                        # 10000 is too slow.  why is that?  what is the normal resolution?
-                        # this wavelength range goes from 0.316 to 10 microns
-                        # the older ariel SNR files are 0.534+-0.379 to 7.54+-0.244
-                        wavelength_um = np.logspace(-0.5,1.0,Nhires)
+                        if 'R' in atmosModel:
+                            iwave1 = atmosModel.index('R')
+                            # print('atmosModel',atmosModel)
+                            Nhires = atmosModel[iwave1+1:]
+                            # Nhires = int(atmosModel[iwave1+1:])
+                            # print('Nhires',Nhires)
+                            wavelength_um = np.logspace(-0.5,1.0,int(Nhires))
+                        else:
+                            wavelength_um = ariel_instrument['wavelength']
 
-                        # WAIT HOLD ON - shouldn't cross-sections depend on T,P,etc
-                        #  otherwise they are the same for all planets
-                        #  oof I guess that's taken into account in the arrays
-                        # in that case, don't rerun this for each planetLetter <-- TODO
-                        #  (but each letter does have to be in the xslib dict though)
-                        #  (or else just use placeholder for planetletter)
-
-                        if not created_xslib:
-                            xslib = {'data':{},
-                                     'STATUS':[]}
+                        if not xslib['STATUS'][-1]:
                             tempspc = {'data':{planetLetter:{'WB':wavelength_um}}}
                             # print('CALCulating cross-sections START')
                             _ = myxsecs(tempspc, xslib)
                             # print('CALCulating cross-sections DONE')
-                            # created_xslib = True
-
-                            # save xslib to disk
-                            # with open(xslibSaveDir+'saved_xslib.pkl', 'wb') as f:
-                            #     pickle.dump(xslib, f)
-
                         else:
-                            # print('NOT recalculating xslib for additional cerberus models')
-                            pass
+                            # make sure that it exists for this planet letter
+                            if planetLetter in xslib['data']:
+                                # print('XSLIB ALREADY CALCULATED',planetLetter)
+                                pass
+                            else:
+                                # print('XSLIB TRANSFERRED TO NEW PLANETLETTER')
+                                existingPlanetLetter = list(xslib['data'].keys())[-1]
+                                # print('existingPlanetLetter',existingPlanetLetter)
+                                xslib['data'][planetLetter] = xslib['data'][existingPlanetLetter]
+                        # print('xslib check',xslib.keys())
+                        # print('xslib status',xslib['STATUS'])
+                        # print('xslib data keys:',xslib['data'].keys())
+                        # print('xslib data keys:',list(xslib['data'].keys())[-1])
 
                         if 'Noclouds' in atmosModel:
-                            cerbModel = makeCerberusAtmos(
+                            cerbModel, cerbModel_by_molecule = makeCerberusAtmos(
                                 wavelength_um, model_params, xslib, planetLetter, clouds=False)
                         else:
-                            cerbModel = makeCerberusAtmos(
+                            cerbModel, cerbModel_by_molecule = makeCerberusAtmos(
                                 wavelength_um, model_params, xslib, planetLetter)
                         fluxDepth = cerbModel
-
+                        fluxDepth_by_molecule = cerbModel_by_molecule
                     elif 'taurex' in atmosModel:
                         if 'Noclouds' in atmosModel:
                             taurexModel = makeTaurexAtmos(model_params, clouds=False)
@@ -237,25 +237,40 @@ def simulate_spectra(target, system_dict, out):
                             taurexModel = makeTaurexAtmos(model_params)
 
                         wn,fluxDepth = taurexModel[:2]
+                        fluxDepth_by_molecule = {}
                         wavelength_um = 1e4 / wn
                     else:
                         sys.exit('ERROR: unknown model')
 
-                    # bads = np.where(np.isnan(fluxDepth))
-                    # if len(bads[0]) > 0:
-                    # print('   bad fluxDepths:',len(bads[0]),'out of',len(fluxDepth))
+                    bads = np.where(np.isnan(fluxDepth))
+                    if len(bads[0]) > 0:
+                        print('   bad fluxDepths:',len(bads[0]),'out of',len(fluxDepth))
 
                     # REBIN to the Ariel spectral resolution
-                    fluxDepth_rebin = []
                     wavelength_um_rebin = []
+                    fluxDepth_rebin = []
+                    fluxDepth_by_molecule_rebin = {}
+                    molecules = fluxDepth_by_molecule.keys()
+                    for molecule in molecules:
+                        fluxDepth_by_molecule_rebin[molecule] = []
                     for wavelow,wavehigh in zip(ariel_instrument['wavelow'],
                                                 ariel_instrument['wavehigh']):
                         thisWaveBin = np.where((wavelength_um >= wavelow) &
                                                (wavelength_um <= wavehigh))
                         fluxDepth_rebin.append(np.average(fluxDepth[thisWaveBin]))
                         wavelength_um_rebin.append(np.average(wavelength_um[thisWaveBin]))
+                        for molecule in molecules:
+                            # print('molecule:',molecule)
+                            fluxDepth_by_molecule_rebin[molecule].append(np.average(
+                                fluxDepth_by_molecule[molecule][thisWaveBin]))
+
                     wavelength_um_rebin = np.array(wavelength_um_rebin)
                     fluxDepth_rebin = np.array(fluxDepth_rebin)
+                    for molecule in molecules:
+                        fluxDepth_by_molecule_rebin[molecule] = np.array(
+                            fluxDepth_by_molecule_rebin[molecule])
+                    # print ('Nan check on raw',np.isnan(np.max(fluxDepth)))
+                    # print ('Nan check on rebin',np.isnan(np.max(fluxDepth_rebin)))
 
                     # ADD OBSERVATIONAL NOISE TO THE TRUE SPECTRUM
                     fluxDepth_observed = fluxDepth_rebin + np.random.normal(scale=uncertainties)
@@ -282,15 +297,19 @@ def simulate_spectra(target, system_dict, out):
                     #  it has to be this way to match the formatting for regular spectra itk
 
                     # redo the chemsitry/mmw calculation for this metallicity
+                    # print('pressure',pressure)
+                    # print('eqtemp',eqtemp)
                     # print('metallicity [X/H]dex:',model_params['metallicity'])
                     mixratio, fH2, fHe = crbutil.crbce(pressure, eqtemp,
                                                        X2Hr=model_params['metallicity'])
+                    # print(' mixratio',mixratio)
+                    # print(' fh2,fhe',fH2,fHe)
                     # assume solar C/O and N/O for now
                     # C2Or=cheq['CtoO'], N2Or=cheq['NtoO'])
                     mmwnow, fH2, fHe = crbutil.getmmw(mixratio, protosolar=False, fH2=fH2, fHe=fHe)
-                    # print('mmwnow,mmwsolar',mmwnow,mmwsolar)
+                    # print(' mmwnow,mmwsolar',mmwnow,mmwsolar)
                     out['data'][planetLetter][atmosModel]['Hs'] = Hssolar * mmwsolar / mmwnow
-
+                    # print('Hs calculation',Hssolar,mmwsolar,mmwnow)
                     # save the true spectrum (both raw and binned)
                     out['data'][planetLetter][atmosModel]['true_spectrum'] = {
                         'fluxDepth':fluxDepth_rebin,
@@ -321,9 +340,13 @@ def simulate_spectra(target, system_dict, out):
                     fluxDepth_observed = 100 * fluxDepth_observed
                     # careful - uncertainties are reused, so don't change them permanently
                     uncertainties_percent = 100 * uncertainties
+                    molecules = fluxDepth_by_molecule_rebin.keys()
+                    for molecule in molecules:
+                        fluxDepth_by_molecule_rebin[molecule] = \
+                            fluxDepth_by_molecule_rebin[molecule] * 100
 
                     # PLOT THE SPECTRA
-                    myfig, ax = plt.subplots(figsize=(6,4))
+                    myfig, ax = plt.subplots(figsize=(8,4))
                     plt.title('Ariel simulation : '+target+' '+planetLetter+' : Tier-'+tier+' '+visits+' visits',
                               fontsize=16)
                     plt.xlabel(str('Wavelength [$\\mu m$]'), fontsize=14)
@@ -338,17 +361,31 @@ def simulate_spectra(target, system_dict, out):
                     plt.plot(wavelength_um_rebin, fluxDepth_rebin,
                              color='k',ls='-',lw=1,
                              zorder=3, label='truth binned')
+                    for imole,molecule in enumerate(molecules):
+                        colorlist = ['red','orange',
+                                     'palegreen','lightseagreen',
+                                     'blueviolet','fuchsia']
+                        stylelist = ['--','--','--','--','--','--',
+                                     ':',':',':',':',':',':']
+                        plt.plot(wavelength_um_rebin, fluxDepth_by_molecule_rebin[molecule],
+                                 color=colorlist[imole % len(colorlist)],
+                                 ls=stylelist[imole % len(stylelist)],
+                                 lw=1, zorder=2, label=molecule)
                     yrange = plt.ylim()
                     # plot the simulated data points
-                    plt.scatter(wavelength_um_rebin, fluxDepth_observed,
-                                marker='o',s=20, color='None',edgecolor='k',
-                                zorder=4, label='simulated data')
-                    plt.errorbar(wavelength_um_rebin, fluxDepth_observed,
-                                 yerr=uncertainties_percent,
-                                 linestyle='None',lw=0.2, color='grey', zorder=2)
+                    #  maybe leave off the simulated points?
+                    #  it's too messy when plotting by molecule
+                    # but keep it for taurex, which isn't broken down by molecule
+                    if 'taurex' in atmosModel:
+                        plt.scatter(wavelength_um_rebin, fluxDepth_observed,
+                                    marker='o',s=20, color='None',edgecolor='k',
+                                    zorder=4, label='simulated data')
+                        plt.errorbar(wavelength_um_rebin, fluxDepth_observed,
+                                     yerr=uncertainties_percent,
+                                     linestyle='None',lw=0.2, color='grey', zorder=2)
                     plt.ylim(yrange)
                     plt.xlim(0.,8.)
-                    plt.legend()
+                    plt.legend(loc='center left', bbox_to_anchor=(1.15, 0.48))
 
                     # add a scale-height-normalized flux scale on the right axis
                     Hsscaling = out['data'][planetLetter][atmosModel]['Hs']
@@ -358,6 +395,7 @@ def simulate_spectra(target, system_dict, out):
                     axmin, axmax = ax.get_ylim()
                     rpmed = np.sqrt(np.nanmedian(1.e-2*fluxDepth_rebin))
 
+                    # print('axmin,axmax',axmin,axmax)
                     # non-convergent spectra can be all NaN, crashing here on the sqrt
                     # should now be stopped up above in that case, but just in case add conditional
                     if np.isnan(np.nanmax(fluxDepth_rebin)):

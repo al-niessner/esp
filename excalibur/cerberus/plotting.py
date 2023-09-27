@@ -125,10 +125,13 @@ def plot_bestfit(transitdata, patmos_model, fmcarray,
     plt.close(figure)
     return save_to_state_vector
 # --------------------------------------------------------------------
-def plot_corner(allkeys, alltraces,  # truth_params,
-                prior_ranges,
+def plot_corner(allkeys, alltraces,
+                truth_params, prior_ranges,
                 filt, trgt, p, saveDir):
     ''' corner plot showing posterior distributions '''
+
+    truthcolor = 'darkgreen'
+    fitcolor = 'firebrick'
 
     mcmcMedian = np.nanmedian(np.array(alltraces), axis=1)
     lo = np.nanpercentile(np.array(alltraces), 16, axis=1)
@@ -146,7 +149,7 @@ def plot_corner(allkeys, alltraces,  # truth_params,
         # else:
         #    print('TROUBLE: param not found',prior_ranges.keys())
         # print(' new prior range:',priorlo[ikey],priorhi[ikey])
-    priorspan = priorhi - priorlo
+    # priorspan = priorhi - priorlo
     # priormid = (priorhi + priorlo) / 2.
 
     # put a line showing the equilibrium temperature
@@ -160,11 +163,27 @@ def plot_corner(allkeys, alltraces,  # truth_params,
     trange = [tuple([x,y]) for x, y in zip(lorange, hirange)]
     # previous lines did 3-sigma range.  better to just use the prior bounds as bounds
     trange = [tuple([x,y]) for x, y in zip(priorlo, priorhi)]
+    truths = []
+    for thiskey in allkeys:
+        if thiskey=='T':
+            truths.append(truth_params['Teq'])
+        elif thiskey=='[X/H]':
+            truths.append(np.log10(truth_params['metallicity']))
+        elif thiskey=='[C/O]':
+            truths.append(np.log10(truth_params['C/O'] / 0.54951))
+        elif thiskey=='[N/O]':
+            truths.append(0)
+        elif thiskey in truth_params.keys():
+            truths.append(truth_params[thiskey])
+        else:
+            truths.append(666)
+            log.warning('--< PROBLEM: no truth value for this key: %s >--',thiskey)
+    # print('truths in corner plot',truths)
     figure = corner.corner(np.vstack(np.array(alltraces)).T,
                            # bins=int(np.sqrt(np.sqrt(nsamples))),
                            bins=10,
                            labels=allkeys, range=trange,
-                           truths=mcmcMedian, truth_color='firebrick',
+                           truths=truths, truth_color=truthcolor,
                            show_titles=True,
                            quantiles=[0.16, 0.50, 0.84])
     ndim = len(alltraces)
@@ -177,24 +196,30 @@ def plot_corner(allkeys, alltraces,  # truth_params,
         # skipping the first one on the y side (it's a histo, not a 2-D plot)
         ax = axes[i+1, 0]
         ax.set_ylabel(allkeys[i+1], fontsize=16)
-    # no need for this; already done by corner
     #  draw a point and crosshair for the medians in each subpanel
-    # for yi in range(ndim):
-    #    for xi in range(yi):
-    #        ax = axes[yi, xi]
-    #        ax.axvline(mcmcMedian[xi], color='green')
-    #        ax.axhline(mcmcMedian[yi], color='green')
-    #        ax.plot(mcmcMedian[xi], mcmcMedian[yi], 'sk')
+    for yi in range(ndim):
+        for xi in range(yi):
+            ax = axes[yi, xi]
+            ax.axvline(mcmcMedian[xi], color=fitcolor)
+            ax.axhline(mcmcMedian[yi], color=fitcolor)
+            ax.plot(mcmcMedian[xi], mcmcMedian[yi], marker='s', c=fitcolor)
     for i in range(ndim):
         ax = axes[i, i]
         # draw light-colored vertical lines in each hisogram for the prior
-        ax.axvline(priorlo[i] + 0.5*priorspan[i], color='grey', zorder=1)
-        ax.axvline(priorlo[i] + 0.16*priorspan[i], color='grey', zorder=1, ls='--')
-        ax.axvline(priorlo[i] + 0.84*priorspan[i], color='grey', zorder=1, ls='--')
+        #  drop this. adds clutter and is redundant with the vsPrior plot following
+        # ax.axvline(priorlo[i] + 0.5*priorspan[i], color='grey', zorder=1)
+        # ax.axvline(priorlo[i] + 0.16*priorspan[i], color='grey', zorder=1, ls='--')
+        # ax.axvline(priorlo[i] + 0.84*priorspan[i], color='grey', zorder=1, ls='--')
+
         # darken the lines for the fit results
-        ax.axvline(mcmcMedian[i], color='k', lw=2, zorder=2)
-        ax.axvline(lo[i], color='k', lw=2, zorder=2, ls='--')
-        ax.axvline(hi[i], color='k', lw=2, zorder=2, ls='--')
+        # ax.axvline(mcmcMedian[i], color='k', lw=2, zorder=2)
+        # ax.axvline(lo[i], color='k', lw=2, zorder=2, ls='--')
+        # ax.axvline(hi[i], color='k', lw=2, zorder=2, ls='--')
+        # actually the fit result lines are o.k. as is, except all three are dashed
+        #  make the median fit a solid line
+        #  and maybe change the color to match the central panels
+        #  hmm, it's not covering up the dashed line; increase lw and maybe zorder
+        ax.axvline(mcmcMedian[i], color=fitcolor, lw=2, zorder=12)
 
     plt.savefig(saveDir + 'corner_'+filt+'_'+trgt+' '+p+'.png')
 
@@ -238,7 +263,7 @@ def plot_vsPrior(allkeys, alltraces, truth_params, prior_ranges,
 
         # highlight the background of successful fits (x2 better precision)
         if span[iparam]/2. < priorspan[iparam]*0.34 / 2:
-            print(' this one has reduced uncertainty',allkeys[iparam])
+            # print(' this one has reduced uncertainty',allkeys[iparam])
             ax.set_facecolor('lightyellow')
 
         # add a dashed line for the true value

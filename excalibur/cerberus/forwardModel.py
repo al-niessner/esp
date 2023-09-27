@@ -38,6 +38,7 @@ def crbmodel(mixratio, rayleigh, cloudtp, rp0, orbp, xsecs, qtgrid,
              nlevels=100, Hsmax=15., solrad=10.,
              hzlib=None, hzp=None, hzslope=-4., hztop=None, hzwscale=1e0,
              cheq=None, h2rs=True, logx=False, pnet='b', sphshell=False,
+             break_down_by_molecule=False,
              verbose=False, debug=False):
     '''
     G. ROUDIER: Cerberus forward model probing up to 'Hsmax' scale heights from solid
@@ -71,17 +72,23 @@ def crbmodel(mixratio, rayleigh, cloudtp, rp0, orbp, xsecs, qtgrid,
         pass
     dz.append(addz[-1])
     rho = p*1e5/(cst.Boltzmann*temp)
-    tau, wtau = gettau(xsecs, qtgrid, temp, mixratio, z, dz, rho, rp0, p, wgrid,
-                       lbroadening, lshifting, cialist, fH2, fHe, xmollist, rayleigh,
-                       hzlib, hzp, hzslope, hztop,
-                       h2rs=h2rs, sphshell=sphshell, hzwscale=hzwscale,
-                       verbose=verbose, debug=debug)
+    tau, tau_by_molecule, wtau = gettau(
+        xsecs, qtgrid, temp, mixratio, z, dz, rho, rp0, p, wgrid,
+        lbroadening, lshifting, cialist, fH2, fHe, xmollist, rayleigh,
+        hzlib, hzp, hzslope, hztop,
+        h2rs=h2rs, sphshell=sphshell, hzwscale=hzwscale,
+        verbose=verbose, debug=debug)
+    if not break_down_by_molecule:
+        tau_by_molecule = {}
+    molecules = tau_by_molecule.keys()
     # SEMI FINITE CLOUD ------------------------------------------------------------------
     reversep = np.array(p[::-1])
     selectcloud = p > 10.**cloudtp
     blocked = False
     if all(selectcloud):
         tau = tau*0
+        for molecule in molecules:
+            tau_by_molecule[molecule] = tau_by_molecule[molecule]*0
         blocked = True
         pass
     if not all(~selectcloud) and not blocked:
@@ -90,6 +97,10 @@ def crbmodel(mixratio, rayleigh, cloudtp, rp0, orbp, xsecs, qtgrid,
             myspl = itp(reversep, tau[:,index])
             tau[cloudindex,index] = myspl(10.**cloudtp)
             tau[:cloudindex,index] = 0.
+            for molecule in molecules:
+                myspl = itp(reversep, tau_by_molecule[molecule][:,index])
+                tau_by_molecule[molecule][cloudindex,index] = myspl(10.**cloudtp)
+                tau_by_molecule[molecule][:cloudindex,index] = 0.
             pass
         ctpdpress = 10.**cloudtp - p[cloudindex]
         ctpdz = abs(Hs/2.*np.log(1. + ctpdpress/p[cloudindex]))
@@ -101,6 +112,12 @@ def crbmodel(mixratio, rayleigh, cloudtp, rp0, orbp, xsecs, qtgrid,
     noatm = rp0**2/(orbp['R*']*ssc['Rsun'])**2
     noatm = np.nanmin(model)
     rp0hs = np.sqrt(noatm*(orbp['R*']*ssc['Rsun'])**2)
+    models_by_molecule = {}
+    for molecule in molecules:
+        atmdepth = 2e0*np.array(np.mat((rp0+np.array(z))*np.array(dz))*
+                                np.mat(1. - np.exp(-tau_by_molecule[molecule]))).flatten()
+        models_by_molecule[molecule] = (rp0**2 + atmdepth)/(orbp['R*']*ssc['Rsun'])**2
+        models_by_molecule[molecule] = models_by_molecule[molecule][::-1]
     if verbose:
         fig, ax = plt.subplots(figsize=(10,6))
         axes = [ax, ax.twinx(), ax.twinx()]
@@ -128,6 +145,8 @@ def crbmodel(mixratio, rayleigh, cloudtp, rp0, orbp, xsecs, qtgrid,
             pass
         plt.show()
         pass
+    if break_down_by_molecule:
+        return model[::-1], models_by_molecule
     return model[::-1]
 
 # --------------------------- ----------------------------------------
@@ -144,6 +163,7 @@ G. ROUDIER: Builds optical depth matrix
     if sphshell:
         # MATRICES INIT ------------------------------------------------------------------
         tau = np.zeros((len(z), wgrid.size))
+        tau_by_molecule = {}
         # DL ARRAY, Z VERSUS ZPRIME ------------------------------------------------------
         dlarray = []
         zprime = np.array(z)
@@ -159,10 +179,10 @@ G. ROUDIER: Builds optical depth matrix
             dl[iz:] = dl[iz:] - np.sqrt(np.abs((rp0 + zprime[iz:])**2 - (rp0 + thisz)**2))
             dlarray.append(dl)
             pass
-        # print('dlarray check in gettau',len(np.where(np.isnan(dlarray))[0]))
         dlarray = np.array(dlarray)
         # GAS ARRAY, ZPRIME VERSUS WAVELENGTH  -------------------------------------------
         for elem in mixratio:
+            # tau_by_molecule[elem] = np.zeros((len(z), wgrid.size))
             mmr = 10.**(mixratio[elem]-6.)
             # Fake use of xmollist due to changes in xslib v112
             # THIS HAS TO BE FIXED
@@ -184,7 +204,9 @@ G. ROUDIER: Builds optical depth matrix
                 if True in ~np.isfinite(sigma): sigma[~np.isfinite(sigma)] = 0e0
                 sigma = np.array(sigma)*1e-4  # m^2/mol
                 pass
-            if isothermal: tau = tau + mmr*sigma*np.array([rho]).T
+            if isothermal:
+                tau = tau + mmr*sigma*np.array([rho]).T
+                tau_by_molecule[elem] = mmr*sigma*np.array([rho]).T
             pass
         # CIA ARRAY, ZPRIME VERSUS WAVELENGTH  -------------------------------------------
         for cia in cialist:
@@ -210,6 +232,7 @@ G. ROUDIER: Builds optical depth matrix
             if True in sigma < 0: sigma[sigma < 0] = 0e0
             if True in ~np.isfinite(sigma): sigma[~np.isfinite(sigma)] = 0e0
             tau = tau + f1*f2*sigma*np.array([rho**2]).T
+            tau_by_molecule[cia] = f1*f2*sigma*np.array([rho**2]).T
             pass
         # RAYLEIGH ARRAY, ZPRIME VERSUS WAVELENGTH  --------------------------------------
         # NAUS & UBACHS 2000
@@ -217,6 +240,7 @@ G. ROUDIER: Builds optical depth matrix
         sray0 = 2.52*1e-28*1e-4  # m^2/mol
         sigma = sray0*(wgrid[::-1]/slambda0)**(-4)
         tau = tau + fH2*sigma*np.array([rho]).T
+        tau_by_molecule['rayleigh'] = fH2*sigma*np.array([rho]).T
         # HAZE ARRAY, ZPRIME VERSUS WAVELENGTH  ------------------------------------------
         if hzlib is None:
             slambda0 = 750.*1e-3  # microns
@@ -224,6 +248,7 @@ G. ROUDIER: Builds optical depth matrix
             sigma = sray0*(wgrid[::-1]/slambda0)**(hzslope)
             hazedensity = np.ones(len(z))
             tau = tau + (10.**rayleigh)*sigma*np.array([hazedensity]).T
+            tau_by_molecule['haze'] = (10.**rayleigh)*sigma*np.array([hazedensity]).T
             pass
         if hzlib is not None:
             # WEST ET AL. 2004
@@ -281,8 +306,13 @@ G. ROUDIER: Builds optical depth matrix
                 if True in negrh: rh[negrh] = 0e0
                 pass
             tau = tau + (10.**rayleigh)*sigma*np.array([rh]).T
+            tau_by_molecule['haze'] = (10.**rayleigh)*sigma*np.array([rh]).T
             pass
         tau = 2e0*np.array(np.mat(dlarray)*np.mat(tau))
+        molecules = tau_by_molecule.keys()
+        for molecule in molecules:
+            tau_by_molecule[molecule] = \
+                2e0*np.array(np.mat(dlarray)*np.mat(tau_by_molecule[molecule]))
         pass
     else:
         # PLANE PARALLEL APPROXIMATION ---------------------------------------------------
@@ -471,7 +501,7 @@ G. ROUDIER: Builds optical depth matrix
         cbar.ax.tick_params(labelsize=20)
         plt.show()
         pass
-    return tau, 1e4/lsig
+    return tau, tau_by_molecule, 1e4/lsig
 # --------- ----------------------------------------------------------
 # -- ATTENUATION COEFFICIENT -- --------------------------------------
 def absorb(xsecs, qtgrid, T, p, mmr, lbroadening, lshifting, wgrid,

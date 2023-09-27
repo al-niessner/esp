@@ -71,11 +71,16 @@ G. ROUDIER: BURROWS AND SHARP 1998 + ANDERS & GREVESSE 1989
     K2 = np.exp((a2/temp + b2 + c2*temp + d2*temp**2 + e2*temp**3)/(RcalpmolpK*temp))
     AN = (10.**X2Hr)*(10.**N2Or)*solNtO*solar['nO']/nH  # solar['nN']/nH
     AH2 = (pH2**2.)/(8.*K2)
-    BN2 = AN + AH2 - np.sqrt((AN + AH2)**2. - (AN)**2.)
+    # another instrument precision problem arising here
+    #  (for WASP-74 ariel sims, highmmw cases)
+    # take absolute value, just to be sure that there's never a negative value
+    # BN2 = AN + AH2 - np.sqrt((AN + AH2)**2. - (AN)**2.)
+    BN2 = AN + AH2 - np.sqrt(np.abs((AN + AH2)**2. - (AN)**2.))
     BNH3 = 2.*(AN - BN2)
-    nN2 = np.mean(BN2*pH2/p)
+    # also I changed mean to nanmean here, though this is no longer necessary
+    nN2 = np.nanmean(BN2*pH2/p)
     if nN2 <= 0: nN2 = 1e-16
-    nNH3 = np.mean(BNH3*pH2/p)
+    nNH3 = np.nanmean(BNH3*pH2/p)
     if nNH3 <= 0: nNH3 = 1e-16
     mixratio = {'H2O':np.log10(nH2O)+6., 'CH4':np.log10(nCH4)+6., 'NH3':np.log10(nNH3)+6.,
                 'N2':np.log10(nN2)+6., 'CO':np.log10(nCO)+6.}

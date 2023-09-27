@@ -147,14 +147,15 @@ def makeCerberusAtmos(wavelength_um, model_params, xslib, planetLetter, clouds=T
     # print('wavelength range',wavelength_um[0],wavelength_um[-1])
 
     # CERBERUS FORWARD MODEL
-    fmc = crbmodel(None, float(hza), float(ctp), solidr, orbp,
-                   xslib['data'][planetLetter]['XSECS'],
-                   xslib['data'][planetLetter]['QTGRID'],
-                   float(Teq), wavelength_um,
-                   # np.array(ctxt.spc['data'][ctxt.p]['WB']),
-                   hzlib=crbhzlib,  hzp='AVERAGE',
-                   hztop=float(hzloc), hzwscale=float(hzthick),
-                   cheq=tceqdict, pnet=planetLetter,
-                   sphshell=True, verbose=False, debug=False)
+    fmc, fmc_by_molecule = crbmodel(None, float(hza), float(ctp), solidr, orbp,
+                                    xslib['data'][planetLetter]['XSECS'],
+                                    xslib['data'][planetLetter]['QTGRID'],
+                                    float(Teq), wavelength_um,
+                                    # np.array(ctxt.spc['data'][ctxt.p]['WB']),
+                                    hzlib=crbhzlib,  hzp='AVERAGE',
+                                    hztop=float(hzloc), hzwscale=float(hzthick),
+                                    cheq=tceqdict, pnet=planetLetter,
+                                    sphshell=True, verbose=False, debug=False,
+                                    break_down_by_molecule=True)
 
-    return fmc
+    return fmc, fmc_by_molecule

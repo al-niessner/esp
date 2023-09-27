@@ -1016,7 +1016,8 @@ def targetlist_ariel():
         'KOI-94',
         'KPS-1',
         'L 98-59',
-        'LHS 1140',
+        # 'LHS 1140',  this one goes by (which I just added here)
+        'GJ 3053',
         'LHS 1478',
         'LHS 1678',
         'LHS 3844',
@@ -1065,7 +1066,7 @@ def targetlist_ariel():
         'TOI-1431',
         'TOI-1442',
         'TOI-1478',
-        'TOI-150.01',
+        # 'TOI-150.01',   it's in the junk list
         'TOI-1518',
         'TOI-157',
         'TOI-1601',
@@ -1086,8 +1087,8 @@ def targetlist_ariel():
         'TOI-201',
         'TOI-2076',
         'TOI-2109',
-        'TOI-216.01',
-        'TOI-216.02',
+        # 'TOI-216.01',     it's in the junk list
+        # 'TOI-216.02',     it's in the junk list
         'TOI-2260',
         'TOI-2337',
         'TOI-237',
