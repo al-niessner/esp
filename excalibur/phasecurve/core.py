@@ -278,10 +278,7 @@ def phasecurve_spitzer(nrm, fin, out, selftype, fltr):
             out['data'][p][ec]['plot_pixelmap'] = save_plot(myfit.plot_pixelmap)
 
             # estimates for photon noise
-            gain = 3.7
-            flux_conv = 0.1257
-            exptime = np.diff(subt).mean()*24*60*60
-            photons = (aper/flux_conv)*gain*exptime
+            photons = aper*1.0  # already converted to e- in data task
 
             # noise estimate in transit
             photon_noise_timeseries = 1/np.sqrt(photons.mean())
@@ -294,6 +291,8 @@ def phasecurve_spitzer(nrm, fin, out, selftype, fltr):
 
             raw_residual = aper/np.median(aper) - myfit.transit
             rel_residuals = myfit.residuals / np.median(aper)
+            print(f"raw photon noise:{nf_timeseries_raw}")
+            print(f"photon noise: {nf_timeseries}")
 
             # create plot for residual statistics
             fig, ax = plt.subplots(3, figsize=(10,10))

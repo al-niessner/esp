@@ -5,6 +5,8 @@ import logging; log = logging.getLogger(__name__)
 import os
 import numpy as np
 
+import excalibur
+
 import h5py
 from astropy.io.misc.hdf5 import read_table_hdf5
 
@@ -19,7 +21,8 @@ def load_ariel_instrument_oldmethod(target):
     '''
 
     # there is a separate file for each planet
-    noise_model_filename='/proj/data/ariel/SNRfiles/'+target+'_SNR_ARIEL.txt'
+    # noise_model_filename='/proj/data/ariel/SNRfiles/'+target+'_SNR_ARIEL.txt'
+    noise_model_filename=excalibur.context['data_dir'] + '/ariel/SNRfiles/'+target+'_SNR_ARIEL.txt'
 
     # all targets should have a file, but if not, return None
     if not os.path.isfile(noise_model_filename):
@@ -63,7 +66,9 @@ def load_ariel_instrument(target):
      number of observed transits is not taken into account.
     '''
 
-    noise_model_dir = '/proj/data/ariel/'
+    # noise_model_dir = '/proj/data/ariel/'
+    noise_model_dir = excalibur.context['data_dir']+'/ariel/'
+
     # noise_model_filename = 'arielRad_02aug2023.h5'
     # noise_model_filename = 'arielRad_07aug2023_mmwFixed.h5'
     noise_model_filename = 'arielRad_07aug2023_mmwExcal.h5'

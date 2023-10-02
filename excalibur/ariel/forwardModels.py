@@ -96,7 +96,8 @@ def makeTaurexAtmos(model_params, clouds=True):
     return tm.model()
 
 # ----------------------------------------------------------------------------------------------
-def makeCerberusAtmos(wavelength_um, model_params, xslib, planetLetter, clouds=True):
+def makeCerberusAtmos(wavelength_um, model_params, xslib, planetLetter, clouds=True,
+                      Hsmax=15., solrad=10.):
     '''
     Create a simulated spectrum using the code that's better than the other ones
     '''
@@ -151,6 +152,7 @@ def makeCerberusAtmos(wavelength_um, model_params, xslib, planetLetter, clouds=T
                                     xslib['data'][planetLetter]['XSECS'],
                                     xslib['data'][planetLetter]['QTGRID'],
                                     float(Teq), wavelength_um,
+                                    Hsmax=Hsmax, solrad=solrad,
                                     # np.array(ctxt.spc['data'][ctxt.p]['WB']),
                                     hzlib=crbhzlib,  hzp='AVERAGE',
                                     hztop=float(hzloc), hzwscale=float(hzthick),

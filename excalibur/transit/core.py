@@ -3547,8 +3547,10 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                 # convert transit duration to seconds
                 tdur = myfit.duration_measured*24*60*60
                 tdur_freq = 1/tdur
+                print(f"raw photon noise:{nf_timeseries_raw}")
+                print(f"photon noise: {nf_timeseries}")
 
-                # create plot for residual statistics
+        # create plot for residual statistics
                 fig, ax = plt.subplots(3, figsize=(10,10))
                 binspace = np.linspace(-0.02,0.02,201)
                 raw_label = f"Mean: {np.mean(raw_residual,):.4f} \n"\
