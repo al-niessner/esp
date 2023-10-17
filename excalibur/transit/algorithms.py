@@ -70,7 +70,7 @@ class normalization(dawgie.Algorithm):
                 pass
             else:
                 errstr = [m for m in [scal, stme, sfin] if m is not None]
-                if not prcd: errstr = ['Kicked by edit.processme()']
+                if not prcd: errstr = [ext + ' Kicked by edit.processme() ']
                 self._failure(errstr[0])
                 pass
             if update: svupdate.append(self.__out[fltrs.index(ext)])
@@ -157,7 +157,7 @@ class whitelight(dawgie.Algorithm):
                     pass
                 else:
                     errstr = [m for m in [snrm, sfin] if m is not None]
-                    if not prcd: errstr = ['Kicked by edit.processme()']
+                    if not prcd: errstr = [ext + ' Kicked by edit.processme()']
                     self._failure(errstr[0])
                     pass
                 pass
@@ -184,7 +184,7 @@ class whitelight(dawgie.Algorithm):
                 pass
             else:
                 errstr = [m for m in [snrm, sfin] if m is not None]
-                if not prcd: errstr = ['Kicked by edit.processme()']
+                if not prcd: errstr = [ext + ' Kicked by edit.processme()']
                 self._failure(errstr[0])
                 pass
             if update: svupdate.append(self.__out[index])
@@ -273,7 +273,7 @@ class spectrum(dawgie.Algorithm):
                 pass
             else:
                 errstr = [m for m in [sfin, snrm, swht] if m is not None]
-                if not prcd: errstr = ['Kicked by edit.processme()']
+                if not prcd: errstr = [ext + ' Kicked by edit.processme()']
                 self._failure(errstr[0])
                 pass
             if update: svupdate.append(self.__out[index])

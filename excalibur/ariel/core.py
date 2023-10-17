@@ -224,10 +224,12 @@ def simulate_spectra(target, system_dict, out):
 
                         if 'Noclouds' in atmosModel:
                             cerbModel, cerbModel_by_molecule = makeCerberusAtmos(
-                                wavelength_um, model_params, xslib, planetLetter, clouds=False)
+                                wavelength_um, model_params, xslib, planetLetter,
+                                Hsmax=20, clouds=False)
                         else:
                             cerbModel, cerbModel_by_molecule = makeCerberusAtmos(
-                                wavelength_um, model_params, xslib, planetLetter)
+                                wavelength_um, model_params, xslib, planetLetter,
+                                Hsmax=20)
                         fluxDepth = cerbModel
                         fluxDepth_by_molecule = cerbModel_by_molecule
                     elif 'taurex' in atmosModel:

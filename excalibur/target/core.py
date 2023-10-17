@@ -660,7 +660,7 @@ def mastapi(tfl, out, dbs, download_url=None, hst_url=None, verbose=False):
     allsci = []
     allurl = []
     allmiss = []
-    for o in obsids[:2]:
+    for o in obsids:
         donmast = False
         request = {'service':'Mast.Caom.Products', 'params':{'obsid':o}, 'format':'json'}
         _h, datastr = masttool.mast_query(request)
@@ -701,6 +701,8 @@ def mastapi(tfl, out, dbs, download_url=None, hst_url=None, verbose=False):
             allurl.extend([thisurl]*len(scidata))
             if verbose: log.warning('%s: %s', o, len(scidata))
             pass
+        else:
+            log.warning('>-- TROUBLE reading the data file. donmast = %s', donmast)
         pass
     tempdir = tempfile.mkdtemp(dir=dawgie.context.data_stg,
                                prefix=target.replace(' ', '')+'_')
@@ -711,7 +713,17 @@ def mastapi(tfl, out, dbs, download_url=None, hst_url=None, verbose=False):
             if row['project'] in ['CALSTIS']:
                 thisobsid = thisobsid.upper()+'%2F'+thisobsid+'_flt.fits'
                 pass
-            else: thisobsid = thisobsid.upper()+'Q%2F'+thisobsid+'q_ima.fits'
+            else:
+                # want ida504e9 --> IDA504E9Q%2Fida504e9q_ima.fits
+                # and ida504e9q --> IDA504E9QQ%2Fida504e9q_ima.fits
+                # (currently the second one gets a double 'qq' toward the end, which fails)
+                # thisobsid = thisobsid.upper()+'Q%2F'+thisobsid+'q_ima.fits'
+                # remove the second double-q (the lower-case one)
+                if len(thisobsid)==9 and thisobsid.endswith('q'):
+                    thisobsid = thisobsid.upper()+'Q%2F'+thisobsid+'_ima.fits'
+                    # thisobsid = thisobsid.replace('qq_ima','q_ima')
+                else:
+                    thisobsid = thisobsid.upper()+'Q%2F'+thisobsid+'q_ima.fits'
             fileout = os.path.join(tempdir, os.path.basename(thisobsid))
             shellcom = "'".join(["curl -s -L -X GET ",
                                  allurl[irow]+"product_name="+thisobsid,

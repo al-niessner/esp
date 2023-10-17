@@ -274,7 +274,7 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
             # VISIT SELECTION ------------------------------------------------------------
             selv = selv & (~ignore)
             viss = list(np.array(spectra)[selv])
-            visw = np.array(wave)[selv]
+            visw = list(np.array(wave)[selv])
             cwave, _t = tplbuild(viss, visw, vrange, disp[selv]*1e-4, medest=True)
             # OUT OF TRANSIT ORBITS SELECTION --------------------------------------------
             selvoot = selv & np.array([(test in pureoot) for test in orbits])
@@ -389,6 +389,7 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
                         pass
                     pass
                 viss = np.array(viss)
+                visw = np.array(visw)
                 for spec in viss.T:
                     for orb in set(orbits[selv]):
                         selorb = orbits[selv] == orb
@@ -424,6 +425,10 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
                     wfos = []
                     allvissts = viss[thisscan].flatten()
                     allviswts = visw[thisscan].flatten()
+                    # new allviswtc calculation, from Raissa 10/10/23
+                    yfc = []
+                    for gcv in visw[thisscan]: yfc.extend(gcv)
+                    allviswts = np.array(yfc)
                     dcwave = [np.diff(cwave)[0]]
                     dcwave.extend(np.diff(cwave))
                     for cw, dcw in zip(cwave, dcwave):
@@ -1601,7 +1606,7 @@ def nlldx(params, x, data=None, weights=None):
     gamma2 = params['gamma2'].value
     gamma3 = params['gamma3'].value
     gamma4 = params['gamma4'].value
-    model = NonlinearModel.evaluate(x, [gamma1, gamma2, gamma3, gamma4])
+    model = NonlinearModel.evaluate(x, np.array([gamma1, gamma2, gamma3, gamma4]))
     if data is None: return model
     if weights is None: return data - model
     return (data - model)/weights

@@ -7,20 +7,16 @@ from excalibur.cerberus.forwardModel import crbmodel
 import taurex
 import taurex.log
 taurex.log.disableLogging()
-# from taurex.chemistry import TaurexChemistry
-# from taurex.chemistry import ConstantGas
-# from taurex.chemistry import ACEChemistry
-from taurex_ace import ACEChemistry
-from taurex.contributions import AbsorptionContribution
-from taurex.contributions import CIAContribution
-from taurex.contributions import RayleighContribution
-from taurex.contributions import SimpleCloudsContribution
+from taurex.chemistry import TaurexChemistry, ConstantGas
+from taurex.contributions import AbsorptionContribution, \
+    CIAContribution, RayleighContribution, SimpleCloudsContribution
 # from taurex.contributions import FlatMieContribution
 from taurex.model import TransmissionModel
 from taurex.planet import Planet
 from taurex.stellar import BlackbodyStar
-from taurex.temperature import Guillot2010
-from taurex.cache import OpacityCache,CIACache
+from taurex.temperature import Guillot2010, Isothermal
+from taurex.cache import OpacityCache, CIACache
+from taurex_ace import ACEChemistry
 
 TAUREX_DATA_ROOT = os.environ.get('TAUREX_DATA_ROOT', excalibur.context['data_dir']+'/taurex')
 OpacityCache().clear_cache()
@@ -29,7 +25,7 @@ OpacityCache().set_opacity_path(os.path.join (TAUREX_DATA_ROOT,
 CIACache().set_cia_path(os.path.join (TAUREX_DATA_ROOT, 'cia/HITRAN'))
 
 # ----------------------------------------------------------------------------------------------
-def makeTaurexAtmos(model_params, clouds=True):
+def makeTaurexAtmos(model_params, mixratios=False, clouds=True):
     '''
     Create a simulated spectrum using the Taurex package
     '''
@@ -43,31 +39,46 @@ def makeTaurexAtmos(model_params, clouds=True):
                     planet_mass=model_params['Mp'])
 
     # set the planet's vertical temperature profile
-    temperature_profile = Guillot2010(
-        T_irr=float(model_params['Teq']))
+    #  P-T profile
+    temperature_profile = Guillot2010(T_irr=float(model_params['Teq']))
+    #  isothermal atmosphere (to match cerberus)
+    temperature_profile = Isothermal(T=float(model_params['Teq']))
 
-    # this is the old version copied from taurex task
-    # chemistry = TaurexChemistry(fill_gases=['H2','He'],ratio=0.172)
-    # water = ConstantGas('H2O', mix_ratio=1.2e-4*model_params['metallicity'])
-    # chemistry.addGas(water)
+    if mixratios:
+        # use a given dictionary of mixing ratios
+        chemistry = TaurexChemistry(fill_gases=['H2','He'],ratio=0.172)
+        # water = ConstantGas('H2O', mix_ratio=1.2e-4*model_params['metallicity'])
+        water = ConstantGas('H2O', mix_ratio=10.**(mixratios['H2O'] - 6.))
+        CO = ConstantGas('CO', mix_ratio=10.**(mixratios['CO'] - 6.))
+        N2 = ConstantGas('N2', mix_ratio=10.**(mixratios['N2'] - 6.))
+        NH3 = ConstantGas('NH3', mix_ratio=10.**(mixratios['NH3'] - 6.))
+        CH4 = ConstantGas('CH4', mix_ratio=10.**(mixratios['CH4'] - 6.))
+        chemistry.addGas(water)
+        chemistry.addGas(CH4)
+        chemistry.addGas(CO)
+        chemistry.addGas(N2)
+        chemistry.addGas(NH3)
 
-    # assume equilibrium chemistry
-    # NOTE that Taurex wants a linear value for metallicity, not the usual dex
-    chemistry = ACEChemistry(metallicity=10.**model_params['metallicity'],
-                             co_ratio=0.54951*10.**model_params['C/O'])
+    else:
+        # assume equilibrium chemistry
+        # NOTE that Taurex wants a linear value for metallicity, not the usual dex
+        chemistry = ACEChemistry(metallicity=10.**model_params['metallicity'],
+                                 co_ratio=0.54951*10.**model_params['C/O'])
 
     # create an atmospheric model based on the above parameters
     tm = TransmissionModel(star=star,
                            planet=planet,
                            temperature_profile=temperature_profile,
                            chemistry=chemistry,
-                           # atm_min_pressure=1e0,
-                           # atm_max_pressure=1e6,
-                           atm_min_pressure=1e-3,  # 1 microbar is better; 1 mbar cuts off many lines
-                           atm_max_pressure=1e4,   # switch atmos base to the 10-bar standard
-                           nlayers=30)
+                           # atm_min_pressure=3e-1,  # 3 microbar top; same as cerberus standard 15 Hs
+                           atm_min_pressure=2e-3,  # 0.02 microbar top; same as cerberus with 20 Hs
+                           atm_max_pressure=1e6,   # switch atmos base to the 10-bar standard
+                           nlayers=100)  # use the same number of layers as cerberus (was 30 before)
     # add some more physics
     tm.add_contribution(AbsorptionContribution())
+    # adding in H2-H and He-H (to match cerberus)
+    # tm.add_contribution(CIAContribution(cia_pairs=['H2-H2','H2-He','H2-H','He-H']))
+    # no wait actually these don't exist!  going back to original
     tm.add_contribution(CIAContribution(cia_pairs=['H2-H2','H2-He']))
     tm.add_contribution(RayleighContribution())
 
@@ -96,7 +107,7 @@ def makeTaurexAtmos(model_params, clouds=True):
     return tm.model()
 
 # ----------------------------------------------------------------------------------------------
-def makeCerberusAtmos(wavelength_um, model_params, xslib, planetLetter, clouds=True,
+def makeCerberusAtmos(wavelength_um, model_params, xslib, planetLetter, clouds=True, mixratios=None,
                       Hsmax=15., solrad=10.):
     '''
     Create a simulated spectrum using the code that's better than the other ones
@@ -124,11 +135,16 @@ def makeCerberusAtmos(wavelength_um, model_params, xslib, planetLetter, clouds=T
     Teq = model_params['Teq']
 
     # ABUNDANCES
-    tceqdict = {}
-    tceqdict['XtoH'] = model_params['metallicity']
-    tceqdict['CtoO'] = model_params['C/O']
-    tceqdict['NtoO'] = 0
-    # print('cloudfree forward model input chem =',tceqdict)
+    if mixratios:
+        # use the given mixing ratios
+        tceqdict = None
+    else:
+        # equilibrium chemistry
+        tceqdict = {}
+        tceqdict['XtoH'] = model_params['metallicity']
+        tceqdict['CtoO'] = model_params['C/O']
+        tceqdict['NtoO'] = 0
+        # print('cloudfree forward model input chem =',tceqdict)
 
     ssc = syscore.ssconstants(mks=True)
     solidr = model_params['Rp']*ssc['Rjup']  # MK
@@ -148,7 +164,8 @@ def makeCerberusAtmos(wavelength_um, model_params, xslib, planetLetter, clouds=T
     # print('wavelength range',wavelength_um[0],wavelength_um[-1])
 
     # CERBERUS FORWARD MODEL
-    fmc, fmc_by_molecule = crbmodel(None, float(hza), float(ctp), solidr, orbp,
+    # fmc, fmc_by_molecule = crbmodel(None, float(hza), float(ctp), solidr, orbp,
+    fmc, fmc_by_molecule = crbmodel(mixratios, float(hza), float(ctp), solidr, orbp,
                                     xslib['data'][planetLetter]['XSECS'],
                                     xslib['data'][planetLetter]['QTGRID'],
                                     float(Teq), wavelength_um,

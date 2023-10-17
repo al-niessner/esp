@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.constants as cst
 from scipy.interpolate import interp1d as itp
+import logging; log = logging.getLogger(__name__)
 
 import excalibur
 # pylint: disable=import-self
@@ -44,6 +45,7 @@ def crbmodel(mixratio, rayleigh, cloudtp, rp0, orbp, xsecs, qtgrid,
     G. ROUDIER: Cerberus forward model probing up to 'Hsmax' scale heights from solid
     radius solrad evenly log divided amongst nlevels steps
     '''
+
     ssc = syscore.ssconstants(mks=True)
     pgrid = np.arange(np.log(solrad)-Hsmax, np.log(solrad)+Hsmax/nlevels,
                       Hsmax/(nlevels-1))
@@ -53,11 +55,12 @@ def crbmodel(mixratio, rayleigh, cloudtp, rp0, orbp, xsecs, qtgrid,
     z = [0e0]
     dz = []
     addz = []
-    if cheq is not None:
+    if not mixratio:
+        if cheq is None: log.warning('neither mixratio nor cheq are defined')
         mixratio, fH2, fHe = crbce(p, temp,
                                    C2Or=cheq['CtoO'], X2Hr=cheq['XtoH'],
                                    N2Or=cheq['NtoO'])
-        mixratio['CO2'] = mixratio['NH3']
+        # mixratio['CO2'] = mixratio['NH3']
         mmw, fH2, fHe = getmmw(mixratio, protosolar=False, fH2=fH2, fHe=fHe)
         pass
     else: mmw, fH2, fHe = getmmw(mixratio)
