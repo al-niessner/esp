@@ -1166,12 +1166,14 @@ def whitelight(nrm, fin, out, ext, selftype, multiwl, chainlen=int(1e4),
         # PRIORS -----------------------------------------------------
         tmjd = priors[p]['t0']
         if tmjd > 2400000.5: tmjd -= 2400000.5
-        allttvfltrs = np.array(multiwl['data'][p]['allttvfltrs'])
-        if ext in allttvfltrs:
-            ttvmask = allttvfltrs == ext
-            alltknot = [np.median(multiwl['data'][p]['mctrace']['dtk__'+str(i)])
-                        for i, cond in enumerate(ttvmask) if cond]
-            pass
+        if p in multiwl['data'].keys():
+            allttvfltrs = np.array(multiwl['data'][p]['allttvfltrs'])
+            if ext in allttvfltrs:
+                ttvmask = allttvfltrs == ext
+                alltknot = [np.median(multiwl['data'][p]['mctrace']['dtk__'+str(i)])
+                            for i, cond in enumerate(ttvmask) if cond]
+                pass
+            else: alltknot = []
         else: alltknot = []
         period = priors[p]['period']
         ecc = priors[p]['ecc']
@@ -1200,9 +1202,11 @@ def whitelight(nrm, fin, out, ext, selftype, multiwl, chainlen=int(1e4),
         if shapettv < len(ttv): shapettv = len(ttv)
         shapevis = 2
         if shapevis < len(visits): shapevis = len(visits)
-        if 'inc' in multiwl['data'][p]['mctrace']:
-            inc = np.median(multiwl['data'][p]['mctrace']['inc'])
-            pass
+        if p in multiwl['data'].keys():
+            if 'inc' in multiwl['data'][p]['mctrace']:
+                inc = np.median(multiwl['data'][p]['mctrace']['inc'])
+                pass
+            else: inc = priors[p]['inc']
         else: inc = priors[p]['inc']
         nodes = []
         ctxtupdt(orbp=priors[p], ecc=ecc, g1=g1, g2=g2, g3=g3, g4=g4,
@@ -1283,7 +1287,12 @@ def whitelight(nrm, fin, out, ext, selftype, multiwl, chainlen=int(1e4),
         omtk = ctxt.tmjd
         inclination = ctxt.ginc
         for i, v in enumerate(visits):
-            if v in ttv: omtk = float(alltknot[ttv.index(v)])
+            # Problem - sometimes ttv exists but alltknot undefined. ok?
+            #  (new conditional added to deal with this)
+            if v in ttv:
+                if ttv.index(v) < len(alltknot):
+                    omtk = float(alltknot[ttv.index(v)])
+                else: omtk = tmjd
             else: omtk = tmjd
             postz, postph = datcore.time2z(time[i], inclination,
                                            omtk, smaors, period, ecc)
@@ -1474,10 +1483,16 @@ def createldgrid(minmu, maxmu, orbp,
         for testprof in ps.profile_averages:
             if np.all(~np.isfinite(testprof)): itpfail = True
             pass
-        nfail = 1e0
+        icounter=0
         while itpfail:
-            nfail *= 2
-            sc = LDPSetCreator(teff=(tstar, nfail*terr), logg=(loggstar, loggerr),
+            icounter+=1
+            # ldtk bug : crashes if there are no stellar model wavelengths inside the given range
+            # if it fails, expand the wavelength range a bit until a model grid point falls inside
+            deltamunm = icounter * (munmmax - munmmin) / 10
+            # print('icounter deltamunm',icounter,deltamunm, munmmin, munmmax)
+            filters = [BoxcarFilter(str(munm), munmmin - deltamunm, munmmax + deltamunm)]
+
+            sc = LDPSetCreator(teff=(tstar, terr), logg=(loggstar, loggerr),
                                z=(fehstar, feherr), filters=filters)
             ps = sc.create_profiles(nsamples=int(1e4))
             itpfail = False
@@ -1485,6 +1500,9 @@ def createldgrid(minmu, maxmu, orbp,
                 if np.all(~np.isfinite(testprof)): itpfail = True
                 pass
             pass
+            if icounter > 10:
+                log.warning('>-- ERROR: limb darkening loop doesnt converge!')
+                break
         cl, el = ldx(ps.profile_mu, ps.profile_averages, ps.profile_uncertainties,
                      mumin=phoenixmin, debug=verbose, model=ldmodel)
         if allcl is None: allcl = cl
@@ -2041,7 +2059,14 @@ def nottvfiorbital(*whiteparams):
     out = []
     for i, v in enumerate(ctxt.visits):
         omt = ctxt.time[i]
-        if v in ctxt.ttv: omtk = float(ctxt.gttv[ctxt.ttv.index(v)])
+        if v in ctxt.ttv:
+            # Problem - sometimes ttv exists but gttv doesn't.  why?!
+            #  (new conditional added to deal with this)
+            if ctxt.ttv.index(v) < len(ctxt.gttv):
+                omtk = float(ctxt.gttv[ctxt.ttv.index(v)])
+            else:
+                # log.warning('>-- Strange: ttv exists but gttv doesnt')
+                omtk = ctxt.tmjd
         else: omtk = ctxt.tmjd
         omz, _pmph = datcore.time2z(omt, inclination, omtk,
                                     ctxt.smaors, ctxt.period, ctxt.ecc)
