@@ -706,6 +706,7 @@ def mastapi(tfl, out, dbs, download_url=None, hst_url=None, verbose=False):
         pass
     tempdir = tempfile.mkdtemp(dir=dawgie.context.data_stg,
                                prefix=target.replace(' ', '')+'_')
+    thisobsids = [row['productFilename'].split('_')[-2] for row in allsci]
     for irow, row in enumerate(allsci):
         # HST: mast api hack
         if allmiss[irow] in ['HST']:
@@ -718,10 +719,16 @@ def mastapi(tfl, out, dbs, download_url=None, hst_url=None, verbose=False):
                 # and ida504e9q --> IDA504E9QQ%2Fida504e9q_ima.fits
                 # (currently the second one gets a double 'qq' toward the end, which fails)
                 # thisobsid = thisobsid.upper()+'Q%2F'+thisobsid+'q_ima.fits'
+                # special case for K2-3 and others with a couple weird 's' files
+                if len(thisobsid)==9 and thisobsid.endswith('s'):
+                    thisobsid = thisobsid[:-1].upper()+'QQ%2F'+thisobsid+'_ima.fits'
                 # remove the second double-q (the lower-case one)
-                if len(thisobsid)==9 and thisobsid.endswith('q'):
+                elif len(thisobsid)==9 and thisobsid.endswith('q'):
                     thisobsid = thisobsid.upper()+'Q%2F'+thisobsid+'_ima.fits'
                     # thisobsid = thisobsid.replace('qq_ima','q_ima')
+                # special case for K2-3 and others with a couple weird 's' files
+                elif thisobsid+'s' in thisobsids:
+                    thisobsid = thisobsid.upper()+'Q%2F'+thisobsid+'s_ima.fits'
                 else:
                     thisobsid = thisobsid.upper()+'Q%2F'+thisobsid+'q_ima.fits'
             fileout = os.path.join(tempdir, os.path.basename(thisobsid))

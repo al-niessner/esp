@@ -224,7 +224,7 @@ def buildsp(autofill, out):
         autofill['starID'][target][p]['inc_lowerr'] = inc_lowerr_derived
         autofill['starID'][target][p]['inc_uperr'] = inc_uperr_derived
         autofill['starID'][target][p]['inc_ref'] = inc_ref_derived
-        autofill['starID'][target][p]['inc_units'] = ['[R*]']*len(inc_derived)
+        autofill['starID'][target][p]['inc_units'] = ['[degree]']*len(inc_derived)
 
     # (now the reverse)
     # use the inclination (and R*, a_p) to fill in blank impact parameters
@@ -240,7 +240,7 @@ def buildsp(autofill, out):
         autofill['starID'][target][p]['impact_lowerr'] = imp_lowerr_derived
         autofill['starID'][target][p]['impact_uperr'] = imp_uperr_derived
         autofill['starID'][target][p]['impact_ref'] = imp_ref_derived
-        autofill['starID'][target][p]['impact_units'] = ['[degree]']*len(imp_derived)
+        autofill['starID'][target][p]['impact_units'] = ['[R*]']*len(imp_derived)
 
     # loop over both the mandatory and non-mandatory parameters
     # for lbl in out['starmdt']+out['starnonmdt']:
