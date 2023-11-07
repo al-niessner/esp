@@ -638,6 +638,7 @@ def targetlist_active():
         'Qatar-3',
         'WASP-129',
         'WASP-144',
+        'LHS 6343',
     ]
     return targets
 # --------------------------------------------------------------------
@@ -732,7 +733,7 @@ def targetlist_junk():
         'K2-183',
         'Kepler-11',
         'Kepler-13',
-        'Kepler-51',
+        # 'Kepler-51',  # HST/G141 STARE, instead of SCAN. was dropped;added back
         'LHS 1140',   # alias for GJ 3053
         'SWEEPS-11',
         'SWEEPS-4',
@@ -1305,11 +1306,101 @@ def targetlist_ariel():
 
 def targetlist_G141():
     '''
-    all targest with HST G141 spectra
+    all targets with HST G141 spectra.  currently 89 stars
     '''
 
     targets = [
-    ]
+        '55 Cnc',
+        'AU Mic',
+        'GJ 1132',
+        'GJ 1214',
+        'GJ 3053',
+        'GJ 3470',
+        'GJ 436',
+        'GJ 9827',
+        'HAT-P-1',
+        'HAT-P-11',
+        'HAT-P-12',
+        'HAT-P-17',
+        'HAT-P-18',
+        'HAT-P-2',
+        'HAT-P-24',
+        'HAT-P-26',
+        'HAT-P-3',
+        'HAT-P-32',
+        'HAT-P-38',
+        'HAT-P-41',
+        'HAT-P-7',
+        'HAT-P-70',
+        'HATS-7',
+        'HD 106315',
+        'HD 149026',
+        'HD 189733',
+        'HD 191939',
+        'HD 209458',
+        'HD 219666',
+        'HD 97658',
+        'K2-18',
+        'K2-24',
+        'K2-3',
+        'K2-33',
+        'K2-93',
+        'K2-96',
+        'KELT-1',
+        'KELT-11',
+        'KELT-20',
+        'KELT-7',
+        'KELT-9',
+        'Kepler-138',
+        'Kepler-16',
+        # 'Kepler-1625',  # G141 is STARE only, not SCAN
+        # 'Kepler-51',  # G141 is STARE only, not SCAN
+        'Kepler-79',
+        'L 98-59',
+        # 'LHS 1140',  # alias for GJ 3470
+        'LHS 6343',
+        'LTT 1445 A',
+        'LTT 9779',
+        # 'TIC 184892124',  # G141 is STARE only, not SCAN
+        'TOI-1201',
+        'TOI-1231',
+        'TOI-270',
+        'TOI-674',
+        'TRAPPIST-1',
+        'V1298 Tau',
+        'WASP-101',
+        'WASP-103',
+        'WASP-107',
+        'WASP-117',
+        'WASP-12',
+        'WASP-121',
+        'WASP-127',
+        'WASP-17',
+        'WASP-178',
+        'WASP-18',
+        'WASP-19',
+        'WASP-29',
+        'WASP-31',
+        'WASP-33',
+        'WASP-39',
+        'WASP-43',
+        'WASP-52',
+        'WASP-6',
+        'WASP-62',
+        'WASP-63',
+        'WASP-67',
+        'WASP-69',
+        'WASP-74',
+        'WASP-76',
+        'WASP-77',
+        'WASP-79',
+        'WASP-80',
+        'WASP-96',
+        'WASP-98',
+        'XO-1',
+        'XO-2',
+        'HAT-P-14',
+        'HD 86226']
 
     return targets
 

@@ -744,6 +744,8 @@ Kepler-1308 :
 Qatar-3 :
 WASP-129 :
 WASP-144 :
+Kepler-51 :
+LHS 6343:
     '''
     return
 # ----------------- --------------------------------------------------
@@ -1385,6 +1387,8 @@ Kepler-1308 : KEPLER1308
 Qatar-3 : QATAR3
 WASP-129 : WASP129
 WASP-144 : WASP144
+Kepler-51 : KEPLER51
+LHS 6343 : LHS6343
     '''
     return
 # -------------------- -----------------------------------------------
@@ -2836,7 +2840,7 @@ overwrite[starID] =
         # teq derivation (from L* and sma) comes before this, so we have to set it here
         'b':{'sma':0.05, 'sma_uperr':0.01, 'sma_lowerr':-0.01,
              'sma_ref':'Assume solar mass',
-             'teq':1245, 'teq_uperr':100, 'teq_lowerr:':100,
+             'teq':1245, 'teq_uperr':100, 'teq_lowerr:':-100,
              'teq_units':'[K]', 'teq_ref':'derived from L*,sma'}}
 
     # this one is weird. there's a metallicity value in the Archive for 'c' but not for 'b'
