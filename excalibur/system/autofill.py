@@ -114,20 +114,20 @@ def fillUncertainty(param,param_value,param_uncertainty,error_type):
     return fillvalue,autofilled
 # ----------------- --------------------------------------------------
 # -- SELECT THE BEST PARAMETER VALUE FROM VARIOUS ARCHIVE VALUES -----
-def bestValue(values,uperrs,lowerrs,refs):
+def bestValue(values,uperrs,lowerrs,refs,lbl):
     '''
     From a list of parameter values, determine the most trustworthy value
     '''
-    if values[0] != '':
+    selectMostRecent = lbl in ('period', 't0')
+    if values[0] != '' and not selectMostRecent:
         # step 1: if there is a default value at the start of the list, use that
+        # -- exception: for the emphemeris (period and t_0) always use the most recent value --
         bestvalue = values[0]
         bestuperr = uperrs[0]
         bestlowerr = lowerrs[0]
         bestref = refs[0]
     else:
-        # step 2: iterate from the end of the list inward, until getting a non-blank value
-        #   (this assumes that the non-default values have been ordered by publish date,
-        #    such that the end of the list is the most recently published value)
+        # step 2: find the most recently published non-blank value
         bestvalue = ''
         bestref = ''
         bestyear = 0
@@ -151,6 +151,9 @@ def bestValue(values,uperrs,lowerrs,refs):
                     bestuperr = uperr
                     bestlowerr = lowerr
                     bestref = ref
+
+        if selectMostRecent:
+            print(lbl,'old default:',values[0],' new most recent:',bestvalue)
 
     return bestvalue,bestuperr,bestlowerr,bestref
 

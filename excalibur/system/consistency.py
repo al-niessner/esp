@@ -231,7 +231,7 @@ def consistency_check_Teq_sma_Lstar(starInfo, planetLetter):
         print('ccheck PASS: one of the Teq/L/sma fields is missing')
     else:
         TeqCheck = 278.3 * float(L)**0.25 / float(sma)**0.5
-        print('ccheck  Teq',Teq,TeqCheck)
+        # print('ccheck  Teq',Teq,TeqCheck)
         if not close_to(float(Teq),TeqCheck):
             consistent = False
 

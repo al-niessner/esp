@@ -58,6 +58,7 @@ def processme():
                                 'HIP 41378',  # this is K2-93
                                 'HD 185603', 'HD 195689', 'HD 197481',
                                 'KIC 12266812', 'TIC 184892124',
+                                'LHS 6343',  # has G141, but doesn't exist in the Exoplanet Archive (listed as false positive)
                                 'TOI-175', 'TOI-193']
     return out
 
@@ -745,7 +746,6 @@ Qatar-3 :
 WASP-129 :
 WASP-144 :
 Kepler-51 :
-LHS 6343:
     '''
     return
 # ----------------- --------------------------------------------------
@@ -1388,7 +1388,6 @@ Qatar-3 : QATAR3
 WASP-129 : WASP129
 WASP-144 : WASP144
 Kepler-51 : KEPLER51
-LHS 6343 : LHS6343
     '''
     return
 # -------------------- -----------------------------------------------
@@ -1653,9 +1652,15 @@ overwrite[starID] =
             ]
         }
     }
+    # 11/07/23 period update to match G141 phase
     overwrite['WASP-39'] = {
         'FEH*':-0.10, 'FEH*_uperr':0.1, 'FEH*_lowerr':-0.1,
-        'FEH*_units':'[dex]', 'FEH*_ref':'Faedi et al. 2011'}
+        'FEH*_units':'[dex]', 'FEH*_ref':'Faedi et al. 2011',
+        # 'b':{'period':4.055259,  # this is the default. increasing it a bit
+        'b':{'period':4.05527892,
+             'period_uperr':0.00000086,
+             'period_lowerr':-0.00000086,
+             'period_ref':'Ivshina & Winn 2022'}}
     overwrite['WASP-43'] = {
         'FEH*':-0.05, 'FEH*_uperr':0.17, 'FEH*_lowerr':-0.17,
         'FEH*_units':'[dex]', 'FEH*_ref':'Hellier et al. 2011',
@@ -2880,6 +2885,43 @@ overwrite[starID] =
     # overwrite['WASP-110'] = {'b':{
     #    'impact':0., 'impact_uperr':0.5, 'impact_lowerr':-0.5,
     #    'impact_units':'[R*]', 'impact_ref':'default'}}
+
+    # 11/10/23 period update to match G141 phase
+    overwrite['HAT-P-26'] = {
+        # 'b':{'period':4.234520,  # this is the default. decreasing it a bit
+        'b':{'period':4.2345002,
+             'period_uperr':7e-7, 'period_lowerr':-7e-7,
+             'period_ref':'Kokori et al. 2022'}}
+
+    # 11/10/23 period update to match G141 phase
+    overwrite['K2-24'] = {
+        # 'b':{'period':20.88977,  # this is the default. decreasing it a bit
+        #      't0':2456905.8855,  # this is the default. decreasing it a lot
+        'b':{'period':20.88506,
+             'period_uperr':2.7e-4, 'period_lowerr':-2.8e-4,
+             'period_ref':'Kruse et al. 2019',
+             't0':2456905.79581,
+             't0_uperr':0.00062, 't0_lowerr':-0.00058,
+             't0_ref':'Kruse et al. 2019'}}
+
+    # 11/12/23 period updates to match G141 phase
+    overwrite['HAT-P-18'] = {
+        # 'b':{'period':5.508023,  # this is the default. increasing it a bit
+        # hmm, these are about the same.  what about t0?  308P+1.4min diff
+        'b':{'period':5.5080287,
+             'period_uperr':1.4e-6, 'period_lowerr':-1.4e-6,
+             'period_ref':'Ivshina & Winn 2022'}}
+    overwrite['KELT-11'] = {
+        # 'b':{'period':4.73610,  # this is the default. increasing it a bit
+        'b':{'period':4.7362034,
+             'period_uperr':8.3e-6, 'period_lowerr':-8.3e-6,
+             'period_ref':'Ivshina & Winn 2022'}}
+    overwrite['WASP-127'] = {
+        # 'b':{'period':4.17806203,  # this is the default. decreasing it a bit
+        # hmm nope. actually it goes up a tiny amount.  t0?  nope. hmm
+        'b':{'period':4.17806476,
+             'period_uperr':6e-7, 'period_lowerr':-6e-7,
+             'period_ref':'Ivshina & Winn 2022'}}
 
     return overwrite
 # -------------------------------------------------------------------

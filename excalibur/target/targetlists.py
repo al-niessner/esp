@@ -638,7 +638,6 @@ def targetlist_active():
         'Qatar-3',
         'WASP-129',
         'WASP-144',
-        'LHS 6343',
     ]
     return targets
 # --------------------------------------------------------------------
@@ -742,6 +741,7 @@ def targetlist_junk():
         'TOI-216.01',
         'TOI-216.02',
         'Kepler-854',  # false-positive planet. was in the 2019 Ariel 1000planet list
+        'LHS 6343',  # has G141, but is a false-positive candidate planet
     ]
 
     return targets
@@ -1358,7 +1358,7 @@ def targetlist_G141():
         'Kepler-79',
         'L 98-59',
         # 'LHS 1140',  # alias for GJ 3470
-        'LHS 6343',
+        # 'LHS 6343',  # has G141, but is a false-positive candidate planet
         'LTT 1445 A',
         'LTT 9779',
         # 'TIC 184892124',  # G141 is STARE only, not SCAN

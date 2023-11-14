@@ -250,7 +250,7 @@ def buildsp(autofill, out):
             uperrs = autofill['starID'][target][lbl+'_uperr'].copy()
             lowerrs = autofill['starID'][target][lbl+'_lowerr'].copy()
             refs = autofill['starID'][target][lbl+'_ref'].copy()
-            value,uperr,lowerr,ref = bestValue(values,uperrs,lowerrs,refs)
+            value,uperr,lowerr,ref = bestValue(values,uperrs,lowerrs,refs,lbl)
         except KeyError:
             value = ''
             uperr = ''
@@ -308,7 +308,7 @@ def buildsp(autofill, out):
             uperrs = autofill['starID'][target][p][lbl+'_uperr'].copy()
             lowerrs = autofill['starID'][target][p][lbl+'_lowerr'].copy()
             refs = autofill['starID'][target][p][lbl+'_ref'].copy()
-            value,uperr,lowerr,ref = bestValue(values,uperrs,lowerrs,refs)
+            value,uperr,lowerr,ref = bestValue(values,uperrs,lowerrs,refs,lbl)
             # print('')
             # print(lbl)
             # print(value)
