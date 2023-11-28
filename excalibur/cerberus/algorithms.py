@@ -27,7 +27,9 @@ fltrs.append('STIS-WFC3')
 fltrs.append('Ariel-sim')
 
 # --- TEMPORARY FOCUS ON JUST THE ARIEL SIMULATIONS ---
-fltrs = ['Ariel-sim']
+# fltrs = ['Ariel-sim']
+# --- TEMPORARY FOCUS ON JUST THE HST/G141 DATA ---
+fltrs = ['HST-WFC3-IR-G141-SCAN']
 
 # ----------------------- --------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
