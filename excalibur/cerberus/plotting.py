@@ -56,7 +56,7 @@ def rebinData(transitdata, binsize=4):
 # --------------------------------------------------------------------
 def plot_bestfit(transitdata, patmos_model, fmcarray,
                  truth_spectrum,
-                 filt, trgt, p, saveDir):
+                 filt, modelName, trgt, p, saveDir):
     ''' plot the best fit to the data '''
 
     figure, ax = plt.subplots(figsize=(6,4))
@@ -114,7 +114,7 @@ def plot_bestfit(transitdata, patmos_model, fmcarray,
     #    ax2.set_ylim((np.sqrt(1e-2*axmin) - rp0hs)/Hs, (np.sqrt(1e-2*axmax) - rp0hs)/Hs)
     figure.tight_layout()
     # plt.show()
-    plt.savefig(saveDir + 'bestFit_'+filt+'_'+trgt+' '+p+'.png')
+    plt.savefig(saveDir + 'bestFit_'+filt+'_'+modelName+'_'+trgt+' '+p+'.png')
     # pdf is so much better, but xv gives error (stick with png for debugging)
     # plt.savefig(saveDir + 'bestFit_'+filt+'_'+trgt+' '+p+'.pdf')
 
@@ -127,7 +127,7 @@ def plot_bestfit(transitdata, patmos_model, fmcarray,
 # --------------------------------------------------------------------
 def plot_corner(allkeys, alltraces,
                 truth_params, prior_ranges,
-                filt, trgt, p, saveDir):
+                filt, modelName, trgt, p, saveDir):
     ''' corner plot showing posterior distributions '''
 
     truthcolor = 'darkgreen'
@@ -163,22 +163,27 @@ def plot_corner(allkeys, alltraces,
     trange = [tuple([x,y]) for x, y in zip(lorange, hirange)]
     # previous lines did 3-sigma range.  better to just use the prior bounds as bounds
     trange = [tuple([x,y]) for x, y in zip(priorlo, priorhi)]
-    truths = []
-    for thiskey in allkeys:
-        if thiskey=='T':
-            truths.append(truth_params['Teq'])
-        elif thiskey=='[X/H]':
-            truths.append(np.log10(truth_params['metallicity']))
-        elif thiskey=='[C/O]':
-            truths.append(np.log10(truth_params['C/O'] / 0.54951))
-        elif thiskey=='[N/O]':
-            truths.append(0)
-        elif thiskey in truth_params.keys():
-            truths.append(truth_params[thiskey])
-        else:
-            truths.append(666)
-            log.warning('--< PROBLEM: no truth value for this key: %s >--',thiskey)
-    # print('truths in corner plot',truths)
+    print('trange',trange)
+    print('lodist',lodist)
+    print('lorange',lorange)
+    truths = None
+    if truth_params is not None:
+        truths = []
+        for thiskey in allkeys:
+            if thiskey=='T':
+                truths.append(truth_params['Teq'])
+            elif thiskey=='[X/H]':
+                truths.append(np.log10(truth_params['metallicity']))
+            elif thiskey=='[C/O]':
+                truths.append(np.log10(truth_params['C/O'] / 0.54951))
+            elif thiskey=='[N/O]':
+                truths.append(0)
+            elif thiskey in truth_params.keys():
+                truths.append(truth_params[thiskey])
+            else:
+                truths.append(666)
+                log.warning('--< PROBLEM: no truth value for this key: %s >--',thiskey)
+        # print('truths in corner plot',truths)
     figure = corner.corner(np.vstack(np.array(alltraces)).T,
                            # bins=int(np.sqrt(np.sqrt(nsamples))),
                            bins=10,
@@ -221,7 +226,7 @@ def plot_corner(allkeys, alltraces,
         #  hmm, it's not covering up the dashed line; increase lw and maybe zorder
         ax.axvline(mcmcMedian[i], color=fitcolor, lw=2, zorder=12)
 
-    plt.savefig(saveDir + 'corner_'+filt+'_'+trgt+' '+p+'.png')
+    plt.savefig(saveDir + 'corner_'+filt+'_'+modelName+'_'+trgt+' '+p+'.png')
 
     # REDUNDANT SAVE - above saves to disk; below saves as state vector
     buf = io.BytesIO()
@@ -231,7 +236,7 @@ def plot_corner(allkeys, alltraces,
     return save_to_state_vector
 # --------------------------------------------------------------------
 def plot_vsPrior(allkeys, alltraces, truth_params, prior_ranges,
-                 filt, trgt, p, saveDir):
+                 filt, modelName, trgt, p, saveDir):
     ''' compare the fit results against the original prior information '''
 
     mcmcMedian = np.nanmedian(np.array(alltraces), axis=1)
@@ -267,27 +272,28 @@ def plot_vsPrior(allkeys, alltraces, truth_params, prior_ranges,
             ax.set_facecolor('lightyellow')
 
         # add a dashed line for the true value
-        if allkeys[iparam]=='T':
-            # print('params',truth_params)
-            Teq = float(truth_params['Teq'])
-            ax.plot([Teq,Teq],[0,priorspan[iparam]],
-                    c='k',ls='--',zorder=5)
-        elif allkeys[iparam]=='[X/H]':
-            XtoH = np.log10(float(truth_params['metallicity']))
-            ax.plot([XtoH,XtoH],[0,priorspan[iparam]],
-                    c='k',ls='--',zorder=5)
-        elif allkeys[iparam]=='[C/O]':
-            # [C/O] is defined as absolute, not relative to Solar?
-            CtoO = np.log10(float(truth_params['C/O']))
-            ax.plot([CtoO,CtoO],[0,priorspan[iparam]],
-                    c='k',ls='--',zorder=5)
+        if truth_params is not None:
+            if allkeys[iparam]=='T':
+                # print('params',truth_params)
+                Teq = float(truth_params['Teq'])
+                ax.plot([Teq,Teq],[0,priorspan[iparam]],
+                        c='k',ls='--',zorder=5)
+            elif allkeys[iparam]=='[X/H]':
+                XtoH = np.log10(float(truth_params['metallicity']))
+                ax.plot([XtoH,XtoH],[0,priorspan[iparam]],
+                        c='k',ls='--',zorder=5)
+            elif allkeys[iparam]=='[C/O]':
+                # [C/O] is defined as absolute, not relative to Solar?
+                CtoO = np.log10(float(truth_params['C/O']))
+                ax.plot([CtoO,CtoO],[0,priorspan[iparam]],
+                        c='k',ls='--',zorder=5)
 
         ax.set_xlim(priorlo[iparam],priorhi[iparam])
         ax.set_ylim(0,priorspan[iparam]*0.4)
         ax.set_xlabel(allkeys[iparam], fontsize=14)
         ax.set_ylabel('uncertainty', fontsize=14)
     figure.tight_layout()
-    plt.savefig(saveDir + 'vsprior_'+filt+'_'+trgt+' '+p+'.png')
+    plt.savefig(saveDir + 'vsprior_'+filt+'_'+modelName+'_'+trgt+' '+p+'.png')
 
     # REDUNDANT SAVE - above saves to disk; below saves as state vector
     buf = io.BytesIO()
@@ -298,7 +304,7 @@ def plot_vsPrior(allkeys, alltraces, truth_params, prior_ranges,
 
 # --------------------------------------------------------------------
 def plot_walkerEvolution(allkeys, alltraces, truth_params, prior_ranges,
-                         filt, trgt, p, saveDir,
+                         filt, modelName, trgt, p, saveDir,
                          Nchains=4):
     ''' trace whether or not the MCMC walkers converge '''
 
@@ -327,20 +333,21 @@ def plot_walkerEvolution(allkeys, alltraces, truth_params, prior_ranges,
                     alpha=1. - (ic/float(Nchains)/2.),
                     ls='-',lw=0.5,zorder=3)
         # add a dashed line for the true value
-        if allkeys[iparam]=='T':
-            # print('params',truth_params)
-            Teq = float(truth_params['Teq'])
-            ax.plot([0,2*chainLength], [Teq,Teq],
-                    c='k',ls='--',zorder=4)
-        elif allkeys[iparam]=='[X/H]':
-            XtoH = np.log10(float(truth_params['metallicity']))
-            ax.plot([0,2*chainLength], [XtoH,XtoH],
-                    c='k',ls='--',zorder=4)
-        elif allkeys[iparam]=='[C/O]':
-            # [C/O] is defined as absolute, not relative to Solar?
-            CtoO = np.log10(float(truth_params['C/O']))
-            ax.plot([0,2*chainLength], [CtoO,CtoO],
-                    c='k',ls='--',zorder=4)
+        if truth_params is not None:
+            if allkeys[iparam]=='T':
+                # print('params',truth_params)
+                Teq = float(truth_params['Teq'])
+                ax.plot([0,2*chainLength], [Teq,Teq],
+                        c='k',ls='--',zorder=4)
+            elif allkeys[iparam]=='[X/H]':
+                XtoH = np.log10(float(truth_params['metallicity']))
+                ax.plot([0,2*chainLength], [XtoH,XtoH],
+                        c='k',ls='--',zorder=4)
+            elif allkeys[iparam]=='[C/O]':
+                # [C/O] is defined as absolute, not relative to Solar?
+                CtoO = np.log10(float(truth_params['C/O']))
+                ax.plot([0,2*chainLength], [CtoO,CtoO],
+                        c='k',ls='--',zorder=4)
         # elif allkeys[iparam]=='[N/O]':
         #    NtoO = np.log10(solarNtoO)  # what is solar N/O?
         #    ax.plot([0,2*chainLength], [NtoO,NtoO],
@@ -350,7 +357,7 @@ def plot_walkerEvolution(allkeys, alltraces, truth_params, prior_ranges,
         ax.set_xlabel('MCMC step #', fontsize=14)
         ax.set_ylabel(allkeys[iparam], fontsize=14)
     figure.tight_layout()
-    plt.savefig(saveDir + 'walkerevol_'+filt+'_'+trgt+' '+p+'.png')
+    plt.savefig(saveDir + 'walkerevol_'+filt+'_'+modelName+'_'+trgt+' '+p+'.png')
 
     # REDUNDANT SAVE - above saves to disk; below saves as state vector
     buf = io.BytesIO()

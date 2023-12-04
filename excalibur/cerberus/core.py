@@ -447,10 +447,10 @@ def atmos(fin, xsl, spc, out, ext,
     ssc = syscore.ssconstants(mks=True)
     crbhzlib = {'PROFILE':[]}
     hazelib(crbhzlib, hazedir=hazedir, verbose=False)
-    # MODELS
-    modfam = ['TEC', 'PHOTOCHEM']
+    # SELECT WHICH MODELS TO RUN FOR THIS FILTER
     if ext=='Ariel-sim':
         modfam = ['TEC']  # Ariel sims are currently only TEC equilibrium models
+        modparlbl = {'TEC':['XtoH', 'CtoO']}
         # ** select which Ariel model to fit.  there are 8 options **
         # atmosModels = ['cerberus', 'cerberusNoclouds',
         #               'cerberuslowmmw', 'cerberuslowmmwNoclouds',
@@ -459,15 +459,17 @@ def atmos(fin, xsl, spc, out, ext,
         arielModel = 'cerberusNoclouds'
         # arielModel = 'cerberus'
         # arielModel = 'taurex'
-    modparlbl = {'TEC':['XtoH', 'CtoO', 'NtoO'],
-                 'PHOTOCHEM':['HCN', 'CH4', 'C2H2', 'CO2', 'H2CO']}
-    # if ext=='Ariel-sim': modparlbl = {'TEC':['XtoH', 'CtoO']}
+
+        # print('available models',spc['data']['models'])
+        if arielModel not in spc['data']['models']:
+            log.warning('--< BIG PROB: ariel model doesnt exist!!! >--')
+    else:
+        modfam = ['TEC', 'PHOTOCHEM']
+        modparlbl = {'TEC':['XtoH', 'CtoO', 'NtoO'],
+                     'PHOTOCHEM':['HCN', 'CH4', 'C2H2', 'CO2', 'H2CO']}
+
     if (singlemod is not None) and (singlemod in modfam):
         modfam = [modfam[modfam.index(singlemod)]]
-        pass
-    # print('available models',spc['data']['models'])
-    if arielModel not in spc['data']['models']:
-        log.warning('--< BIG PROB: ariel model doesnt exist!!! >--')
 
     # PLANET LOOP
     for p in spc['data'].keys():
@@ -516,7 +518,12 @@ def atmos(fin, xsl, spc, out, ext,
 
             # bottom line:
             #  use the same Teq as in ariel-sim, otherwise truth/retrieved won't match
-            eqtemp = inputData['model_params']['Teq']
+            if ext=='Ariel-sim':
+                eqtemp = inputData['model_params']['Teq']
+            else:
+                # (real data doesn't have any 'model_params' defined)
+                # eqtemp = orbp['T*']*np.sqrt(orbp['R*']*ssc['Rsun/AU']/(2.*orbp[p]['sma']))
+                eqtemp = orbp[p]['teq']
 
             tspc = np.array(inputData['ES'])
             terr = np.array(inputData['ESerr'])
@@ -777,8 +784,8 @@ def atmos(fin, xsl, spc, out, ext,
                         pass
                     else: mctrace[key] = trace[tracekeys[0]]
                     pass
-            out['data'][p][model]['MCTRACE'] = mctrace
-            out['data'][p][model]['prior_ranges'] = prior_ranges
+                out['data'][p][model]['MCTRACE'] = mctrace
+                out['data'][p][model]['prior_ranges'] = prior_ranges
             # out['data'][p]['WAVELENGTH'] = np.array(spc['data'][p]['WB'])
             out['data'][p]['WAVELENGTH'] = np.array(inputData['WB'])
             out['data'][p]['SPECTRUM'] = np.array(inputData['ES'])
@@ -1032,202 +1039,247 @@ def results(trgt, filt, fin, xsl, atm, out, verbose=False):
             log.warning('>-- PROBABLY OK this planet is missing cerb fit: %s %s', trgt, p)
 
         else:
+            out['data'][p] = {}
 
-            # limit results to just the TEC model
+            # limit results to just the TEC model?  No, not for HST/G141
+            # but do verify that TEC exists at least
             if 'TEC' not in atm[p]['MODELPARNAMES'].keys():
                 log.warning('>-- %s', 'TROUBLE: theres no TEC fit!?')
                 return False
 
-            alltraces = []
-            allkeys = []
-            for key in atm[p]['TEC']['MCTRACE']:
-                # print('fillin tru the keys again?',key)
+            # there was a bug before where PHOTOCHEM was passed in for Ariel
+            # just in case, filter out models that are missing
+            models = []
+            for modelName in atm[p]['MODELPARNAMES']:
+                if modelName in atm[p].keys(): models.append(modelName)
+            for modelName in models:
+                # for modelName in atm[p]['MODELPARNAMES']:
+                alltraces = []
+                allkeys = []
+                for key in atm[p][modelName]['MCTRACE']:
+                    # print('fillin tru the keys again?',key)
 
-                alltraces.append(atm[p]['TEC']['MCTRACE'][key])
+                    alltraces.append(atm[p][modelName]['MCTRACE'][key])
+                    if modelName=='TEC':
+                        if key=='TEC[0]': allkeys.append('[X/H]')
+                        elif key=='TEC[1]': allkeys.append('[C/O]')
+                        elif key=='TEC[2]': allkeys.append('[N/O]')
+                        else: allkeys.append(key)
+                    elif modelName=='PHOTOCHEM':
+                        if key=='PHOTOCHEM[0]': allkeys.append('HCN')
+                        elif key=='PHOTOCHEM[1]': allkeys.append('CH4')
+                        elif key=='PHOTOCHEM[2]': allkeys.append('C2H2')
+                        elif key=='PHOTOCHEM[3]': allkeys.append('CO2')
+                        elif key=='PHOTOCHEM[4]': allkeys.append('H2CO')
+                        else: allkeys.append(key)
+                    else:
+                        allkeys.append(key)
+                    # print('allkeys',allkeys)
 
-                if key=='TEC[0]': allkeys.append('[X/H]')
-                elif key=='TEC[1]': allkeys.append('[C/O]')
-                elif key=='TEC[2]': allkeys.append('[N/O]')
-                else: allkeys.append(key)
-            # print('allkeys',allkeys)
-
-            # make note of the bounds placed on each parameter
-            if 'prior_ranges' in atm[p]['TEC'].keys():
-                prior_ranges = atm[p]['TEC']['prior_ranges']
-            else:
-                prior_ranges = {}
-
-            if 'CTP' in allkeys:
-                noClouds = False
-            else:
-                noClouds = True
-
-            # ndim = len(alltraces)
-            # nsamples = len(alltraces[0])
-            # print('ndim,nsamples',ndim,nsamples)
-
-            # save the relevant info
-            transitdata = {}
-            transitdata['wavelength'] = atm[p]['WAVELENGTH']
-            transitdata['depth'] = atm[p]['SPECTRUM']**2
-            transitdata['error'] = 2 * atm[p]['SPECTRUM'] * atm[p]['ERRORS']
-
-            truth_spectrum = None
-            truth_params = None
-            if 'sim' in filt:
-                if 'TRUTH_SPECTRUM' in atm[p].keys():
-                    # print('NOT ERROR: true spectrum found in atmos output')
-                    truth_spectrum = {'depth':atm[p]['TRUTH_SPECTRUM'],
-                                      'wavelength':atm[p]['TRUTH_WAVELENGTH']}
-                    truth_params = atm[p]['TRUTH_MODELPARAMS']
+                # make note of the bounds placed on each parameter
+                if 'prior_ranges' in atm[p][modelName].keys():
+                    prior_ranges = atm[p][modelName]['prior_ranges']
                 else:
-                    print('ERROR: true spectrum is missing from the atmos output')
-            elif 'TRUTH_SPECTRUM' in atm[p].keys():
-                print('ERROR: true spectrum is present for non-simulated data')
+                    prior_ranges = {}
 
-            # print('results',atm[p]['TEC'].keys())
-            # print('results',atm[p]['TEC']['MCTRACE'].keys())
+                if 'CTP' in allkeys:
+                    noClouds = False
+                else:
+                    noClouds = True
 
-            # print('T',np.median(atm[p]['TEC']['MCTRACE']['T']))
-            # if not noClouds:
-                # print('CTP',np.median(atm[p]['TEC']['MCTRACE']['CTP']))
-                # print('Hscale',np.median(atm[p]['TEC']['MCTRACE']['HScale']))
-                # print('HLoc  ',np.median(atm[p]['TEC']['MCTRACE']['HLoc']))
-                # print('HThick',np.median(atm[p]['TEC']['MCTRACE']['HThick']))
-            # print('TEC0',np.median(atm[p]['TEC']['MCTRACE']['TEC[0]']))
-            # print('TEC1',np.median(atm[p]['TEC']['MCTRACE']['TEC[1]']))
-            # print('TEC2',np.median(atm[p]['TEC']['MCTRACE']['TEC[2]']))
+                # ndim = len(alltraces)
+                # nsamples = len(alltraces[0])
+                # print('ndim,nsamples',ndim,nsamples)
 
-            tprtrace = atm[p]['TEC']['MCTRACE']['T']
-            mdplist = [key for key in atm[p]['TEC']['MCTRACE'] if 'TEC' in key]
-            mdptrace = []
-            # print('mdplist',mdplist)
-            for key in mdplist: mdptrace.append(atm[p]['TEC']['MCTRACE'][key])
-            if not noClouds:
-                ctptrace = atm[p]['TEC']['MCTRACE']['CTP']
-                hzatrace = atm[p]['TEC']['MCTRACE']['HScale']
-                hloctrace = atm[p]['TEC']['MCTRACE']['HLoc']
-                hthicktrace = atm[p]['TEC']['MCTRACE']['HThick']
-                ctp = np.median(ctptrace)
-                hza = np.median(hzatrace)
-                hloc = np.median(hloctrace)
-                hthc = np.median(hthicktrace)
-                # print('fit results; CTP:',ctp)
-                # print('fit results; Hscale:',hza)
-                # print('fit results; HLoc:',hloc)
-                # print('fit results; HThick:',hthc)
-            else:
-                ctp = 3.
-                hza = 0.
-                hloc = 0.
-                hthc = 0.
-            tpr = np.median(tprtrace)
-            mdp = np.median(np.array(mdptrace), axis=1)
-            # print('fit results; T:',tpr)
-            # print('fit results; mdplist:',mdp)
+                # save the relevant info
+                transitdata = {}
+                transitdata['wavelength'] = atm[p]['WAVELENGTH']
+                transitdata['depth'] = atm[p]['SPECTRUM']**2
+                transitdata['error'] = 2 * atm[p]['SPECTRUM'] * atm[p]['ERRORS']
 
-            solidr = fin['priors'][p]['rp'] * ssc['Rjup']
+                truth_spectrum = None
+                truth_params = None
+                if 'sim' in filt:
+                    if 'TRUTH_SPECTRUM' in atm[p].keys():
+                        # print('NOT ERROR: true spectrum found in atmos output')
+                        truth_spectrum = {'depth':atm[p]['TRUTH_SPECTRUM'],
+                                          'wavelength':atm[p]['TRUTH_WAVELENGTH']}
+                        truth_params = atm[p]['TRUTH_MODELPARAMS']
+                    else:
+                        print('ERROR: true spectrum is missing from the atmos output')
+                elif 'TRUTH_SPECTRUM' in atm[p].keys():
+                    print('ERROR: true spectrum is present for non-simulated data')
 
-            tceqdict = {}
-            tceqdict['XtoH'] = float(mdp[0])
-            tceqdict['CtoO'] = float(mdp[1])
-            tceqdict['NtoO'] = float(mdp[2])
+                # print('results',atm[p][modelName].keys())
+                # print('results',atm[p][modelName]['MCTRACE'].keys())
 
-            # print('CONFIRMING xsl keys',xsl[p].keys())  # (XSECS, QTGRID)
-
-            crbhzlib = {'PROFILE':[]}
-            hazedir = os.path.join(excalibur.context['data_dir'], 'CERBERUS/HAZE')
-            hazelib(crbhzlib, hazedir=hazedir, verbose=False)
-
-            fmc = np.zeros(transitdata['depth'].size)
-            fmc = crbmodel(None, float(hza), float(ctp),
-                           solidr, fin['priors'],
-                           xsl[p]['XSECS'], xsl[p]['QTGRID'],
-                           float(tpr),
-                           transitdata['wavelength'],
-                           hzlib=crbhzlib, hzp='AVERAGE', hztop=float(hloc),
-                           hzwscale=float(hthc), cheq=tceqdict, pnet=p,
-                           sphshell=True, verbose=False, debug=False)
-            # print('median fmc',np.nanmedian(fmc))
-            # print('mean model',np.nanmean(fmc))
-            # print('mean data',np.nanmean(transitdata['depth']))
-            patmos_model = fmc - np.nanmean(fmc) + np.nanmean(transitdata['depth'])
-            # print('median pmodel',np.nanmedian(patmos_model))
-
-            # make an array of 10 random walker results
-            nrandomwalkers = 10
-            nrandomwalkers = 100
-            fmcarray = []
-            for _ in range(nrandomwalkers):
-                iwalker = int(len(tprtrace) * np.random.rand())
-                # iwalker = max(0, len(tprtrace) - 1 - int(1000* np.random.rand()))
-                if not noClouds:
-                    ctp = ctptrace[iwalker]
-                    hza = hzatrace[iwalker]
-                    hloc = hloctrace[iwalker]
-                    hthc = hthicktrace[iwalker]
-                tpr = tprtrace[iwalker]
-                mdp = np.array(mdptrace)[:,iwalker]
-                # print('shape mdp',mdp.shape)
+                # print('T',np.median(atm[p][modelName]['MCTRACE']['T']))
                 # if not noClouds:
-                #    print('fit results; CTP:',ctp)
-                #    print('fit results; Hscale:',hza)
-                #    print('fit results; HLoc:',hloc)
-                #    print('fit results; HThick:',hthc)
+                #     print('CTP',np.median(atm[p][modelName]['MCTRACE']['CTP']))
+                #     print('Hscale',np.median(atm[p][modelName]['MCTRACE']['HScale']))
+                #     print('HLoc  ',np.median(atm[p][modelName]['MCTRACE']['HLoc']))
+                #     print('HThick',np.median(atm[p][modelName]['MCTRACE']['HThick']))
+                # print('TEC0',np.median(atm[p][modelName]['MCTRACE']['TEC[0]']))
+                # print('TEC1',np.median(atm[p][modelName]['MCTRACE']['TEC[1]']))
+                # print('TEC2',np.median(atm[p][modelName]['MCTRACE']['TEC[2]']))
+
+                tprtrace = atm[p][modelName]['MCTRACE']['T']
+                mdplist = [key for key in atm[p][modelName]['MCTRACE'] if modelName in key]
+                mdptrace = []
+                # print('mdplist',mdplist)
+                for key in mdplist: mdptrace.append(atm[p][modelName]['MCTRACE'][key])
+                if not noClouds:
+                    ctptrace = atm[p][modelName]['MCTRACE']['CTP']
+                    hzatrace = atm[p][modelName]['MCTRACE']['HScale']
+                    hloctrace = atm[p][modelName]['MCTRACE']['HLoc']
+                    hthicktrace = atm[p][modelName]['MCTRACE']['HThick']
+                    ctp = np.median(ctptrace)
+                    hza = np.median(hzatrace)
+                    hloc = np.median(hloctrace)
+                    hthc = np.median(hthicktrace)
+                    # print('fit results; CTP:',ctp)
+                    # print('fit results; Hscale:',hza)
+                    # print('fit results; HLoc:',hloc)
+                    # print('fit results; HThick:',hthc)
+                else:
+                    ctp = 3.
+                    hza = 0.
+                    hloc = 0.
+                    hthc = 0.
+                tpr = np.median(tprtrace)
+                mdp = np.median(np.array(mdptrace), axis=1)
                 # print('fit results; T:',tpr)
                 # print('fit results; mdplist:',mdp)
 
-                tceqdict = {}
-                tceqdict['XtoH'] = float(mdp[0])
-                tceqdict['CtoO'] = float(mdp[1])
-                tceqdict['NtoO'] = float(mdp[2])
+                solidr = fin['priors'][p]['rp'] * ssc['Rjup']
 
-                fmcrand = np.zeros(transitdata['depth'].size)
-                fmcrand = crbmodel(None, float(hza), float(ctp),
-                                   solidr, fin['priors'],
-                                   xsl[p]['XSECS'], xsl[p]['QTGRID'],
-                                   float(tpr),
-                                   transitdata['wavelength'],
-                                   hzlib=crbhzlib, hzp='AVERAGE', hztop=float(hloc),
-                                   hzwscale=float(hthc), cheq=tceqdict, pnet=p,
-                                   sphshell=True, verbose=False, debug=False)
-                # print('len',len(fmcrand))
-                # print('median fmc',np.nanmedian(fmcrand))
-                # print('mean model',np.nanmean(fmcrand))
-                # print('stdev model',np.nanstd(fmcrand))
-                fmcarray.append(fmcrand)
+                if modelName=='TEC':
+                    if len(mdp)!=3: log.warning('--< Expecting 3 molecules for TEQ model! >--')
+                    mixratio = None
+                    tceqdict = {}
+                    tceqdict['XtoH'] = float(mdp[0])
+                    tceqdict['CtoO'] = float(mdp[1])
+                    tceqdict['NtoO'] = float(mdp[2])
+                elif modelName=='PHOTOCHEM':
+                    if len(mdp)!=5: log.warning('--< Expecting 5 molecules for PHOTOCHEM model! >--')
+                    tceqdict = None
+                    mixratio = {}
+                    mixratio['HCN'] = float(mdp[0])
+                    mixratio['CH4'] = float(mdp[1])
+                    mixratio['C2H2'] = float(mdp[2])
+                    mixratio['CO2'] = float(mdp[3])
+                    mixratio['H2CO'] = float(mdp[4])
+                else:
+                    log.warning('--< Expecting TEQ or PHOTOCHEM model! >--')
 
-            # _______________MAKE SOME PLOTS________________
-            out['data'][p] = {}
-            saveDir = os.path.join(excalibur.context['data_dir'], 'bryden/')
-            # print('saveDir',saveDir)
+                # print('CONFIRMING xsl keys',xsl[p].keys())  # (XSECS, QTGRID)
 
-            # _______________BEST-FIT SPECTRUM PLOT________________
-            transitdata = rebinData(transitdata)
-            out['data'][p]['plot_spectrum'] = plot_bestfit(transitdata,
-                                                           patmos_model, fmcarray,
-                                                           truth_spectrum,
-                                                           filt, trgt, p, saveDir)
+                crbhzlib = {'PROFILE':[]}
+                hazedir = os.path.join(excalibur.context['data_dir'], 'CERBERUS/HAZE')
+                hazelib(crbhzlib, hazedir=hazedir, verbose=False)
 
-            # _______________CORNER PLOT________________
-            out['data'][p]['plot_corner'] = plot_corner(allkeys, alltraces,
-                                                        truth_params, prior_ranges,
-                                                        filt, trgt, p, saveDir)
+                fmc = np.zeros(transitdata['depth'].size)
+                fmc = crbmodel(mixratio, float(hza), float(ctp),
+                               solidr, fin['priors'],
+                               xsl[p]['XSECS'], xsl[p]['QTGRID'],
+                               float(tpr),
+                               transitdata['wavelength'],
+                               hzlib=crbhzlib, hzp='AVERAGE', hztop=float(hloc),
+                               hzwscale=float(hthc), cheq=tceqdict, pnet=p,
+                               sphshell=True, verbose=False, debug=False)
+                # print('median fmc',np.nanmedian(fmc))
+                # print('mean model',np.nanmean(fmc))
+                # print('mean data',np.nanmean(transitdata['depth']))
+                patmos_model = fmc - np.nanmean(fmc) + np.nanmean(transitdata['depth'])
+                # print('median pmodel',np.nanmedian(patmos_model))
 
-            # _______________VS-PRIOR PLOT________________
-            out['data'][p]['plot_vsprior'] = plot_vsPrior(allkeys, alltraces,
-                                                          truth_params, prior_ranges,
-                                                          filt, trgt, p, saveDir)
+                # make an array of 10 random walker results
+                nrandomwalkers = 10
+                nrandomwalkers = 100
+                fmcarray = []
+                for _ in range(nrandomwalkers):
+                    iwalker = int(len(tprtrace) * np.random.rand())
+                    # iwalker = max(0, len(tprtrace) - 1 - int(1000* np.random.rand()))
+                    if not noClouds:
+                        ctp = ctptrace[iwalker]
+                        hza = hzatrace[iwalker]
+                        hloc = hloctrace[iwalker]
+                        hthc = hthicktrace[iwalker]
+                    tpr = tprtrace[iwalker]
+                    mdp = np.array(mdptrace)[:,iwalker]
+                    # print('shape mdp',mdp.shape)
+                    # if not noClouds:
+                    #    print('fit results; CTP:',ctp)
+                    #    print('fit results; Hscale:',hza)
+                    #    print('fit results; HLoc:',hloc)
+                    #    print('fit results; HThick:',hthc)
+                    # print('fit results; T:',tpr)
+                    # print('fit results; mdplist:',mdp)
 
-            # _______________WALKER-EVOLUTION PLOT________________
-            out['data'][p]['plot_walkerevol'] = plot_walkerEvolution(allkeys, alltraces,
-                                                                     truth_params, prior_ranges,
-                                                                     filt, trgt, p, saveDir)
+                    if modelName=='TEC':
+                        mixratio = None
+                        tceqdict = {}
+                        tceqdict['XtoH'] = float(mdp[0])
+                        tceqdict['CtoO'] = float(mdp[1])
+                        tceqdict['NtoO'] = float(mdp[2])
+                    elif modelName=='PHOTOCHEM':
+                        tceqdict = None
+                        mixratio = {}
+                        mixratio['HCN'] = float(mdp[0])
+                        mixratio['CH4'] = float(mdp[1])
+                        mixratio['C2H2'] = float(mdp[2])
+                        mixratio['CO2'] = float(mdp[3])
+                        mixratio['H2CO'] = float(mdp[4])
 
-            out['target'].append(trgt)
-            out['planets'].append(p)
-            completed_at_least_one_planet = True
-            # print('out-data keys at end of this planet',out['data'][p].keys())
+                    fmcrand = np.zeros(transitdata['depth'].size)
+                    fmcrand = crbmodel(mixratio, float(hza), float(ctp),
+                                       solidr, fin['priors'],
+                                       xsl[p]['XSECS'], xsl[p]['QTGRID'],
+                                       float(tpr),
+                                       transitdata['wavelength'],
+                                       hzlib=crbhzlib, hzp='AVERAGE', hztop=float(hloc),
+                                       hzwscale=float(hthc), cheq=tceqdict, pnet=p,
+                                       sphshell=True, verbose=False, debug=False)
+                    # print('len',len(fmcrand))
+                    # print('median fmc',np.nanmedian(fmcrand))
+                    # print('mean model',np.nanmean(fmcrand))
+                    # print('stdev model',np.nanstd(fmcrand))
+                    fmcarray.append(fmcrand)
+
+                # _______________MAKE SOME PLOTS________________
+                saveDir = os.path.join(excalibur.context['data_dir'], 'bryden/')
+                # print('saveDir',saveDir)
+
+                # _______________BEST-FIT SPECTRUM PLOT________________
+                transitdata = rebinData(transitdata)
+                out['data'][p]['plot_spectrum_'+modelName] = plot_bestfit(transitdata,
+                                                                          patmos_model, fmcarray,
+                                                                          truth_spectrum,
+                                                                          filt, modelName,
+                                                                          trgt, p, saveDir)
+
+                # _______________CORNER PLOT________________
+                out['data'][p]['plot_corner_'+modelName] = plot_corner(allkeys, alltraces,
+                                                                       truth_params, prior_ranges,
+                                                                       filt, modelName,
+                                                                       trgt, p, saveDir)
+
+                # _______________VS-PRIOR PLOT________________
+                out['data'][p]['plot_vsprior_'+modelName] = plot_vsPrior(allkeys, alltraces,
+                                                                         truth_params, prior_ranges,
+                                                                         filt, modelName,
+                                                                         trgt, p, saveDir)
+
+                # _______________WALKER-EVOLUTION PLOT________________
+                out['data'][p]['plot_walkerevol_'+modelName] = plot_walkerEvolution(allkeys, alltraces,
+                                                                                    truth_params, prior_ranges,
+                                                                                    filt, modelName,
+                                                                                    trgt, p, saveDir)
+
+                out['target'].append(trgt)
+                out['planets'].append(p)
+                completed_at_least_one_planet = True
+                # print('out-data keys at end of this planet',out['data'][p].keys())
 
     if completed_at_least_one_planet: out['STATUS'].append(True)
     return out['STATUS'][-1]

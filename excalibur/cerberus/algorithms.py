@@ -23,13 +23,7 @@ import excalibur.cerberus.states as crbstates
 # FILTERS
 fltrs = (trgedit.activefilters.__doc__).split('\n')
 fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
-fltrs.append('STIS-WFC3')
 fltrs.append('Ariel-sim')
-
-# --- TEMPORARY FOCUS ON JUST THE ARIEL SIMULATIONS ---
-# fltrs = ['Ariel-sim']
-# --- TEMPORARY FOCUS ON JUST THE HST/G141 DATA ---
-fltrs = ['HST-WFC3-IR-G141-SCAN']
 
 # ----------------------- --------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
@@ -75,8 +69,12 @@ class xslib(dawgie.Algorithm):
                     sv = self.__arielsim.sv_as_dict()['parameters']
                     vspc, sspc = crbcore.checksv(sv)
                 else:
-                    sv = self.__spc.sv_as_dict()[ext]
-                    vspc, sspc = crbcore.checksv(sv)
+                    if ext in self.__spc.sv_as_dict().keys():
+                        sv = self.__spc.sv_as_dict()[ext]
+                        vspc, sspc = crbcore.checksv(sv)
+                    else:
+                        vspc = False
+                        sspc = 'This filter doesnt have a spectrum (no data?): ' + ext
 
             # pylint: disable=protected-access
             prcd = trgedit.proceed(ds._tn(), ext, verbose=False)
@@ -85,7 +83,7 @@ class xslib(dawgie.Algorithm):
                 update = self._xslib(sv, fltrs.index(ext))
             else:
                 errstr = [m for m in [sspc] if m is not None]
-                if not prcd: errstr = ['Kicked by edit.processme()']
+                if not prcd: errstr = [ext + ' Kicked by edit.processme()']
                 self._failure(errstr[0])
                 pass
             if update: svupdate.append(self.__out[fltrs.index(ext)])
@@ -147,10 +145,12 @@ class atmos(dawgie.Algorithm):
         '''Top level algorithm call'''
         svupdate = []
         vfin, sfin = crbcore.checksv(self.__fin.sv_as_dict()['parameters'])
+        if sfin: sfin = 'Missing system params!'
+
         for ext in fltrs:
             update = False
             vxsl, sxsl = crbcore.checksv(self.__xsl.sv_as_dict()[ext])
-            sxsl = 'missing XSL'
+            if sxsl: sxsl = ext + ' missing XSL'
 
             if ext in self.__tau.sv_as_dict():
                 sv = self.__tau.sv_as_dict()[ext]
@@ -162,8 +162,12 @@ class atmos(dawgie.Algorithm):
                     sv = self.__arielsim.sv_as_dict()['parameters']
                     vspc, sspc = crbcore.checksv(sv)
                 else:
-                    sv = self.__spc.sv_as_dict()[ext]
-                    vspc, sspc = crbcore.checksv(sv)
+                    if ext in self.__spc.sv_as_dict().keys():
+                        sv = self.__spc.sv_as_dict()[ext]
+                        vspc, sspc = crbcore.checksv(sv)
+                    else:
+                        vspc = False
+                        sspc = 'This filter doesnt seem to exist: ' + ext
 
             # pylint: disable=protected-access
             prcd = trgedit.proceed(ds._tn(), ext, verbose=False)
@@ -173,8 +177,12 @@ class atmos(dawgie.Algorithm):
                                      self.__xsl.sv_as_dict()[ext],
                                      sv, fltrs.index(ext), ext)
             else:
-                errstr = [m for m in [sfin, sxsl, sspc] if m is not None]
-                if not prcd: errstr = ['Kicked by edit.processme()']
+                if not (vfin and vxsl and vspc):
+                    errstr = [m for m in [sfin, sspc, sxsl] if m is not None]
+                elif not prcd:
+                    errstr = [ext + ' Kicked by edit.processme()']
+                else:
+                    errstr = ['HUH?! BAD LOGIC HERE']
                 self._failure(errstr[0])
                 pass
             if update: svupdate.append(self.__out[fltrs.index(ext)])
@@ -301,13 +309,19 @@ class results(dawgie.Algorithm):
         svupdate = []
         vfin, sfin = crbcore.checksv(self.__fin.sv_as_dict()['parameters'])
 
-        filts = ['HST-WFC3-IR-G141-SCAN']
-        filts = ['Ariel-sim']
+        # filts = ['HST-WFC3-IR-G141-SCAN']
+        # filts = ['Ariel-sim']
         # filts = ['HST-WFC3-IR-G141-SCAN', 'Ariel-sim']
 
         update = False
         if vfin:
-            for filt in filts:
+            # available_filters = self.__xsl.sv_as_dict().keys()
+            # print('available_filters',available_filters)
+            available_filters = self.__atm.sv_as_dict().keys()
+            # print('available_filters',available_filters)
+
+            # for filt in filts:
+            for filt in available_filters:
                 log.warning('--< CERBERUS RESULTS: %s >--', filt)
                 # pylint: disable=protected-access
                 vxsl, _ = crbcore.checksv(self.__xsl.sv_as_dict()[filt])
@@ -318,6 +332,7 @@ class results(dawgie.Algorithm):
                                            self.__xsl.sv_as_dict()[filt]['data'],
                                            self.__atm.sv_as_dict()[filt]['data'],
                                            fltrs.index(filt))
+                    if update: svupdate.append(self.__out[fltrs.index(filt)])
                 else:
                     errstr = [m for m in [satm] if m is not None]
                     self._failure(errstr[0])
@@ -325,7 +340,6 @@ class results(dawgie.Algorithm):
             errstr = [m for m in [sfin] if m is not None]
             self._failure(errstr[0])
 
-        if update: svupdate.append(self.__out[fltrs.index(filt)])
         self.__out = svupdate
         if self.__out.__len__() > 0: ds.update()
         else: raise dawgie.NoValidOutputDataError(

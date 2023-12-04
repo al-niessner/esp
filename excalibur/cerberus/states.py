@@ -186,16 +186,20 @@ class resSV(dawgie.StateVector):
             for target,planetLetter in zip(self['target'],self['planets']):
                 for savedresult in self['data'][planetLetter].keys():
                     if 'plot' in savedresult:
-                        if savedresult=='plot_spectrum':
+                        if savedresult.startswith('plot_spectrum'):
                             plotlabel = 'best-fit spectrum'
-                        elif savedresult=='plot_corner':
+                        elif savedresult.startswith('plot_corner'):
                             plotlabel = 'corner plot'
-                        elif savedresult=='plot_vsprior':
+                        elif savedresult.startswith('plot_vsprior'):
                             plotlabel = 'improvement past prior'
-                        elif savedresult=='plot_walkerevol':
+                        elif savedresult.startswith('plot_walkerevol'):
                             plotlabel = 'walker evolution'
                         else:
                             plotlabel = 'unknown plottype plot'
+                        if savedresult.endswith('PHOTOCHEM'):
+                            plotlabel = plotlabel + ' : DISEQ MODEL'
+                        else:
+                            plotlabel = plotlabel + ' : TEQ MODEL'
                         textlabel = '--------- ' + plotlabel + \
                             ' for '+target+' '+planetLetter + ' ---------'
                         visitor.add_image('...', textlabel,

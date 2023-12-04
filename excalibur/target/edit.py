@@ -48,7 +48,7 @@ def processme():
     out = {}
     out['FILTER'] = {}
     out['FILTER']['include'] = []
-    out['FILTER']['exclude'] = ['STIS', 'JWST', 'Spitzer']
+    out['FILTER']['exclude'] = ['STIS', 'JWST', 'Spitzer', 'Ariel']
     out['TARGET'] = {}
     # Best to use a function call that returns a specific list
     # if one wants to change the 'include' target content
