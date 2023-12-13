@@ -10,6 +10,7 @@ from excalibur.transit.core import composite_spectrum, jwst_lightcurve
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import cauchy, norm, t
+from scipy.interpolate import interp1d
 # ------------- ------------------------------------------------------
 # -- SV -- -----------------------------------------------------------
 class NormSV(dawgie.StateVector):
@@ -80,44 +81,83 @@ class WhiteLightSV(dawgie.StateVector):
             if 'HST' in self.__name:
                 mergesv = bool(self.__name == 'HST')
                 for p in self['data'].keys():
-                    visits = self['data'][p]['visits']
-                    phase = self['data'][p]['phase']
-                    allwhite = self['data'][p]['allwhite']
-                    postim = self['data'][p]['postim']
-                    postphase = self['data'][p]['postphase']
-                    postlc = self['data'][p]['postlc']
-                    postflatphase = self['data'][p]['postflatphase']
-                    if mergesv: allfltrs = self['data'][p]['allfltrs']
-                    myfig = plt.figure(figsize=(10, 6))
-                    plt.title(p)
+                    visits = np.array(self['data'][p]['visits'])
+                    # phase,allwhite is the data before shifting
+                    phase = np.array(self['data'][p]['phase'])
+                    allwhite = np.array(self['data'][p]['allwhite'])
+                    # postphase,allwhite/postim is the data after shifting
+                    postphase = np.array(self['data'][p]['postphase'])
+                    postim = np.array(self['data'][p]['postim'])
+                    # phase,postlc is the model
+                    postflatphase = np.array(self['data'][p]['postflatphase'])
+                    postlc = np.array(self['data'][p]['postlc'])
+
+                    # myfig = plt.figure(figsize=(10, 6))
+                    # plt.title('Planet '+p, fontsize=14)
+                    myfig, (ax1, ax2) = plt.subplots(2, 1, figsize=(9, 7), sharex=True,
+                                                     gridspec_kw={'height_ratios': [3, 1]})
+                    myfig.subplots_adjust(hspace=0.03, right=0.8)
+                    ax1.set_title('Planet '+p, fontsize=16)
+                    # ax1.set_xlabel('Orbital Phase', fontsize=14)
+                    ax1.set_ylabel('Normalized Post-Whitelight Curve', fontsize=14)
                     for index, v in enumerate(visits):
-                        plt.plot(phase[index], allwhite[index], 'k+')
+                        # plot the normalized/shifted data
                         if mergesv:
-                            vlabel = allfltrs[index]
-                            plt.plot(postphase[index], allwhite[index]/postim[index], 'o',
-                                     label=vlabel)
-                            pass
+                            vlabel = self['data'][p]['allfltrs'][index]
                         else:
-                            plt.plot(postphase[index], allwhite[index]/postim[index], 'o',
-                                     label=str(v))
-                            pass
-                        pass
+                            vlabel = 'visit '+str(v)
+                        ax1.plot(postphase[index], allwhite[index]/postim[index], 'o',
+                                 zorder=3, label=vlabel)
+
+                        # plot the pre-correction data
+                        if index==len(visits)-1:
+                            ax1.plot(phase[index], allwhite[index], 'k+', zorder=2,
+                                     label='pre-correction')
+                        else:
+                            ax1.plot(phase[index], allwhite[index], 'k+', zorder=2,)
+
+                        # add a lower panel showing the data-model residuals
+                        model_interpolator = interp1d(postflatphase[np.argsort(postflatphase)],
+                                                      postlc[np.argsort(postflatphase)],
+                                                      kind='linear', fill_value='extrapolate')
+                        model_at_observed_time = model_interpolator(postphase[index])
+                        residuals = allwhite[index]/postim[index] - model_at_observed_time
+
+                        ax2.plot(postphase[index], residuals,'o', color='black', markerfacecolor='None')
+                        ax2.axhline(y=0, color='black', linestyle='dashed', linewidth=1)
+                        ax2.set_xlabel('Orbital Phase', fontsize=14)
+                        ax2.set_ylabel('Residuals', fontsize=14)
+
+                    xdatarange = ax1.get_xlim()
+                    # use full model (not just at some points) if available
+                    if 'modellc' in self['data'][p].keys():
+                        modelphase = np.array(self['data'][p]['modelphase'])
+                        modellc = np.array(self['data'][p]['modellc'])
+                        # the points are ordered by time, not by phase
+                        #  so sorting is needed for multi-visit observations
+                        # otherwise you get weird wrap-around in the line plots
+                        ax1.plot(modelphase[np.argsort(modelphase)],
+                                 modellc[np.argsort(modelphase)],
+                                 '-', c='k', marker='None', zorder=1,
+                                 label='model')
+                    else:
+                        ax1.plot(postflatphase, postlc,
+                                 '^', zorder=1, label='model')
+                        # '^', c='green', zorder=1, label='model')
+                    ax1.set_xlim(xdatarange)
+
                     if len(visits) > 14: ncol = 2
                     else: ncol = 1
-                    plt.plot(postflatphase, postlc, '^', label='M')
-                    plt.xlabel('Orbital Phase')
-                    plt.ylabel('Normalized Post White Light Curve')
                     if mergesv:
-                        plt.legend(loc='best', ncol=ncol, mode='expand', numpoints=1,
+                        ax1.legend(loc='best', ncol=ncol, mode='expand', numpoints=1,
                                    borderaxespad=0., frameon=False)
-                        plt.tight_layout()
-                        pass
+                        # myfig.tight_layout()
                     else:
-                        plt.legend(bbox_to_anchor=(1 + 0.1*(ncol - 0.5), 0.5),
+                        ax1.legend(bbox_to_anchor=(1 + 0.1*(ncol - 0.5), 0.5),
                                    loc=5, ncol=ncol, mode='expand', numpoints=1,
                                    borderaxespad=0., frameon=False)
-                        plt.tight_layout(rect=[0,0,(1 - 0.1*ncol),1])
-                        pass
+                        # myfig.tight_layout(rect=[0,0,(1 - 0.1*ncol),1])
+
                     buf = io.BytesIO()
                     myfig.savefig(buf, format='png')
                     visitor.add_image('...', ' ', buf.getvalue())

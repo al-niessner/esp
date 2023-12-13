@@ -986,6 +986,8 @@ def hstwhitelight(allnrm, fin, out, allext, selftype, chainlen=int(1e4), verbose
         postsep = []
         postphase = []
         postflatphase = []
+        modelphase = []
+        modellc = []
         ttvindex = 0
         if 'WFC3' in ext:
             if fixedinc: inclination = priors[p]['inc']
@@ -1011,6 +1013,18 @@ def hstwhitelight(allnrm, fin, out, allext, selftype, chainlen=int(1e4), verbose
                                     oitcp=np.nanmedian(mctrace[f'oitcp__{i}'])))
                 pass
             pass
+            modeltimes = []
+            for times in time:
+                mintime = np.min(times)
+                maxtime = np.max(times)
+                # print('min,max time for this visit',mintime,maxtime)
+                modeltimes_thisVisit = np.linspace(mintime-0.05, maxtime+0.05, num=1000)
+                modeltimes.extend(list(modeltimes_thisVisit))
+            postz, postph = datcore.time2z(np.array(modeltimes), inclination,
+                                           tmjd, smaors, period, ecc)
+            modelphase.extend(postph)
+            modellc.extend(tldlc(abs(postz), np.nanmedian(mctrace['rprs']),
+                                 g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0]))
         else:
             omtk = ctxt.tmjd
             inclination = ctxt.orbp['inc']
@@ -1035,6 +1049,8 @@ def hstwhitelight(allnrm, fin, out, allext, selftype, chainlen=int(1e4), verbose
         out['data'][p]['postsep'] = postsep
         out['data'][p]['postphase'] = postphase
         out['data'][p]['postflatphase'] = postflatphase
+        out['data'][p]['modellc'] = modellc
+        out['data'][p]['modelphase'] = modelphase
         out['data'][p]['mcpost'] = mcpost
         out['data'][p]['mctrace'] = mctrace
         out['data'][p]['allttvfltrs'] = allttvfltrs
@@ -1066,6 +1082,7 @@ def whitelight(nrm, fin, out, ext, selftype, multiwl, chainlen=int(1e4),
     '''
     G. ROUDIER: Orbital parameters recovery
     '''
+
     wl = False
     priors = fin['priors'].copy()
     ssc = syscore.ssconstants()
@@ -1284,6 +1301,8 @@ def whitelight(nrm, fin, out, ext, selftype, multiwl, chainlen=int(1e4),
         postsep = []
         postphase = []
         postflatphase = []
+        modelphase = []
+        modellc = []
         omtk = ctxt.tmjd
         inclination = ctxt.ginc
         for i, v in enumerate(visits):
@@ -1308,11 +1327,34 @@ def whitelight(nrm, fin, out, ext, selftype, multiwl, chainlen=int(1e4),
                                 oslope=np.nanmedian(mctrace[f'oslope__{i}']),
                                 oitcp=np.nanmedian(mctrace[f'oitcp__{i}'])))
             pass
+        # finding the min/max time over all visits doesn't work
+        #  you end up covering the time between visits, with not enough points during transit
+        # instead, make a series of times covering each transit/visit and then concatenate them
+        # mintime = 1.e10
+        # maxtime = -1.e10
+        # for times in time:
+        #    mintime = np.min([mintime,np.min(times)])
+        #    maxtime = np.max([maxtime,np.max(times)])
+        # modeltimes = np.linspace(mintime-0.05, maxtime+0.05, num=1000)
+        modeltimes = []
+        for times in time:
+            mintime = np.min(times)
+            maxtime = np.max(times)
+            # print('min,max time for this visit',mintime,maxtime)
+            modeltimes_thisVisit = np.linspace(mintime-0.05, maxtime+0.05, num=1000)
+            modeltimes.extend(list(modeltimes_thisVisit))
+        postz, postph = datcore.time2z(np.array(modeltimes), inclination,
+                                       tmjd, smaors, period, ecc)
+        modelphase.extend(postph)
+        modellc.extend(tldlc(abs(postz), np.nanmedian(mctrace['rprs']),
+                             g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0]))
         out['data'][p]['postlc'] = postlc
         out['data'][p]['postim'] = postim
         out['data'][p]['postsep'] = postsep
         out['data'][p]['postphase'] = postphase
         out['data'][p]['postflatphase'] = postflatphase
+        out['data'][p]['modelphase'] = modelphase
+        out['data'][p]['modellc'] = modellc
         out['data'][p]['mcpost'] = mcpost
         out['data'][p]['mctrace'] = mctrace
         out['data'][p]['tauwhite'] = tauwhite
@@ -1483,9 +1525,9 @@ def createldgrid(minmu, maxmu, orbp,
         for testprof in ps.profile_averages:
             if np.all(~np.isfinite(testprof)): itpfail = True
             pass
-        icounter=0
+        icounter = 0
         while itpfail:
-            icounter+=1
+            icounter += 1
             # ldtk bug : crashes if there are no stellar model wavelengths inside the given range
             # if it fails, expand the wavelength range a bit until a model grid point falls inside
             deltamunm = icounter * (munmmax - munmmin) / 10
@@ -1501,8 +1543,31 @@ def createldgrid(minmu, maxmu, orbp,
                 pass
             pass
             if icounter > 10:
-                log.warning('>-- ERROR: limb darkening loop doesnt converge!')
-                break
+                log.warning('>-- PROBLEM: limb darkening loop doesnt converge after wider wavebin!')
+
+                # adding another loop for two troublemakers - WASP-19 and WASP-52
+                icounter = 0
+                filters = [BoxcarFilter(str(mue), mun, mux)
+                           for mue, mun, mux in zip(munm, munmmin, munmmax)]
+                while itpfail:
+                    icounter += 1
+                    # tstar = tstar + 1
+                    # print('TRYING OUT A NEW TSTAR',tstar)
+                    terr *= 1.05
+                    loggerr *= 1.05
+                    feherr *= 1.05
+                    # print('TRYING OUT A NEW TERR,LOGGERR,FEHERR',terr)
+                    sc = LDPSetCreator(teff=(tstar, terr), logg=(loggstar, loggerr),
+                                       z=(fehstar, feherr), filters=filters)
+                    ps = sc.create_profiles(nsamples=int(1e4))
+                    itpfail = False
+                    for testprof in ps.profile_averages:
+                        if np.all(~np.isfinite(testprof)): itpfail = True
+                        pass
+                    pass
+                    if icounter > 10:
+                        log.warning('>-- ERROR: limb darkening loop still does not converge!')
+                        break
         cl, el = ldx(ps.profile_mu, ps.profile_averages, ps.profile_uncertainties,
                      mumin=phoenixmin, debug=verbose, model=ldmodel)
         if allcl is None: allcl = cl

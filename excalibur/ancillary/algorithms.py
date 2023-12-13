@@ -18,11 +18,6 @@ from excalibur.target.targetlists import get_target_lists
 
 from excalibur.ancillary.core import savesv
 
-# ------------- ------------------------------------------------------
-# -- ALGO RUN OPTIONS -- ---------------------------------------------
-# FILTERS
-# fltrs = (trgedit.activefilters.__doc__).split('\n')
-# fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class estimate(dawgie.Algorithm):
@@ -65,8 +60,13 @@ class population(dawgie.Analyzer):
     def __init__(self):
         '''__init__ ds'''
         self._version_ = dawgie.VERSION(1,0,3)
+        self.__est = estimate()
         self.__out = ancstates.PopulationSV('statistics')
         return
+
+    def previous(self):
+        '''Input State Vectors: ancillary.estimate'''
+        return [dawgie.ALG_REF(sys.task, self.__est)]
 
     def feedback(self):
         '''feedback ds'''
@@ -78,8 +78,8 @@ class population(dawgie.Analyzer):
 
     def traits(self)->[dawgie.SV_REF, dawgie.V_REF]:
         '''traits ds'''
-        return [dawgie.V_REF(anc.task, estimate(),
-                             estimate().state_vectors()[0], 'data')]
+        return [dawgie.SV_REF(anc.task, estimate(),
+                              estimate().state_vectors()[0])]
 
     def state_vectors(self):
         '''state_vectors ds'''
@@ -102,20 +102,8 @@ class population(dawgie.Analyzer):
         # for trgt in aspects:
         #    target_sample = '__all__'
         # Only consider the 'active' stars, not aliases/misspellings/dropped/etc
-
-        # print('len',len(targetlists['active']))
-        # print('len',filter(lambda tgt: 'STATUS' in aspects[tgt][svname], targetlists['active']))
-        # i = 0
-        # for a in filter(lambda tgt: 'STATUS' in aspects[tgt][svname], targetlists['active']):
-        #    #print(a)
-        #    i += 1
-        # print('len for real',i)
-        # exit()
-
         # for trgt in targetlists['active']:
         for trgt in filter(lambda tgt: 'STATUS' in aspects[tgt][svname], targetlists['active']):
-
-            # target_sample = 'active'
 
             anc_data = aspects[trgt][svname]
 
@@ -136,9 +124,7 @@ class population(dawgie.Analyzer):
                         pl_attrs[key].append(anc_data['data'][pl][key])
 
         # Loop through a second group of targets.  (this subset will be overplotted in the histos)
-        # for trgt in targetlists['roudier62']:
         for trgt in filter(lambda tgt: 'STATUS' in aspects[tgt][svname], targetlists['roudier62']):
-            # target_sample = 'roudier62'
 
             anc_data = aspects[trgt][svname]
 
@@ -163,7 +149,6 @@ class population(dawgie.Analyzer):
         self.__out['data']['pl_attrs'] = pl_attrs
         self.__out['data']['st_attrs_roudier62'] = st_attrs_roudier62
         self.__out['data']['pl_attrs_roudier62'] = pl_attrs_roudier62
-        # self.__out['data']['sample'] = target_sample
         self.__out['STATUS'].append(True)
         aspects.ds().update()
 
