@@ -162,7 +162,7 @@ def proceed(name, ext=None, verbose=False):
     namekeys = [r for r in ['include', 'exclude'] if rules['TARGET'][r]]
     for thisrule in namekeys:
         # exact name matching for targets, otherwise TOI-175 removes TOI-1759
-        trout = any(itm is name for itm in rules['TARGET'][thisrule])
+        trout = any(itm==name for itm in rules['TARGET'][thisrule])
         if 'exclude' in thisrule: trout = not trout
         out = out and trout
         if verbose: log.warning('>---- TARGET %s: %s %s', name, thisrule, out)
