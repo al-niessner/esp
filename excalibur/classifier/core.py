@@ -149,7 +149,7 @@ def lc_resid_classification(transit_whitelight, ext, out):
 
         try:
             sep = np.array(initial_dict['postsep'])
-            whitelight = np.array(initial_dict['allwhite'])
+            whitelight = np.array(initial_dict['allwhite'] / initial_dict['postim'])
             model = np.array(initial_dict['postlc'])
         except AttributeError:
             sep = []
@@ -157,7 +157,7 @@ def lc_resid_classification(transit_whitelight, ext, out):
             model = []
             for p in initial_dict:
                 sep.extend(p['postsep'])
-                whitelight.append(p['allwhite'])
+                whitelight.append(p['allwhite'] / p['postim'])
                 model.append(p['postlc'])
                 pass
             pass

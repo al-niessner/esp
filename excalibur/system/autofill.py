@@ -152,8 +152,8 @@ def bestValue(values,uperrs,lowerrs,refs,lbl):
                     bestlowerr = lowerr
                     bestref = ref
 
-        if selectMostRecent:
-            print(lbl,'old default:',values[0],' new most recent:',bestvalue)
+        # if selectMostRecent:
+        #     print(lbl,'old default:',values[0],' new most recent:',bestvalue)
 
     return bestvalue,bestuperr,bestlowerr,bestref
 

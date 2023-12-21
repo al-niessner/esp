@@ -68,37 +68,6 @@ class StEstimator(Estimator):
         return self._method(priors, ests)
 # -------------------------- -----------------------------------------
 # -- COLLECTION OF ESTIMATORS ----------------------------------------
-class StellarTypeEstimator(StEstimator):
-    '''StellarTypeEstimator ds'''
-    def __init__(self):
-        '''__init__ ds'''
-        StEstimator.__init__(self, name='stellar_type',
-                             descr='Harvard system stellar type',
-                             scale=['M', 'K', 'G', 'F', 'A', 'B', 'unknown'],
-                             plot='bar', ref='from T_star')
-        return
-
-    def run(self, priors, ests):
-        '''Estimates the Harvard system spectral type using the
-        prior stellar temperature from NExSci
-        Temperature ranges taken from
-        https://en.wikipedia.org/wiki/Stellar_classification'''
-
-        if 'T*' not in priors.keys(): return 'unknown'
-        if isinstance(priors['T*'],str): return 'unknown'
-
-        st_temp = priors['T*']
-
-        if st_temp >= 30e3: st_type = 'O'
-        elif st_temp >= 10e3: st_type = 'B'
-        elif st_temp >= 7.5e3: st_type = 'A'
-        elif st_temp >= 6e3: st_type = 'F'
-        elif st_temp >= 5.2e3: st_type = 'G'
-        elif st_temp >= 3.7e3: st_type = 'K'
-        elif st_temp >= 2.4e3: st_type = 'M'
-        else: st_type = 'unknown'
-
-        return st_type
 
 class TeqEstimator(PlEstimator):
     '''TeqEstimator ds'''

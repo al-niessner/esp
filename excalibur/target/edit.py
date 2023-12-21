@@ -60,6 +60,8 @@ def processme():
                                 'KIC 12266812', 'TIC 184892124',
                                 'LHS 6343',  # has G141, but doesn't exist in the Exoplanet Archive (listed as false positive)
                                 'TOI-175', 'TOI-193',
+                                'LHS 1140',  # alias for GJ 3053
+                                'LHS 1140 (taurex sim @TS)',
                                 '55 Cnc (taurex sim @TS)',  # drop taurex-sim targets; they waste CPU
                                 'AU Mic (taurex sim @TS)',
                                 'GJ 1132 (taurex sim @TS)',
@@ -826,7 +828,15 @@ Qatar-3 :
 WASP-129 :
 WASP-144 :
 Kepler-51 :
+WD 1856 : WD 1856+534
+GJ 4102 : LHS 475
+HD 80606 :
+GJ 4332 : L 168-9
+LTT 5972 : TOI-836
     '''
+# these two JWST targets are not yet listed in the Exoplanet Archive composite table:
+# GJ 341 : HIP 45908
+# GJ 1008 : HIP 1532  (TOI-260)
     return
 # ----------------- --------------------------------------------------
 # -- TARGET ON DISK -- -----------------------------------------------
@@ -995,7 +1005,6 @@ Kepler-9 : KEPLER9
 Kepler-93 : KEPLER93
 Kepler-94 : KEPLER94
 KIC 12266812 : KIC12266812
-LHS 1140 : LHS1140
 LHS 3844 : LHS3844
 OGLE-TR-056 : OGLETR056
 OGLE-TR-10 : OGLETR10
@@ -1468,6 +1477,13 @@ Qatar-3 : QATAR3
 WASP-129 : WASP129
 WASP-144 : WASP144
 Kepler-51 : KEPLER51
+WD 1856 : WD1856
+GJ 341 : GJ341
+GJ 4102 : GJ4102
+HD 80606 : HD80606
+GJ 4332 : GJ4332
+GJ 1008 : GJ1008
+LTT 5972 : LTT5972
     '''
     return
 # -------------------- -----------------------------------------------
@@ -1681,6 +1697,27 @@ overwrite[starID] =
     overwrite['Kepler-16'] = {
         'R*':0.665924608009903, 'R*_uperr':0.0013, 'R*_lowerr':-0.0013,
         'R*_ref':'Oroz + GMR',
+        # the Triaud 2022 period (226 days, with no accompaning transit midtime) is no good
+        #  none of the HST/G141 falls within the transit; data.timing is empty
+        #  (in it's defense, that publication gives an errorbar of 1.7 days!)
+        # the only other reference is the discovery paper with 228.776+-0.03
+        #  no idea how they got such a small error bar; off by >100-sigma!
+        # it's really hard to get the HST just right.  how did they schedule it?!
+        #  HST is 12 orbits since the published T_0 in Jan.2020
+        #   so a 0.01 error in period translates to a 3 hour shift in Jun.2017 (HST)
+        # seems like t0=225.165 but it's still off a bit
+        # let's just use the original params from a year ago:
+        'b':{
+            'inc':89.7511397641686,
+            'inc_uperr':0.0323, 'inc_lowerr':-0.04,
+            'inc_ref':'Oroz + GMR',
+            't0':2457914.235774330795,
+            't0_uperr':0.004, 't0_lowerr':-0.004,
+            't0_ref':'Oroz',
+            'period':228.776,
+            'period_uperr':0.03,'period_lowerr':-0.03,
+            'period_ref':'Doyle et al. 2011'
+            }
     }
     overwrite['Kepler-1625'] = {
         'b':{'logg':3.0132,
@@ -1732,15 +1769,10 @@ overwrite[starID] =
             ]
         }
     }
-    # 11/07/23 period update to match G141 phase
     overwrite['WASP-39'] = {
         'FEH*':-0.10, 'FEH*_uperr':0.1, 'FEH*_lowerr':-0.1,
         'FEH*_units':'[dex]', 'FEH*_ref':'Faedi et al. 2011',
-        # 'b':{'period':4.055259,  # this is the default. increasing it a bit
-        'b':{'period':4.05527892,
-             'period_uperr':0.00000086,
-             'period_lowerr':-0.00000086,
-             'period_ref':'Ivshina & Winn 2022'}}
+        }
     overwrite['WASP-43'] = {
         'FEH*':-0.05, 'FEH*_uperr':0.17, 'FEH*_lowerr':-0.17,
         'FEH*_units':'[dex]', 'FEH*_ref':'Hellier et al. 2011',
@@ -1874,20 +1906,6 @@ overwrite[starID] =
                 0.567918864270408,
                 -0.2807821851882787
             ]
-        }
-    }
-    overwrite['Kepler-11'] = {
-        'g':{
-            'omega':97.0,
-            'omega_lowerr':-30,
-            'omega_uperr':30,
-            'omega_ref':"Borsato et al. 2014"
-        },
-        'b':{
-            'omega':71.46,
-            'omega_lowerr':-17,
-            'omega_uperr':17,
-            'omega_ref':"Borsato et al. 2014"
         }
     }
     overwrite['Kepler-9'] = {
@@ -2973,17 +2991,6 @@ overwrite[starID] =
              'period_uperr':7e-7, 'period_lowerr':-7e-7,
              'period_ref':'Kokori et al. 2022'}}
 
-    # 11/10/23 period update to match G141 phase
-    overwrite['K2-24'] = {
-        # 'b':{'period':20.88977,  # this is the default. decreasing it a bit
-        #      't0':2456905.8855,  # this is the default. decreasing it a lot
-        'b':{'period':20.88506,
-             'period_uperr':2.7e-4, 'period_lowerr':-2.8e-4,
-             'period_ref':'Kruse et al. 2019',
-             't0':2456905.79581,
-             't0_uperr':0.00062, 't0_lowerr':-0.00058,
-             't0_ref':'Kruse et al. 2019'}}
-
     # 11/12/23 period updates to match G141 phase
     overwrite['HAT-P-18'] = {
         # 'b':{'period':5.508023,  # this is the default. increasing it a bit
@@ -2991,17 +2998,22 @@ overwrite[starID] =
         'b':{'period':5.5080287,
              'period_uperr':1.4e-6, 'period_lowerr':-1.4e-6,
              'period_ref':'Ivshina & Winn 2022'}}
-    overwrite['KELT-11'] = {
-        # 'b':{'period':4.73610,  # this is the default. increasing it a bit
-        'b':{'period':4.7362034,
-             'period_uperr':8.3e-6, 'period_lowerr':-8.3e-6,
-             'period_ref':'Ivshina & Winn 2022'}}
-    overwrite['WASP-127'] = {
-        # 'b':{'period':4.17806203,  # this is the default. decreasing it a bit
-        # hmm nope. actually it goes up a tiny amount.  t0?  nope. hmm
-        'b':{'period':4.17806476,
-             'period_uperr':6e-7, 'period_lowerr':-6e-7,
-             'period_ref':'Ivshina & Winn 2022'}}
+
+    # some of the new JWST targets are missing mandatory parameters
+    #  (without these system.finalize will crash)
+
+    # not much in Vizier.  there's two StarHorse metallicities 0.0698 and -0.101483
+    overwrite['GJ 4102'] = {
+        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    # even less in Vizier for this white dwarf.  e.g. C/He and Ca/He both blank
+    overwrite['WD 1856'] = {
+        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+
+# HD 80606   data empty
+# GJ 4332    data empty
+# LTT 5972   data empty
 
     return overwrite
 # -------------------------------------------------------------------

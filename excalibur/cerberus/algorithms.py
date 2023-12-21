@@ -202,6 +202,7 @@ class atmos(dawgie.Algorithm):
             # MCMC_chain_length = 10
         else:
             MCMC_chain_length = 15000
+            MCMC_chain_length = 200
         print(' calling atmos from cerb-alg-atmos  chain len=',MCMC_chain_length)
         am = crbcore.atmos(fin, xsl, spc, self.__out[index], ext,
                            mclen=MCMC_chain_length,

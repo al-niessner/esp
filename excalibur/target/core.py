@@ -76,7 +76,7 @@ def scrapeids(ds:dawgie.Dataset, out, web, genIDs=True):
     targets = targets.split('\n')
     targets = [t.strip() for t in targets if t.replace(' ', '').__len__() > 0]
     tn = os.environ.get('TARGET_NAME', None)
-    if tn is not None:
+    if tn is not None and tn != '':
         found_target_list = None
         for target in targets:
             if tn == target.split(':')[0].strip(): found_target_list = target
@@ -657,6 +657,7 @@ def mastapi(tfl, out, dbs, download_url=None, hst_url=None, verbose=False):
     target = list(tfl['starID'].keys())[0]
     obstable = tfl['starID'][target]['datatable']
     obsids = [o['obsid'] for o in obstable]
+
     allsci = []
     allurl = []
     allmiss = []

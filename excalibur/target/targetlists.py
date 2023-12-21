@@ -1017,7 +1017,7 @@ def targetlist_ariel():
         'KOI-94',
         'KPS-1',
         'L 98-59',
-        # 'LHS 1140',  this one goes by (which I just added here)
+        # 'LHS 1140',  # alias for GJ 3053
         'GJ 3053',
         'LHS 1478',
         'LHS 1678',

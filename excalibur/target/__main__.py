@@ -19,10 +19,10 @@ dawgie.security.initialize(os.path.expandvars(os.path.expanduser
                                               (dawgie.context.gpg_home)))
 dawgie.db.reopen()
 excalibur.target.bot.Actor('target', 4, rid).do()
-
 if tn == '':
     for tn in dawgie.db.targets():
-        excalibur.target.bot.Agent('target', 4, rid, tn).do()
+        # excalibur.target.bot.Agent('target', 4, rid, tn).do()
+        pass
 else:
     excalibur.target.bot.Agent('target', 4, rid, tn).do()
 dawgie.db.close()

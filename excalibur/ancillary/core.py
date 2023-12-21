@@ -25,7 +25,6 @@ def getestimators():
         StEstimator(name='luminosity', units='L_sun', descr='Stellar luminosity',
                     method=ancestor.st_luminosity,
                     ref='from R_star & T_star'),
-        ancestor.StellarTypeEstimator(),
         StEstimator(name='spTyp', units='', descr='Spectral type',
                     method=ancestor.st_spTyp,
                     ref='Exoplanet Archive'),
