@@ -204,7 +204,9 @@ class atmos(dawgie.Algorithm):
             MCMC_chain_length = 15000
             MCMC_chain_length = 200
         print(' calling atmos from cerb-alg-atmos  chain len=',MCMC_chain_length)
+        import numexpr  # because this is for testing only, pylint: disable=import-outside-toplevel
         import time  # because this is for testing only, pylint: disable=import-outside-toplevel
+        numexpr.ncores = 1
         for MCMC_chain_length in [200, 400, 800, 1600]:
             t0 = time.time()
             am = crbcore.atmos(fin, xsl, spc, crbstates.atmosSV(ext), ext,
