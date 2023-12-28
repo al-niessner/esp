@@ -2,6 +2,9 @@ FROM esp_base:ghrVersion
 ENV DAWGIE_DOCKERIZED_AE_GIT_REVISION esp-git-rev
 ENV GNUPGHOME /proj/gnupg
 ENV HOME /tmp
+ENV NUMEXPR_NUM_THREADS 1
+ENV NUMEXPR_MAX_THREADS 1
+ENV OMP_NUM_THREADS 1
 ENV PYTHONPATH /proj/src/ae:/usr/local/lib/python
 RUN set -ex && \
     mkdir /tmp/esp && \
