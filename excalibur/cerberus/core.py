@@ -1276,10 +1276,10 @@ def results(trgt, filt, fin, xsl, atm, out, verbose=False):
                                                                                     filt, modelName,
                                                                                     trgt, p, saveDir)
 
-                out['target'].append(trgt)
-                out['planets'].append(p)
-                completed_at_least_one_planet = True
-                # print('out-data keys at end of this planet',out['data'][p].keys())
+            out['target'].append(trgt)
+            out['planets'].append(p)
+            completed_at_least_one_planet = True
+            # print('out-data keys at end of this planet',out['data'][p].keys())
 
     if completed_at_least_one_planet: out['STATUS'].append(True)
     return out['STATUS'][-1]

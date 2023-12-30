@@ -3,6 +3,8 @@
 import dawgie
 import dawgie.context
 
+import numexpr; numexpr.ncores = 1  # this is actually a performance enhancer!
+
 import logging; log = logging.getLogger(__name__)
 
 import excalibur.system as sys
@@ -175,7 +177,7 @@ class atmos(dawgie.Algorithm):
                 log.warning('--< CERBERUS ATMOS: %s >--', ext)
                 update = self._atmos(self.__fin.sv_as_dict()['parameters'],
                                      self.__xsl.sv_as_dict()[ext],
-                                     sv, fltrs.index(ext), ext, ds._tn())
+                                     sv, fltrs.index(ext), ext)
             else:
                 if not (vfin and vxsl and vspc):
                     errstr = [m for m in [sfin, sspc, sxsl] if m is not None]
@@ -193,7 +195,7 @@ class atmos(dawgie.Algorithm):
                 f'No output created for CERBERUS.{self.name()}')
         return
 
-    def _atmos(self, fin, xsl, spc, index, ext, tn):
+    def _atmos(self, fin, xsl, spc, index, ext):
         '''Core code call'''
         if ext=='Ariel-sim':
             MCMC_chain_length = 1000
@@ -202,18 +204,11 @@ class atmos(dawgie.Algorithm):
             # MCMC_chain_length = 10
         else:
             MCMC_chain_length = 15000
-            MCMC_chain_length = 200
-        print(' calling atmos from cerb-alg-atmos  chain len=',MCMC_chain_length)
-        import numexpr  # because this is for testing only, pylint: disable=import-outside-toplevel
-        import time  # because this is for testing only, pylint: disable=import-outside-toplevel
-        numexpr.ncores = 1
-        for MCMC_chain_length in [200, 400, 800, 1600]:
-            t0 = time.time()
-            am = crbcore.atmos(fin, xsl, spc, crbstates.atmosSV(ext), ext,
-                               mclen=MCMC_chain_length,
-                               sphshell=True, verbose=False)  # singlemod='TEC' after mclen
-            log.info('Alas, it took %8.2f seconds for %d chain length and target %s', time.time() - t0, MCMC_chain_length, tn)
-        am = not isinstance(self.__out[index], crbstates.atmosSV)
+            # MCMC_chain_length = 200
+        log.info(' calling atmos from cerb-alg-atmos  chain len=%d',MCMC_chain_length)
+        am = crbcore.atmos(fin, xsl, spc, self.__out[index], ext,
+                           mclen=MCMC_chain_length,
+                           sphshell=True, verbose=False)  # singlemod='TEC' after mclen
         return am
 
     @staticmethod
