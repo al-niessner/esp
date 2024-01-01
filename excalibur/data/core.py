@@ -26,12 +26,13 @@ import pyvo as vo
 
 import numpy as np
 import numpy.polynomial.polynomial as poly
+
 import astropy.io.fits as pyfits
 import astropy.units
-from astropy.wcs import WCS
+from astropy.modeling.models import BlackBody as astrobb
 from astropy.coordinates import SkyCoord
 from astropy.time import Time
-
+from astropy.wcs import WCS
 # ------------- ------------------------------------------------------
 # -- SV VALIDITY -- --------------------------------------------------
 def checksv(sv):
@@ -77,38 +78,50 @@ def collect(name, scrape, out):
 # ------------------ -------------------------------------------------
 # -- TIMING -- -------------------------------------------------------
 def timingversion():
-    '''1.2.0: GMR: Create outputs with top level keys'''
-    return dawgie.VERSION(1,2,0)
+    '''
+    1.1.0: GMR: HST
+    1.2.0: K. Pearson: Spitzer
+    1.3.0: GMR: JWST
+    '''
+    return dawgie.VERSION(1,3,0)
 
 def timing(force, ext, clc, out, verbose=False):
     '''
-    G. ROUDIER: Uses system orbital parameters to guide the dataset towards transit, eclipse or phasecurve tasks
-    K. Pearson: Spitzer
+    Uses system orbital parameters to guide the dataset towards
+    transit, eclipse or phasecurve tasks
     '''
+    ssc = syscore.ssconstants()
     chunked = False
     priors = force['priors'].copy()
     dbs = os.path.join(dawgie.context.data_dbs, 'mast')
-    data = {'LOC':[], 'SCANANGLE':[], 'TIME':[], 'EXPLEN':[]}
+    data = {'LOC':[], 'SCANANGLE':[], 'TIME':[], 'EXPLEN':[], 'ISORTEXP':[]}
     # LOAD DATA ------------------------------------------------------
     if 'JWST' in ext:
+        # Segmented datasets, length clc['LOC'] is the number of segments
+        alldinm = []  # Flatten integration number
+        alldtms = []  # Flatten times
+        alldidr = []  # Flatten integration durations
         for loc in sorted(clc['LOC']):
             fullloc = os.path.join(dbs, loc)
             with pyfits.open(fullloc) as hdulist:
-                header0 = hdulist[0].header
-                ftime = []
-                exptime = []
                 for hdu in hdulist:
-                    if "SCI" in hdu.name:
-                        data['LOC'].append(loc)
-                        data['TIME'].extend([hdu.header.get('MJD-AVG')])  # [MJD]
-                        data['EXPLEN'].extend([hdu.header.get('XPOSURE')])  # [s]
-                        data['SCANANGLE'].extend([hdu.header.get('PA_V3')])  # [deg]
+                    if 'PRIMARY' in hdu.name: pass
+                    elif "INT_TIMES" in hdu.name:
+                        alldinm.extend(hdu.data['integration_number'])
+                        alldtms.extend(hdu.data['int_mid_MJD_UTC'])
+                        alldidr.extend(hdu.data['int_end_MJD_UTC'] -
+                                       hdu.data['int_start_MJD_UTC'])
                         pass
                     pass
                 pass
             pass
+        isort = np.argsort(alldinm)
+        data['ISORTEXP'].extend(isort)
+        data['TIME'].extend(np.array(alldtms)[isort])  # [MJD-UTC]
+        data['EXPLEN'].extend(np.array(alldidr)[isort])  # [days]
+        data['LOC'].extend(sorted(clc['LOC']))
         pass
-    if 'Spitzer' in ext:
+    elif 'Spitzer' in ext:
         for loc in sorted(clc['LOC']):
             fullloc = os.path.join(dbs, loc)
             with pyfits.open(fullloc) as hdulist:
@@ -129,6 +142,7 @@ def timing(force, ext, clc, out, verbose=False):
                     else:
                         ftime.append(start)
                         exptime.append(hdu.header['EXPTIME'])
+                        pass
                     pass
                 data['LOC'].append(loc)
                 data['TIME'].extend(ftime)
@@ -182,7 +196,7 @@ def timing(force, ext, clc, out, verbose=False):
                 pass
             pass
         pass
-    data['IGNORED'] = [False]*len(data['LOC'])
+    data['IGNORED'] = [False]*len(data['TIME'])
     time = np.array(data['TIME'].copy())
     ignore = np.array(data['IGNORED'].copy())
     exposlen = np.array(data['EXPLEN'].copy())
@@ -190,18 +204,78 @@ def timing(force, ext, clc, out, verbose=False):
     ordt = np.argsort(time)
     exlto = exposlen.copy()[ordt]
     tmeto = time.copy()[ordt]
-    ssc = syscore.ssconstants()
-    if 'Spitzer' not in ext and 'JWST' not in ext:
-        ignto = ignore.copy()[ordt]
-        scato = scanangle.copy()[ordt]
-        pass
-
+    ignto = ignore.copy()[ordt]
+    if 'HST' in ext: scato = scanangle.copy()[ordt]
     if tmeto.size > 1:
         timingplist = [p for p in priors['planets'] if p not in force['pignore']]
         for p in timingplist:
             out['data'][p] = {}
-
-            if 'Spitzer' in ext or 'JWST' in ext:
+            if 'JWST' in ext:  # JWST --------------------------------
+                smaors = priors[p]['sma']/priors['R*']/ssc['Rsun/AU']
+                tmjd = priors[p]['t0']
+                if tmjd > 2400000.5: tmjd -= 2400000.5
+                z, phase = time2z(time, priors[p]['inc'], tmjd, smaors,
+                                  priors[p]['period'], priors[p]['ecc'])
+                zto = z.copy()[ordt]
+                phsto = phase.copy()[ordt]
+                # VISIT NUMBERING
+                visto = np.ones(time.size)
+                vis = np.ones(time.size)
+                # think of something else for phasecurves
+                wherev = np.where(np.diff(phsto) < 0)[0]
+                for index in wherev: visto[index+1:] += 1
+                # TRANSIT VISIT PHASECURVE
+                out['data'][p]['transit'] = []
+                out['data'][p]['eclipse'] = []
+                out['data'][p]['phasecurve'] = []
+                for v in set(visto):
+                    selv = (visto == v)
+                    trlim = 1e0
+                    posphsto = phsto.copy()
+                    posphsto[posphsto < 0] = posphsto[posphsto < 0] + 1e0
+                    tecrit = abs(np.arcsin(trlim/smaors))/(2e0*np.pi)
+                    select = (abs(zto[selv]) < trlim)
+                    pcconde = False
+                    if (np.any(select) and ((np.min(abs(posphsto[selv][select] - 0.5)) <
+                                             tecrit))):
+                        out['eclipse'].append(int(v))
+                        out['data'][p]['eclipse'].append(int(v))
+                        pcconde = True
+                        pass
+                    pccondt = False
+                    if np.any(select) and (np.min(abs(phsto[selv][select])) < tecrit):
+                        out['transit'].append(int(v))
+                        out['data'][p]['transit'].append(int(v))
+                        pccondt = True
+                        pass
+                    if pcconde and pccondt:
+                        out['phasecurve'].append(int(v))
+                        out['data'][p]['phasecurve'].append(int(v))
+                        pass
+                    pass
+                vis[ordt] = visto.astype(int)
+                ignore[ordt] = ignto
+                # PLOTS
+                if verbose:
+                    plt.figure()
+                    plt.plot(phsto, 'k.')
+                    plt.plot(np.arange(phsto.size)[~ignto], phsto[~ignto], 'bo')
+                    for i in wherev: plt.axvline(i, ls='--', color='r')
+                    plt.xlim(0, time.size - 1)
+                    plt.ylim(-0.5, 0.5)
+                    plt.xlabel('Time index')
+                    plt.ylabel('Orbital Phase [2pi rad]')
+                    plt.show()
+                    pass
+                out['data'][p]['wherev'] = wherev
+                out['data'][p]['visits'] = vis
+                out['data'][p]['z'] = z
+                out['data'][p]['phase'] = phase
+                out['data'][p]['ordt'] = ordt
+                out['data'][p]['ignore'] = ignore
+                out['STATUS'].append(True)
+                pass
+            elif 'Spitzer' in ext:  # SPITZER ------------------------
                 out['data'][p]['transit'] = []
                 out['data'][p]['eclipse'] = []
                 out['data'][p]['phasecurve'] = []
@@ -213,7 +287,9 @@ def timing(force, ext, clc, out, verbose=False):
 
                 # https://arxiv.org/pdf/1001.2010.pdf eq 33
                 w = priors[p].get('omega',0)
-                tme = priors[p]['t0']+ priors[p]['period']*0.5 * (1 + priors[p]['ecc']*(4./np.pi)*np.cos(np.deg2rad(w)))
+                tme = (priors[p]['t0'] +
+                       priors[p]['period']*0.5*(1 + priors[p]['ecc']*
+                                                (4./np.pi)*np.cos(np.deg2rad(w))))
                 tm = priors[p]['t0']
                 if tm > 2400000.5 and 'Spitzer' in ext:
                     tme -= 2400000.5
@@ -229,27 +305,31 @@ def timing(force, ext, clc, out, verbose=False):
                 events = np.unique(np.floor(tphase))
                 min_images = 200
                 for e in events:  # loop through different years
-
-                    tmask = (tphase > e + (offset-2*pdur)) & (tphase < e + (offset+2*pdur))
-                    mmask = (tphase > e + (offset-2*pdur+0.25)) & (tphase < e + (offset+2*pdur+0.25))
-                    emask = (ephase > e + (offset-2*pdur)) & (ephase < e + (offset+2*pdur))
-                    # emask2 = (ephase > (e-1) + (offset-2*pdur)) & (ephase < (e-1) + (offset+2*pdur))  # eclipse at prior orbit
-                    # tmask2 = (tphase > (e+1) + (offset-2*pdur)) & (tphase < (e+1) + (offset+2*pdur) )  # transit at next orbit
+                    tmask = ((tphase > e + (offset-2*pdur)) &
+                             (tphase < e + (offset+2*pdur)))
+                    mmask = ((tphase > e + (offset-2*pdur+0.25)) &
+                             (tphase < e + (offset+2*pdur+0.25)))
+                    emask = ((ephase > e + (offset-2*pdur)) &
+                             (ephase < e + (offset+2*pdur)))
+                    # emask2 = (ephase > (e-1) + (offset-2*pdur)) &
+                    # (ephase < (e-1) + (offset+2*pdur))  # eclipse at prior orbit
+                    # tmask2 = (tphase > (e+1) + (offset-2*pdur)) &
+                    # (tphase < (e+1) + (offset+2*pdur) )  # transit at next orbit
                     if tmask.sum() > min_images:
                         out['data'][p]['transit'].append(e)
                     if emask.sum() > min_images:
                         out['data'][p]['eclipse'].append(e)
-                    if tmask.sum() > min_images and emask.sum() > min_images and mmask.sum() > min_images:
+                    if ((tmask.sum() > min_images) and (emask.sum() > min_images) and (mmask.sum() > min_images)):
                         out['data'][p]['phasecurve'].append(e)
-
                 visto = np.floor(tphase)
                 out['STATUS'].append(True)
                 pass
-            else:  # HST
+            elif 'HST' in ext:  # HST --------------------------------
                 smaors = priors[p]['sma']/priors['R*']/ssc['Rsun/AU']
                 tmjd = priors[p]['t0']
                 if tmjd > 2400000.5: tmjd -= 2400000.5
-                z, phase = time2z(time, priors[p]['inc'], tmjd, smaors, priors[p]['period'], priors[p]['ecc'])
+                z, phase = time2z(time, priors[p]['inc'], tmjd, smaors,
+                                  priors[p]['period'], priors[p]['ecc'])
                 zto = z.copy()[ordt]
                 phsto = phase.copy()[ordt]
                 tmetod = [np.diff(tmeto)[0]]
@@ -262,15 +342,14 @@ def timing(force, ext, clc, out, verbose=False):
                 # THRESHOLDS
                 rbtthr = 25e-1*thrs  # HAT-P-11
                 vstthr = 3e0*thro
-                # VISIT NUMBERING --------------------------------------------
+                # VISIT NUMBERING
                 whereo = np.where(tmetod > rbtthr)[0]
                 wherev = np.where(tmetod > vstthr)[0]
                 visto = np.ones(tmetod.size)
                 dvis = np.ones(tmetod.size)
                 vis = np.ones(tmetod.size)
-
                 for index in wherev: visto[index:] += 1
-                # DOUBLE SCAN VISIT RE NUMBERING -----------------------------
+                # DOUBLE SCAN VISIT RE NUMBERING
                 dvisto = visto.copy()
                 for v in set(visto):
                     selv = (visto == v)
@@ -283,7 +362,7 @@ def timing(force, ext, clc, out, verbose=False):
                         dvisto[selv] = vdbvisto
                         pass
                     pass
-                # ORBIT NUMBERING --------------------------------------------
+                # ORBIT NUMBERING
                 orbto = np.ones(tmetod.size)
                 orb = np.ones(tmetod.size)
                 for v in set(visto):
@@ -311,7 +390,7 @@ def timing(force, ext, clc, out, verbose=False):
                             pass
                         pass
                     pass
-                # TRANSIT VISIT PHASECURVE -----------------------------------
+                # TRANSIT VISIT PHASECURVE
                 out['data'][p]['svntransit'] = []
                 out['data'][p]['svneclipse'] = []
                 out['data'][p]['svnphasecurve'] = []
@@ -323,7 +402,7 @@ def timing(force, ext, clc, out, verbose=False):
                     tecrit = abs(np.arcsin(trlim/smaors))/(2e0*np.pi)
                     select = (abs(zto[selv]) < trlim)
                     pcconde = False
-                    if np.any(select) and (np.min(abs(posphsto[selv][select] - 0.5)) < tecrit):
+                    if (np.any(select) and (np.min(abs(posphsto[selv][select] - 0.5)) < tecrit)):
                         out['eclipse'].append(int(v))
                         out['data'][p]['svneclipse'].append(int(v))
                         pcconde = True
@@ -350,7 +429,7 @@ def timing(force, ext, clc, out, verbose=False):
                     tecrit = abs(np.arcsin(trlim/smaors))/(2e0*np.pi)
                     select = (abs(zto[selv]) < trlim)
                     pcconde = False
-                    if np.any(select)and(np.min(abs(posphsto[selv][select] - 0.5)) < tecrit):
+                    if (np.any(select) and (np.min(abs(posphsto[selv][select] - 0.5)) < tecrit)):
                         out['data'][p]['eclipse'].append(int(v))
                         pcconde = True
                         pass
@@ -365,8 +444,7 @@ def timing(force, ext, clc, out, verbose=False):
                 orb[ordt] = orbto.astype(int)
                 dvis[ordt] = dvisto.astype(int)
                 ignore[ordt] = ignto
-
-                # PLOTS ------------------------------------------------------
+                # PLOTS
                 if verbose:
                     plt.figure()
                     plt.plot(phsto, 'k.')
@@ -377,7 +455,6 @@ def timing(force, ext, clc, out, verbose=False):
                     plt.ylim(-0.5, 0.5)
                     plt.xlabel('Time index')
                     plt.ylabel('Orbital Phase [2pi rad]')
-
                     plt.figure()
                     plt.plot(tmetod, 'o')
                     plt.plot(tmetod*0+vstthr, 'r--')
@@ -388,7 +465,6 @@ def timing(force, ext, clc, out, verbose=False):
                     plt.xlabel('Time index')
                     plt.ylabel('Frame Separation [Days]')
                     plt.semilogy()
-
                     if np.max(dvis) > np.max(vis):
                         plt.figure()
                         plt.plot(dvisto, 'o')
@@ -414,17 +490,125 @@ def timing(force, ext, clc, out, verbose=False):
                 out['data'][p]['ignore'] = ignore
                 out['STATUS'].append(True)
                 pass
-
             log.warning('>-- Planet: %s', p)
             log.warning('--< Transit: %s', str(out['data'][p]['transit']))
             log.warning('--< Eclipse: %s', str(out['data'][p]['eclipse']))
             log.warning('--< Phase Curve: %s', str(out['data'][p]['phasecurve']))
-
-            if out['data'][p]['transit'] or out['data'][p]['eclipse'] or out['data'][p]['phasecurve']: chunked = True
+            if (out['data'][p]['transit'] or out['data'][p]['eclipse'] or
+                out['data'][p]['phasecurve']): chunked = True
             pass
         pass
     return chunked
 # ------------ -------------------------------------------------------
+# -- JWST CALIBRATION -- ---------------------------------------------
+def jwstcal(fin, clc, tim, ext, out, verbose=False, debug=True):
+    '''
+    G. ROUDIER: Extracts and Wavelength calibrates JWST datasets
+    '''
+    dbs = os.path.join(dawgie.context.data_dbs, 'mast')
+    data = {'LOC':[], 'EPS':[],
+            'EXP':[], 'EXPERR':[], 'EXPFLAG':[], 'TIME':[]}
+    # TEMP CI
+    _ = tim
+    _ = out
+    _ = verbose
+    _ = data
+    # -------
+    alldinm = []  # Flatten integration number
+    alldexp = []  # Flatten exposure time serie
+    for loc in sorted(clc['LOC']):
+        fullloc = os.path.join(dbs, loc)
+        with pyfits.open(fullloc) as hdulist:
+            for hdu in hdulist:
+                if 'PRIMARY' in hdu.name: pass
+                elif 'INT_TIMES' in hdu.name:
+                    alldinm.extend(hdu.data['integration_number'])
+                    pass
+                elif 'SCI' in hdu.name: alldexp.extend(hdu.data)
+                pass
+            pass
+        pass
+    # Time ordered data
+    isort = np.argsort(alldinm)
+    alldexp = np.array(alldexp)
+    alldexp = alldexp[isort]
+    # Calibration files
+    reffile = jwstreffiles(ext)
+    # reffile[0]: images of the 3 orders [296, 2088] +20 on each side
+    # reffile[1]: calibrated wavelength, pixel XY, throughput for the 3 orders
+    refwave = []  # Reference wavelength for each order
+    refX = []  # X reference
+    refY = []  # Y reference
+    refT = []  # Throughput curve
+    refB = []  # Blackbody model curve
+    refS = []  # Blackbody*Throughput curve
+    Tstar = fin['priors']['T*']
+    bbfunc = astrobb(Tstar*astropy.units.K)
+    for order in np.arange(3):
+        refwave.append(reffile[1][order]['WAVELENGTH'])
+        refX.append(reffile[1][order]['X'] - 20.)
+        refY.append(reffile[1][order]['Y'] - 20.)
+        refT.append(reffile[1][order]['THROUGHPUT'])
+        bbstar = bbfunc(refwave[-1]*astropy.units.um)
+        refB.append(bbstar)
+        refS.append(refT[-1]*refB[-1]/np.nansum(refB[-1]))
+        pass
+    YY, XX = np.mgrid[0:alldexp[0].shape[0], 0:alldexp[0].shape[1]]
+    # Mixing Matrix
+    MM = list(reffile[0])
+    # Transforms
+    TMX = []
+    for thisrefX, thisrefS in zip(refX, refS):
+        orderme = np.argsort(thisrefX)
+        TMX.append(itp.CubicSpline(thisrefX[orderme], thisrefS[orderme]))
+        if debug:
+            select = (thisrefX > 0) & (thisrefX < alldexp[0].shape[1])
+            plt.plot(thisrefX[select], thisrefS[select], 'o')
+            test = np.arange(0, 2048, step=0.1)
+            plt.plot(test, TMX[-1](test), '+')
+            plt.show()
+            # BANG
+            # Order 3 interpolated negative values
+            pass
+        pass
+    TMY = []
+    # STOP TEST JWST
+    _ = YY
+    _ = XX
+    _ = MM
+    _ = TMY
+    return True
+
+def jwstreffiles(thisext):
+    '''
+    G. ROUDIER: Returns a list of reference files for wavelegnth calibration
+    Source: https://jwst-crds.stsci.edu
+    Local: /proj/sdp/data/cal/
+    '''
+    if 'NIRISS' in thisext:
+        # --< DATA CALIBRATION: JWST-NIRISS-NIS-CLEAR-GR700XD >--
+        thisdir = 'NIRISS'
+        thisprofile = 'jwst_niriss_specprofile_0022.fits'
+        thistrace = 'jwst_niriss_spectrace_0023.fits'
+        # Note: do something smarter to get latest files
+        pass
+    else:
+        log.error('>-- %s :NOT SUPPORTED', thisext)
+        pass
+    fpath = os.path.join(excalibur.context['data_cal'], thisdir, thisprofile)
+    # Trace template for each order (2D ARRAY)
+    with pyfits.open(fpath) as prfhdul:
+        orders = [hdu.data for hdu in prfhdul if hdu.data is not None]
+        pass
+    # Trace pixel (waves[0]['X'], waves[0]['Y']) and
+    # associated calibrated wavelength (waves[0]['WAVELENGTH']) (1D ARRAYS)
+    fpath = os.path.join(excalibur.context['data_cal'], thisdir, thistrace)
+    with pyfits.open(fpath) as trchdul:
+        waves = [hdu.data for hdu in trchdul if hdu.data is not None]
+        pass
+    reffiles = [orders, waves]
+    return reffiles
+# ---------------------- ---------------------------------------------
 # -- CALIBRATE SCAN DATA -- ------------------------------------------
 def scancal(clc, tim, tid, flttype, out,
             emptythr=1e3, frame2png=False, verbose=False, debug=False):

@@ -118,13 +118,9 @@ class timing(dawgie.Algorithm):
         vfin, efin = datcore.checksv(fin)
         col = self.__col.sv_as_dict()['frames']
         vcol, ecol = datcore.checksv(col)
-        validtype = []
-        for test in col['activefilters'].keys():
-            if test in fltrs: validtype.append(test)
-            pass
         svupdate = []
         if vfin and vcol:
-            for ext in validtype:
+            for ext in col['activefilters'].keys():
                 # pylint: disable=protected-access
                 prcd = trgedit.proceed(ds._tn(), ext, verbose=False)
                 if prcd:
@@ -246,9 +242,12 @@ class calibration(dawgie.Algorithm):
         if 'Spitzer' in flttype:
             caled = datcore.spitzercal(cll, out)
             pass
-        if 'NIRISS' in flttype:
-            caled = datcore.jwstcal_NIRISS(fin, cll, tim, tid, flttype, out,
-                                           verbose=False)
+        # if 'NIRISS' in flttype:
+        #    caled = datcore.jwstcal_NIRISS(fin, cll, tim, tid, flttype, out,
+        #                                   verbose=False)
+        #    pass
+        if 'JWST' in flttype:
+            caled = datcore.jwstcal(fin, cll, tim, flttype, out, verbose=False)
             pass
         return caled
 

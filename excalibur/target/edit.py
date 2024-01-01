@@ -48,11 +48,11 @@ def processme():
     out = {}
     out['FILTER'] = {}
     out['FILTER']['include'] = []
-    out['FILTER']['exclude'] = ['STIS', 'JWST', 'Spitzer', 'Ariel']
+    out['FILTER']['exclude'] = ['STIS', 'WFC3', 'Spitzer', 'Ariel']
     out['TARGET'] = {}
     # Best to use a function call that returns a specific list
     # if one wants to change the 'include' target content
-    out['TARGET']['include'] = []
+    out['TARGET']['include'] = ['GJ 486', 'GJ 1132']
     out['TARGET']['exclude'] = ['HR 8799',
                                 'GJ 3193',  # doesn't exist in the Exoplanet Archive
                                 'HIP 41378',  # this is K2-93

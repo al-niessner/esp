@@ -127,6 +127,7 @@ class autofill(dawgie.Algorithm):
         # pylint: disable=protected-access
         prc = trgedit.proceed(ds._tn())
         if valid and (ds._tn() in crt['starIDs']['starID']) and prc:
+            log.warning('--< TARGET AUTOFILL: %s >--', ds._tn())
             update = self._autofill(crt, ds._tn())
             pass
         else: self._failure(errstring)
@@ -176,8 +177,10 @@ class scrape(dawgie.Algorithm):
         var_autofill = self.__autofill.sv_as_dict()['parameters']
         valid, errstring = trgcore.checksv(var_autofill)
         # pylint: disable=protected-access
-        valid = valid and trgedit.proceed(ds._tn())
-        if valid: _ = self._scrape(var_autofill, self.__out)
+        if valid and trgedit.proceed(ds._tn()):
+            log.warning('--< TARGET SCRAPE: %s >--', ds._tn())
+            _ = self._scrape(var_autofill, self.__out)
+            pass
         else: self._failure(errstring)
         # GMR: always update.
         # Sims / proceed() do not require data nor full set of system parameters.
