@@ -24,10 +24,11 @@ fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
 class collect(dawgie.Algorithm):
     '''
     G. ROUDIER: Data collection by filters
+    1.1.3 bugfix in proceed call
     '''
     def __init__(self):
         '''__init__ ds'''
-        self._version_ = dawgie.VERSION(1,1,2)
+        self._version_ = datcore.collectversion()
         self.__create = trgalg.create()
         self.__scrape = trgalg.scrape()
         self.__out = trgstates.FilterSV('frames')
@@ -55,8 +56,8 @@ class collect(dawgie.Algorithm):
         if valid:
             for key in create['filters'].keys(): self.__out[key] = create['filters'][key]
             for name in create['filters']['activefilters']['NAMES']:
-                prc = trgedit.proceed(list(create['starIDs']['starID'])[0], ext=name)
-                if prc:
+                # pylint: disable=protected-access
+                if trgedit.proceed(ds._tn(), ext=name):
                     ok = self._collect(name, scrape, self.__out)
                     update = update or ok
                     pass

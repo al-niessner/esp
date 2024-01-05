@@ -46,6 +46,12 @@ def checksv(sv):
     return valid, errstring
 # ----------------- --------------------------------------------------
 # -- COLLECT DATA -- -------------------------------------------------
+def collectversion():
+    '''
+    1.1.3: GMR: bugfix for JWST NIRSPEC filters
+    '''
+    return dawgie.VERSION(1,1,3)
+
 def collect(name, scrape, out):
     '''
     G. ROUDIER: Filters data from target.scrape.databases according to active filters
@@ -55,7 +61,7 @@ def collect(name, scrape, out):
     for rootname in scrape['name'].keys():
         ok = scrape['name'][rootname]['observatory'] in [obs.strip()]
         ok = ok and (scrape['name'][rootname]['instrument'] in [ins.strip()])
-        ok = ok and (scrape['name'][rootname]['detector'] in [det.strip()])
+        ok = ok and (det.strip() in scrape['name'][rootname]['detector'])
         ok = ok and (scrape['name'][rootname]['filter'] in [fil.strip()])
         ok = ok and (scrape['name'][rootname]['mode'] in [mod.strip()])
         if ok:
@@ -544,39 +550,42 @@ def jwstcal(fin, clc, tim, ext, out, verbose=False, debug=True):
     refS = []  # Blackbody*Throughput curve
     Tstar = fin['priors']['T*']
     bbfunc = astrobb(Tstar*astropy.units.K)
-    for order in np.arange(3):
-        refwave.append(reffile[1][order]['WAVELENGTH'])
-        refX.append(reffile[1][order]['X'] - 20.)
-        refY.append(reffile[1][order]['Y'] - 20.)
-        refT.append(reffile[1][order]['THROUGHPUT'])
-        bbstar = bbfunc(refwave[-1]*astropy.units.um)
-        refB.append(bbstar)
-        refS.append(refT[-1]*refB[-1]/np.nansum(refB[-1]))
-        pass
-    YY, XX = np.mgrid[0:alldexp[0].shape[0], 0:alldexp[0].shape[1]]
-    # Mixing Matrix
-    MM = list(reffile[0])
-    # Transforms
-    TMX = []
-    for thisrefX, thisrefS in zip(refX, refS):
-        orderme = np.argsort(thisrefX)
-        TMX.append(itp.CubicSpline(thisrefX[orderme], thisrefS[orderme]))
-        if debug:
-            select = (thisrefX > 0) & (thisrefX < alldexp[0].shape[1])
-            plt.plot(thisrefX[select], thisrefS[select], 'o')
-            test = np.arange(0, 2048, step=0.1)
-            plt.plot(test, TMX[-1](test), '+')
-            plt.show()
-            # BANG
-            # Order 3 interpolated negative values
+    # TEST NIRISS
+    if reffile is not None:
+        for order in np.arange(3):
+            refwave.append(reffile[1][order]['WAVELENGTH'])
+            refX.append(reffile[1][order]['X'] - 20.)
+            refY.append(reffile[1][order]['Y'] - 20.)
+            refT.append(reffile[1][order]['THROUGHPUT'])
+            bbstar = bbfunc(refwave[-1]*astropy.units.um)
+            refB.append(bbstar)
+            refS.append(refT[-1]*refB[-1]/np.nansum(refB[-1]))
             pass
+        YY, XX = np.mgrid[0:alldexp[0].shape[0], 0:alldexp[0].shape[1]]
+        # Mixing Matrix
+        MM = list(reffile[0])
+        # Transforms
+        TMX = []
+        TMY = []
+        for thisrefX, thisrefS in zip(refX, refS):
+            orderme = np.argsort(thisrefX)
+            TMX.append(itp.CubicSpline(thisrefX[orderme], thisrefS[orderme]))
+            if debug:
+                select = (thisrefX > 0) & (thisrefX < alldexp[0].shape[1])
+                plt.plot(thisrefX[select], thisrefS[select], 'o')
+                test = np.arange(0, 2048, step=0.1)
+                plt.plot(test, TMX[-1](test), '+')
+                plt.show()
+                # BANG
+                # Order 3 interpolated negative values
+                pass
+            pass
+        # STOP TEST JWST
+        _ = YY
+        _ = XX
+        _ = MM
+        _ = TMY
         pass
-    TMY = []
-    # STOP TEST JWST
-    _ = YY
-    _ = XX
-    _ = MM
-    _ = TMY
     return True
 
 def jwstreffiles(thisext):
@@ -585,28 +594,35 @@ def jwstreffiles(thisext):
     Source: https://jwst-crds.stsci.edu
     Local: /proj/sdp/data/cal/
     '''
+    thisdir = None
     if 'NIRISS' in thisext:
+        # Note: do something smarter to get latest files
         # --< DATA CALIBRATION: JWST-NIRISS-NIS-CLEAR-GR700XD >--
         thisdir = 'NIRISS'
         thisprofile = 'jwst_niriss_specprofile_0022.fits'
         thistrace = 'jwst_niriss_spectrace_0023.fits'
-        # Note: do something smarter to get latest files
+        pass
+    if 'NIRSPEC' in thisext:
+        # --< DATA CALIBRATION: JWST-NIRSPEC-NRS-F290LP-G395H >--
+        pass
+    if thisdir is None:
+        log.error('>-- %s :NOT SUPPORTED', thisext)
+        reffiles = None
         pass
     else:
-        log.error('>-- %s :NOT SUPPORTED', thisext)
+        fpath = os.path.join(excalibur.context['data_cal'], thisdir, thisprofile)
+        # Trace template for each order (2D ARRAY)
+        with pyfits.open(fpath) as prfhdul:
+            orders = [hdu.data for hdu in prfhdul if hdu.data is not None]
+            pass
+        # Trace pixel (waves[0]['X'], waves[0]['Y']) and
+        # associated calibrated wavelength (waves[0]['WAVELENGTH']) (1D ARRAYS)
+        fpath = os.path.join(excalibur.context['data_cal'], thisdir, thistrace)
+        with pyfits.open(fpath) as trchdul:
+            waves = [hdu.data for hdu in trchdul if hdu.data is not None]
+            pass
+        reffiles = [orders, waves]
         pass
-    fpath = os.path.join(excalibur.context['data_cal'], thisdir, thisprofile)
-    # Trace template for each order (2D ARRAY)
-    with pyfits.open(fpath) as prfhdul:
-        orders = [hdu.data for hdu in prfhdul if hdu.data is not None]
-        pass
-    # Trace pixel (waves[0]['X'], waves[0]['Y']) and
-    # associated calibrated wavelength (waves[0]['WAVELENGTH']) (1D ARRAYS)
-    fpath = os.path.join(excalibur.context['data_cal'], thisdir, thistrace)
-    with pyfits.open(fpath) as trchdul:
-        waves = [hdu.data for hdu in trchdul if hdu.data is not None]
-        pass
-    reffiles = [orders, waves]
     return reffiles
 # ---------------------- ---------------------------------------------
 # -- CALIBRATE SCAN DATA -- ------------------------------------------
