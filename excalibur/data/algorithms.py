@@ -119,9 +119,13 @@ class timing(dawgie.Algorithm):
         vfin, efin = datcore.checksv(fin)
         col = self.__col.sv_as_dict()['frames']
         vcol, ecol = datcore.checksv(col)
+        validtype = []
+        for test in col['activefilters'].keys():
+            if test in fltrs: validtype.append(test)
         svupdate = []
         if vfin and vcol:
-            for ext in col['activefilters'].keys():
+            # for ext in col['activefilters'].keys():
+            for ext in validtype:
                 # pylint: disable=protected-access
                 prcd = trgedit.proceed(ds._tn(), ext, verbose=False)
                 if prcd:

@@ -119,6 +119,8 @@ def bestValue(values,uperrs,lowerrs,refs,lbl):
     From a list of parameter values, determine the most trustworthy value
     '''
     selectMostRecent = lbl in ('period', 't0')
+    # turn off the new period/T0 selection, to see how much effect it has
+    selectMostRecent = False
     if values[0] != '' and not selectMostRecent:
         # step 1: if there is a default value at the start of the list, use that
         # -- exception: for the emphemeris (period and t_0) always use the most recent value --

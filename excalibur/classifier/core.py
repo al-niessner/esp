@@ -147,9 +147,12 @@ def lc_resid_classification(transit_whitelight, ext, out):
         else:
             initial_dict = transit_whitelight['data'][planet]
 
+        # note that Spitzer doesn't have 'postim', so if-then needed here
         try:
             sep = np.array(initial_dict['postsep'])
-            whitelight = np.array(initial_dict['allwhite']) / np.array(initial_dict['postim'])
+            whitelight = np.array(initial_dict['allwhite'])
+            if 'postim' in initial_dict.keys():
+                whitelight /= np.array(initial_dict['postim'])
             model = np.array(initial_dict['postlc'])
         except AttributeError:
             sep = []
@@ -157,7 +160,9 @@ def lc_resid_classification(transit_whitelight, ext, out):
             model = []
             for p in initial_dict:
                 sep.extend(p['postsep'])
-                whitelight.append(np.array(p['allwhite']) / np.array(p['postim']))
+                whitelight.append(np.array(p['allwhite']))
+                if 'postim' in p.keys():
+                    whitelight[-1] /= np.array(p['postim'])
                 model.append(p['postlc'])
                 pass
             pass

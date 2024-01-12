@@ -33,10 +33,13 @@ def processme():
     '''
     out = {}
     out['FILTER'] = {}
-    out['FILTER']['include'] = ['JWST']
-    out['FILTER']['exclude'] = ['Ariel', '@TS']
+    out['FILTER']['include'] = []
+    # out['FILTER']['exclude'] = ['STIS', 'WFC3', 'Spitzer', 'Ariel']
+    out['FILTER']['exclude'] = ['STIS', 'JWST', 'Spitzer', 'Ariel']
     out['TARGET'] = {}
-    out['TARGET']['include'] = ['GJ 486', 'GJ 1132', 'WASP-39']
+    # Best to use a function call that returns a specific list
+    # if one wants to change the 'include' target content
+    out['TARGET']['include'] = []
     out['TARGET']['exclude'] = dropouts()
     return out
 
@@ -80,7 +83,86 @@ def dropouts():
            'LHS 6343',  # has G141, but doesn't exist in the Exoplanet Archive (listed as false positive)
            'TOI-175', 'TOI-193',
            'LHS 1140',  # alias for GJ 3053
-    ]
+           'LHS 1140 (taurex sim @TS)',
+           '55 Cnc (taurex sim @TS)',  # drop taurex-sim targets; they waste CPU
+           'AU Mic (taurex sim @TS)',
+           'GJ 1132 (taurex sim @TS)',
+           'GJ 1214 (taurex sim @TS)',
+           'GJ 3053 (taurex sim @TS)',
+           'GJ 3470 (taurex sim @TS)',
+           'GJ 436 (taurex sim @TS)',
+           'GJ 9827 (taurex sim @TS)',
+           'HAT-P-1 (taurex sim @TS)',
+           'HAT-P-11 (taurex sim @TS)',
+           'HAT-P-12 (taurex sim @TS)',
+           'HAT-P-17 (taurex sim @TS)',
+           'HAT-P-18 (taurex sim @TS)',
+           'HAT-P-2 (taurex sim @TS)',
+           'HAT-P-24 (taurex sim @TS)',
+           'HAT-P-26 (taurex sim @TS)',
+           'HAT-P-3 (taurex sim @TS)',
+           'HAT-P-32 (taurex sim @TS)',
+           'HAT-P-38 (taurex sim @TS)',
+           'HAT-P-41 (taurex sim @TS)',
+           'HATS-7 (taurex sim @TS)',
+           'HD 106315 (taurex sim @TS)',
+           'HD 149026 (taurex sim @TS)',
+           'HD 189733 (taurex sim @TS)',
+           'HD 191939 (taurex sim @TS)',
+           'HD 209458 (taurex sim @TS)',
+           'HD 219666 (taurex sim @TS)',
+           'HD 97658 (taurex sim @TS)',
+           'K2-18 (taurex sim @TS)',
+           'K2-24 (taurex sim @TS)',
+           'K2-3 (taurex sim @TS)',
+           'K2-33 (taurex sim @TS)',
+           'K2-93 (taurex sim @TS)',
+           'K2-96 (taurex sim @TS)',
+           'KELT-1 (taurex sim @TS)',
+           'KELT-11 (taurex sim @TS)',
+           'KELT-20 (taurex sim @TS)',
+           'KELT-7 (taurex sim @TS)',
+           'Kepler-138 (taurex sim @TS)',
+           'Kepler-16 (taurex sim @TS)',
+           'Kepler-79 (taurex sim @TS)',
+           'L 98-59 (taurex sim @TS)',
+           'LTT 1445 A (taurex sim @TS)',
+           'LTT 9779 (taurex sim @TS)',
+           'TOI-1201 (taurex sim @TS)',
+           'TOI-1231 (taurex sim @TS)',
+           'TOI-270 (taurex sim @TS)',
+           'TOI-674 (taurex sim @TS)',
+           'TRAPPIST-1 (taurex sim @TS)',
+           'V1298 Tau (taurex sim @TS)',
+           'WASP-101 (taurex sim @TS)',
+           'WASP-103 (taurex sim @TS)',
+           'WASP-107 (taurex sim @TS)',
+           'WASP-117 (taurex sim @TS)',
+           'WASP-12 (taurex sim @TS)',
+           'WASP-121 (taurex sim @TS)',
+           'WASP-127 (taurex sim @TS)',
+           'WASP-17 (taurex sim @TS)',
+           'WASP-178 (taurex sim @TS)',
+           'WASP-18 (taurex sim @TS)',
+           'WASP-19 (taurex sim @TS)',
+           'WASP-29 (taurex sim @TS)',
+           'WASP-31 (taurex sim @TS)',
+           'WASP-39 (taurex sim @TS)',
+           'WASP-43 (taurex sim @TS)',
+           'WASP-52 (taurex sim @TS)',
+           'WASP-6 (taurex sim @TS)',
+           'WASP-62 (taurex sim @TS)',
+           'WASP-63 (taurex sim @TS)',
+           'WASP-67 (taurex sim @TS)',
+           'WASP-69 (taurex sim @TS)',
+           'WASP-74 (taurex sim @TS)',
+           'WASP-76 (taurex sim @TS)',
+           'WASP-79 (taurex sim @TS)',
+           'WASP-80 (taurex sim @TS)',
+           'WASP-96 (taurex sim @TS)',
+           'WASP-98 (taurex sim @TS)',
+           'XO-1 (taurex sim @TS)',
+           'XO-2 (taurex sim @TS)']
     return out
 # ------------------- ------------------------------------------------
 # -- CREATE -- -------------------------------------------------------
@@ -2717,6 +2799,13 @@ overwrite[starID] =
 
     overwrite["GJ 1214"] = {
         "b": {
+            # switch from the most recent ephemeris (Kokori 2022 = exoClock) back to the default
+            'period':1.58040433,
+            'period_uperr':1.3e-7, 'period_lowerr':-1.3e-7,
+            'period_ref':'Cloutier et al. 2021',
+            't0':2455701.413328,
+            't0_uperr':0.000066, 't0_lowerr':-0.000059,
+            't0_ref':'Cloutier et al. 2021',
             "Spitzer_IRAC1_subarray": [
                 0.9083242210542111,
                 -0.7976911808204602,

@@ -3,6 +3,8 @@
 import dawgie
 import dawgie.context
 
+import numexpr; numexpr.ncores = 1  # this is actually a performance enhancer!
+
 import logging; log = logging.getLogger(__name__)
 
 from collections import defaultdict

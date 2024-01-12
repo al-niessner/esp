@@ -163,9 +163,9 @@ def plot_corner(allkeys, alltraces,
     trange = [tuple([x,y]) for x, y in zip(lorange, hirange)]
     # previous lines did 3-sigma range.  better to just use the prior bounds as bounds
     trange = [tuple([x,y]) for x, y in zip(priorlo, priorhi)]
-    print('trange',trange)
-    print('lodist',lodist)
-    print('lorange',lorange)
+    # print('trange',trange)
+    # print('lodist',lodist)
+    # print('lorange',lorange)
     truths = None
     if truth_params is not None:
         truths = []
