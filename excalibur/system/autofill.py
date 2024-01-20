@@ -98,6 +98,9 @@ def fillUncertainty(param,param_value,param_uncertainty,error_type):
                 # impact parameter is a number from 0 to 1 (normalized to stellar radius)
                 # inclination uncertainty is ~2deg, and rp/sma is ~10, so maybe 0.2 here?
                 fillvalue = 0.2
+            elif param=='trandepth':
+                # transit depth to 20%? S/N=5 seems like a minimum for detection
+                fillvalue = float(param_value) * 1.e-2
             else:
                 # fallback option is to set uncertainty to 10%
                 fillvalue = float(param_value) * 1.e-1

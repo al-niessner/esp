@@ -43,6 +43,7 @@ def simulate_spectra(target, system_dict, out):
     1) both Taurex and Cerberus atmosphere models
     2) with or without clouds
     3) two models for metallicity/mmw (mmw=2.3 or FINESSE mass-metallicity relation)
+    4) TEC vs DISEQ models [NOT IMPLEMENTED YET!]
     '''
 
     # ** two key parameters for adjusting the instrument noise model **
@@ -59,10 +60,13 @@ def simulate_spectra(target, system_dict, out):
     # xslibSaveDir = os.path.join(excalibur.context['data_dir'], 'bryden/')
 
     # specify which models should be calculated (use these as keys within data)
-    atmosModels = ['cerberus', 'cerberusNoclouds',
-                   'cerberuslowmmw', 'cerberuslowmmwNoclouds',
-                   'taurex', 'taurexNoclouds',
-                   'taurexlowmmw', 'taurexlowmmwNoclouds']
+    atmosModels = ['cerberus']
+    # atmosModels = ['cerberus', 'cerberusNoclouds']
+    #  these 8 models were calculated in 2023 runs; less models used in 2024
+    # atmosModels = ['cerberus', 'cerberusNoclouds',
+    #               'cerberuslowmmw', 'cerberuslowmmwNoclouds',
+    #               'taurex', 'taurexNoclouds',
+    #               'taurexlowmmw', 'taurexlowmmwNoclouds']
     # atmosModels = ['taurexNoclouds']
     # atmosModels = ['taurex', 'taurexNoclouds',
     #               'taurexlowmmw', 'taurexlowmmwNoclouds']

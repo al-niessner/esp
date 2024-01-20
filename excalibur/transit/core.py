@@ -1889,7 +1889,7 @@ def spectrum(fin, nrm, wht, out, ext, selftype,
             mixratio, fH2, fHe = crbutil.crbce(pressure, eqtemp)
             mmw, fH2, fHe = crbutil.getmmw(mixratio, protosolar=False, fH2=fH2, fHe=fHe)
             mmw = mmw*cst.m_p  # [kg]
-            Hs = cst.Boltzmann*eqtemp/(mmw*1e-2*(10.**priors[p]['logg']))  # [m]
+            Hs = cst.Boltzmann*eqtemp/(mmw*1e-2*(10.**float(priors[p]['logg'])))  # [m]
             Hs = Hs/(priors['R*']*sscmks['Rsun'])
             tauvs = 1e0/((1e-2/trdura)**2)
             ootstd = np.nanstd(data[abs(allz) > (1e0 + whiterprs)])
@@ -2030,7 +2030,7 @@ def spectrum(fin, nrm, wht, out, ext, selftype,
             vspectrum = vspectrum**2
             Rstar = priors['R*']*sscmks['Rsun']
             Rp = priors[p]['rp']*7.14E7  # m
-            Hs = cst.Boltzmann*eqtemp/(mmw*1e-2*(10.**priors[p]['logg']))  # m
+            Hs = cst.Boltzmann*eqtemp/(mmw*1e-2*(10.**float(priors[p]['logg'])))  # m
             noatm = Rp**2/(Rstar)**2
             rp0hs = np.sqrt(noatm*(Rstar)**2)
             # Smooth spectrum
@@ -2319,7 +2319,7 @@ def fastspec(fin, nrm, wht, ext, selftype,
         mixratio, fH2, fHe = crbutil.crbce(pressure, eqtemp)
         mmw, fH2, fHe = crbutil.getmmw(mixratio, protosolar=False, fH2=fH2, fHe=fHe)
         mmw = mmw*cst.m_p  # [kg]
-        Hs = cst.Boltzmann*eqtemp/(mmw*1e-2*(10.**priors[p]['logg']))  # [m]
+        Hs = cst.Boltzmann*eqtemp/(mmw*1e-2*(10.**float(priors[p]['logg'])))  # [m]
         Hs = Hs/(priors['R*']*sscmks['Rsun'])
         tauvs = 1e0/((1e-2/trdura)**2)
         ootstd = np.nanstd(data[abs(allz) > (1e0 + whiterprs)])
@@ -2368,7 +2368,7 @@ def fastspec(fin, nrm, wht, ext, selftype,
         vspectrum = vspectrum**2
         Rstar = priors['R*']*sscmks['Rsun']
         Rp = priors[p]['rp']*7.14E7  # m
-        Hs = cst.Boltzmann*eqtemp/(mmw*1e-2*(10.**priors[p]['logg']))  # m
+        Hs = cst.Boltzmann*eqtemp/(mmw*1e-2*(10.**float(priors[p]['logg'])))  # m
         noatm = Rp**2/(Rstar)**2
         rp0hs = np.sqrt(noatm*(Rstar)**2)
         _fig, ax0 = plt.subplots(figsize=(10,6))

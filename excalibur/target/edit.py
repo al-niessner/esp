@@ -35,7 +35,8 @@ def processme():
     out['FILTER'] = {}
     out['FILTER']['include'] = []
     # out['FILTER']['exclude'] = ['STIS', 'WFC3', 'Spitzer', 'Ariel']
-    out['FILTER']['exclude'] = ['STIS', 'JWST', 'Spitzer', 'Ariel']
+    # out['FILTER']['exclude'] = ['STIS', 'JWST', 'Spitzer', 'Ariel']
+    out['FILTER']['exclude'] = ['HST', 'JWST', 'Spitzer']
     out['TARGET'] = {}
     # Best to use a function call that returns a specific list
     # if one wants to change the 'include' target content
@@ -162,7 +163,8 @@ def dropouts():
            'WASP-96 (taurex sim @TS)',
            'WASP-98 (taurex sim @TS)',
            'XO-1 (taurex sim @TS)',
-           'XO-2 (taurex sim @TS)']
+           'XO-2 (taurex sim @TS)',
+           'TOI-561 (taurex sim @TS)']
     return out
 # ------------------- ------------------------------------------------
 # -- CREATE -- -------------------------------------------------------

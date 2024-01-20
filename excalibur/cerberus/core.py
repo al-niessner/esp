@@ -15,6 +15,7 @@ from excalibur.cerberus.forwardModel import \
 from excalibur.cerberus.plotting import rebinData, plot_bestfit, \
     plot_corner, plot_vsPrior, plot_walkerEvolution, \
     plot_fitsVStruths, plot_massVSmetals
+# from excalibur.cerberus.bounds import setPriorBound, getProfileLimits, applyProfiling
 
 import logging
 log = logging.getLogger(__name__)
@@ -450,14 +451,15 @@ def atmos(fin, xsl, spc, out, ext,
     # SELECT WHICH MODELS TO RUN FOR THIS FILTER
     if ext=='Ariel-sim':
         modfam = ['TEC']  # Ariel sims are currently only TEC equilibrium models
-        modparlbl = {'TEC':['XtoH', 'CtoO']}
+        # modparlbl = {'TEC':['XtoH', 'CtoO']}
+        modparlbl = {'TEC':['XtoH', 'CtoO', 'NtoO']}
         # ** select which Ariel model to fit.  there are 8 options **
         # atmosModels = ['cerberus', 'cerberusNoclouds',
         #               'cerberuslowmmw', 'cerberuslowmmwNoclouds',
         #               'taurex', 'taurexNoclouds',
         #               'taurexlowmmw', 'taurexlowmmwNoclouds']
-        arielModel = 'cerberusNoclouds'
-        # arielModel = 'cerberus'
+        # arielModel = 'cerberusNoclouds'
+        arielModel = 'cerberus'
         # arielModel = 'taurex'
 
         # print('available models',spc['data']['models'])
@@ -569,6 +571,10 @@ def atmos(fin, xsl, spc, out, ext,
                          tspectrum=tspectrum, xsl=xsl, spc=spc, modparlbl=modparlbl,
                          hzlib=crbhzlib)
                 out['data'][p][model] = {}
+
+                # new method for setting priors (no change, but easier to view in bounds.py)
+                # priorRangesAlt = setPriorBound()
+
                 out['data'][p][model]['prior_ranges'] = {}
                 # keep track of the bounds put on each parameter
                 # this will be helpful for later plotting and analysis
@@ -1246,6 +1252,8 @@ def results(trgt, filt, fin, xsl, atm, out, verbose=False):
                     # print('stdev model',np.nanstd(fmcrand))
                     fmcarray.append(fmcrand)
 
+                # limits = getProfileLimits()
+
                 # _______________MAKE SOME PLOTS________________
                 saveDir = os.path.join(excalibur.context['data_dir'], 'bryden/')
                 # print('saveDir',saveDir)
@@ -1293,15 +1301,29 @@ def analysis(aspects, out, verbose=False):
     '''
     if verbose: print('cerberus/analysis...')
 
+    # print('aspect keys',aspects.keys())
+    # for a in aspects.keys(): print(a)
+    #  exit('core stop')
+
     svname = 'cerberus.atmos'
     filts = ['Ariel-sim']
+    # filts = ['HST-WFC3-IR-G102-SCAN']
+    # filts = ['HST-WFC3-IR-G141-SCAN']
+
     targetlists = get_target_lists()
 
     for filt in filts:
+        # print('filt',filt)
         param_names = []
         truth_values = defaultdict(list)
         fit_values = defaultdict(list)
         fit_errors = defaultdict(list)
+
+        if filt=='Ariel-sim':
+            targets = targetlists['roudier62']
+        else:
+            targets = targetlists['active']
+            targets = targetlists['roudier62']
 
         # for trgt in filter(lambda tgt: 'STATUS' in aspects[tgt][svname+'.'+filt], targetlists['active']):
         # JenkinsPEP8 needs this param outside loop
@@ -1309,14 +1331,23 @@ def analysis(aspects, out, verbose=False):
         # for trgt in filter(lambda tgt: 'STATUS' in aspects[tgt][svname_with_filter], targetlists['active']):
         # nope! still not jenkins compatible. arg!
         # for trgt in targetlists['active']:
-        for trgt in targetlists['roudier62']:
-            # print('        cycling through targets',trgt)
-            if trgt in aspects.keys() and 'STATUS' in aspects[trgt][svname+'.'+filt]:
-                # print('target with valid data format for this filter:',trgt)
+        # for trgt in targetlists['roudier62']:
+        for trgt in targets:
+            print('        cycling through targets',trgt)
+            if trgt not in aspects.keys():
+                log.warning('--< TARGET NOT IN ASPECT: %s >--',trgt)
+            elif svname+'.'+filt in aspects[trgt]:
+                log.warning('--< NO CERB.ATMOS FOR THIS FILTER %s >--',filt)
+            elif 'STATUS' not in aspects[trgt][svname+'.'+filt]:
+                log.warning('--< FORMAT ERROR: NO STATUS %s %s >--',filt,trgt)
+            else:
+                print('target with valid data format for this filter:',filt,trgt)
                 atmosFit = aspects[trgt][svname+'.'+filt]
 
                 # verify SV succeeded for target
-                if atmosFit['STATUS'][-1]:
+                if not atmosFit['STATUS'][-1]:
+                    log.warning('--< STATUS IS FALSE FOR CERB.ATMOS: %s %s >--',filt,trgt)
+                else:
                     for planetLetter in atmosFit['data'].keys():
                         if 'TEC' not in atmosFit['data'][planetLetter]['MODELPARNAMES'].keys():
                             log.warning('--< BIG PROBLEM theres no TEC model! >--')
@@ -1372,12 +1403,6 @@ def analysis(aspects, out, verbose=False):
                         # print('T,fit,err',truth_values['T'][-1],
                         #      fit_values['T'][-1],fit_errors['T'][-1],
                         #      (fit_values['T'][-1] - truth_values['T'][-1])/fit_errors['T'][-1],trgt)
-                else:
-                    log.warning('--< HUH?!?! no cerb.atmos fit results?!?! %s >--',trgt)
-            elif trgt not in aspects.keys():
-                log.warning('--< TARGET NOT IN ASPECT.  Why!!?!? %s >--',trgt)
-            else:
-                log.warning('--< NO STATUS KEY.  Why!!?!? %s >--',trgt)
     # plot analysis of the results.  save as png and as state vector for states/view
     saveDir = os.path.join(excalibur.context['data_dir'], 'bryden/')
     # jenkins doesn't like to have a triple-packed return here because it's fussy
@@ -1401,3 +1426,5 @@ def analysis(aspects, out, verbose=False):
     out['data']['plot_massVmetals'] = massMetalsplot
     out['STATUS'].append(True)
     return out['STATUS'][-1]
+
+# def applyProfiling(target, limits, alltraces, allkeys):

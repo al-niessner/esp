@@ -122,6 +122,14 @@ def makeCerberusAtmos(wavelength_um, model_params, xslib, planetLetter, clouds=T
         # HAZE POWER INDEX FOR SPHERICAL SHELL
         hzloc = 0
         hzthick = 0
+
+        # median values from Estrela et al 2022, Table 2 (TEC column)
+        #  (I assume we have to take log10 of these 4 values)
+        ctp = -1.52     # 0.03 bar
+        hza = -2.10     # 0.008 for Hscale
+        hzloc = -2.30   # 0.005 bar
+        hzthick = 9.76  # 5.8e9
+
     else:
         # these are the same numbers as set in cerb/forwardModel/clearfmcerberus()
         ctp = 3.    # cloud deck is very deep - 1000 bars

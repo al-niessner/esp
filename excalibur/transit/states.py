@@ -140,6 +140,11 @@ class WhiteLightSV(dawgie.StateVector):
                                  modellc[np.argsort(modelphase)],
                                  '-', c='k', marker='None', zorder=1,
                                  label='model')
+                        # model phases only go from -0.5 to 0.5 (not good for eclipse)
+                        # plot the model line a second time, but shifting the phases over by 1
+                        ax1.plot(modelphase[np.argsort(modelphase)] + 1,
+                                 modellc[np.argsort(modelphase)],
+                                 '-', c='k', marker='None', zorder=1)
                     else:
                         ax1.plot(postflatphase, postlc,
                                  '^', zorder=1, label='model')

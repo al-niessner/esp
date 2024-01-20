@@ -327,9 +327,10 @@ class results(dawgie.Algorithm):
             for filt in available_filters:
                 log.warning('--< CERBERUS RESULTS: %s >--', filt)
                 # pylint: disable=protected-access
-                vxsl, _ = crbcore.checksv(self.__xsl.sv_as_dict()[filt])
+                vxsl, sxsl = crbcore.checksv(self.__xsl.sv_as_dict()[filt])
                 vatm, satm = crbcore.checksv(self.__atm.sv_as_dict()[filt])
-                if vxsl and vatm:
+                prcd = trgedit.proceed(ds._tn(), filt, verbose=False)
+                if vxsl and vatm and prcd:
                     update = self._results(ds._tn(), filt,
                                            self.__fin.sv_as_dict()['parameters'],
                                            self.__xsl.sv_as_dict()[filt]['data'],
@@ -337,7 +338,12 @@ class results(dawgie.Algorithm):
                                            fltrs.index(filt))
                     if update: svupdate.append(self.__out[fltrs.index(filt)])
                 else:
-                    errstr = [m for m in [satm] if m is not None]
+                    if not (vxsl and vatm):
+                        errstr = [m for m in [sxsl, satm] if m is not None]
+                    elif not prcd:
+                        errstr = [filt + ' Kicked by edit.processme()']
+                    else:
+                        errstr = ['HUH?! BAD LOGIC HERE']
                     self._failure(errstr[0])
         else:
             errstr = [m for m in [sfin] if m is not None]
@@ -392,7 +398,7 @@ class analysis(dawgie.Analyzer):
     def traits(self)->[dawgie.SV_REF, dawgie.V_REF]:
         '''traits ds'''
         return [dawgie.SV_REF(crb.task, atmos(),
-                              atmos().state_vectors()[0])]
+                              sv) for sv in atmos().state_vectors()]
 
     def state_vectors(self):
         '''Output State Vectors: cerberus.analysis'''
@@ -400,11 +406,19 @@ class analysis(dawgie.Analyzer):
 
     def run(self, aspects:dawgie.Aspect):
         '''Top level algorithm call'''
-        filts = ['Ariel-sim']
+
         svupdate = []
-        for filt in filts:
-            update = self._analysis(aspects, fltrs.index(filt))
-            if update: svupdate.append(self.__out[fltrs.index(filt)])
+        if len(aspects.keys())==0:
+            log.warning('--< CERBERUS ANALYSIS: contains no targets >--')
+        else:
+            for filt in fltrs:
+                # only consider filters that have cerb.atmos results loaded in as an aspect
+                if filt not in aspects[aspects.keys()[0]]:
+                    log.warning('--< CERBERUS ANALYSIS: %s not found >--', filt)
+                else:
+                    log.warning('--< CERBERUS ANALYSIS: %s  >--', filt)
+                    update = self._analysis(aspects, fltrs.index(filt))
+                    if update: svupdate.append(self.__out[fltrs.index(filt)])
         self.__out = svupdate
         if self.__out.__len__() > 0: aspects.ds().update()
         else: raise dawgie.NoValidOutputDataError(
