@@ -157,9 +157,11 @@ def simulate_spectra(target, system_dict, out):
                 M_p = model_params['Mp']
                 includeMetallicityDispersion = True
                 if includeMetallicityDispersion:
-                    metallicity_planet_dex = massMetalRelationDisp(metallicity_star_dex, M_p)
+                    metallicity_planet_dex = massMetalRelationDisp(metallicity_star_dex, M_p,
+                                                                   thorngren=True)
                 else:
-                    metallicity_planet_dex = massMetalRelation(metallicity_star_dex, M_p)
+                    metallicity_planet_dex = massMetalRelation(metallicity_star_dex, M_p,
+                                                               thorngren=True)
                 CtoO_planet = randomCtoO()  # this is linear C/O, not dex
 
                 # Load the instrument model and rescale based on #-of-transits
@@ -182,6 +184,7 @@ def simulate_spectra(target, system_dict, out):
                     # print()
                     # print('starting Atmospheric Model:',atmosModel)
 
+                    # ABUNDANCES
                     if 'lowmmw' in atmosModel:
                         # print(' - using a low mmw')
                         model_params['metallicity'] = 0.  # dex
@@ -196,6 +199,26 @@ def simulate_spectra(target, system_dict, out):
                         model_params['C/O'] = np.log10(CtoO_planet/0.54951)
 
                     if 'cerberus' in atmosModel:
+                        # CLOUD PARAMETERS
+                        if 'Noclouds' in atmosModel:
+                            model_params['CTP'] = 3.       # cloud deck is very deep - 1000 bars
+                            model_params['HScale'] = -10.  # small number means essentially no haze
+                            model_params['HLoc'] = 0.
+                            model_params['HThick'] = 0.
+                        else:
+                            # CLOUD TOP PRESSURE
+                            # model_params['CTP'] = -2.  # 0.01 bar = 10 mbar
+                            # HAZE SCAT CROSS SECTION SCALE FACTOR
+                            # model_params['HScale'] = 0.  # some haze (1x times the nominal Jupiter model)
+                            # model_params['HLoc'] = 0.
+                            # model_params['HThick'] = 0.
+
+                            # median values from Estrela et al 2022, Table 2 (TEC column)
+                            model_params['CTP'] = -1.52     # 0.03 bar
+                            model_params['HScale'] = -2.10  # 0.008
+                            model_params['HLoc'] = -2.30    # 0.005 bar location (meaningless)
+                            model_params['HThick'] = 9.76   # very wide vertical thickness
+
                         if 'R' in atmosModel:
                             iwave1 = atmosModel.index('R')
                             # print('atmosModel',atmosModel)
@@ -226,16 +249,12 @@ def simulate_spectra(target, system_dict, out):
                         # print('xslib data keys:',xslib['data'].keys())
                         # print('xslib data keys:',list(xslib['data'].keys())[-1])
 
-                        if 'Noclouds' in atmosModel:
-                            cerbModel, cerbModel_by_molecule = makeCerberusAtmos(
-                                wavelength_um, model_params, xslib, planetLetter,
-                                Hsmax=20, clouds=False)
-                        else:
-                            cerbModel, cerbModel_by_molecule = makeCerberusAtmos(
-                                wavelength_um, model_params, xslib, planetLetter,
-                                Hsmax=20)
+                        cerbModel, cerbModel_by_molecule = makeCerberusAtmos(
+                            wavelength_um, model_params, xslib, planetLetter, Hsmax=20)
+
                         fluxDepth = cerbModel
                         fluxDepth_by_molecule = cerbModel_by_molecule
+
                     elif 'taurex' in atmosModel:
                         if 'Noclouds' in atmosModel:
                             taurexModel = makeTaurexAtmos(model_params, clouds=False)
@@ -245,6 +264,7 @@ def simulate_spectra(target, system_dict, out):
                         wn,fluxDepth = taurexModel[:2]
                         fluxDepth_by_molecule = {}
                         wavelength_um = 1e4 / wn
+
                     else:
                         sys.exit('ERROR: unknown model')
 

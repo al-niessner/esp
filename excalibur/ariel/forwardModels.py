@@ -107,40 +107,22 @@ def makeTaurexAtmos(model_params, mixratios=False, clouds=True):
     return tm.model()
 
 # ----------------------------------------------------------------------------------------------
-def makeCerberusAtmos(wavelength_um, model_params, xslib, planetLetter, clouds=True, mixratios=None,
+def makeCerberusAtmos(wavelength_um, model_params, xslib, planetLetter, mixratios=None,
                       Hsmax=15., solrad=10.):
     '''
     Create a simulated spectrum using the code that's better than the other ones
     '''
 
-    if clouds:
-        # CLOUD TOP PRESSURE
-        # ctp = -1.  # 0.1 bar = 100 mbar
-        ctp = -2.  # 0.01 bar = 10 mbar
-        # HAZE SCAT. CROSS SECTION SCALE FACTOR
-        hza = 0.  # some haze (1x times the nominal Jupiter model)
-        # HAZE POWER INDEX FOR SPHERICAL SHELL
-        hzloc = 0
-        hzthick = 0
-
-        # median values from Estrela et al 2022, Table 2 (TEC column)
-        #  (I assume we have to take log10 of these 4 values)
-        ctp = -1.52     # 0.03 bar
-        hza = -2.10     # 0.008 for Hscale
-        hzloc = -2.30   # 0.005 bar
-        hzthick = 9.76  # 5.8e9
-
-    else:
-        # these are the same numbers as set in cerb/forwardModel/clearfmcerberus()
-        ctp = 3.    # cloud deck is very deep - 1000 bars
-        hza = -10.  # small number means essentially no haze
-        hzloc = 0.
-        hzthick = 0.
-
     # print('modelparams',model_params)
 
     # EQUILIBRIUM TEMPERATURE
     Teq = model_params['Teq']
+
+    # CLOUD/HAZE PARAMETERS
+    ctp = model_params['CTP']
+    hza = model_params['HScale']
+    hzloc = model_params['HLoc']
+    hzthick = model_params['HThick']
 
     # ABUNDANCES
     if mixratios:

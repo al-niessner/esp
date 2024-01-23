@@ -198,9 +198,8 @@ class atmos(dawgie.Algorithm):
     def _atmos(self, fin, xsl, spc, index, ext):
         '''Core code call'''
         if ext=='Ariel-sim':
-            MCMC_chain_length = 1000
-            MCMC_chain_length = 5000
             MCMC_chain_length = 2000
+            MCMC_chain_length = 15000
             # MCMC_chain_length = 10
         else:
             MCMC_chain_length = 15000
@@ -408,26 +407,38 @@ class analysis(dawgie.Analyzer):
         '''Top level algorithm call'''
 
         svupdate = []
-        if len(aspects.keys())==0:
+        if len(aspects)==0:
             log.warning('--< CERBERUS ANALYSIS: contains no targets >--')
         else:
-            for filt in fltrs:
-                # only consider filters that have cerb.atmos results loaded in as an aspect
-                if filt not in aspects[aspects.keys()[0]]:
-                    log.warning('--< CERBERUS ANALYSIS: %s not found >--', filt)
-                else:
-                    log.warning('--< CERBERUS ANALYSIS: %s  >--', filt)
-                    update = self._analysis(aspects, fltrs.index(filt))
-                    if update: svupdate.append(self.__out[fltrs.index(filt)])
+            # determine which filters have results from cerb.atmos (in aspects)
+            #  (you have to loop through all targets, since filters vary by target)
+            filtersWithResults = []
+            for trgt in aspects:
+                for filt in fltrs:
+                    if (filt not in filtersWithResults) and \
+                       ('cerberus.atmos.'+filt in aspects[trgt]):
+                        # print('This filter exists in the cerb.atmos aspect:',filt,trgt)
+                        filtersWithResults.append(filt)
+            if not filtersWithResults:
+                log.warning('--< CERBERUS ANALYSIS: NO FILTERS WITH ATMOS DATA!!!>--')
+
+            # only consider filters that have cerb.atmos results loaded in as an aspect
+            for filt in filtersWithResults:
+                # if 'cerberus.atmos.'+filt not in aspects[trgt]:
+                #    log.warning('--< CERBERUS ANALYSIS: %s not found IMPOSSIBLE!!!!>--', filt)
+                # else:
+                log.warning('--< CERBERUS ANALYSIS: %s  >--', filt)
+                update = self._analysis(aspects, filt, fltrs.index(filt))
+                if update: svupdate.append(self.__out[fltrs.index(filt)])
         self.__out = svupdate
         if self.__out.__len__() > 0: aspects.ds().update()
         else: raise dawgie.NoValidOutputDataError(
                 f'No output created for CERBERUS.{self.name()}')
         return
 
-    def _analysis(self, aspects, index):
+    def _analysis(self, aspects, filt, index):
         '''Core code call'''
-        analysisout = crbcore.analysis(aspects,
+        analysisout = crbcore.analysis(aspects, filt,
                                        self.__out[index], verbose=False)
         return analysisout
 

@@ -14,7 +14,7 @@ from excalibur.cerberus.forwardModel import \
     offcerberus5, offcerberus6, offcerberus7, offcerberus8
 from excalibur.cerberus.plotting import rebinData, plot_bestfit, \
     plot_corner, plot_vsPrior, plot_walkerEvolution, \
-    plot_fitsVStruths, plot_massVSmetals
+    plot_fitsVStruths, plot_fitUncertainties, plot_massVSmetals
 # from excalibur.cerberus.bounds import setPriorBound, getProfileLimits, applyProfiling
 
 import logging
@@ -501,6 +501,9 @@ def atmos(fin, xsl, spc, out, ext,
             out['data'][p] = {}
             out['data'][p]['MODELPARNAMES'] = modparlbl
 
+            # save the planet params (mass), so that analysis can make a mass-metallicity plot
+            out['data'][p]['planet_params'] = orbp[p]
+
             # eqtemp1 = orbp['T*']*np.sqrt(orbp['R*']*ssc['Rsun/AU']/(2.*orbp[p]['sma']))
             # use of L* might be better than T*,R*; it's more of a direct observable
             # eqtemp2 = 278.6 * orbp['L*']**0.25 / np.sqrt(orbp[p]['sma'])
@@ -797,10 +800,10 @@ def atmos(fin, xsl, spc, out, ext,
             out['data'][p]['SPECTRUM'] = np.array(inputData['ES'])
             out['data'][p]['ERRORS'] = np.array(inputData['ESerr'])
             if ext=='Ariel-sim':
-                # wavelength should be identical to just above, but just in case load it here too
                 if 'true_spectrum' in inputData.keys():
 
                     out['data'][p]['TRUTH_SPECTRUM'] = np.array(inputData['true_spectrum']['fluxDepth'])
+                    # wavelength should be the same as just above, but just in case load it here too
                     out['data'][p]['TRUTH_WAVELENGTH'] = np.array(inputData['true_spectrum']['wavelength_um'])
                     out['data'][p]['TRUTH_MODELPARAMS'] = inputData['model_params']
             out['data'][p]['VALID'] = cleanup
@@ -1292,7 +1295,7 @@ def results(trgt, filt, fin, xsl, atm, out, verbose=False):
     if completed_at_least_one_planet: out['STATUS'].append(True)
     return out['STATUS'][-1]
 # --------------------------------------------------------------------
-def analysis(aspects, out, verbose=False):
+def analysis(aspects, filt, out, verbose=False):
     '''
     Plot out the population analysis (retrieval vs truth, mass-metallicity, etc)
     aspects: cross-target information
@@ -1306,111 +1309,119 @@ def analysis(aspects, out, verbose=False):
     #  exit('core stop')
 
     svname = 'cerberus.atmos'
-    filts = ['Ariel-sim']
-    # filts = ['HST-WFC3-IR-G102-SCAN']
-    # filts = ['HST-WFC3-IR-G141-SCAN']
+    param_names = []
+    masses = []
+    truth_values = defaultdict(list)
+    fit_values = defaultdict(list)
+    fit_errors = defaultdict(list)
 
     targetlists = get_target_lists()
+    if filt=='Ariel-sim':
+        targets = targetlists['roudier62']
+    else:
+        targets = targetlists['active']
+        targets = targetlists['roudier62']
 
-    for filt in filts:
-        # print('filt',filt)
-        param_names = []
-        truth_values = defaultdict(list)
-        fit_values = defaultdict(list)
-        fit_errors = defaultdict(list)
-
-        if filt=='Ariel-sim':
-            targets = targetlists['roudier62']
+    # for trgt in filter(lambda tgt: 'STATUS' in aspects[tgt][svname+'.'+filt], targetlists['active']):
+    # JenkinsPEP8 needs this param outside loop
+    # svname_with_filter = svname+'.'+filt
+    # for trgt in filter(lambda tgt: 'STATUS' in aspects[tgt][svname_with_filter], targetlists['active']):
+    # nope! still not jenkins compatible. arg!
+    for trgt in targets:
+        # print('        cycling through targets',trgt)
+        if trgt not in aspects.keys():
+            log.warning('--< TARGET NOT IN ASPECT: %s %s >--',filt,trgt)
+        elif svname+'.'+filt not in aspects[trgt]:
+            # some targets don't have this filter; no problem
+            # log.warning('--< NO CERB.ATMOS for this FILTER+TARGET %s %s >--',filt,trgt)
+            pass
+        elif 'STATUS' not in aspects[trgt][svname+'.'+filt]:
+            log.warning('--< FORMAT ERROR: NO STATUS %s %s >--',filt,trgt)
         else:
-            targets = targetlists['active']
-            targets = targetlists['roudier62']
+            # print('target with valid data format for this filter:',filt,trgt)
+            atmosFit = aspects[trgt][svname+'.'+filt]
 
-        # for trgt in filter(lambda tgt: 'STATUS' in aspects[tgt][svname+'.'+filt], targetlists['active']):
-        # JenkinsPEP8 needs this param outside loop
-        # svname_with_filter = svname+'.'+filt
-        # for trgt in filter(lambda tgt: 'STATUS' in aspects[tgt][svname_with_filter], targetlists['active']):
-        # nope! still not jenkins compatible. arg!
-        # for trgt in targetlists['active']:
-        # for trgt in targetlists['roudier62']:
-        for trgt in targets:
-            print('        cycling through targets',trgt)
-            if trgt not in aspects.keys():
-                log.warning('--< TARGET NOT IN ASPECT: %s >--',trgt)
-            elif svname+'.'+filt in aspects[trgt]:
-                log.warning('--< NO CERB.ATMOS FOR THIS FILTER %s >--',filt)
-            elif 'STATUS' not in aspects[trgt][svname+'.'+filt]:
-                log.warning('--< FORMAT ERROR: NO STATUS %s %s >--',filt,trgt)
+            # verify SV succeeded for target
+            if not atmosFit['STATUS'][-1]:
+                log.warning('--< STATUS IS FALSE FOR CERB.ATMOS: %s %s >--',filt,trgt)
             else:
-                print('target with valid data format for this filter:',filt,trgt)
-                atmosFit = aspects[trgt][svname+'.'+filt]
-
-                # verify SV succeeded for target
-                if not atmosFit['STATUS'][-1]:
-                    log.warning('--< STATUS IS FALSE FOR CERB.ATMOS: %s %s >--',filt,trgt)
-                else:
-                    for planetLetter in atmosFit['data'].keys():
-                        if 'TEC' not in atmosFit['data'][planetLetter]['MODELPARNAMES'].keys():
-                            log.warning('--< BIG PROBLEM theres no TEC model! >--')
-                        elif 'TRUTH_MODELPARAMS' not in atmosFit['data'][planetLetter].keys():
-                            log.warning('--< TEMP PROBLEM theres no truth info >--')
+                for planetLetter in atmosFit['data'].keys():
+                    if 'TEC' not in atmosFit['data'][planetLetter]['MODELPARNAMES'].keys():
+                        log.warning('--< BIG PROBLEM theres no TEC model! >--')
+                    else:
+                        if 'planet_params' in atmosFit['data'][planetLetter]:
+                            masses.append(atmosFit['data'][planetLetter]['planet_params']['mass'])
                         else:
+                            masses.append(1)
 
-                            # (prior range should be the same for all the targets)
-                            # print('priors',atmosFit['data'][planetLetter]['TEC']['prior_ranges'])
-                            prior_ranges = atmosFit['data'][planetLetter]['TEC']['prior_ranges']
+                        # (prior range should be the same for all the targets)
+                        # print('priors',atmosFit['data'][planetLetter]['TEC']['prior_ranges'])
+                        prior_ranges = atmosFit['data'][planetLetter]['TEC']['prior_ranges']
 
-                            alltraces = []
-                            allkeys = []
-                            for key in atmosFit['data'][planetLetter]['TEC']['MCTRACE']:
-                                alltraces.append(atmosFit['data'][planetLetter]['TEC']['MCTRACE'][key])
+                        alltraces = []
+                        allkeys = []
+                        for key in atmosFit['data'][planetLetter]['TEC']['MCTRACE']:
+                            alltraces.append(atmosFit['data'][planetLetter]['TEC']['MCTRACE'][key])
 
-                                if key=='TEC[0]': allkeys.append('[X/H]')
-                                elif key=='TEC[1]': allkeys.append('[C/O]')
-                                elif key=='TEC[2]': allkeys.append('[N/O]')
-                                else: allkeys.append(key)
+                            if key=='TEC[0]': allkeys.append('[X/H]')
+                            elif key=='TEC[1]': allkeys.append('[C/O]')
+                            elif key=='TEC[2]': allkeys.append('[N/O]')
+                            else: allkeys.append(key)
 
-                            for key,trace in zip(allkeys,alltraces):
-                                if key not in param_names: param_names.append(key)
-                                fit_values[key].append(np.median(trace))
-                                lo = np.percentile(np.array(trace), 16)
-                                hi = np.percentile(np.array(trace), 84)
-                                fit_errors[key].append((hi-lo)/2)
+                        for key,trace in zip(allkeys,alltraces):
+                            if key not in param_names: param_names.append(key)
+                            fit_values[key].append(np.median(trace))
+                            lo = np.percentile(np.array(trace), 16)
+                            hi = np.percentile(np.array(trace), 84)
+                            fit_errors[key].append((hi-lo)/2)
 
-                            if isinstance(atmosFit['data'][planetLetter]['TRUTH_MODELPARAMS'], dict):
-                                truth_params = atmosFit['data'][planetLetter]['TRUTH_MODELPARAMS'].keys()
-                                # print('truth keys:',system_data['data'][planetLetter]['TRUTH_MODELPARAMS'].keys())
+                        if ('TRUTH_MODELPARAMS' in atmosFit['data'][planetLetter].keys()) and \
+                           (isinstance(atmosFit['data'][planetLetter]['TRUTH_MODELPARAMS'], dict)):
+                            truth_params = atmosFit['data'][planetLetter]['TRUTH_MODELPARAMS'].keys()
+                            # print('truth keys:',truth_params)
+                        else:
+                            truth_params = []
+
+                        for trueparam,fitparam in zip(['Teq','metallicity','C/O','Mp'],
+                                                      ['T','[X/H]','[C/O]','Mp']):
+                            if trueparam in truth_params:
+                                true_value = atmosFit['data'][planetLetter]['TRUTH_MODELPARAMS'][trueparam]
+                                # careful here: metallicity and C/O have to be converted to log-solar
+                                if trueparam=='metallicity':
+                                    true_value = np.log10(true_value)
+                                elif trueparam=='C/O':
+                                    true_value = np.log10(true_value/0.54951)  # solar is C/O=0.55
+                                # elif trueparam=='N/O':
+                                #     true_value = np.log10(true_value)
+                                truth_values[fitparam].append(true_value)
                             else:
-                                truth_params = []
-                                log.warning('--< CORRUPTED TRUTH (bad dict trouble) >--')
+                                truth_values[fitparam].append(666)
+                        # print('fits',dict(fit_values))
+                        # print('truths',dict(truth_values))
+                        # print()
 
-                            for trueparam,fitparam in zip(['Teq','metallicity','C/O','Mp'],
-                                                          ['T','[X/H]','[C/O]','Mp']):
-                                if trueparam in truth_params:
-                                    true_value = atmosFit['data'][planetLetter]['TRUTH_MODELPARAMS'][trueparam]
-                                    # careful here: metallicity and C/O have to be converted to log-solar
-                                    if trueparam=='metallicity':
-                                        true_value = np.log10(true_value)
-                                    elif trueparam=='C/O':
-                                        true_value = np.log10(true_value/0.54951)  # solar is C/O=0.55
-                                    truth_values[fitparam].append(true_value)
-                                else:
-                                    truth_values[fitparam].append(666)
-                            # print('fits',dict(fit_values))
-                            # print('truths',dict(truth_values))
-                            # print()
+                    # look out for oddballs
+                    # print('T,fit,err',truth_values['T'][-1],
+                    #      fit_values['T'][-1],fit_errors['T'][-1],
+                    #      (fit_values['T'][-1] - truth_values['T'][-1])/fit_errors['T'][-1],trgt)
 
-                        # look out for oddballs
-                        # print('T,fit,err',truth_values['T'][-1],
-                        #      fit_values['T'][-1],fit_errors['T'][-1],
-                        #      (fit_values['T'][-1] - truth_values['T'][-1])/fit_errors['T'][-1],trgt)
     # plot analysis of the results.  save as png and as state vector for states/view
     saveDir = os.path.join(excalibur.context['data_dir'], 'bryden/')
     # jenkins doesn't like to have a triple-packed return here because it's fussy
-    plotarray = plot_fitsVStruths(
-        truth_values, fit_values, fit_errors, prior_ranges, saveDir)
-    fitTplot, fitMetalplot, fitCOplot = plotarray[0],plotarray[1],plotarray[2]
+    if 'sim' in filt:
+        # for simulated data, compare retrieval against the truth
+        plotarray = plot_fitsVStruths(
+            truth_values, fit_values, fit_errors, prior_ranges, filt, saveDir)
+        fitTplot, fitMetalplot, fitCOplot = plotarray[0],plotarray[1],plotarray[2]
+    else:
+        # for real data, make a histogram of the retrieved uncertainties
+        plotarray = plot_fitUncertainties(
+            fit_values, fit_errors, prior_ranges, filt, saveDir)
+        fitTplot, fitMetalplot, fitCOplot = plotarray[0],plotarray[1],plotarray[2]
+
+    masses = truth_values['Mp']
     massMetalsplot = plot_massVSmetals(
-        truth_values, fit_values, fit_errors, prior_ranges, saveDir)
+        masses, truth_values, fit_values, fit_errors, prior_ranges, filt, saveDir)
 
     # save the analysis as .csv file? (in /proj/data/spreadsheets/)
     # savesv(aspects, targetlists)

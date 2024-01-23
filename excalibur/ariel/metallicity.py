@@ -7,12 +7,12 @@ import numpy as np
 
 # ______________________________________________________
 
-def massMetalRelationDisp(logmetStar,Mp):
+def massMetalRelationDisp(logmetStar,Mp,thorngren=False):
     '''
     Add some realistic scatter to the mass-metallicity relation
     (not that we know reality)
     '''
-    logmet = massMetalRelation(logmetStar,Mp)
+    logmet = massMetalRelation(logmetStar,Mp,thorngren=thorngren)
 
     # FINESSE used a dispersion of just 0.3
     #  Swain analysis of Thorgren 2016 finds a lot more scatter (0.8)
@@ -23,7 +23,7 @@ def massMetalRelationDisp(logmetStar,Mp):
     return logmet
 # ______________________________________________________
 
-def massMetalRelation(logmetStar, Mp):
+def massMetalRelation(logmetStar, Mp, thorngren=False):
     '''
     Assume an inverse-linear relationship between planet mass and metallicity
     Include a limit on metallicity of +2.0 dex, relative to the parent star
@@ -34,19 +34,30 @@ def massMetalRelation(logmetStar, Mp):
     # Mp = 10/318 = 10Earths gives met = +2 dex
     # Mp = 1/318 = 1Earth would give met = +3 dex, but capped at +2 dex
 
-    slope = -1.
-    maxMetal = 2.
-    # Mpivot = 1.   # (earth units)
-    # intercept = maxMetal - slope*Mpivot
-    # Mpivot = -1.5  # (jupiter units)
-    intercept = 0.5  # metallicity for Jupiter mass
+    if thorngren:
+        # mass-metallicity relation from Thorngren et al 2016
+        slope = -0.45
+        # metallicity for Jupiter mass (trend value; Jupiter itself is lower)
+        intercept = np.log10(9.7)
 
-    logmet = intercept + slope*np.log10(Mp)
-    # change so that it can handle an array of masses (from cerberus/plotting)
-    if isinstance(Mp,float):
-        logmet = min(maxMetal,logmet)
+        logmet = intercept + slope*np.log10(Mp)
+
     else:
-        logmet[np.where(logmet > maxMetal)] = maxMetal
+        # mass-metallicity relation from FINESSE proposal (Fortney motivated)
+        slope = -1.
+        maxMetal = 2.
+        # Mpivot = 1.   # (earth units)
+        # intercept = maxMetal - slope*Mpivot
+        # Mpivot = -1.5  # (jupiter units)
+        intercept = 0.5  # metallicity for Jupiter mass
+
+        logmet = intercept + slope*np.log10(Mp)
+        # change so that it can handle an array of masses (from cerberus/plotting)
+        if isinstance(Mp,float):
+            logmet = min(maxMetal,logmet)
+        else:
+            logmet[np.where(logmet > maxMetal)] = maxMetal
+
     logmet += logmetStar
 
     return logmet

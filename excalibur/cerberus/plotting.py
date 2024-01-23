@@ -181,7 +181,7 @@ def plot_corner(allkeys, alltraces,
             elif thiskey in truth_params.keys():
                 truths.append(truth_params[thiskey])
             else:
-                truths.append(666)
+                truths.append(666666)
                 log.warning('--< PROBLEM: no truth value for this key: %s >--',thiskey)
         # print('truths in corner plot',truths)
     figure = corner.corner(np.vstack(np.array(alltraces)).T,
@@ -369,7 +369,7 @@ def plot_walkerEvolution(allkeys, alltraces, truth_params, prior_ranges,
 
 # --------------------------------------------------------------------
 def plot_fitsVStruths(truth_values, fit_values, fit_errors, prior_ranges,
-                      saveDir):
+                      filt, saveDir):
     ''' compare the retrieved values against the original inputs '''
 
     plot_statevectors = []
@@ -381,7 +381,6 @@ def plot_fitsVStruths(truth_values, fit_values, fit_errors, prior_ranges,
         for truth,fit,error in zip(truth_values[param],
                                    fit_values[param],
                                    fit_errors[param]):
-
             # check whether there is any real information beyond the prior
             # let's say you have to improve uncertainty by a factor of 2
             # but note that the original 1-sigma uncertainty is ~2/3 of prior range
@@ -450,7 +449,7 @@ def plot_fitsVStruths(truth_values, fit_values, fit_errors, prior_ranges,
         figure.tight_layout()
 
         # ('display' doesn't work for pdf files)
-        plt.savefig(saveDir + 'fitVStruth_'+param.replace('/',':')+'.png')
+        plt.savefig(saveDir + 'fitVStruth_'+filt+'_'+param.replace('/',':')+'.png')
         # REDUNDANT SAVE - above saves to disk; below saves as state vector
         buf = io.BytesIO()
         figure.savefig(buf, format='png')
@@ -459,19 +458,82 @@ def plot_fitsVStruths(truth_values, fit_values, fit_errors, prior_ranges,
         plt.close(figure)
     return plot_statevectors
 # --------------------------------------------------------------------
-def plot_massVSmetals(truth_values, fit_values, fit_errors, prior_ranges,
-                      saveDir):
+def plot_fitUncertainties(fit_values, fit_errors, prior_ranges,
+                          filt, saveDir):
+    ''' make of histogram of the uncertainties, to see how many are better than the prior '''
+
+    plot_statevectors = []
+    for param in ['T', '[X/H]', '[C/O]']:
+
+        figure = plt.figure(figsize=(5,5))
+        ax = figure.add_subplot(1,1,1)
+
+        for fitvalue,error in zip(fit_values[param],fit_errors[param]):
+
+            # check whether there is any real information beyond the prior
+            # let's say you have to improve uncertainty by a factor of 2
+            # but note that the original 1-sigma uncertainty is ~2/3 of prior range
+            # oh wait also note that errorbar is one-sided, so another factor of 2
+            minInfo = 0.5 * 0.68 * 0.5
+            newInfo = False
+            if param=='T':
+                priorRangeFactor = prior_ranges[param][1] / prior_ranges[param][0]
+                # prior is normally set to 0.75-1.5 times Teq
+                # if error < minInfo * (priorRangeFactor-1) * 0.75*truth:
+                # asdf: this needs work maybe.  should pass in Teq as truth?
+                if error < minInfo * (priorRangeFactor-1) * 0.75*fitvalue:
+                    newInfo = True
+            else:
+                priorRangeDiff = prior_ranges[param][1] - prior_ranges[param][0]
+                if error < minInfo * priorRangeDiff:
+                    newInfo = True
+            if newInfo:
+                clr = 'k'
+                # lwid = 1
+                zord = 4
+                ptsiz = 40
+            else:
+                clr = 'grey'
+                # lwid = 0.5
+                zord = 2
+                ptsiz = 20
+            ax.scatter(fitvalue, error,
+                       facecolor=clr,edgecolor=clr, s=ptsiz, zorder=zord+1)
+
+        ax.set_xlabel(param+' fit value', fontsize=14)
+        ax.set_ylabel(param+' fit uncertainty', fontsize=14)
+
+        # xrange = ax.get_xlim()
+        # ax.set_xlim(xrange)
+        # ax.set_ylim(prior_ranges[param][0],prior_ranges[param][1])
+
+        figure.tight_layout()
+
+        # ('display' doesn't work for pdf files)
+        plt.savefig(saveDir + 'fitUncertainties_'+filt+'_'+param.replace('/',':')+'.png')
+        # REDUNDANT SAVE - above saves to disk; below saves as state vector
+        buf = io.BytesIO()
+        figure.savefig(buf, format='png')
+        # out['data'][p]['plot_walkerevol'] = buf.getvalue()
+        plot_statevectors.append(buf.getvalue())
+        plt.close(figure)
+    return plot_statevectors
+# --------------------------------------------------------------------
+def plot_massVSmetals(masses, truth_values,
+                      fit_values, fit_errors, prior_ranges,
+                      filt, saveDir):
     ''' how well do we retrieve the input mass-metallicity relation? '''
 
     figure = plt.figure(figsize=(5,5))
     ax = figure.add_subplot(1,1,1)
 
-    masses = truth_values['Mp']
+    masses_true = truth_values['Mp']
     metals_true = truth_values['[X/H]']
     metals_fit = fit_values['[X/H]']
     metals_fiterr = fit_errors['[X/H]']
 
-    for mass,metaltrue,metalfit,metalerror in zip(masses,metals_true,metals_fit,metals_fiterr):
+    for mass,masstrue,metaltrue,metalfit,metalerror in zip(
+            masses,masses_true,metals_true,metals_fit,metals_fiterr):
         # check whether there is any real information beyond the prior
         # let's say you have to improve uncertainty by a factor of 2
         # but note that the original 1-sigma uncertainty is ~2/3 of prior range
@@ -488,8 +550,9 @@ def plot_massVSmetals(truth_values, fit_values, fit_errors, prior_ranges,
             lwid = 0.5
             ptsiz = 20
             zord = 2
-        ax.scatter(mass, metaltrue,
-                   facecolor='w',edgecolor=clr, s=ptsiz, zorder=zord+1)
+        if metaltrue not in (666, 666666):
+            ax.scatter(masstrue, metaltrue,
+                       facecolor='w',edgecolor=clr, s=ptsiz, zorder=zord+1)
         ax.scatter(mass, metalfit,
                    facecolor=clr,edgecolor=clr, s=ptsiz, zorder=zord+2)
         ax.errorbar(mass, metalfit, yerr=metalerror,
@@ -508,7 +571,7 @@ def plot_massVSmetals(truth_values, fit_values, fit_errors, prior_ranges,
 
     # plot the underlying distribution
     masses = np.logspace(-5,3,100)
-    metals = massMetalRelation(0, masses)
+    metals = massMetalRelation(0, masses,thorngren=True)
     ax.plot(masses,metals, 'k--', lw=1, zorder=1)
 
     ax.set_xlim(xrange)
@@ -518,7 +581,7 @@ def plot_massVSmetals(truth_values, fit_values, fit_errors, prior_ranges,
     # *** TROUBLE - need to subtract off the stellar metallicity? ***
 
     # ('display' doesn't work for pdf files)
-    plt.savefig(saveDir + 'massVSmetals.png')
+    plt.savefig(saveDir + 'massVSmetals_'+filt+'.png')
     # REDUNDANT SAVE - above saves to disk; below saves as state vector
     buf = io.BytesIO()
     figure.savefig(buf, format='png')
