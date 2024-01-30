@@ -24,7 +24,6 @@ fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
 class collect(dawgie.Algorithm):
     '''
     G. ROUDIER: Data collection by filters
-    1.1.3 bugfix in proceed call
     '''
     def __init__(self):
         '''__init__ ds'''
@@ -119,12 +118,13 @@ class timing(dawgie.Algorithm):
         vfin, efin = datcore.checksv(fin)
         col = self.__col.sv_as_dict()['frames']
         vcol, ecol = datcore.checksv(col)
+        # validtype list is necessary to filter out hidden non valid filter names
         validtype = []
         for test in col['activefilters'].keys():
             if test in fltrs: validtype.append(test)
+            pass
         svupdate = []
         if vfin and vcol:
-            # for ext in col['activefilters'].keys():
             for ext in validtype:
                 # pylint: disable=protected-access
                 prcd = trgedit.proceed(ds._tn(), ext, verbose=False)
@@ -210,7 +210,7 @@ class calibration(dawgie.Algorithm):
             if vfin and vcll and vtim and prcd:
                 # pylint: disable=protected-access
                 update = self._calib(fin, cll['activefilters'][datatype], tim, ds._tn(),
-                                     datatype, self.__out[fltrs.index(datatype)])
+                                     datatype, self.__out[fltrs.index(datatype)], ps)
                 if update: svupdate.append(self.__out[fltrs.index(datatype)])
                 pass
             else:
@@ -230,12 +230,13 @@ class calibration(dawgie.Algorithm):
         raise dawgie.NoValidOutputDataError(f'No output created for DATA.{myname}')
 
     @staticmethod
-    def _calib(fin, cll, tim, tid, flttype, out):
+    def _calib(fin, cll, tim, tid, flttype, out, ps):
         '''Core code call'''
         log.warning('--< DATA CALIBRATION: %s >--', flttype)
         caled = False
         if 'SCAN' in flttype:
-            caled = datcore.scancal(cll, tim, tid, flttype, out, verbose=False)
+            caled = datcore.scancal(cll, tim, tid, flttype, out,
+                                    verbose=False)
             pass
         if 'G430' in flttype:
             caled = datcore.stiscal_G430L(fin, cll, tim, tid, flttype, out,
@@ -247,12 +248,9 @@ class calibration(dawgie.Algorithm):
         if 'Spitzer' in flttype:
             caled = datcore.spitzercal(cll, out)
             pass
-        # if 'NIRISS' in flttype:
-        #    caled = datcore.jwstcal_NIRISS(fin, cll, tim, tid, flttype, out,
-        #                                   verbose=False)
-        #    pass
         if 'JWST' in flttype:
-            caled = datcore.jwstcal(fin, cll, tim, flttype, out, verbose=False)
+            caled = datcore.jwstcal(fin, cll, tim, flttype, out,
+                                    ps=ps, verbose=False, debug=False)
             pass
         return caled
 

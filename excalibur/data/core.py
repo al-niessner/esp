@@ -33,6 +33,8 @@ from astropy.modeling.models import BlackBody as astrobb
 from astropy.coordinates import SkyCoord
 from astropy.time import Time
 from astropy.wcs import WCS
+
+from multiprocessing import Pool
 # ------------- ------------------------------------------------------
 # -- SV VALIDITY -- --------------------------------------------------
 def checksv(sv):
@@ -121,7 +123,7 @@ def timing(force, ext, clc, out, verbose=False):
                     pass
                 pass
             pass
-        isort = np.argsort(alldinm)
+        isort = np.argsort(alldtms)
         data['ISORTEXP'].extend(isort)
         data['TIME'].extend(np.array(alldtms)[isort])  # [MJD-UTC]
         data['EXPLEN'].extend(np.array(alldidr)[isort])  # [days]
@@ -507,7 +509,7 @@ def timing(force, ext, clc, out, verbose=False):
     return chunked
 # ------------ -------------------------------------------------------
 # -- JWST CALIBRATION -- ---------------------------------------------
-def jwstcal(fin, clc, tim, ext, out, verbose=False, debug=True):
+def jwstcal(fin, clc, tim, ext, out, ps=None, verbose=False, debug=False):
     '''
     G. ROUDIER: Extracts and Wavelength calibrates JWST datasets
     '''
@@ -522,36 +524,58 @@ def jwstcal(fin, clc, tim, ext, out, verbose=False, debug=True):
     # -------
     alldinm = []  # Flatten integration number
     alldexp = []  # Flatten exposure time serie
+    allwaves = []
+    alldet = []
+    alldintimes = []
     for loc in sorted(clc['LOC']):
         fullloc = os.path.join(dbs, loc)
         with pyfits.open(fullloc) as hdulist:
+            nints = None
             for hdu in hdulist:
-                if 'PRIMARY' in hdu.name: pass
+                if 'PRIMARY' in hdu.name:
+                    nints = hdu.header['NINTS']
+                    alldet.extend(nints*[hdu.header['DETECTOR']])
+                    pass
+                elif ('WAVELENGTH' in hdu.name) and nints:
+                    allwaves.extend(nints*[hdu.data])
+                    pass
                 elif 'INT_TIMES' in hdu.name:
                     alldinm.extend(hdu.data['integration_number'])
+                    alldintimes.extend(hdu.data['int_mid_MJD_UTC'])
                     pass
-                elif 'SCI' in hdu.name: alldexp.extend(hdu.data)
+                elif 'SCI' in hdu.name:
+                    alldexp.extend(hdu.data)
+                    pass
                 pass
             pass
         pass
     # Time ordered data
-    isort = np.argsort(alldinm)
+    isort = np.argsort(alldintimes)
+
     alldexp = np.array(alldexp)
+    allwaves = np.array(allwaves)
+    alldintimes = np.array(alldintimes)
+    alldet = np.array(alldet)
+
     alldexp = alldexp[isort]
+    allwaves = allwaves[isort]
+    alldintimes = alldintimes[isort]
+    alldet = alldet[isort]
+
     # Calibration files
     reffile = jwstreffiles(ext)
-    # reffile[0]: images of the 3 orders [296, 2088] +20 on each side
-    # reffile[1]: calibrated wavelength, pixel XY, throughput for the 3 orders
-    refwave = []  # Reference wavelength for each order
-    refX = []  # X reference
-    refY = []  # Y reference
-    refT = []  # Throughput curve
-    refB = []  # Blackbody model curve
-    refS = []  # Blackbody*Throughput curve
     Tstar = fin['priors']['T*']
     bbfunc = astrobb(Tstar*astropy.units.K)
-    # TEST NIRISS
-    if reffile is not None:
+    if 'NIRISS' in ext:
+        # NIRISS
+        # reffile[0]: images of the 3 orders [296, 2088] +20 on each side
+        # reffile[1]: calibrated wavelength, pixel XY, throughput for the 3 orders
+        refwave = []  # Reference wavelength for each order
+        refX = []  # X reference
+        refY = []  # Y reference
+        refT = []  # Throughput curve
+        refB = []  # Blackbody model curve
+        refS = []  # Blackbody*Throughput curve
         for order in np.arange(3):
             refwave.append(reffile[1][order]['WAVELENGTH'])
             refX.append(reffile[1][order]['X'] - 20.)
@@ -586,7 +610,112 @@ def jwstcal(fin, clc, tim, ext, out, verbose=False, debug=True):
         _ = MM
         _ = TMY
         pass
+    elif 'NIRSPEC' in ext:
+        all1d = []
+        all1dwave = []
+        excld = []
+        sel1 = np.array(['1' in test for test in alldet])
+        sel2 = np.array(['2' in test for test in alldet])
+        timeorder1 = np.argsort(alldintimes[sel1])
+        timeorder2 = np.argsort(alldintimes[sel2])
+        _NRS1 = alldexp[sel1][timeorder1]
+        _NRS1w = allwaves[sel1][timeorder1]
+        _NRS2 = alldexp[sel2][timeorder2]
+        _NRS2w = allwaves[sel2][timeorder2]
+        if ps > 1:
+            with Pool(ps) as pool:
+                multiout = pool.map(starnirspeccal, list(zip(alldexp, allwaves)))
+                pool.close()
+                pool.join()
+                pass
+            excld, all1d, all1dwave = zip(*multiout)
+            pass
+        else:
+            for it, thisexp in enumerate(alldexp):
+                this1d = np.sum(thisexp, axis=0)
+                this1dwave = np.nanmedian(allwaves[it], axis=0)
+                this1d[this1d < 0] = np.nan
+                logthis1d = np.log10(this1d)
+                flood = []
+                stdflood = []
+                ws = 32
+                for i in np.arange(logthis1d.size):
+                    il = int(i - ws/2)
+                    il = max(il, 0)
+                    iu = int(i + ws/2)
+                    if iu >= logthis1d.size: iu = logthis1d.size - 1
+                    test = logthis1d[il:iu]
+                    select = ((test > np.nanpercentile(test, 10)) &
+                              (test < np.nanpercentile(test, 90)))
+                    flood.append(np.nanmedian(test[select]))
+                    stdflood.append(np.nanstd(test[select]))
+                    pass
+                stdflood = np.array(stdflood)
+                stdflood[~np.isfinite(stdflood)] = np.nanmedian(stdflood)
+                ff = int(np.sqrt(ws))
+                s1 = (logthis1d - (np.array(flood) - ff*stdflood)) < 0
+                s2 = (logthis1d - (np.array(flood) + ff*stdflood)) > 0
+                select = s1 | s2
+                this1d[select | ~np.isfinite(flood)] = np.nan
+                excld.append(np.sum(select))
+                all1d.append(this1d)
+                all1dwave.append(this1dwave)
+                if debug:
+                    plt.figure()
+                    plt.imshow(np.log10(thisexp), aspect='auto')
+                    plt.colorbar()
+                    plt.figure()
+                    plt.plot(np.log10(this1d), 'o')
+                    plt.plot(flood)
+                    plt.plot(np.array(flood) - ff*stdflood, color='r', ls='--')
+                    plt.plot(np.array(flood) + ff*stdflood, color='r', ls='--')
+                    plt.show()
+                    pass
+                if verbose: log.warning('>-- : %d/%d', it, len(alldexp))
+                pass
+            pass
+        out['data']['EXCLNUM'] = excld
+        out['data']['SPECTRUM'] = all1d
+        out['data']['WAVE'] = all1dwave
+        pass
     return True
+
+def starnirspeccal(thoseargs):
+    '''
+    * trick because of the way map works
+    '''
+    return nirspeccal(*thoseargs)
+
+def nirspeccal(thisexp, thosewaves):
+    '''
+    NIRSPEC calibration - The cheap version
+    '''
+    this1d = np.sum(thisexp, axis=0)
+    this1dwave = np.nanmedian(thosewaves, axis=0)
+    this1d[this1d < 0] = np.nan
+    logthis1d = np.log10(this1d)
+    flood = []
+    stdflood = []
+    ws = 32
+    for i in np.arange(logthis1d.size):
+        il = int(i - ws/2)
+        il = max(il, 0)
+        iu = int(i + ws/2)
+        if iu >= logthis1d.size: iu = logthis1d.size - 1
+        test = logthis1d[il:iu]
+        select = ((test > np.nanpercentile(test, 10)) &
+                  (test < np.nanpercentile(test, 90)))
+        flood.append(np.nanmedian(test[select]))
+        stdflood.append(np.nanstd(test[select]))
+        pass
+    stdflood = np.array(stdflood)
+    stdflood[~np.isfinite(stdflood)] = np.nanmedian(stdflood)
+    ff = int(np.sqrt(ws))
+    s1 = (logthis1d - (np.array(flood) - ff*stdflood)) < 0
+    s2 = (logthis1d - (np.array(flood) + ff*stdflood)) > 0
+    select = s1 | s2
+    this1d[select | ~np.isfinite(flood)] = np.nan
+    return (np.sum(select), this1d, this1dwave)
 
 def jwstreffiles(thisext):
     '''
@@ -604,11 +733,12 @@ def jwstreffiles(thisext):
         pass
     if 'NIRSPEC' in thisext:
         # --< DATA CALIBRATION: JWST-NIRSPEC-NRS-F290LP-G395H >--
+        thisdir = 'NIRSPEC'
+        thisprofile = 'jwst_nirspec_g395h_disp_20160902193401.fits'
+        thistrace = thisprofile
+        thisdir = None
         pass
-    if thisdir is None:
-        log.error('>-- %s :NOT SUPPORTED', thisext)
-        reffiles = None
-        pass
+    if thisdir is None: reffiles = None
     else:
         fpath = os.path.join(excalibur.context['data_cal'], thisdir, thisprofile)
         # Trace template for each order (2D ARRAY)
