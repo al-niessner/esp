@@ -88,11 +88,20 @@ class normalization(dawgie.Algorithm):
         if 'Spitzer' in fltrs[index]:
             normed = trncore.norm_spitzer(cal, tme, fin, self.__out[index], self._type)
             pass
-        elif 'JWST' in fltrs[index]:
-            normed = trncore.norm_jwst_niriss(cal, tme, fin, self.__out[index], self._type)
+        elif 'NIRISS' in fltrs[index]:
+            # Not compatible with new calibration. To be updated.
+            # normed = trncore.norm_jwst_niriss(cal, tme, fin, self.__out[index], self._type)
+            normed = False
+            pass
+        elif 'NIRSPEC' in fltrs[index]:
+            normed = trncore.norm_jwst(cal, tme, fin, fltrs[index],
+                                       self.__out[index], self._type,
+                                       verbose=False, debug=False)
+            pass
         else:
-            normed = trncore.norm(cal, tme, fin, fltrs[index], self.__out[index],
-                                  self._type, verbose=False)
+            normed = trncore.norm(cal, tme, fin, fltrs[index],
+                                  self.__out[index], self._type,
+                                  verbose=False)
             pass
         return normed
 

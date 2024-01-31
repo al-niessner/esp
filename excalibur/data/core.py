@@ -674,7 +674,9 @@ def jwstcal(fin, clc, tim, ext, out, ps=None, verbose=False, debug=False):
                 if verbose: log.warning('>-- : %d/%d', it, len(alldexp))
                 pass
             pass
+        out['STATUS'].append(True)
         out['data']['EXCLNUM'] = excld
+        out['data']['IGNORED'] = np.array(excld) > int(len(all1d[0])/2)
         out['data']['SPECTRUM'] = all1d
         out['data']['WAVE'] = all1dwave
         pass

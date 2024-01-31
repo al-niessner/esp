@@ -111,8 +111,111 @@ def normversion():
     1.1.6: add timing parameter start model
     1.1.7: new sigma clip for spitzer
     1.1.8: added jwst filter
+    1.1.9: NIRSPEC
     '''
     return dawgie.VERSION(1,1,9)
+
+def norm_jwst(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
+    '''
+    JWST spectra normalization
+    '''
+    normed = False
+    priors = fin['priors'].copy()
+    ssc = syscore.ssconstants()
+    spectra = np.array(cal['data']['SPECTRUM'])
+    wave = np.array(cal['data']['WAVE'])
+    # TEST
+    # spectra = spectra[:10]
+    # wave = wave[:10]
+    # END TEST
+    wavelen = []
+    wavetemplate = []
+    for w in wave:
+        if len(w) not in wavelen:
+            wavelen.append(len(w))
+            wavetemplate.append(w)
+            pass
+        pass
+    newspectra = []
+    newwave = []
+    alllen = []
+    for s, w in zip(spectra, wave):
+        newspectra.append(s)
+        neww = w
+        if len(w) != len(s): neww = wavetemplate[wavelen.index(len(s))]
+        newwave.append(neww)
+        alllen.append(len(s))
+        pass
+    spectra = np.array(newspectra)
+    wave = np.array(newwave)
+    events = [pnet for pnet in tme['data'].keys()
+              if (pnet in priors.keys()) and tme['data'][pnet][selftype]]
+    for p in events:
+        log.warning('>-- Planet: %s', p)
+        out['data'][p] = {}
+        rpors = priors[p]['rp']/priors['R*']*ssc['Rjup/Rsun']
+        mttref = priors[p]['t0']
+        if mttref > 2400000.5: mttref -= 2400000.5
+        ignore = np.array(tme['data'][p]['ignore']) | np.array(cal['data']['IGNORED'])
+        z = tme['data'][p]['z']
+        # TEST
+        # z = z[:10]
+        # END TEST
+        uniqlen = []
+        allwavet = []
+        alltemplates = []
+        for thislen in set(alllen):
+            uniqlen.append(thislen)
+            select = np.array(alllen) == thislen
+            soot = abs(z[select]) > (1e0 + 2e0*rpors)
+            wavet, template = tplbuild(spectra[select][soot], wave[select][soot],
+                                       [np.min([np.min(w) for w in wave[select]]),
+                                        np.max([np.max(w) for w in wave[select]])],
+                                       np.diff(wave[select][0]),
+                                       medest=True, verbose=debug)
+            template = np.array(template)
+            wavet = np.array(wavet)
+            template[template > 1] = np.nan
+            allwavet.append(wavet)
+            alltemplates.append(template)
+            pass
+        if verbose:
+            plt.figure()
+            for x, y in zip(allwavet, alltemplates): plt.plot(x, y)
+            plt.semilogy()
+            plt.show()
+            pass
+        allnorms = []
+        allnwaves = []
+        for ws, s in zip(wave, spectra):
+            t = alltemplates[uniqlen.index(len(s))]
+            w = allwavet[uniqlen.index(len(s))]
+            norms = []
+            for thisw in w:
+                dist = list(abs(ws - thisw))
+                norms.append(s[dist.index(np.min(dist))])
+                pass
+            allnorms.append(np.array(norms) / t)
+            allnwaves.append(w)
+            pass
+        if verbose:
+            plt.figure()
+            for x, a in zip(allnwaves, allnorms): plt.plot(x, a)
+            plt.show()
+            pass
+        out['data'][p]['visits'] = tme['data'][p]['visits']
+        out['data'][p]['ignore'] = ignore
+        out['data'][p]['nspec'] = allnorms
+        out['data'][p]['wave'] = allnwaves
+        out['data'][p]['z'] = tme['data'][p]['z']
+        out['data'][p]['phase'] = tme['data'][p]['phase']
+        out['data'][p]['wavet'] = allwavet
+        out['data'][p]['template'] = alltemplates
+        pass
+    _ = ext
+    out['STATUS'].append(True)
+    normed = True
+    return normed
 
 def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
     '''
@@ -643,7 +746,7 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
     return normed
 # ------------------- ------------------------------------------------
 # -- TEMPLATE BUILDER -- ---------------------------------------------
-def tplbuild(spectra, wave, vrange, disp, superres=False, medest=False):
+def tplbuild(spectra, wave, vrange, disp, superres=False, medest=False, verbose=False):
     '''
     G. ROUDIER: Builds a spectrum template according to the peak in population density
     per wavelength bins
@@ -709,6 +812,7 @@ def tplbuild(spectra, wave, vrange, disp, superres=False, medest=False):
         else: finiteloop = guess[-1] + vdisp
         while finiteloop in guess: finiteloop += vdisp
         guess.append(finiteloop)
+        if verbose: log.warning('>-- %s/%s', str(guess[-1]), str(max(vrange) + vdisp/2e0))
         pass
     return wavet, template
 # ---------------------- ---------------------------------------------
@@ -1662,8 +1766,8 @@ def lnldx(params, x, data=None, weights=None):
     '''
     G. ROUDIER: Linear law
     '''
-    gamma1=params['gamma1'].value
-    model=LinearModel.evaluate(x, [gamma1])
+    gamma1 = params['gamma1'].value
+    model = LinearModel.evaluate(x, [gamma1])
     if data is None: return model
     if weights is None: return data - model
     return (data - model)/weights
