@@ -311,6 +311,9 @@ def myxsecs(spc, out,
             mmr = 2.3  # Fortney 2015 for hot Jupiters
             solrad = 10.
             Hsmax = 15.
+            # increase the number of scale heights from 15 to 20, to match the Ariel forward model
+            # (this is the range used for xslib; also has to be set for atmos)
+            Hsmax = 20.
             nlevels = 100.
             pgrid = np.arange(np.log(solrad)-Hsmax, np.log(solrad)+Hsmax/nlevels,
                               Hsmax/(nlevels-1))
@@ -442,7 +445,10 @@ def atmos(fin, xsl, spc, out, ext,
     '''
     G. ROUDIER: Cerberus retrieval
     '''
-    noClouds = False
+    fitCloudParameters = True
+    fitNtoO = True
+    fitCtoO = True
+    fitT = True
     am = False
     orbp = fin['priors'].copy()
     ssc = syscore.ssconstants(mks=True)
@@ -462,6 +468,25 @@ def atmos(fin, xsl, spc, out, ext,
         arielModel = 'cerberus'
         # arielModel = 'taurex'
 
+        # if the ariel sim doesn't have clouds, then don't fit the clouds
+        fitCloudParameters = 'Noclouds' not in arielModel
+        #  OR
+        # don't fit the 4 cloud parameters, even if the model has clouds
+        # fitCloudParameters = False
+
+        # let's fix N/O; one less param to worry about
+        # fitNtoO = False
+        if not fitNtoO:
+            modparlbl = {'TEC':['XtoH', 'CtoO']}
+        # let's fix C/O, to see if this parameter is the problem
+        # fitCtoO = False
+        if not fitCtoO:
+            modparlbl = {'TEC':['XtoH']}
+        # maybe fix the planet temperature?
+        # fitT = False  # not tested yet
+
+        # print('name of the forward model:',arielModel)
+        # print('fitCloudParameters for retrieved model:',fitCloudParameters)
         # print('available models',spc['data']['models'])
         if arielModel not in spc['data']['models']:
             log.warning('--< BIG PROB: ariel model doesnt exist!!! >--')
@@ -489,10 +514,6 @@ def atmos(fin, xsl, spc, out, ext,
                     # (the cerberus forward models expect it to come after [p])
                     # spc['data'][p]['WB'] = spc['data'][p][arielModel]['WB']
                     inputData['WB'] = spc['data'][p]['WB']
-
-                    noClouds = 'Noclouds' in arielModel
-                    # print('name of the forward model:',arielModel)
-                    # print('noClouds for retrieved model:',noClouds)
                 else:
                     log.warning('--< THIS arielModel DOESNT EXIST!!! (rerun ariel task?) >--')
             else:
@@ -520,6 +541,8 @@ def atmos(fin, xsl, spc, out, ext,
             #  equilibrium temperatures from the archive sometimes don't match this!
             #  e.g. GJ 3053=LHS 1140 b,c (the Archive has 379K,709K vs 216,403K here)
             #  that one is wrong it seems. Lillo-Box 2020 has strange extra factor
+
+            # print('model_params',inputData['model_params'])
 
             # bottom line:
             #  use the same Teq as in ariel-sim, otherwise truth/retrieved won't match
@@ -584,16 +607,22 @@ def atmos(fin, xsl, spc, out, ext,
                 prior_ranges = {}
                 nodes = []
                 with pm.Model():
-                    if not noClouds:
+                    fixedParams = {}
+
+                    if fitCloudParameters:
                         # CLOUD TOP PRESSURE
                         prior_ranges['CTP'] = (-6,1)
-                        ctp = pm.Uniform('CTP', -6., 1.)
+                        ctp = pm.Uniform('CTP', prior_ranges['CTP'][0], prior_ranges['CTP'][1])
                         nodes.append(ctp)
 
                         # HAZE SCAT. CROSS SECTION SCALE FACTOR
                         prior_ranges['Hscale'] = (-6,6)
-                        hza = pm.Uniform('HScale', -6e0, 6e0)
+                        hza = pm.Uniform('HScale', prior_ranges['Hscale'][0], prior_ranges['Hscale'][1])
                         nodes.append(hza)
+                    else:
+                        print('model_params',inputData['model_params'])
+                        fixedParams['CTP'] = inputData['model_params']['CTP']
+                        fixedParams['HScale'] = inputData['model_params']['HScale']
 
                     # OFFSET BETWEEN STIS AND WFC3 filters
                     if 'STIS-WFC3' in ext:
@@ -669,43 +698,69 @@ def atmos(fin, xsl, spc, out, ext,
                                 off0 = pm.Uniform('OFF0', -off0_value, off0_value)
                                 nodes.append(off0)
                     # KILL HAZE POWER INDEX FOR SPHERICAL SHELL
-                    if not noClouds:
-                        if sphshell:
+                    if sphshell:
+                        if fitCloudParameters:
                             prior_ranges['HLoc'] = (-6,1)
-                            hzloc = pm.Uniform('HLoc', -6.0, 1.0)
+                            hzloc = pm.Uniform('HLoc',
+                                               prior_ranges['HLoc'][0], prior_ranges['HLoc'][1])
                             nodes.append(hzloc)
 
                             prior_ranges['HThick'] = (1,20)
-                            hzthick = pm.Uniform('HThick', 1.0, 20.0)
+                            hzthick = pm.Uniform('HThick',
+                                                 prior_ranges['HThick'][0],prior_ranges['HThick'][1])
                             nodes.append(hzthick)
-                            pass
                         else:
+                            fixedParams['HLoc'] = inputData['model_params']['HLoc']
+                            fixedParams['HThick'] = inputData['model_params']['HThick']
+                    else:
+                        if fitCloudParameters:
                             prior_ranges['HIndex'] = (-4,0)
-                            hzi = pm.Uniform('HIndex', -4e0, 0e0)
+                            hzi = pm.Uniform('HIndex',
+                                             prior_ranges['HIndex'][0], prior_ranges['HIndex'][1])
                             nodes.append(hzi)
-                            pass
-                    # BOOST TEMPERATURE PRIOR TO [75%, 150%] Teq
-                    prior_ranges['T'] = (0.75e0*eqtemp, 1.5e0*eqtemp)
-                    tpr = pm.Uniform('T', 0.75e0*eqtemp, 1.5e0*eqtemp)
+                        else:
+                            fixedParams['HIndex'] = -2
 
-                    nodes.append(tpr)
+                    # BOOST TEMPERATURE PRIOR TO [75%, 150%] Teq
+                    if fitT:
+                        prior_ranges['T'] = (0.75e0*eqtemp, 1.5e0*eqtemp)
+                        tpr = pm.Uniform('T', prior_ranges['T'][0], prior_ranges['T'][1])
+                        nodes.append(tpr)
+                    else:
+                        fixedParams['T'] = inputData['model_params']['T']
 
                     # MODEL SPECIFIC ABSORBERS
                     for param in modparlbl[model]:
+                        dexRange = (-6,6)
                         if param=='XtoH':
-                            prior_ranges['[X/H]'] = (-6,6)
+                            prior_ranges['[X/H]'] = dexRange
                         elif param=='CtoO':
-                            prior_ranges['[C/O]'] = (-6,6)
+                            prior_ranges['[C/O]'] = dexRange
                         elif param=='NtoO':
-                            prior_ranges['[N/O]'] = (-6,6)
+                            prior_ranges['[N/O]'] = dexRange
                         else:
-                            prior_ranges[param] = (-6,6)
-                    modelpar = pm.Uniform(model, lower=-6e0, upper=6e0,
-                                          shape=len(modparlbl[model]))
+                            prior_ranges[param] = dexRange
+                    numAbundanceParams = len(modparlbl[model])
+                    # make sure that there's at least two parameters here, or the decorator crashes
+                    # if fitCtoO: numAbundanceParams += 1
+                    numAbundanceParams = max(numAbundanceParams, 2)
+                    print('numAbundanceParams',numAbundanceParams)
+                    modelpar = pm.Uniform(model, lower=dexRange[0], upper=dexRange[1],
+                                          shape=numAbundanceParams)
                     nodes.append(modelpar)
+                    if not fitNtoO:
+                        fixedParams['NtoO'] = 0.
+                    if not fitCtoO:
+                        # print('model params',inputData['model_params'])
+                        fixedParams['CtoO'] = inputData['model_params']['C/O']
+
+                    # before calling MCMC, save the fixed-parameter info in the context
+                    ctxtupdt(cleanup=cleanup, model=model, p=p, solidr=solidr, orbp=orbp,
+                             tspectrum=tspectrum, xsl=xsl, spc=spc, modparlbl=modparlbl,
+                             hzlib=crbhzlib, fixedParams=fixedParams)
 
                     # CERBERUS MCMC
-                    if noClouds:
+                    if not fitCloudParameters:
                         log.warning('--< RUNNING MCMC - NO CLOUDS! >--')
                         _mcdata = pm.Normal('mcdata', mu=clearfmcerberus(*nodes),
                                             tau=1e0/(np.nanmedian(tspecerr[cleanup])**2),
@@ -1091,10 +1146,10 @@ def results(trgt, filt, fin, xsl, atm, out, verbose=False):
                 else:
                     prior_ranges = {}
 
-                if 'CTP' in allkeys:
-                    noClouds = False
-                else:
-                    noClouds = True
+                fitCloudParameters = 'CTP' in allkeys
+                fitNtoO = '[N/O]' in allkeys
+                fitCtoO = '[C/O]' in allkeys
+                fitT = 'T' in allkeys
 
                 # ndim = len(alltraces)
                 # nsamples = len(alltraces[0])
@@ -1123,7 +1178,7 @@ def results(trgt, filt, fin, xsl, atm, out, verbose=False):
                 # print('results',atm[p][modelName]['MCTRACE'].keys())
 
                 # print('T',np.median(atm[p][modelName]['MCTRACE']['T']))
-                # if not noClouds:
+                # if fitCloudParameters:
                 #     print('CTP',np.median(atm[p][modelName]['MCTRACE']['CTP']))
                 #     print('Hscale',np.median(atm[p][modelName]['MCTRACE']['HScale']))
                 #     print('HLoc  ',np.median(atm[p][modelName]['MCTRACE']['HLoc']))
@@ -1137,7 +1192,7 @@ def results(trgt, filt, fin, xsl, atm, out, verbose=False):
                 mdptrace = []
                 # print('mdplist',mdplist)
                 for key in mdplist: mdptrace.append(atm[p][modelName]['MCTRACE'][key])
-                if not noClouds:
+                if fitCloudParameters:
                     ctptrace = atm[p][modelName]['MCTRACE']['CTP']
                     hzatrace = atm[p][modelName]['MCTRACE']['HScale']
                     hloctrace = atm[p][modelName]['MCTRACE']['HLoc']
@@ -1151,11 +1206,23 @@ def results(trgt, filt, fin, xsl, atm, out, verbose=False):
                     # print('fit results; HLoc:',hloc)
                     # print('fit results; HThick:',hthc)
                 else:
-                    ctp = 3.
-                    hza = 0.
-                    hloc = 0.
-                    hthc = 0.
-                tpr = np.median(tprtrace)
+                    # ctp = 3.
+                    # hza = 10.
+                    # hloc = 0.
+                    # hthc = 0.
+                    # ctp = -1.52
+                    # hza = -2.1
+                    # hloc = -2.3
+                    # hthc = 9.76
+                    ctp = atm[p]['TRUTH_MODELPARAMS']['CTP']
+                    hza = atm[p]['TRUTH_MODELPARAMS']['HScale']
+                    hloc = atm[p]['TRUTH_MODELPARAMS']['HLoc']
+                    hthc = atm[p]['TRUTH_MODELPARAMS']['HThick']
+                    # print(' ctp hza hloc hthc',ctp,hza,hloc,hthc)
+                if fitT:
+                    tpr = np.median(tprtrace)
+                else:
+                    tpr = atm[p]['TRUTH_MODELPARAMS']['T']
                 mdp = np.median(np.array(mdptrace), axis=1)
                 # print('fit results; T:',tpr)
                 # print('fit results; mdplist:',mdp)
@@ -1163,12 +1230,23 @@ def results(trgt, filt, fin, xsl, atm, out, verbose=False):
                 solidr = fin['priors'][p]['rp'] * ssc['Rjup']
 
                 if modelName=='TEC':
-                    if len(mdp)!=3: log.warning('--< Expecting 3 molecules for TEQ model! >--')
+                    # if len(mdp)!=3: log.warning('--< Expecting 3 molecules for TEQ model! >--')
                     mixratio = None
                     tceqdict = {}
                     tceqdict['XtoH'] = float(mdp[0])
-                    tceqdict['CtoO'] = float(mdp[1])
-                    tceqdict['NtoO'] = float(mdp[2])
+                    if fitCtoO:
+                        tceqdict['CtoO'] = float(mdp[1])
+                    else:
+                        print('truth params',atm[p]['TRUTH_MODELPARAMS'])
+                        tceqdict['CtoO'] = atm[p]['TRUTH_MODELPARAMS']['CtoO']
+                    if fitNtoO:
+                        tceqdict['NtoO'] = float(mdp[2])
+                    else:
+                        # print('truth params',atm[p]['TRUTH_MODELPARAMS'])
+                        if 'NtoO' in atm[p]['TRUTH_MODELPARAMS'].keys():
+                            tceqdict['NtoO'] = atm[p]['TRUTH_MODELPARAMS']['NtoO']
+                        else:
+                            tceqdict['NtoO'] = 0.
                 elif modelName=='PHOTOCHEM':
                     if len(mdp)!=5: log.warning('--< Expecting 5 molecules for PHOTOCHEM model! >--')
                     tceqdict = None
@@ -1209,15 +1287,16 @@ def results(trgt, filt, fin, xsl, atm, out, verbose=False):
                 for _ in range(nrandomwalkers):
                     iwalker = int(len(tprtrace) * np.random.rand())
                     # iwalker = max(0, len(tprtrace) - 1 - int(1000* np.random.rand()))
-                    if not noClouds:
+                    if fitCloudParameters:
                         ctp = ctptrace[iwalker]
                         hza = hzatrace[iwalker]
                         hloc = hloctrace[iwalker]
                         hthc = hthicktrace[iwalker]
-                    tpr = tprtrace[iwalker]
+                    if fitT:
+                        tpr = tprtrace[iwalker]
                     mdp = np.array(mdptrace)[:,iwalker]
                     # print('shape mdp',mdp.shape)
-                    # if not noClouds:
+                    # if fitCloudParameters:
                     #    print('fit results; CTP:',ctp)
                     #    print('fit results; Hscale:',hza)
                     #    print('fit results; HLoc:',hloc)
@@ -1229,8 +1308,15 @@ def results(trgt, filt, fin, xsl, atm, out, verbose=False):
                         mixratio = None
                         tceqdict = {}
                         tceqdict['XtoH'] = float(mdp[0])
-                        tceqdict['CtoO'] = float(mdp[1])
-                        tceqdict['NtoO'] = float(mdp[2])
+                        if fitCtoO:
+                            tceqdict['CtoO'] = float(mdp[1])
+                        else:
+                            tceqdict['CtoO'] = atm[p]['TRUTH_MODELPARAMS']['CtoO']
+                        if fitNtoO:
+                            tceqdict['NtoO'] = float(mdp[2])
+                        else:
+                            # tceqdict['NtoO'] = atm[p]['TRUTH_MODELPARAMS']['NtoO'] #aasdfasdf
+                            tceqdict['NtoO'] = 0.
                     elif modelName=='PHOTOCHEM':
                         tceqdict = None
                         mixratio = {}
@@ -1386,13 +1472,13 @@ def analysis(aspects, filt, out, verbose=False):
                                                       ['T','[X/H]','[C/O]','Mp']):
                             if trueparam in truth_params:
                                 true_value = atmosFit['data'][planetLetter]['TRUTH_MODELPARAMS'][trueparam]
-                                # careful here: metallicity and C/O have to be converted to log-solar
-                                if trueparam=='metallicity':
-                                    true_value = np.log10(true_value)
-                                elif trueparam=='C/O':
-                                    true_value = np.log10(true_value/0.54951)  # solar is C/O=0.55
+                                # (metallicity and C/O do not have to be converted to log-solar)
+                                # if trueparam=='metallicity':
+                                #    true_value = np.log10(true_value)
+                                # elif trueparam=='C/O':
+                                #    true_value = np.log10(true_value/0.54951)  # solar is C/O=0.55
                                 # elif trueparam=='N/O':
-                                #     true_value = np.log10(true_value)
+                                #     true_value = true_value
                                 truth_values[fitparam].append(true_value)
                             else:
                                 truth_values[fitparam].append(666)

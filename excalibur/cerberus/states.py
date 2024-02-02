@@ -226,16 +226,24 @@ class analysisSV(dawgie.StateVector):
         if self['STATUS'][-1]:
             for savedresult in self['data'].keys():
                 if 'plot' in savedresult:
-                    if savedresult=='plot_fitT':
-                        plotlabel = 'T_eff : retrieved vs input values'
-                    elif savedresult=='plot_fitMetal':
-                        plotlabel = 'Metallicity : retrieved vs input values'
-                    elif savedresult=='plot_fitCO':
-                        plotlabel = 'C/O : retrieved vs input values'
-                    elif savedresult=='plot_massVmetals':
+                    if savedresult=='plot_massVmetals':
                         plotlabel = 'Planet Mass vs Metallicity'
+                    elif savedresult=='plot_fitT':
+                        plotlabel = 'T_eff'
+                    elif savedresult=='plot_fitMetal':
+                        plotlabel = 'Metallicity'
+                    elif savedresult=='plot_fitCO':
+                        plotlabel = 'C/O'
                     else:
                         plotlabel = 'unknown plottype plot'
+                    # the plot titles are different for real data vs simulated
+                    # use __name to decide it it's a comparison against truth
+                    if savedresult in ['plot_fitT','plot_fitMetal','plot_fitCO']:
+                        if 'sim' in self.__name:
+                            plotlabel = plotlabel + ' : retrieved vs input values'
+                        else:
+                            plotlabel = plotlabel + ' : retrieved values and uncertainties'
+
                     textlabel = '--------- ' + plotlabel + ' ---------'
                     visitor.add_image('...', textlabel, self['data'][savedresult])
         return

@@ -17,17 +17,18 @@ import theano.compile.ops as tco
 # -- GLOBAL CONTEXT FOR PYMC3 DETERMINISTICS ---------------------------------------------
 from collections import namedtuple
 CONTEXT = namedtuple('CONTEXT', ['cleanup', 'model', 'p', 'solidr', 'orbp', 'tspectrum',
-                                 'xsl', 'spc', 'modparlbl', 'hzlib'])
+                                 'xsl', 'spc', 'modparlbl', 'hzlib', 'fixedParams'])
 ctxt = CONTEXT(cleanup=None, model=None, p=None, solidr=None, orbp=None, tspectrum=None,
-               xsl=None, spc=None, modparlbl=None, hzlib=None)
+               xsl=None, spc=None, modparlbl=None, hzlib=None, fixedParams=None)
 def ctxtupdt(cleanup=None, model=None, p=None, solidr=None, orbp=None, tspectrum=None,
-             xsl=None, spc=None, modparlbl=None, hzlib=None):
+             xsl=None, spc=None, modparlbl=None, hzlib=None, fixedParams=None):
     '''
     G. ROUDIER: Update context
     '''
     excalibur.cerberus.forwardModel.ctxt = CONTEXT(cleanup=cleanup, model=model, p=p,
                                                    solidr=solidr, orbp=orbp,
                                                    tspectrum=tspectrum, xsl=xsl, spc=spc,
+                                                   fixedParams=fixedParams,
                                                    modparlbl=modparlbl, hzlib=hzlib)
     return
 # ----------- --------------------------------------------------------
@@ -36,7 +37,9 @@ def crbmodel(mixratio, rayleigh, cloudtp, rp0, orbp, xsecs, qtgrid,
              temp, wgrid, lbroadening=False, lshifting=False,
              cialist=['H2-H', 'H2-H2', 'H2-He', 'He-H'].copy(),
              xmollist=['TIO', 'CH4', 'H2O', 'H2CO', 'HCN', 'CO', 'CO2', 'NH3'].copy(),
-             nlevels=100, Hsmax=15., solrad=10.,
+             # nlevels=100, Hsmax=15., solrad=10.,
+             # increase the number of scale heights from 15 to 20, to match the Ariel forward model
+             nlevels=100, Hsmax=20., solrad=10.,
              hzlib=None, hzp=None, hzslope=-4., hztop=None, hzwscale=1e0,
              cheq=None, h2rs=True, logx=False, pnet='b', sphshell=False,
              break_down_by_molecule=False,
@@ -645,6 +648,7 @@ def spshfmcerberus(*crbinputs):
     '''
     ctp, hza, hzloc, hzthick, tpr, mdp = crbinputs
     # ctp, hza, hzloc, hzthick, tpr, mdp = crbinputs
+    # print(' not-fixed cloud parameters (cloudy):',ctp,hza,hzloc,hzthick)
     fmc = np.zeros(ctxt.tspectrum.size)
     if ctxt.model == 'TEC':
         tceqdict = {}
@@ -682,18 +686,49 @@ def clearfmcerberus(*crbinputs):
     '''
     Wrapper around Cerberus forward model - NO CLOUDS!
     '''
-    ctp = 3.    # cloud deck is very deep - 1000 bars
-    hza = -10.  # small number means essentially no haze
-    hzloc = 0.
-    hzthick = 0.
+    # ctp = 3.    # cloud deck is very deep - 1000 bars
+    # hza = -10.  # small number means essentially no haze
+    # hzloc = 0.
+    # hzthick = 0.
+    ctp = ctxt.fixedParams['CTP']
+    hza = ctxt.fixedParams['HScale']
+    hzloc = ctxt.fixedParams['HLoc']
+    hzthick = ctxt.fixedParams['HThick']
+    # print(' fixed cloud parameters (clear):',ctp,hza,hzloc,hzthick)
 
     tpr, mdp = crbinputs
+
+    # if you don't want to fit Teq, fix it here. otherwise modify decorators somehow
+    # tpr = 593.5
+    # if 'T' in ctxt.fixedParams: exit('fixing T is tricky; need to adjust the decorators')
+    # if 'T' in ctxt.fixedParams:
+    #     tpr = ctxt.fixedParams['T']
+    #     mdp = crbinputs
+    # else:
+    #    tpr, mdp = crbinputs
+
     fmc = np.zeros(ctxt.tspectrum.size)
     if ctxt.model == 'TEC':
         tceqdict = {}
-        tceqdict['XtoH'] = float(mdp[0])
-        tceqdict['CtoO'] = float(mdp[1])
-        tceqdict['NtoO'] = float(mdp[2])
+        mdpindex = 0
+        if 'XtoH' in ctxt.fixedParams:
+            tceqdict['XtoH'] = ctxt.fixedParams['XtoH']
+        else:
+            tceqdict['XtoH'] = float(mdp[mdpindex])
+            mdpindex += 1
+
+        if 'CtoO' in ctxt.fixedParams:
+            tceqdict['CtoO'] = ctxt.fixedParams['CtoO']
+        else:
+            tceqdict['CtoO'] = float(mdp[mdpindex])
+            mdpindex += 1
+
+        if 'NtoO' in ctxt.fixedParams:
+            tceqdict['NtoO'] = ctxt.fixedParams['NtoO']
+        else:
+            tceqdict['NtoO'] = float(mdp[mdpindex])
+        # print('XtoH,CtoO,NtoO =',tceqdict['XtoH'],tceqdict['CtoO'],tceqdict['NtoO'])
+
         fmc = crbmodel(None, float(hza), float(ctp), ctxt.solidr, ctxt.orbp,
                        ctxt.xsl['data'][ctxt.p]['XSECS'],
                        ctxt.xsl['data'][ctxt.p]['QTGRID'],

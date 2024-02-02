@@ -103,4 +103,13 @@ def load_ariel_instrument(target):
                     'noise':noiseSpectrum['NoiseOnTransitFloor'].value,
                 }
 
+        for iwave in range(len(ariel_instrument['wavelow'])-1):
+            # multiply by number slightly above 1 to deal with numerical precision error
+            if ariel_instrument['wavehigh'][iwave] > ariel_instrument['wavelow'][iwave+1]*1.00001:
+                # print('spectral channels overlap!!',iwave,
+                #       ariel_instrument['wavehigh'][iwave],ariel_instrument['wavelow'][iwave+1])
+                log.warning('--< ADJUSTING ARIEL WAVELENGTH GRID: %s wave=%s >--',
+                            target,ariel_instrument['wavelength'][iwave])
+                ariel_instrument['wavehigh'][iwave] = ariel_instrument['wavelow'][iwave+1]*0.99999
+
     return ariel_instrument

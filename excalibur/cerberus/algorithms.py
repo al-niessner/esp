@@ -198,8 +198,9 @@ class atmos(dawgie.Algorithm):
     def _atmos(self, fin, xsl, spc, index, ext):
         '''Core code call'''
         if ext=='Ariel-sim':
-            MCMC_chain_length = 2000
-            MCMC_chain_length = 15000
+            # MCMC_chain_length = 2000
+            # MCMC_chain_length = 15000
+            MCMC_chain_length = 5000
             # MCMC_chain_length = 10
         else:
             MCMC_chain_length = 15000
@@ -382,9 +383,7 @@ class analysis(dawgie.Analyzer):
 
     # def previous(self):
     #    '''Input State Vectors: cerberus.atmos'''
-    #    return [dawgie.ALG_REF(sys.task, self.__fin),
-    #            dawgie.ALG_REF(crb.task, self.__xsl),
-    #            dawgie.ALG_REF(crb.task, self.__atm)]
+    #        return [dawgie.ALG_REF(sys.task, self.__fin)]
 
     def feedback(self):
         '''feedback ds'''
@@ -419,6 +418,8 @@ class analysis(dawgie.Analyzer):
                        ('cerberus.atmos.'+filt in aspects[trgt]):
                         # print('This filter exists in the cerb.atmos aspect:',filt,trgt)
                         filtersWithResults.append(filt)
+            # filtersWithResults=['Ariel-sim']  # just one filter, while debugging
+            # filtersWithResults=['HST-WFC3-IR-G141-SCAN']  # just one filter, while debugging
             if not filtersWithResults:
                 log.warning('--< CERBERUS ANALYSIS: NO FILTERS WITH ATMOS DATA!!!>--')
 

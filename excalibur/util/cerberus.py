@@ -89,7 +89,7 @@ G. ROUDIER: BURROWS AND SHARP 1998 + ANDERS & GREVESSE 1989
 # -- MEAN MOLECULAR WEIGHT -- ----------------------------------------
 def getmmw(mixratio, protosolar=True, fH2=None, fHe=None):
     '''
-G. ROUDIER: Mean molecular weight estimate assuming proton mass dominated nucleous
+G. ROUDIER: Mean molecular weight estimate assuming proton mass dominated nucleus
     '''
     molsum = 0.
     mmw = 0.

@@ -7,7 +7,7 @@ import excalibur.system.core as syscore
 import excalibur.util.cerberus as crbutil
 
 from excalibur.ariel.metallicity import \
-    massMetalRelation, massMetalRelationDisp, randomCtoO
+    massMetalRelation, massMetalRelationDisp, randomCtoO_linear
 from excalibur.ariel.arielInstrumentModel import load_ariel_instrument
 from excalibur.ariel.arielObservingPlan import make_tier_table
 from excalibur.ariel.forwardModels import makeTaurexAtmos, makeCerberusAtmos
@@ -108,7 +108,6 @@ def simulate_spectra(target, system_dict, out):
         ariel_instrument = load_ariel_instrument(target+' '+planetLetter)
 
         if ariel_instrument:
-
             # asdf : LATER : add in uncertainty scatter to these model parameters
             model_params = {
                 'T*':system_params['T*'],
@@ -149,7 +148,6 @@ def simulate_spectra(target, system_dict, out):
                 # print('SKIP:',target,planetLetter,'  scale height / planet radius =',HoverRmax)
                 log.warning('--< SKIP UNBOUND ATMOS: %s %s ; scale height / planet radius = %s >--',target,planetLetter,HoverRmax)
             else:
-
                 # planet metallicity is from an assumed mass-metallicity relation
                 #  with scatter included
                 # planet metallicity should be defined relative to the stellar metallicity
@@ -162,7 +160,11 @@ def simulate_spectra(target, system_dict, out):
                 else:
                     metallicity_planet_dex = massMetalRelation(metallicity_star_dex, M_p,
                                                                thorngren=True)
-                CtoO_planet = randomCtoO()  # this is linear C/O, not dex
+                # print('metallicity_star_dex',metallicity_star_dex)
+                # print('metallicity_planet_dex',metallicity_planet_dex)
+
+                CtoO_planet_linear = randomCtoO_linear()  # this is linear C/O, not dex
+                # print('CtoO_planet_linear',CtoO_planet_linear)
 
                 # Load the instrument model and rescale based on #-of-transits
                 uncertainties = ariel_instrument['noise']
@@ -191,12 +193,16 @@ def simulate_spectra(target, system_dict, out):
                         model_params['C/O'] = 0.     # [C/O] (relative to solar)
                     else:
                         model_params['metallicity*'] = metallicity_star_dex
-                        model_params['metallicity'] = metallicity_star_dex + metallicity_planet_dex
+                        # model_params['metallicity'] = metallicity_star_dex + metallicity_planet_dex
+                        # stellar metallicity has already been added (in metallicity.py)
+                        model_params['metallicity'] = metallicity_planet_dex
+                        # print('model_params metallicity',model_params['metallicity'])
 
                         # planet C/O ratio is assumed to be solar
                         #  (0.54951 is the default in ACEChemistry, so it actually has no effect)
                         # actually, let's consider a distribution of C/O, as done for FINESSE
-                        model_params['C/O'] = np.log10(CtoO_planet/0.54951)
+                        model_params['C/O'] = np.log10(CtoO_planet_linear/0.54951)
+                        # print('C/O model param',model_params['C/O'])
 
                     if 'cerberus' in atmosModel:
                         # CLOUD PARAMETERS
@@ -292,6 +298,7 @@ def simulate_spectra(target, system_dict, out):
 
                     wavelength_um_rebin = np.array(wavelength_um_rebin)
                     fluxDepth_rebin = np.array(fluxDepth_rebin)
+
                     for molecule in molecules:
                         fluxDepth_by_molecule_rebin[molecule] = np.array(
                             fluxDepth_by_molecule_rebin[molecule])
@@ -323,13 +330,13 @@ def simulate_spectra(target, system_dict, out):
                     #  it has to be this way to match the formatting for regular spectra itk
 
                     # redo the chemsitry/mmw calculation for this metallicity
-                    # print('pressure',pressure)
-                    # print('eqtemp',eqtemp)
                     # print('metallicity [X/H]dex:',model_params['metallicity'])
                     mixratio, fH2, fHe = crbutil.crbce(pressure, eqtemp,
                                                        X2Hr=model_params['metallicity'])
                     # print(' mixratio',mixratio)
+                    # print(' H2O fraction',10.**(mixratio['H2O']-6))
                     # print(' fh2,fhe',fH2,fHe)
+
                     # assume solar C/O and N/O for now
                     # C2Or=cheq['CtoO'], N2Or=cheq['NtoO'])
                     mmwnow, fH2, fHe = crbutil.getmmw(mixratio, protosolar=False, fH2=fH2, fHe=fHe)

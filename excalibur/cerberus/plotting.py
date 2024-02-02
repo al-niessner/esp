@@ -56,7 +56,7 @@ def rebinData(transitdata, binsize=4):
 # --------------------------------------------------------------------
 def plot_bestfit(transitdata, patmos_model, fmcarray,
                  truth_spectrum,
-                 filt, modelName, trgt, p, saveDir):
+                 filt, modelName, trgt, p, saveDir, savetodisk=False):
     ''' plot the best fit to the data '''
 
     figure, ax = plt.subplots(figsize=(6,4))
@@ -114,9 +114,8 @@ def plot_bestfit(transitdata, patmos_model, fmcarray,
     #    ax2.set_ylim((np.sqrt(1e-2*axmin) - rp0hs)/Hs, (np.sqrt(1e-2*axmax) - rp0hs)/Hs)
     figure.tight_layout()
     # plt.show()
-    plt.savefig(saveDir + 'bestFit_'+filt+'_'+modelName+'_'+trgt+' '+p+'.png')
+    if savetodisk: plt.savefig(saveDir + 'bestFit_'+filt+'_'+modelName+'_'+trgt+' '+p+'.png')
     # pdf is so much better, but xv gives error (stick with png for debugging)
-    # plt.savefig(saveDir + 'bestFit_'+filt+'_'+trgt+' '+p+'.pdf')
 
     # REDUNDANT SAVE - above saves to disk; below saves as state vector
     buf = io.BytesIO()
@@ -127,7 +126,7 @@ def plot_bestfit(transitdata, patmos_model, fmcarray,
 # --------------------------------------------------------------------
 def plot_corner(allkeys, alltraces,
                 truth_params, prior_ranges,
-                filt, modelName, trgt, p, saveDir):
+                filt, modelName, trgt, p, saveDir, savetodisk=False):
     ''' corner plot showing posterior distributions '''
 
     truthcolor = 'darkgreen'
@@ -173,9 +172,11 @@ def plot_corner(allkeys, alltraces,
             if thiskey=='T':
                 truths.append(truth_params['Teq'])
             elif thiskey=='[X/H]':
-                truths.append(np.log10(truth_params['metallicity']))
+                # truths.append(np.log10(truth_params['metallicity']))
+                truths.append(truth_params['metallicity'])
             elif thiskey=='[C/O]':
-                truths.append(np.log10(truth_params['C/O'] / 0.54951))
+                # truths.append(np.log10(truth_params['C/O'] / 0.54951))
+                truths.append(truth_params['C/O'])
             elif thiskey=='[N/O]':
                 truths.append(0)
             elif thiskey in truth_params.keys():
@@ -226,8 +227,7 @@ def plot_corner(allkeys, alltraces,
         #  hmm, it's not covering up the dashed line; increase lw and maybe zorder
         ax.axvline(mcmcMedian[i], color=fitcolor, lw=2, zorder=12)
 
-    plt.savefig(saveDir + 'corner_'+filt+'_'+modelName+'_'+trgt+' '+p+'.png')
-
+    if savetodisk: plt.savefig(saveDir + 'corner_'+filt+'_'+modelName+'_'+trgt+' '+p+'.png')
     # REDUNDANT SAVE - above saves to disk; below saves as state vector
     buf = io.BytesIO()
     figure.savefig(buf, format='png')
@@ -236,7 +236,7 @@ def plot_corner(allkeys, alltraces,
     return save_to_state_vector
 # --------------------------------------------------------------------
 def plot_vsPrior(allkeys, alltraces, truth_params, prior_ranges,
-                 filt, modelName, trgt, p, saveDir):
+                 filt, modelName, trgt, p, saveDir, savetodisk=False):
     ''' compare the fit results against the original prior information '''
 
     mcmcMedian = np.nanmedian(np.array(alltraces), axis=1)
@@ -279,12 +279,15 @@ def plot_vsPrior(allkeys, alltraces, truth_params, prior_ranges,
                 ax.plot([Teq,Teq],[0,priorspan[iparam]],
                         c='k',ls='--',zorder=5)
             elif allkeys[iparam]=='[X/H]':
-                XtoH = np.log10(float(truth_params['metallicity']))
+                # XtoH = np.log10(float(truth_params['metallicity']))
+                XtoH = float(truth_params['metallicity'])
                 ax.plot([XtoH,XtoH],[0,priorspan[iparam]],
                         c='k',ls='--',zorder=5)
             elif allkeys[iparam]=='[C/O]':
                 # [C/O] is defined as absolute, not relative to Solar?
-                CtoO = np.log10(float(truth_params['C/O']))
+                # CtoO = np.log10(float(truth_params['C/O']))
+                # C/O is actually log-scale already, and is relative to Solar
+                CtoO = float(truth_params['C/O'])
                 ax.plot([CtoO,CtoO],[0,priorspan[iparam]],
                         c='k',ls='--',zorder=5)
 
@@ -293,8 +296,7 @@ def plot_vsPrior(allkeys, alltraces, truth_params, prior_ranges,
         ax.set_xlabel(allkeys[iparam], fontsize=14)
         ax.set_ylabel('uncertainty', fontsize=14)
     figure.tight_layout()
-    plt.savefig(saveDir + 'vsprior_'+filt+'_'+modelName+'_'+trgt+' '+p+'.png')
-
+    if savetodisk: plt.savefig(saveDir + 'vsprior_'+filt+'_'+modelName+'_'+trgt+' '+p+'.png')
     # REDUNDANT SAVE - above saves to disk; below saves as state vector
     buf = io.BytesIO()
     figure.savefig(buf, format='png')
@@ -304,7 +306,7 @@ def plot_vsPrior(allkeys, alltraces, truth_params, prior_ranges,
 
 # --------------------------------------------------------------------
 def plot_walkerEvolution(allkeys, alltraces, truth_params, prior_ranges,
-                         filt, modelName, trgt, p, saveDir,
+                         filt, modelName, trgt, p, saveDir, savetodisk=False,
                          Nchains=4):
     ''' trace whether or not the MCMC walkers converge '''
 
@@ -340,12 +342,15 @@ def plot_walkerEvolution(allkeys, alltraces, truth_params, prior_ranges,
                 ax.plot([0,2*chainLength], [Teq,Teq],
                         c='k',ls='--',zorder=4)
             elif allkeys[iparam]=='[X/H]':
-                XtoH = np.log10(float(truth_params['metallicity']))
+                # XtoH = np.log10(float(truth_params['metallicity']))
+                XtoH = float(truth_params['metallicity'])
                 ax.plot([0,2*chainLength], [XtoH,XtoH],
                         c='k',ls='--',zorder=4)
             elif allkeys[iparam]=='[C/O]':
                 # [C/O] is defined as absolute, not relative to Solar?
-                CtoO = np.log10(float(truth_params['C/O']))
+                # CtoO = np.log10(float(truth_params['C/O']))
+                # C/O is actually log-scale and relative to Solar
+                CtoO = float(truth_params['C/O'])
                 ax.plot([0,2*chainLength], [CtoO,CtoO],
                         c='k',ls='--',zorder=4)
         # elif allkeys[iparam]=='[N/O]':
@@ -357,8 +362,7 @@ def plot_walkerEvolution(allkeys, alltraces, truth_params, prior_ranges,
         ax.set_xlabel('MCMC step #', fontsize=14)
         ax.set_ylabel(allkeys[iparam], fontsize=14)
     figure.tight_layout()
-    plt.savefig(saveDir + 'walkerevol_'+filt+'_'+modelName+'_'+trgt+' '+p+'.png')
-
+    if savetodisk: plt.savefig(saveDir + 'walkerevol_'+filt+'_'+modelName+'_'+trgt+' '+p+'.png')
     # REDUNDANT SAVE - above saves to disk; below saves as state vector
     buf = io.BytesIO()
     figure.savefig(buf, format='png')
@@ -369,7 +373,7 @@ def plot_walkerEvolution(allkeys, alltraces, truth_params, prior_ranges,
 
 # --------------------------------------------------------------------
 def plot_fitsVStruths(truth_values, fit_values, fit_errors, prior_ranges,
-                      filt, saveDir):
+                      filt, saveDir, savetodisk=False):
     ''' compare the retrieved values against the original inputs '''
 
     plot_statevectors = []
@@ -449,7 +453,7 @@ def plot_fitsVStruths(truth_values, fit_values, fit_errors, prior_ranges,
         figure.tight_layout()
 
         # ('display' doesn't work for pdf files)
-        plt.savefig(saveDir + 'fitVStruth_'+filt+'_'+param.replace('/',':')+'.png')
+        if savetodisk: plt.savefig(saveDir + 'fitVStruth_'+filt+'_'+param.replace('/',':')+'.png')
         # REDUNDANT SAVE - above saves to disk; below saves as state vector
         buf = io.BytesIO()
         figure.savefig(buf, format='png')
@@ -459,7 +463,7 @@ def plot_fitsVStruths(truth_values, fit_values, fit_errors, prior_ranges,
     return plot_statevectors
 # --------------------------------------------------------------------
 def plot_fitUncertainties(fit_values, fit_errors, prior_ranges,
-                          filt, saveDir):
+                          filt, saveDir, savetodisk=False):
     ''' make of histogram of the uncertainties, to see how many are better than the prior '''
 
     plot_statevectors = []
@@ -510,7 +514,7 @@ def plot_fitUncertainties(fit_values, fit_errors, prior_ranges,
         figure.tight_layout()
 
         # ('display' doesn't work for pdf files)
-        plt.savefig(saveDir + 'fitUncertainties_'+filt+'_'+param.replace('/',':')+'.png')
+        if savetodisk: plt.savefig(saveDir + 'fitUncertainties_'+filt+'_'+param.replace('/',':')+'.png')
         # REDUNDANT SAVE - above saves to disk; below saves as state vector
         buf = io.BytesIO()
         figure.savefig(buf, format='png')
@@ -521,7 +525,7 @@ def plot_fitUncertainties(fit_values, fit_errors, prior_ranges,
 # --------------------------------------------------------------------
 def plot_massVSmetals(masses, truth_values,
                       fit_values, fit_errors, prior_ranges,
-                      filt, saveDir):
+                      filt, saveDir, savetodisk=False):
     ''' how well do we retrieve the input mass-metallicity relation? '''
 
     figure = plt.figure(figsize=(5,5))
@@ -581,7 +585,7 @@ def plot_massVSmetals(masses, truth_values,
     # *** TROUBLE - need to subtract off the stellar metallicity? ***
 
     # ('display' doesn't work for pdf files)
-    plt.savefig(saveDir + 'massVSmetals_'+filt+'.png')
+    if savetodisk: plt.savefig(saveDir + 'massVSmetals_'+filt+'.png')
     # REDUNDANT SAVE - above saves to disk; below saves as state vector
     buf = io.BytesIO()
     figure.savefig(buf, format='png')

@@ -40,7 +40,7 @@ def massMetalRelation(logmetStar, Mp, thorngren=False):
         # metallicity for Jupiter mass (trend value; Jupiter itself is lower)
         intercept = np.log10(9.7)
 
-        logmet = intercept + slope*np.log10(Mp)
+        logmet = logmetStar + intercept + slope*np.log10(Mp)
 
     else:
         # mass-metallicity relation from FINESSE proposal (Fortney motivated)
@@ -51,14 +51,12 @@ def massMetalRelation(logmetStar, Mp, thorngren=False):
         # Mpivot = -1.5  # (jupiter units)
         intercept = 0.5  # metallicity for Jupiter mass
 
-        logmet = intercept + slope*np.log10(Mp)
+        logmet = logmetStar + intercept + slope*np.log10(Mp)
         # change so that it can handle an array of masses (from cerberus/plotting)
         if isinstance(Mp,float):
             logmet = min(maxMetal,logmet)
         else:
             logmet[np.where(logmet > maxMetal)] = maxMetal
-
-    logmet += logmetStar
 
     return logmet
 # ______________________________________________________
@@ -76,7 +74,7 @@ def randomStarMetal():
     return logmetStar
 # ______________________________________________________
 
-def randomCtoO():
+def randomCtoO_linear():
     '''
     Assign a random C-to-O ratio to each system
     Allow a small fraction (~5%) of stars to have more C than O
