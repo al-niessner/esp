@@ -1074,7 +1074,7 @@ def resultsversion():
     '''
     return dawgie.VERSION(1,0,0)
 # ------------------------------ -------------------------------------
-def results(trgt, filt, fin, xsl, atm, out, verbose=False):
+def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
     '''
     Plot out the results from atmos()
     trgt [INPUT]: target name
@@ -1352,6 +1352,7 @@ def results(trgt, filt, fin, xsl, atm, out, verbose=False):
                 out['data'][p]['plot_spectrum_'+modelName] = plot_bestfit(transitdata,
                                                                           patmos_model, fmcarray,
                                                                           truth_spectrum,
+                                                                          anc['data'][p],
                                                                           filt, modelName,
                                                                           trgt, p, saveDir)
 
@@ -1525,3 +1526,5 @@ def analysis(aspects, filt, out, verbose=False):
     return out['STATUS'][-1]
 
 # def applyProfiling(target, limits, alltraces, allkeys):
+
+# dummy comment for testing github website glitch

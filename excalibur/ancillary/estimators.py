@@ -5,6 +5,10 @@ import excalibur.system.core as syscore
 import numpy as np
 import scipy
 import math
+
+from astropy.modeling.models import BlackBody
+from astropy import units as u
+
 # ------------- ------------------------------------------------------
 # -- ESTIMATOR PROTOTYPES -- -----------------------------------------
 class Estimator:
@@ -269,8 +273,8 @@ def pl_ZFOM(priors, _ests, pl):
     modulation = pl_modulation(priors, _ests, pl)
     ZFOM = modulation / 10**(Hmag/5)
 
-    # normalization to make it easier to read
-    return ZFOM * 1.e6
+    # normalization to make it scaled similar to TSM
+    return ZFOM * 1.e8
 
 def pl_ZFOMmax(priors, _ests, pl):
     '''pl_ZFOMmax ds'''
@@ -292,10 +296,11 @@ def pl_ZFOMmax(priors, _ests, pl):
 
     # calculate Zellem Figure-of-Merit (Zellem 2017, Eq.10)
     modulation = pl_modulationmax(priors, _ests, pl)
-    ZFOM = modulation / 10**(Hmag/5)
+    ZFOMmax = modulation / 10**(Hmag/5)
+    # print('ZFOMmax',ZFOMmax*1.e8)
 
-    # normalization to make it easier to read
-    return ZFOM * 1.e6
+    # normalization to make it scaled similar to TSM
+    return ZFOMmax * 1.e8
 
 def pl_density(priors, _ests, pl):
     '''pl_density ds'''
@@ -607,4 +612,101 @@ def pl_beta_rad(priors, _ests, pl):
 
     return Beta
 
+def pl_TSM(priors, _ests, pl):
+    '''pl_TSM'''
+
+    sscmks = syscore.ssconstants(cgs=True)
+
+    error_message = ''
+    if priors[pl]['mass'] == '': error_message = 'missing planet mass'
+    if 'sma' not in priors[pl].keys(): error_message = 'missing semi-major axis'
+    if priors[pl]['sma']=='': error_message = 'missing semi-major axis'
+    if priors['R*']=='': error_message = 'missing R*'
+    if priors['T*']=='': error_message = 'missing T*'
+    if not error_message=='': return error_message
+    if 'Jmag' in priors.keys():
+        Jmag = priors['Jmag']
+        if Jmag=='': return 'blank Jmag'
+    elif 'Hmag' in priors.keys():
+        # print(' NOTE: using Hmag instead of Jmag for TSM (temp fix)')
+        Jmag = priors['Hmag']
+        if Jmag=='': return 'blank Jmag'
+    else:
+        return 'no Jmag'
+
+    # calculate TSM figure-of-merit (Kempton 2018, Eq.1)
+
+    eqtemp = priors['T*']*np.sqrt(priors['R*']*sscmks['Rsun/AU']/
+                                  (2.*priors[pl]['sma']))
+
+    Rp_earth = priors[pl]['rp'] * sscmks['Rjup']/sscmks['Rearth']
+    Mp_earth = priors[pl]['mass'] * sscmks['Mjup']/sscmks['Mearth']
+    Rstar_sun = priors['R*']
+
+    if Rp_earth < 1.5:
+        scaleFactor = 0.190
+    elif Rp_earth < 2.75:
+        scaleFactor = 1.26
+    elif Rp_earth < 4.0:
+        scaleFactor = 1.28
+    else:
+        scaleFactor = 1.15
+    # scaleFactor = 1
+    # print('scaleFactor',scaleFactor)
+
+    TSM = scaleFactor * eqtemp * Rp_earth**3 / Rstar_sun**2 / Mp_earth \
+        / 10**(Jmag/5)
+    # print('TSM',TSM)
+    # zfommax = pl_ZFOMmax(priors, _ests, pl)
+    # print('zfommax',zfommax)
+    # print('zellem/kempton ratio',zfommax / TSM)
+
+    return TSM
+
+def pl_ESM(priors, _ests, pl):
+    '''pl_ESM'''
+
+    sscmks = syscore.ssconstants(cgs=True)
+
+    error_message = ''
+    if 'sma' not in priors[pl].keys(): error_message = 'missing semi-major axis'
+    if priors[pl]['sma']=='': error_message = 'missing semi-major axis'
+    if priors['R*']=='': error_message = 'missing R*'
+    if priors['T*']=='': error_message = 'missing T*'
+    if not error_message=='': return error_message
+
+    if 'Kmag' in priors.keys():
+        Kmag = priors['Kmag']
+        if Kmag=='': return 'blank Kmag'
+    elif 'Hmag' in priors.keys():
+        print(' NOTE: using Hmag instead of Kmag for ESM (temp fix)')
+        Kmag = priors['Hmag']
+        if Kmag=='': return 'blank Kmag'
+    else:
+        return 'no Kmag'
+
+    # calculate ESM figure-of-merit (Kempton 2018, Eq.4)
+
+    Tstar = priors['T*']
+    eqtemp = Tstar*np.sqrt(priors['R*']*sscmks['Rsun/AU']/
+                           (2.*priors[pl]['sma']))
+    Tday = 1.1 * eqtemp
+
+    Rp_cgs = priors[pl]['rp'] * sscmks['Rjup']
+    Rstar_cgs = priors['R*'] * sscmks['Rsun']
+
+    scaleFactor = 4.29e6
+
+    BBplanet = BlackBody(temperature=Tday*u.K)
+    BBstar = BlackBody(temperature=Tstar*u.K)
+    ESM = scaleFactor * BBplanet(7.5*u.micron) / BBstar(7.5*u.micron) \
+        * (Rp_cgs / Rstar_cgs)**2 \
+        / 10**(Kmag/5)
+    # print('ESM factor1',scaleFactor)
+    # print('ESM factor2',BBplanet(7.5*u.micron) / BBstar(7.5*u.micron))
+    # print('ESM factor3',Rp_cgs**2 / Rstar_cgs**2)
+    # print('ESM factor4',1/ 10**(Kmag/5))
+    # print('ESM',ESM)
+
+    return ESM
 # --------------------------- ----------------------------------------

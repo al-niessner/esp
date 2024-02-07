@@ -9,6 +9,8 @@ import logging; log = logging.getLogger(__name__)
 
 import excalibur.system as sys
 import excalibur.system.algorithms as sysalg
+import excalibur.ancillary as anc
+import excalibur.ancillary.algorithms as ancillaryalg
 import excalibur.taurex as tau
 import excalibur.taurex.algorithms as taualg
 import excalibur.transit as trn
@@ -287,6 +289,7 @@ class results(dawgie.Algorithm):
         '''__init__ ds'''
         self._version_ = crbcore.resultsversion()
         self.__fin = sysalg.finalize()
+        self.__anc = ancillaryalg.estimate()
         self.__xsl = xslib()
         self.__atm = atmos()
         self.__out = [crbstates.resSV(filt) for filt in fltrs]
@@ -299,6 +302,7 @@ class results(dawgie.Algorithm):
     def previous(self):
         '''Input State Vectors: cerberus.atmos'''
         return [dawgie.ALG_REF(sys.task, self.__fin),
+                dawgie.ALG_REF(anc.task, self.__anc),
                 dawgie.ALG_REF(crb.task, self.__xsl),
                 dawgie.ALG_REF(crb.task, self.__atm)]
 
@@ -311,6 +315,7 @@ class results(dawgie.Algorithm):
 
         svupdate = []
         vfin, sfin = crbcore.checksv(self.__fin.sv_as_dict()['parameters'])
+        # vanc, sanc = crbcore.checksv(self.__anc.sv_as_dict()['parameters'])
 
         # filts = ['HST-WFC3-IR-G141-SCAN']
         # filts = ['Ariel-sim']
@@ -325,14 +330,15 @@ class results(dawgie.Algorithm):
 
             # for filt in filts:
             for filt in available_filters:
-                log.warning('--< CERBERUS RESULTS: %s >--', filt)
                 # pylint: disable=protected-access
                 vxsl, sxsl = crbcore.checksv(self.__xsl.sv_as_dict()[filt])
                 vatm, satm = crbcore.checksv(self.__atm.sv_as_dict()[filt])
                 prcd = trgedit.proceed(ds._tn(), filt, verbose=False)
                 if vxsl and vatm and prcd:
+                    log.warning('--< CERBERUS RESULTS: %s >--', filt)
                     update = self._results(ds._tn(), filt,
                                            self.__fin.sv_as_dict()['parameters'],
+                                           self.__anc.sv_as_dict()['parameters'],
                                            self.__xsl.sv_as_dict()[filt]['data'],
                                            self.__atm.sv_as_dict()[filt]['data'],
                                            fltrs.index(filt))
@@ -355,9 +361,9 @@ class results(dawgie.Algorithm):
                 f'No output created for CERBERUS.{self.name()}')
         return
 
-    def _results(self, trgt, filt, fin, xsl, atm, index):
+    def _results(self, trgt, filt, fin, ancil, xsl, atm, index):
         '''Core code call'''
-        resout = crbcore.results(trgt, filt, fin, xsl, atm,
+        resout = crbcore.results(trgt, filt, fin, ancil, xsl, atm,
                                  self.__out[index], verbose=False)
         return resout
 

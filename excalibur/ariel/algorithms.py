@@ -6,7 +6,7 @@ import dawgie
 
 import excalibur.ariel.core as arielcore
 import excalibur.ariel.states as arielstates
-
+import excalibur.target.edit as trgedit
 import excalibur.system as sys
 import excalibur.system.bot as sysbot
 import excalibur.system.algorithms as sysalg
@@ -43,19 +43,26 @@ class sim_spectrum(dawgie.Algorithm):
         # pylint: disable=protected-access
         target = ds._tn()
 
+        # pylint: disable=protected-access
+        prcd = trgedit.proceed(ds._tn(), verbose=False)
+
         task = sysbot.Actor('system', 4, 999, target)
         subtask = sysalg.finalize()
         dataset = dawgie.db.connect(subtask, task, target); dataset.load()
         system_dict = subtask.sv_as_dict()['parameters']
         valid, errstring = arielcore.checksv(system_dict)
-        if valid:
+        if valid and prcd:
             update = self._simSpectrum(target, system_dict, self.__out)
         else:
+            if valid:
+                if not prcd:
+                    errstring = ['ariel.sim  Kicked by edit.processme()']
+                else:
+                    errstring = ['HUH?! BAD LOGIC HERE']
             self._failure(errstring)
         if update:
             ds.update()
-        else:
-            raise dawgie.NoValidOutputDataError(
+        elif valid and prcd: raise dawgie.NoValidOutputDataError(
                 f'No output created for ARIEL.{self.name()}')
         return
 

@@ -90,7 +90,8 @@ def buildsp(autofill, out):
     # MANDATORY STELLAR PARAMETERS
     # out['starmdt'].extend(['R*', 'T*', 'FEH*', 'LOGG*', 'M*', 'RHO*', 'Hmag'])
     # out['starmdt'].extend(['R*', 'M*', 'LOGG*', 'RHO*', 'FEH*', 'Hmag', 'T*'])
-    out['starmdt'].extend(['R*', 'M*', 'LOGG*', 'RHO*', 'FEH*', 'Hmag', 'T*', 'L*'])
+    # out['starmdt'].extend(['R*', 'M*', 'LOGG*', 'RHO*', 'FEH*', 'Hmag', 'T*', 'L*'])
+    out['starmdt'].extend(['R*', 'M*', 'LOGG*', 'T*', 'L*', 'RHO*', 'FEH*', 'Jmag','Hmag','Kmag'])
     # NEW CATEGORY: PARAMS TO PASS THROUGH TO ANCILLARY, BUT THEY"RE NOT MANDATORY
     # out['starnonmdt'].extend(['spTyp', 'L*', 'AGE*'])
     # change L* to mandatory (needed for planet T_eq)

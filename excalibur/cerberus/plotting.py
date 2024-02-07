@@ -55,11 +55,12 @@ def rebinData(transitdata, binsize=4):
 # --------------------------------------------------------------------
 # --------------------------------------------------------------------
 def plot_bestfit(transitdata, patmos_model, fmcarray,
-                 truth_spectrum,
+                 truth_spectrum, ancillary_data,
                  filt, modelName, trgt, p, saveDir, savetodisk=False):
     ''' plot the best fit to the data '''
 
-    figure, ax = plt.subplots(figsize=(6,4))
+    figure, ax = plt.subplots(figsize=(8,4))
+    plt.subplots_adjust(left=0.13,right=0.75,bottom=0.15,top=0.93)
 
     # 1) plot the data
     ax.errorbar(transitdata['wavelength'],
@@ -81,6 +82,7 @@ def plot_bestfit(transitdata, patmos_model, fmcarray,
              c='k', lw=2, zorder=4,
              label='best fit')
     # 4) plot a selection of walkers, to see spread
+    xlims = plt.xlim()
     ylims = plt.ylim()
     # print('median pmodel',np.nanmedian(patmos_model))
     for fmcexample in fmcarray:
@@ -97,6 +99,15 @@ def plot_bestfit(transitdata, patmos_model, fmcarray,
                  c='orange', lw=2, zorder=3,
                  label='truth')
 
+    # add some labels off to the right side
+    # print('ancillary_data',ancillary_data.keys())
+    # print('ancillary_data',ancillary_data['ZFOM'])
+    plt.text(xlims[1]+0.1,ylims[0]+(ylims[1]-ylims[0])*0.8,
+             'ZFOM='+f"{ancillary_data['ZFOM']:4.1f}"+'-'+
+             f"{ancillary_data['ZFOM_max']:4.1f}",fontsize=12)
+    plt.text(xlims[1]+0.1,ylims[0]+(ylims[1]-ylims[0])*0.7,
+             'TSM='+f"{ancillary_data['TSM']:5.2f}",fontsize=12)
+
     if filt=='Ariel-sim':
         plt.xlim(0,8)
     plt.title(trgt+' '+p, fontsize=16)
@@ -112,7 +123,7 @@ def plot_bestfit(transitdata, patmos_model, fmcarray,
     #    ax2.set_ylabel('$\\Delta$ [Hs]')
     #    axmin, axmax = ax.get_ylim()
     #    ax2.set_ylim((np.sqrt(1e-2*axmin) - rp0hs)/Hs, (np.sqrt(1e-2*axmax) - rp0hs)/Hs)
-    figure.tight_layout()
+    # figure.tight_layout()
     # plt.show()
     if savetodisk: plt.savefig(saveDir + 'bestFit_'+filt+'_'+modelName+'_'+trgt+' '+p+'.png')
     # pdf is so much better, but xv gives error (stick with png for debugging)
@@ -197,11 +208,11 @@ def plot_corner(allkeys, alltraces,
     # use larger font size for the axis labels
     for i in range(ndim):
         ax = axes[ndim-1, i]
-        ax.set_xlabel(allkeys[i], fontsize=16)
+        ax.set_xlabel(allkeys[i], fontsize=14)
     for i in range(ndim-1):
         # skipping the first one on the y side (it's a histo, not a 2-D plot)
         ax = axes[i+1, 0]
-        ax.set_ylabel(allkeys[i+1], fontsize=16)
+        ax.set_ylabel(allkeys[i+1], fontsize=14)
     #  draw a point and crosshair for the medians in each subpanel
     for yi in range(ndim):
         for xi in range(yi):
@@ -273,22 +284,19 @@ def plot_vsPrior(allkeys, alltraces, truth_params, prior_ranges,
 
         # add a dashed line for the true value
         if truth_params is not None:
-            if allkeys[iparam]=='T':
-                # print('params',truth_params)
-                Teq = float(truth_params['Teq'])
-                ax.plot([Teq,Teq],[0,priorspan[iparam]],
+            keyMatch = {'T':'Teq',
+                        '[X/H]':'metallicity',
+                        '[C/O]':'C/O'}
+            if allkeys[iparam] in keyMatch:
+                truthparam = keyMatch[allkeys[iparam]]
+            else:
+                truthparam = allkeys[iparam]
+            if truthparam in truth_params:
+                truthvalue = float(truth_params[truthparam])
+                ax.plot([truthvalue,truthvalue],[0,priorspan[iparam]],
                         c='k',ls='--',zorder=5)
-            elif allkeys[iparam]=='[X/H]':
-                # XtoH = np.log10(float(truth_params['metallicity']))
-                XtoH = float(truth_params['metallicity'])
-                ax.plot([XtoH,XtoH],[0,priorspan[iparam]],
-                        c='k',ls='--',zorder=5)
-            elif allkeys[iparam]=='[C/O]':
-                # [C/O] is defined as absolute, not relative to Solar?
-                # CtoO = np.log10(float(truth_params['C/O']))
-                # C/O is actually log-scale already, and is relative to Solar
-                CtoO = float(truth_params['C/O'])
-                ax.plot([CtoO,CtoO],[0,priorspan[iparam]],
+            elif truthparam=='[N/O]':
+                ax.plot([0,0],[0,priorspan[iparam]],
                         c='k',ls='--',zorder=5)
 
         ax.set_xlim(priorlo[iparam],priorhi[iparam])
@@ -336,27 +344,21 @@ def plot_walkerEvolution(allkeys, alltraces, truth_params, prior_ranges,
                     ls='-',lw=0.5,zorder=3)
         # add a dashed line for the true value
         if truth_params is not None:
-            if allkeys[iparam]=='T':
-                # print('params',truth_params)
-                Teq = float(truth_params['Teq'])
-                ax.plot([0,2*chainLength], [Teq,Teq],
+            keyMatch = {'T':'Teq',
+                        '[X/H]':'metallicity',
+                        '[C/O]':'C/O'}
+            if allkeys[iparam] in keyMatch:
+                truthparam = keyMatch[allkeys[iparam]]
+            else:
+                truthparam = allkeys[iparam]
+            if truthparam in truth_params:
+                truthvalue = float(truth_params[truthparam])
+                ax.plot([0,2*chainLength], [truthvalue,truthvalue],
                         c='k',ls='--',zorder=4)
-            elif allkeys[iparam]=='[X/H]':
-                # XtoH = np.log10(float(truth_params['metallicity']))
-                XtoH = float(truth_params['metallicity'])
-                ax.plot([0,2*chainLength], [XtoH,XtoH],
+            elif truthparam=='[N/O]':
+                ax.plot([0,2*chainLength], [0,0],
                         c='k',ls='--',zorder=4)
-            elif allkeys[iparam]=='[C/O]':
-                # [C/O] is defined as absolute, not relative to Solar?
-                # CtoO = np.log10(float(truth_params['C/O']))
-                # C/O is actually log-scale and relative to Solar
-                CtoO = float(truth_params['C/O'])
-                ax.plot([0,2*chainLength], [CtoO,CtoO],
-                        c='k',ls='--',zorder=4)
-        # elif allkeys[iparam]=='[N/O]':
-        #    NtoO = np.log10(solarNtoO)  # what is solar N/O?
-        #    ax.plot([0,2*chainLength], [NtoO,NtoO],
-        #            c='k',ls='--',zorder=4)
+
         ax.set_xlim(0,chainLength+1)
         ax.set_ylim(priorlo[iparam],priorhi[iparam])
         ax.set_xlabel('MCMC step #', fontsize=14)
