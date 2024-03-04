@@ -447,6 +447,7 @@ def atmos(fin, xsl, spc, out, ext,
     '''
     fitCloudParameters = True
     fitNtoO = True
+    fitNtoO = False
     fitCtoO = True
     fitT = True
     am = False

@@ -71,7 +71,8 @@ def load_ariel_instrument(target):
 
     # noise_model_filename = 'arielRad_02aug2023.h5'
     # noise_model_filename = 'arielRad_07aug2023_mmwFixed.h5'
-    noise_model_filename = 'arielRad_07aug2023_mmwExcal.h5'
+    # noise_model_filename = 'arielRad_07aug2023_mmwExcal.h5'
+    noise_model_filename = 'arielRad_3mar2024_MCStargetsAdded.h5'
 
     # all targets should have a file, but if not, return None
     if not os.path.isfile(noise_model_dir + noise_model_filename):

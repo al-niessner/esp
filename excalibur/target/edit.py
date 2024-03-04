@@ -35,7 +35,8 @@ def processme():
     out['FILTER'] = {}
     # out['FILTER']['include'] = []
     # out['FILTER']['include'] = ['NIRSPEC']
-    out['FILTER']['include'] = ['HST', 'Ariel']
+    # out['FILTER']['include'] = ['HST', 'Ariel']
+    out['FILTER']['include'] = ['Ariel']
     out['FILTER']['exclude'] = []
     # out['FILTER']['exclude'] = ['STIS', 'JWST', 'Spitzer', 'Ariel']
     # out['FILTER']['exclude'] = ['HST', 'JWST', 'Spitzer']
@@ -87,6 +88,7 @@ def dropouts():
            'TOI-175', 'TOI-193',
            'LHS 1140',  # alias for GJ 3053
            'LHS 1140 (taurex sim @TS)',
+           'SWEEPS-4', 'SWEEPS-11',
            '55 Cnc (taurex sim @TS)',  # drop taurex-sim targets; they waste CPU
            'AU Mic (taurex sim @TS)',
            'GJ 1132 (taurex sim @TS)',
@@ -354,7 +356,7 @@ Kepler-93 :
 Kepler-94 :
 KIC 12266812 :
 LHS 3844 :
-OGLE-TR-056 :
+OGLE-TR-056 : OGLE-TR-56
 OGLE-TR-10 :
 Qatar-1 :
 Qatar-2 :
@@ -830,6 +832,195 @@ GJ 4102 : LHS 475
 HD 80606 :
 GJ 4332 : L 168-9
 LTT 5972 : TOI-836
+GJ 3090 :
+GJ 806 :
+HD 109833 :
+HD 207496 :
+HD 260655 :
+HD 93963 A :
+HD 95338 :
+HIP 29442 :
+HIP 94235 :
+HIP 97166 :
+K2-105 :
+K2-370 :
+K2-415 :
+K2-60 :
+Kepler-1656 :
+Kepler-470 :
+Kepler-63 :
+Kepler-96 :
+NGTS-14 A :
+TOI-1136 :
+TOI-1272 :
+TOI-1278 :
+TOI-1288 :
+TOI-132 :
+TOI-139 :
+TOI-1422 :
+TOI-1468 :
+TOI-1470 :
+TOI-1634 :
+TOI-1694 :
+TOI-1695 :
+TOI-1710 :
+TOI-1801 :
+TOI-181 :
+TOI-1853 :
+TOI-1859 :
+TOI-199 :
+TOI-2000 :
+TOI-2010 :
+TOI-2018 :
+TOI-2134 :
+TOI-2136 :
+TOI-220 :
+TOI-2364 :
+TOI-2443 :
+TOI-2445 :
+TOI-2459 :
+TOI-2498 :
+TOI-251 :
+TOI-277 :
+TOI-3082 :
+TOI-332 :
+TOI-3629 :
+TOI-3785 :
+TOI-4010 :
+TOI-444 :
+TOI-4479 :
+TOI-4600 :
+TOI-4641 :
+TOI-470 :
+TOI-5126 :
+TOI-532 :
+TOI-5344 :
+TOI-5398 :
+TOI-5678 :
+TOI-5704 :
+TOI-5803 :
+TOI-672 :
+TOI-712 :
+TOI-908 :
+TOI-913 :
+TOI-942 :
+TOI-969 :
+Wolf 327 :
+CoRoT-3 :
+CoRoT-36 :
+Gaia-1 :
+Gaia-2 :
+HATS-10 :
+HATS-12 :
+HATS-45 :
+HATS-55 :
+HATS-61 :
+HD 118203 :
+HD 15906 :
+HD 21749 : GJ 143
+HD 235088 :
+HD 28109 :
+HIP 113103 :
+HIP 116454 :
+HIP 9618 :
+K2-233 :
+K2-240 :
+K2-285 :
+K2-321 :
+K2-344 :
+K2-348 :
+K2-399 :
+K2-417 :
+K2-99 :
+Kepler-1515 :
+Kepler-1517 :
+Kepler-1658 :
+Kepler-411 :
+Kepler-91 :
+KOI-12 :
+NGTS-24 :
+NGTS-9 :
+PH2 :
+TIC 237913194 :
+TOI-1107 :
+TOI-1181 :
+TOI-1194 :
+TOI-1246 :
+TOI-1338 : TOI-1338 A
+TOI-1408 :
+TOI-1416 :
+TOI-1420 :
+TOI-1452 :
+TOI-1516 :
+TOI-1680 :
+TOI-1811 :
+TOI-1820 :
+TOI-1937 A :
+TOI-198 :
+TOI-2025 :
+TOI-2046 :
+TOI-2048 :
+TOI-206 :
+TOI-2081 :
+TOI-2145 :
+TOI-2152 A : TOI-2152
+TOI-2154 :
+TOI-2158 :
+TOI-2193 A :
+TOI-2194 :
+TOI-2202 :
+TOI-2207 :
+TOI-2236 :
+TOI-2338 :
+TOI-2421 :
+TOI-2497 :
+TOI-2524 :
+TOI-2567 :
+TOI-2570 :
+TOI-2583 A :
+TOI-2587 A :
+TOI-262 :
+TOI-2641 :
+TOI-2796 :
+TOI-2803 A :
+TOI-2818 :
+TOI-2842 :
+TOI-2977 :
+TOI-3023 :
+TOI-3235 :
+TOI-3331 A :
+TOI-3364 :
+TOI-3540 A :
+TOI-3688 A :
+TOI-3693 :
+TOI-3714 :
+TOI-3807 :
+TOI-3819 :
+TOI-3884 :
+TOI-3912 :
+TOI-3976 A :
+TOI-4087 :
+TOI-411 : HD 22946
+TOI-4137 :
+TOI-4145 A :
+TOI-4308 :
+TOI-4342 :
+TOI-4377 :
+TOI-4406 :
+TOI-4463 A :
+TOI-4551 :
+TOI-4603 :
+TOI-4791 :
+TOI-615 :
+TOI-622 :
+TOI-778 :
+TOI-858 : TOI-858 B
+WASP-130 :
+WASP-150 :
+WASP-162 :
+WASP-171 :
+WASP-193 :
+WASP-60 :
     '''
 # these two JWST targets are not yet listed in the Exoplanet Archive composite table:
 # GJ 341 : HIP 45908
@@ -1481,6 +1672,195 @@ HD 80606 : HD80606
 GJ 4332 : GJ4332
 GJ 1008 : GJ1008
 LTT 5972 : LTT5972
+GJ 3090 : GJ3090
+GJ 806 : GJ806
+HD 109833 : HD109833
+HD 207496 : HD207496
+HD 260655 : HD260655
+HD 93963 A : HD93963A
+HD 95338 : HD95338
+HIP 29442 : HIP29442
+HIP 94235 : HIP94235
+HIP 97166 : HIP97166
+K2-105 : K2105
+K2-370 : K237
+K2-415 : K2415
+K2-60 : K260
+Kepler-1656 : Kepler1656
+Kepler-470 : Kepler470
+Kepler-63 : Kepler63
+Kepler-96 : Kepler96
+NGTS-14 A : NGTS14A
+TOI-1136 : TOI1136
+TOI-1272 : TOI1272
+TOI-1278 : TOI1278
+TOI-1288 : TOI1288
+TOI-132 : TOI132
+TOI-139 : TOI139
+TOI-1422 : TOI1422
+TOI-1468 : TOI1468
+TOI-1470 : TOI1470
+TOI-1634 : TOI1634
+TOI-1694 : TOI1694
+TOI-1695 : TOI1695
+TOI-1710 : TOI1710
+TOI-1801 : TOI1801
+TOI-181 : TOI181
+TOI-1853 : TOI1853
+TOI-1859 : TOI1859
+TOI-199 : TOI199
+TOI-2000 : TOI2000
+TOI-2010 : TOI2010
+TOI-2018 : TOI2018
+TOI-2134 : TOI2134
+TOI-2136 : TOI2136
+TOI-220 : TOI220
+TOI-2364 : TOI2364
+TOI-2443 : TOI2443
+TOI-2445 : TOI2445
+TOI-2459 : TOI2459
+TOI-2498 : TOI2498
+TOI-251 : TOI251
+TOI-277 : TOI277
+TOI-3082 : TOI3082
+TOI-332 : TOI332
+TOI-3629 : TOI3629
+TOI-3785 : TOI3785
+TOI-4010 : TOI4010
+TOI-444 : TOI444
+TOI-4479 : TOI4479
+TOI-4600 : TOI4600
+TOI-4641 : TOI4641
+TOI-470 : TOI470
+TOI-5126 : TOI5126
+TOI-532 : TOI532
+TOI-5344 : TOI5344
+TOI-5398 : TOI5398
+TOI-5678 : TOI5678
+TOI-5704 : TOI5704
+TOI-5803 : TOI5803
+TOI-672 : TOI672
+TOI-712 : TOI712
+TOI-908 : TOI908
+TOI-913 : TOI913
+TOI-942 : TOI942
+TOI-969 : TOI969
+Wolf 327 : Wolf327
+CoRoT-3 : COROT3
+CoRoT-36 : COROT36
+Gaia-1 : GAIA1
+Gaia-2 : GAIA2
+HATS-10 : HATS10
+HATS-12 : HATS12
+HATS-45 : HATS45
+HATS-55 : HATS55
+HATS-61 : HATS61
+HD 118203 : HD118203
+HD 15906 : HD15906
+HD 21749 : HD21749
+HD 235088 : HD235088
+HD 28109 : HD28109
+HIP 113103 : HIP113103
+HIP 116454 : HIP116454
+HIP 9618 : HIP9618
+K2-233 : K2233
+K2-240 : K2240
+K2-285 : K2285
+K2-321 : K2321
+K2-344 : K2344
+K2-348 : K2348
+K2-399 : K2399
+K2-417 : K2417
+K2-99 : K299
+Kepler-1515 : KEPLER1515
+Kepler-1517 : KEPLER1517
+Kepler-1658 : KEPLER1658
+Kepler-411 : KEPLER411
+Kepler-91 : KEPLER91
+KOI-12 : KOI12
+NGTS-24 : NGTS24
+NGTS-9 : NGTS9
+PH2 : PH2
+TIC 237913194 : TIC237913194
+TOI-1107 : TOI1107
+TOI-1181 : TOI1181
+TOI-1194 : TOI1194
+TOI-1246 : TOI1246
+TOI-1338 : TOI1338
+TOI-1408 : TOI1408
+TOI-1416 : TOI1416
+TOI-1420 : TOI1420
+TOI-1452 : TOI1452
+TOI-1516 : TOI1516
+TOI-1680 : TOI1680
+TOI-1811 : TOI1811
+TOI-1820 : TOI1820
+TOI-1937 A : TOI1937A
+TOI-198 : TOI198
+TOI-2025 : TOI2025
+TOI-2046 : TOI2046
+TOI-2048 : TOI2048
+TOI-206 : TOI206
+TOI-2081 : TOI2081
+TOI-2145 : TOI2145
+TOI-2152 A : TOI2152A
+TOI-2154 : TOI2154
+TOI-2158 : TOI2158
+TOI-2193 A : TOI2193A
+TOI-2194 : TOI2194
+TOI-2202 : TOI2202
+TOI-2207 : TOI2207
+TOI-2236 : TOI2236
+TOI-2338 : TOI2338
+TOI-2421 : TOI2421
+TOI-2497 : TOI2497
+TOI-2524 : TOI2524
+TOI-2567 : TOI2567
+TOI-2570 : TOI2570
+TOI-2583 A : TOI2583A
+TOI-2587 A : TOI2587A
+TOI-262 : TOI262
+TOI-2641 : TOI2641
+TOI-2796 : TOI2796
+TOI-2803 A : TOI2803A
+TOI-2818 : TOI2818
+TOI-2842 : TOI2842
+TOI-2977 : TOI2977
+TOI-3023 : TOI3023
+TOI-3235 : TOI3235
+TOI-3331 A : TOI3331A
+TOI-3364 : TOI3364
+TOI-3540 A : TOI3540A
+TOI-3688 A : TOI3688A
+TOI-3693 : TOI3693
+TOI-3714 : TOI3714
+TOI-3807 : TOI3807
+TOI-3819 : TOI3819
+TOI-3884 : TOI3884
+TOI-3912 : TOI3912
+TOI-3976 A : TOI3976A
+TOI-4087 : TOI4087
+TOI-411 : TOI411
+TOI-4137 : TOI4137
+TOI-4145 A : TOI4145A
+TOI-4308 : TOI4308
+TOI-4342 : TOI4342
+TOI-4377 : TOI4377
+TOI-4406 : TOI4406
+TOI-4463 A : TOI4463A
+TOI-4551 : TOI4551
+TOI-4603 : TOI4603
+TOI-4791 : TOI4791
+TOI-615 : TOI615
+TOI-622 : TOI622
+TOI-778 : TOI778
+TOI-858 : TOI858
+WASP-130 : WASP130
+WASP-150 : WASP150
+WASP-162 : WASP162
+WASP-171 : WASP171
+WASP-193 : WASP193
+WASP-60 : WASP60
     '''
     return
 # -------------------- -----------------------------------------------
@@ -2923,10 +3303,14 @@ overwrite[starID] =
     overwrite['TOI-833'] = {
         'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
         'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
-    # this one is missing Hmag.  not sure why; it's in 2MASS/Simbad
+    # this one is missing JHK photometry.  not sure why; it's in 2MASS/Simbad
     overwrite['K2-295'] = {
-        'Hmag':11.135, 'Hmag_uperr':0.025, 'Hmag_lowerr':-0.025,
-        'Hmag_units':'[mag]', 'Hmag_ref':'2MASS'}
+        'Jmag':11.807, 'Jmag_uperr':0.027, 'Jmag_lowerr':-0.027,
+        'Jmag_units':'[mag]', 'Jmag_ref':'2MASS',
+        'Hmag':11.259, 'Hmag_uperr':0.023, 'Hmag_lowerr':-0.023,
+        'Hmag_units':'[mag]', 'Hmag_ref':'2MASS',
+        'Kmag':11.135, 'Kmag_uperr':0.025, 'Kmag_lowerr':-0.025,
+        'Kmag_units':'[mag]', 'Kmag_ref':'2MASS'}
     # this one is missing R* and M*.  That's unusual!
     # ah wait it does actually have a log-g measure of 4.1 (lower than Solar)
     # arg this one is really tricky.  planet semi-major axis is undefined without M*
@@ -3019,5 +3403,76 @@ overwrite[starID] =
 # GJ 4332    data empty
 # LTT 5972   data empty
 
+    # for the 75 new Ariel targets in the Feb.14,2024 Edwards target list
+    #  3 are missing the mandatory stellar metallicity (2 aren't even in SIMBAD!)
+    #
+    overwrite['TOI-2445'] = {
+        'FEH*':-0.140, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+        'FEH*_units':'[dex]', 'FEH*_ref':'Sprague et al. 2022'}
+    overwrite['TOI-2459'] = {  # CD-39 1993
+        'FEH*':0.01, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+        'FEH*_units':'[dex]', 'FEH*_ref':'Bochanski et al. 2018'}
+    overwrite['TOI-5803'] = {  # TYC 556-982-1
+        'FEH*':0.02, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+        'FEH*_units':'[dex]', 'FEH*_ref':'Ammons et al. 2006'}
+    # and another 100+ new Ariel targets considered (eclipse targets plus Nov.2023 targets)
+    #  8 more are missing the mandatory stellar metallicity (toi-4308 is not in simbad even)
+    #
+    overwrite['Gaia-1'] = {
+        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    overwrite['Gaia-2'] = {
+        'FEH*':-0.49, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+        'FEH*_units':'[dex]', 'FEH*_ref':'Ammons et al. 2006'}
+    overwrite['HIP 9618'] = {
+        'FEH*':-0.07, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+        'FEH*_units':'[dex]', 'FEH*_ref':'Xiang et al. 2019'}
+    overwrite['K2-321'] = {
+        'FEH*':-0.05, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+        'FEH*_units':'[dex]', 'FEH*_ref':'Ding et al. 2022'}
+    overwrite['K2-417'] = {
+        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    overwrite['TOI-206'] = {
+        'FEH*':0.057, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+        'FEH*_units':'[dex]', 'FEH*_ref':'Sprague et al. 2022'}
+    overwrite['TOI-4308'] = {
+        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    overwrite['TOI-4342'] = {
+        'FEH*':-0.090, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+        'FEH*_units':'[dex]', 'FEH*_ref':'Yu et al. 2023'}
+
+    # stellar distance isn't an excalibur-mandatory parameter, but it's used by ArielRad
+    #  so try to fill it in if it's blank
+    #
+    # this one is in simbad.   parallax = 3.5860 [0.0397]
+    overwrite['TOI-3540 A'] = {
+        'dist':278.9, 'dist_uperr':3.1, 'dist_lowerr':-3.1,
+        'dist_units':'[pc]', 'dist_ref':'Gaia EDR3'}
+    # this one is in simbad.   parallax = 2.9341 [0.0939]
+    overwrite['TOI-2977'] = {
+        'dist':340.82, 'dist_uperr':10.9, 'dist_lowerr':-10.9,
+        'dist_units':'[pc]', 'dist_ref':'Gaia EDR3'}
+    # this one is NOT in simbad.  Gaia Plx missing in Vizier.   parallax =
+    #  oh wait, it's already set above. nevermind
+    # overwrite['Kepler-14'] = {
+    #    'dist':, 'dist_uperr':, 'dist_lowerr':,
+    #    'dist_units':'[pc]', 'dist_ref':'Gaia EDR3'}
+    # this one is in simbad.   parallax = 7.0083 [0.1077]
+    #  drop it - it's already done above here
+    # overwrite['Kepler-1314'] = {
+    #    'dist':142.69, 'dist_uperr':2.2, 'dist_lowerr':-2.2,
+    #    'dist_units':'[pc]', 'dist_ref':'Gaia EDR3'}
+    # this one is NOT in simbad, but Vizier has it.   parallax = 3.8714+-0.1759
+    #  drop it - it's already done above here
+    # overwrite['NGTS-10'] = {
+    #    'dist':258.30, 'dist_uperr':11.7, 'dist_lowerr':-11.7,
+    #    'dist_units':'[pc]', 'dist_ref':'Gaia EDR3'}
+    # this one is in simbad.   parallax = 80.2123 [0.0716]
+    #  drop it - it's already done above here
+    # overwrite['TRAPPIST-1'] = {
+    #    'dist':12.467, 'dist_uperr':0.01, 'dist_lowerr':-0.01,
+    #    'dist_units':'[pc]', 'dist_ref':'Gaia EDR3'}
     return overwrite
 # -------------------------------------------------------------------

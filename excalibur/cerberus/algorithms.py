@@ -201,8 +201,8 @@ class atmos(dawgie.Algorithm):
         '''Core code call'''
         if ext=='Ariel-sim':
             # MCMC_chain_length = 2000
-            # MCMC_chain_length = 15000
-            MCMC_chain_length = 5000
+            MCMC_chain_length = 15000
+            # MCMC_chain_length = 5000
             # MCMC_chain_length = 10
         else:
             MCMC_chain_length = 15000

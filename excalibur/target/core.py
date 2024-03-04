@@ -202,11 +202,11 @@ def autofill(ident, thistarget, out, searchrad=0.2):
                    'removecache':True}
         _h, outstr = masttool.mast_query(request)
         outjson = json.loads(outstr)
-
         # 3 - activefilters filtering on TELESCOPE INSTRUMENT FILTER
         targettable = []
         platformlist = []
         filters = ident['filters']['activefilters']['NAMES']
+        if 'data' not in outjson: outjson['data'] = []  # special case for TOI-1338
         for obs in outjson['data']:
             for f in filters:
                 if trgedit.proceed(thistarget, ext=f):
