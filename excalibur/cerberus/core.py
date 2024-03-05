@@ -446,7 +446,7 @@ def atmos(fin, xsl, spc, out, ext,
     G. ROUDIER: Cerberus retrieval
     '''
     fitCloudParameters = True
-    fitNtoO = True
+    # fitNtoO = True
     fitNtoO = False
     fitCtoO = True
     fitT = True
@@ -621,7 +621,7 @@ def atmos(fin, xsl, spc, out, ext,
                         hza = pm.Uniform('HScale', prior_ranges['Hscale'][0], prior_ranges['Hscale'][1])
                         nodes.append(hza)
                     else:
-                        print('model_params',inputData['model_params'])
+                        # print('model_params',inputData['model_params'])
                         fixedParams['CTP'] = inputData['model_params']['CTP']
                         fixedParams['HScale'] = inputData['model_params']['HScale']
 
@@ -745,7 +745,7 @@ def atmos(fin, xsl, spc, out, ext,
                     # make sure that there's at least two parameters here, or the decorator crashes
                     # if fitCtoO: numAbundanceParams += 1
                     numAbundanceParams = max(numAbundanceParams, 2)
-                    print('numAbundanceParams',numAbundanceParams)
+                    # print('numAbundanceParams',numAbundanceParams)
                     modelpar = pm.Uniform(model, lower=dexRange[0], upper=dexRange[1],
                                           shape=numAbundanceParams)
                     nodes.append(modelpar)
