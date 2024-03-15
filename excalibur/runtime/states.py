@@ -1,6 +1,7 @@
 '''Runtime configuration products'''
 
 import dawgie
+import excalibur
 
 class ConfigSV(dawgie.StateVector):
     '''State representation of the configuration file'''
@@ -11,9 +12,9 @@ class ConfigSV(dawgie.StateVector):
         self['fit_parameters'] = excalibur.ValuesDict()
         self['filter_includes'] = excalibur.ValuesList()
         self['filter_excludes'] = excalibur.ValuesList()
-        self['targets_ariel'] = excalibur.ValueList()
-        self['targets_bad'] = excalibur.ValueList()
-        self['targets_spitzer'] = excalibur.ValueList()
+        self['targets_ariel'] = excalibur.ValuesList()
+        self['targets_bad'] = excalibur.ValuesList()
+        self['targets_spitzer'] = excalibur.ValuesList()
         return
 
     def name(self): return 'config'

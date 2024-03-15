@@ -1,7 +1,7 @@
 '''The actors/agents that do something'''
 
 import dawgie
-import .algorithms
+from . import algorithms
 
 class AnalysisTeam(dawgie.Analysis):
     '''Analytical team'''
