@@ -1,0 +1,21 @@
+<levers>
+  <controls cerberus.atmos.fitCloudParameters="true"
+            cerberus.atmos.fitNtoO="false"
+            cerberus.atmos.fitCtoO="true"
+            cerberus.atmos.fitT="true"
+            target.autofill.selectMostRecent="false"
+            ariel.simulate_spectra.includeMetallicityDispersion="true"/>
+  <filters>
+    <exclude>HST-STIS-CCD-G750L-STARE</exclude>
+    <include>HST-WFC3-IR-G141-SCAN</include>
+    <include>Spitzer-IRAC-IR-36-SUB</include>
+    <include>Spitzer-IRAC-IR-45-SUB</include>
+  </filters>
+  <pymc>
+    <cerberus default="15000">
+      <target name="55 Cnc" steps="10000"/>
+      <target name="HD 189733" steps="20000"/>
+    </cerberus>
+    <spectrum default="10000"/>
+  </pymc>
+</levers>
