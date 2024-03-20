@@ -10,6 +10,7 @@ class BoolValue(dawgie.Value):
         self._version_ = dawgie.VERSION(1,0,0)
         return
     def features(self): return []
+    def new(self, state): return BoolValue(state)
     pass
 
 class CompositeSV(dawgie.StateVector):
@@ -31,12 +32,12 @@ class ControlsSV(dawgie.StateVector,dawgie.Value):
     def __init__(self):
         '''init the state vector with empty values'''
         self._version_ = dawgie.VERSION(1,0,0)
-        self['cerberus-atmos-fitCloudParameters'] = BoolValue()
-        self['cerberus-atmos-fitNtoO'] = BoolValue()
-        self['cerberus-atmos-fitCtoO'] = BoolValue()
-        self['cerberus-atmos-fitT'] = BoolValue()
-        self['target-autofill-selectMostRecent'] = BoolValue()
-        self['ariel-simulate_spectra-includeMetallicityDispersion'] = BoolValue()
+        self['cerberus_atmos_fitCloudParameters'] = BoolValue()
+        self['cerberus_atmos_fitNtoO'] = BoolValue()
+        self['cerberus_atmos_fitCtoO'] = BoolValue()
+        self['cerberus_atmos_fitT'] = BoolValue()
+        self['target_autofill_selectMostRecent'] = BoolValue()
+        self['ariel_simulate_spectra_includeMetallicityDispersion'] = BoolValue()
         return
     def name(self): return 'controls'
     def features(self): return []
@@ -45,7 +46,7 @@ class ControlsSV(dawgie.StateVector,dawgie.Value):
         return
     pass
 
-class FiltersSV(dawgie.StateVector,dawgie.Value):
+class FilterSV(dawgie.StateVector,dawgie.Value):
     '''State representation of the filters to be included/excluded'''
     def __init__(self):
         '''init the state vector with empty values'''
@@ -66,7 +67,7 @@ class PymcSV(dawgie.StateVector,dawgie.Value):
         '''init the state vector with empty values'''
         self.__name = f'pymc-{name}'
         self._version_ = dawgie.VERSION(1,0,0)
-        self['default'] = excalibur.ValuesScalar()
+        self['default'] = excalibur.ValueScalar()
         self['overrides'] = excalibur.ValuesDict()
         return
     def name(self): return self.__name

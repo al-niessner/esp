@@ -64,6 +64,8 @@ class ValueScalar(dawgie.Value):
     def features (self):
         '''features ds'''
         return []
+    def new(self, value):
+        return ValueScalar(value)
     def value(self):
         '''value ds'''
         return self.__content
