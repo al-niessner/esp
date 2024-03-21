@@ -4,13 +4,21 @@ import dawgie
 import excalibur
 
 class BoolValue(dawgie.Value):
-    def __bool__ (self): return self.__state
+    '''helper value for boolean type'''
+    def __bool__ (self):
+        '''allows class to be treated like boolean using its __state'''
+        return self.__state
     def __init__ (self, state:bool=False):
+        '''init the boolean'''
         self.__state = state if state else False  # change None to false
         self._version_ = dawgie.VERSION(1,0,0)
         return
-    def features(self): return []
-    def new(self, state): return BoolValue(state)
+    def features(self):
+        '''contains no features'''
+        return []
+    def new(self, state):
+        '''hide explicit requirement for dawgie'''
+        return BoolValue(state if state is not None else self.__state)
     pass
 
 class CompositeSV(dawgie.StateVector):
@@ -21,7 +29,9 @@ class CompositeSV(dawgie.StateVector):
         for constituent in constituents:
             self[constituent.name()] = constituent
         return
-    def name(self): return 'composite'
+    def name(self):
+        '''database name'''
+        return 'composite'
     def view(self, visitor:dawgie.Visitor)->None:
         '''Show the configutation information'''
         return
@@ -32,15 +42,19 @@ class ControlsSV(dawgie.StateVector,dawgie.Value):
     def __init__(self):
         '''init the state vector with empty values'''
         self._version_ = dawgie.VERSION(1,0,0)
+        self['ariel_simulate_spectra_includeMetallicityDispersion'] = BoolValue()
         self['cerberus_atmos_fitCloudParameters'] = BoolValue()
         self['cerberus_atmos_fitNtoO'] = BoolValue()
         self['cerberus_atmos_fitCtoO'] = BoolValue()
         self['cerberus_atmos_fitT'] = BoolValue()
         self['target_autofill_selectMostRecent'] = BoolValue()
-        self['ariel_simulate_spectra_includeMetallicityDispersion'] = BoolValue()
         return
-    def name(self): return 'controls'
-    def features(self): return []
+    def features(self):
+        '''contains no features'''
+        return []
+    def name(self):
+        '''database name'''
+        return 'controls'
     def view(self, visitor:dawgie.Visitor)->None:
         '''Show the configutation information'''
         return
@@ -54,8 +68,12 @@ class FilterSV(dawgie.StateVector,dawgie.Value):
         self['includes'] = excalibur.ValuesList()
         self['excludes'] = excalibur.ValuesList()
         return
-    def name(self): return 'filters'
-    def features(self): return []
+    def features(self):
+        '''contains no features'''
+        return []
+    def name(self):
+        '''datebase name'''
+        return 'filters'
     def view(self, visitor:dawgie.Visitor)->None:
         '''Show the configutation information'''
         return
@@ -70,9 +88,54 @@ class PymcSV(dawgie.StateVector,dawgie.Value):
         self['default'] = excalibur.ValueScalar()
         self['overrides'] = excalibur.ValuesDict()
         return
-    def name(self): return self.__name
-    def features(self): return []
+    def features(self):
+        '''contains no features'''
+        return []
+    def name(self):
+        '''database name'''
+        return self.__name
     def view(self, visitor:dawgie.Visitor)->None:
         '''Show the configutation information'''
+        return
+    pass
+
+class SequesterSV(dawgie.StateVector,dawgie.Value):
+    '''State representation of the targets to sequester'''
+    def __init__(self):
+        '''init the state vector with empty values'''
+        self._version_ = dawgie.VERSION(1,0,0)
+        self['targets'] = excalibur.ValuesList()
+        return
+    def features(self):
+        '''contains no features'''
+        return []
+    def name(self):
+        '''database name'''
+        return 'sequester'
+    def view (self, visitor:dawgie.Visitor)->None:
+        '''Show the configuration information'''
+        return
+    pass
+
+class StatusSV(dawgie.StateVector):
+    '''State representation of how the AE should view this target'''
+    def __init__(self):
+        '''init the state vector with empty values'''
+        self._version_ = dawgie.VERSION(1,0,0)
+        self['allowed_observations'] = excalibur.ValuesList()
+        self['ariel_simulate_spectra_includeMetallicityDispersion'] = BoolValue()
+        self['cerberus_atmos_fitCloudParameters'] = BoolValue()
+        self['cerberus_atmos_fitNtoO'] = BoolValue()
+        self['cerberus_atmos_fitCtoO'] = BoolValue()
+        self['cerberus_atmos_fitT'] = BoolValue()
+        self['cerberus_steps'] = excalibur.ValueScalar()
+        self['isValidTarget'] = BoolValue()
+        self['spectrum_steps'] = excalibur.ValueScalar()
+        self['target_autofill_selectMostRecent'] = BoolValue()
+    def name(self):
+        '''database name'''
+        return 'status'
+    def view(self, visitor:dawgie.Visitor)->None:
+        '''Show the state for this target'''
         return
     pass

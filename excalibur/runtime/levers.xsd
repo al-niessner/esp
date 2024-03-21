@@ -85,6 +85,7 @@
       <xs:element name="controls" type="control_type"/>
       <xs:element name="filters" type="filter_type"/>
       <xs:element name="pymc" type="pymc_type"/>
+      <xs:element name="sequester" type="sequester_type"/>
     </xs:all>
     <xs:attribute default="registry" name="index" type="xs:normalizedString"/>
   </xs:complexType>
@@ -113,6 +114,31 @@
       <xs:element name="cerberus" type="pymc_count_type"/>
       <xs:element name="spectrum" type="pymc_count_type"/>
     </xs:all>
+  </xs:complexType>
+
+  <xs:complexType name="sequester_type">
+    <xs:annotation>
+      <xs:documentation xml:lang="en">
+        Sequester the targets to the island of no processing.
+      </xs:documentation>
+    </xs:annotation>
+    <xs:sequence>
+      <xs:element maxOccurs="unbounded" name="target" type="target_type"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="target_type">
+    <xs:annotation>
+      <xs:documentation xml:lang="en">
+        The name of the target to not process and the reason why.
+      </xs:documentation>
+    </xs:annotation>
+    <xs:simpleContent>
+      <xs:extension base="xs:normalizedString">
+        <xs:attribute name="because" type="xs:normalizedString" use="required"/>
+        <xs:attribute default="false" name="isRegex" type="xs:boolean"/>
+      </xs:extension>
+    </xs:simpleContent>
   </xs:complexType>
 
   <xs:complexType name="target_override_type">

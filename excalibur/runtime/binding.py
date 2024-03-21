@@ -1,7 +1,7 @@
 # ./excalibur/runtime/binding.py
 # -*- coding: utf-8 -*-
 # PyXB bindings for NM:e92452c8d3e28a9e27abfc9994d2007779e7f4c9
-# Generated 2024-03-05 14:43:06.167285 by PyXB version 1.2.7-DEV using Python 3.10.8.final.0
+# Generated 2024-03-21 10:24:57.023243 by PyXB version 1.2.7-DEV using Python 3.10.12.final.0
 # Namespace AbsentNamespace0
 
 from __future__ import unicode_literals
@@ -14,7 +14,7 @@ import pyxb.utils.domutils
 import sys
 import pyxb.utils.six as _six
 # Unique identifier for bindings created at the same time
-_GenerationUID = pyxb.utils.utility.UniqueIdentifier('urn:uuid:bb8d1e68-db41-11ee-9b31-5512f5d98c71')
+_GenerationUID = pyxb.utils.utility.UniqueIdentifier('urn:uuid:f028b20a-e7a7-11ee-9c9f-c9aec4937e1f')
 
 # Version of PyXB used to generate the bindings
 _PyXBVersion = '1.2.7-DEV'
@@ -91,7 +91,7 @@ class filter_names (pyxb.binding.datatypes.normalizedString, pyxb.binding.basis.
     """An atomic simple type."""
 
     _ExpandedName = pyxb.namespace.ExpandedName(Namespace, 'filter_names')
-    _XSDLocation = pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 128, 2)
+    _XSDLocation = pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 154, 2)
     _Documentation = None
 filter_names._CF_enumeration = pyxb.binding.facets.CF_enumeration(value_datatype=filter_names, enum_prefix=None)
 filter_names.HST_STIS_CCD_G430L_STARE = filter_names._CF_enumeration.addEnumeration(unicode_value='HST-STIS-CCD-G430L-STARE', tag='HST_STIS_CCD_G430L_STARE')
@@ -273,17 +273,25 @@ class lever_type (pyxb.binding.basis.complexTypeDefinition):
     pymc = property(__pymc.value, __pymc.set, None, None)
 
     
+    # Element sequester uses Python identifier sequester
+    __sequester = pyxb.binding.content.ElementDeclaration(pyxb.namespace.ExpandedName(None, 'sequester'), 'sequester', '__AbsentNamespace0_lever_type_sequester', False, pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 88, 6), )
+
+    
+    sequester = property(__sequester.value, __sequester.set, None, None)
+
+    
     # Attribute index uses Python identifier index
     __index = pyxb.binding.content.AttributeUse(pyxb.namespace.ExpandedName(None, 'index'), 'index', '__AbsentNamespace0_lever_type_index', pyxb.binding.datatypes.normalizedString, unicode_default='registry')
-    __index._DeclarationLocation = pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 89, 4)
-    __index._UseLocation = pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 89, 4)
+    __index._DeclarationLocation = pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 90, 4)
+    __index._UseLocation = pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 90, 4)
     
     index = property(__index.value, __index.set, None, None)
 
     _ElementMap.update({
         __controls.name() : __controls,
         __filters.name() : __filters,
-        __pymc.name() : __pymc
+        __pymc.name() : __pymc,
+        __sequester.name() : __sequester
     })
     _AttributeMap.update({
         __index.name() : __index
@@ -302,13 +310,13 @@ class pymc_count_type (pyxb.binding.basis.complexTypeDefinition):
     _ContentTypeTag = pyxb.binding.basis.complexTypeDefinition._CT_ELEMENT_ONLY
     _Abstract = False
     _ExpandedName = pyxb.namespace.ExpandedName(Namespace, 'pymc_count_type')
-    _XSDLocation = pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 92, 2)
+    _XSDLocation = pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 93, 2)
     _ElementMap = {}
     _AttributeMap = {}
     # Base type is pyxb.binding.datatypes.anyType
     
     # Element target uses Python identifier target
-    __target = pyxb.binding.content.ElementDeclaration(pyxb.namespace.ExpandedName(None, 'target'), 'target', '__AbsentNamespace0_pymc_count_type_target', True, pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 100, 6), )
+    __target = pyxb.binding.content.ElementDeclaration(pyxb.namespace.ExpandedName(None, 'target'), 'target', '__AbsentNamespace0_pymc_count_type_target', True, pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 101, 6), )
 
     
     target = property(__target.value, __target.set, None, None)
@@ -316,8 +324,8 @@ class pymc_count_type (pyxb.binding.basis.complexTypeDefinition):
     
     # Attribute default uses Python identifier default
     __default = pyxb.binding.content.AttributeUse(pyxb.namespace.ExpandedName(None, 'default'), 'default', '__AbsentNamespace0_pymc_count_type_default', pyxb.binding.datatypes.positiveInteger, required=True)
-    __default._DeclarationLocation = pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 103, 4)
-    __default._UseLocation = pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 103, 4)
+    __default._DeclarationLocation = pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 104, 4)
+    __default._UseLocation = pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 104, 4)
     
     default = property(__default.value, __default.set, None, None)
 
@@ -340,20 +348,20 @@ class pymc_type (pyxb.binding.basis.complexTypeDefinition):
     _ContentTypeTag = pyxb.binding.basis.complexTypeDefinition._CT_ELEMENT_ONLY
     _Abstract = False
     _ExpandedName = pyxb.namespace.ExpandedName(Namespace, 'pymc_type')
-    _XSDLocation = pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 106, 2)
+    _XSDLocation = pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 107, 2)
     _ElementMap = {}
     _AttributeMap = {}
     # Base type is pyxb.binding.datatypes.anyType
     
     # Element cerberus uses Python identifier cerberus
-    __cerberus = pyxb.binding.content.ElementDeclaration(pyxb.namespace.ExpandedName(None, 'cerberus'), 'cerberus', '__AbsentNamespace0_pymc_type_cerberus', False, pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 113, 6), )
+    __cerberus = pyxb.binding.content.ElementDeclaration(pyxb.namespace.ExpandedName(None, 'cerberus'), 'cerberus', '__AbsentNamespace0_pymc_type_cerberus', False, pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 114, 6), )
 
     
     cerberus = property(__cerberus.value, __cerberus.set, None, None)
 
     
     # Element spectrum uses Python identifier spectrum
-    __spectrum = pyxb.binding.content.ElementDeclaration(pyxb.namespace.ExpandedName(None, 'spectrum'), 'spectrum', '__AbsentNamespace0_pymc_type_spectrum', False, pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 114, 6), )
+    __spectrum = pyxb.binding.content.ElementDeclaration(pyxb.namespace.ExpandedName(None, 'spectrum'), 'spectrum', '__AbsentNamespace0_pymc_type_spectrum', False, pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 115, 6), )
 
     
     spectrum = property(__spectrum.value, __spectrum.set, None, None)
@@ -369,6 +377,76 @@ _module_typeBindings.pymc_type = pymc_type
 Namespace.addCategoryObject('typeBinding', 'pymc_type', pymc_type)
 
 
+# Complex type sequester_type with content type ELEMENT_ONLY
+class sequester_type (pyxb.binding.basis.complexTypeDefinition):
+    """
+        Sequester the targets to the island of no processing.
+      """
+    _TypeDefinition = None
+    _ContentTypeTag = pyxb.binding.basis.complexTypeDefinition._CT_ELEMENT_ONLY
+    _Abstract = False
+    _ExpandedName = pyxb.namespace.ExpandedName(Namespace, 'sequester_type')
+    _XSDLocation = pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 119, 2)
+    _ElementMap = {}
+    _AttributeMap = {}
+    # Base type is pyxb.binding.datatypes.anyType
+    
+    # Element target uses Python identifier target
+    __target = pyxb.binding.content.ElementDeclaration(pyxb.namespace.ExpandedName(None, 'target'), 'target', '__AbsentNamespace0_sequester_type_target', True, pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 126, 6), )
+
+    
+    target = property(__target.value, __target.set, None, None)
+
+    _ElementMap.update({
+        __target.name() : __target
+    })
+    _AttributeMap.update({
+        
+    })
+_module_typeBindings.sequester_type = sequester_type
+Namespace.addCategoryObject('typeBinding', 'sequester_type', sequester_type)
+
+
+# Complex type target_type with content type SIMPLE
+class target_type (pyxb.binding.basis.complexTypeDefinition):
+    """
+        The name of the target to not process and the reason why.
+      """
+    _TypeDefinition = pyxb.binding.datatypes.normalizedString
+    _ContentTypeTag = pyxb.binding.basis.complexTypeDefinition._CT_SIMPLE
+    _Abstract = False
+    _ExpandedName = pyxb.namespace.ExpandedName(Namespace, 'target_type')
+    _XSDLocation = pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 130, 2)
+    _ElementMap = {}
+    _AttributeMap = {}
+    # Base type is pyxb.binding.datatypes.normalizedString
+    
+    # Attribute because uses Python identifier because
+    __because = pyxb.binding.content.AttributeUse(pyxb.namespace.ExpandedName(None, 'because'), 'because', '__AbsentNamespace0_target_type_because', pyxb.binding.datatypes.normalizedString, required=True)
+    __because._DeclarationLocation = pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 138, 8)
+    __because._UseLocation = pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 138, 8)
+    
+    because = property(__because.value, __because.set, None, None)
+
+    
+    # Attribute isRegex uses Python identifier isRegex
+    __isRegex = pyxb.binding.content.AttributeUse(pyxb.namespace.ExpandedName(None, 'isRegex'), 'isRegex', '__AbsentNamespace0_target_type_isRegex', pyxb.binding.datatypes.boolean, unicode_default='false')
+    __isRegex._DeclarationLocation = pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 139, 8)
+    __isRegex._UseLocation = pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 139, 8)
+    
+    isRegex = property(__isRegex.value, __isRegex.set, None, None)
+
+    _ElementMap.update({
+        
+    })
+    _AttributeMap.update({
+        __because.name() : __because,
+        __isRegex.name() : __isRegex
+    })
+_module_typeBindings.target_type = target_type
+Namespace.addCategoryObject('typeBinding', 'target_type', target_type)
+
+
 # Complex type target_override_type with content type EMPTY
 class target_override_type (pyxb.binding.basis.complexTypeDefinition):
     """
@@ -378,23 +456,23 @@ class target_override_type (pyxb.binding.basis.complexTypeDefinition):
     _ContentTypeTag = pyxb.binding.basis.complexTypeDefinition._CT_EMPTY
     _Abstract = False
     _ExpandedName = pyxb.namespace.ExpandedName(Namespace, 'target_override_type')
-    _XSDLocation = pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 118, 2)
+    _XSDLocation = pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 144, 2)
     _ElementMap = {}
     _AttributeMap = {}
     # Base type is pyxb.binding.datatypes.anyType
     
     # Attribute name uses Python identifier name
     __name = pyxb.binding.content.AttributeUse(pyxb.namespace.ExpandedName(None, 'name'), 'name', '__AbsentNamespace0_target_override_type_name', pyxb.binding.datatypes.normalizedString, required=True)
-    __name._DeclarationLocation = pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 124, 4)
-    __name._UseLocation = pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 124, 4)
+    __name._DeclarationLocation = pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 150, 4)
+    __name._UseLocation = pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 150, 4)
     
     name = property(__name.value, __name.set, None, None)
 
     
     # Attribute steps uses Python identifier steps
     __steps = pyxb.binding.content.AttributeUse(pyxb.namespace.ExpandedName(None, 'steps'), 'steps', '__AbsentNamespace0_target_override_type_steps', pyxb.binding.datatypes.positiveInteger, required=True)
-    __steps._DeclarationLocation = pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 125, 4)
-    __steps._UseLocation = pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 125, 4)
+    __steps._DeclarationLocation = pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 151, 4)
+    __steps._UseLocation = pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 151, 4)
     
     steps = property(__steps.value, __steps.set, None, None)
 
@@ -422,7 +500,7 @@ class CTD_ANON (lever_type):
     _ContentTypeTag = pyxb.binding.basis.complexTypeDefinition._CT_ELEMENT_ONLY
     _Abstract = False
     _ExpandedName = None
-    _XSDLocation = pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 145, 4)
+    _XSDLocation = pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 171, 4)
     _ElementMap = lever_type._ElementMap.copy()
     _AttributeMap = lever_type._AttributeMap.copy()
     # Base type is lever_type
@@ -432,6 +510,8 @@ class CTD_ANON (lever_type):
     # Element filters (filters) inherited from lever_type
     
     # Element pymc (pymc) inherited from lever_type
+    
+    # Element sequester (sequester) inherited from lever_type
     
     # Attribute index inherited from lever_type
     _ElementMap.update({
@@ -443,7 +523,7 @@ class CTD_ANON (lever_type):
 _module_typeBindings.CTD_ANON = CTD_ANON
 
 
-levers = pyxb.binding.basis.element(pyxb.namespace.ExpandedName(Namespace, 'levers'), CTD_ANON, location=pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 144, 2))
+levers = pyxb.binding.basis.element(pyxb.namespace.ExpandedName(Namespace, 'levers'), CTD_ANON, location=pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 170, 2))
 Namespace.addCategoryObject('elementBinding', levers.name().localName(), levers)
 
 
@@ -496,6 +576,8 @@ lever_type._AddElement(pyxb.binding.basis.element(pyxb.namespace.ExpandedName(No
 
 lever_type._AddElement(pyxb.binding.basis.element(pyxb.namespace.ExpandedName(None, 'pymc'), pymc_type, scope=lever_type, location=pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 87, 6)))
 
+lever_type._AddElement(pyxb.binding.basis.element(pyxb.namespace.ExpandedName(None, 'sequester'), sequester_type, scope=lever_type, location=pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 88, 6)))
+
 def _BuildAutomaton_2 ():
     # Remove this helper function from the namespace after it is invoked
     global _BuildAutomaton_2
@@ -544,6 +626,27 @@ def _BuildAutomaton_4 ():
     st_0._set_transitionSet(transitions)
     return fac.Automaton(states, counters, False, containing_state=st_0)
 
+def _BuildAutomaton_5 ():
+    # Remove this helper function from the namespace after it is invoked
+    global _BuildAutomaton_5
+    del _BuildAutomaton_5
+    import pyxb.utils.fac as fac
+
+    counters = set()
+    cc_0 = fac.CounterCondition(min=0, max=1, metadata=pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 88, 6))
+    counters.add(cc_0)
+    states = []
+    final_update = set()
+    final_update.add(fac.UpdateInstruction(cc_0, False))
+    symbol = pyxb.binding.content.ElementUse(lever_type._UseForTag(pyxb.namespace.ExpandedName(None, 'sequester')), pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 88, 6))
+    st_0 = fac.State(symbol, is_initial=True, final_update=final_update, is_unordered_catenation=False)
+    states.append(st_0)
+    transitions = []
+    transitions.append(fac.Transition(st_0, [
+        fac.UpdateInstruction(cc_0, True) ]))
+    st_0._set_transitionSet(transitions)
+    return fac.Automaton(states, counters, True, containing_state=st_0)
+
 def _BuildAutomaton_ ():
     # Remove this helper function from the namespace after it is invoked
     global _BuildAutomaton_
@@ -551,11 +654,14 @@ def _BuildAutomaton_ ():
     import pyxb.utils.fac as fac
 
     counters = set()
+    cc_0 = fac.CounterCondition(min=0, max=1, metadata=pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 88, 6))
+    counters.add(cc_0)
     states = []
     sub_automata = []
     sub_automata.append(_BuildAutomaton_2())
     sub_automata.append(_BuildAutomaton_3())
     sub_automata.append(_BuildAutomaton_4())
+    sub_automata.append(_BuildAutomaton_5())
     final_update = set()
     symbol = pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 84, 4)
     st_0 = fac.State(symbol, is_initial=True, final_update=final_update, is_unordered_catenation=True)
@@ -569,21 +675,21 @@ lever_type._Automaton = _BuildAutomaton_()
 
 
 
-pymc_count_type._AddElement(pyxb.binding.basis.element(pyxb.namespace.ExpandedName(None, 'target'), target_override_type, scope=pymc_count_type, location=pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 100, 6)))
+pymc_count_type._AddElement(pyxb.binding.basis.element(pyxb.namespace.ExpandedName(None, 'target'), target_override_type, scope=pymc_count_type, location=pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 101, 6)))
 
-def _BuildAutomaton_5 ():
+def _BuildAutomaton_6 ():
     # Remove this helper function from the namespace after it is invoked
-    global _BuildAutomaton_5
-    del _BuildAutomaton_5
+    global _BuildAutomaton_6
+    del _BuildAutomaton_6
     import pyxb.utils.fac as fac
 
     counters = set()
-    cc_0 = fac.CounterCondition(min=0, max=None, metadata=pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 100, 6))
+    cc_0 = fac.CounterCondition(min=0, max=None, metadata=pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 101, 6))
     counters.add(cc_0)
     states = []
     final_update = set()
     final_update.add(fac.UpdateInstruction(cc_0, False))
-    symbol = pyxb.binding.content.ElementUse(pymc_count_type._UseForTag(pyxb.namespace.ExpandedName(None, 'target')), pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 100, 6))
+    symbol = pyxb.binding.content.ElementUse(pymc_count_type._UseForTag(pyxb.namespace.ExpandedName(None, 'target')), pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 101, 6))
     st_0 = fac.State(symbol, is_initial=True, final_update=final_update, is_unordered_catenation=False)
     states.append(st_0)
     transitions = []
@@ -591,30 +697,14 @@ def _BuildAutomaton_5 ():
         fac.UpdateInstruction(cc_0, True) ]))
     st_0._set_transitionSet(transitions)
     return fac.Automaton(states, counters, True, containing_state=None)
-pymc_count_type._Automaton = _BuildAutomaton_5()
+pymc_count_type._Automaton = _BuildAutomaton_6()
 
 
 
 
-pymc_type._AddElement(pyxb.binding.basis.element(pyxb.namespace.ExpandedName(None, 'cerberus'), pymc_count_type, scope=pymc_type, location=pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 113, 6)))
+pymc_type._AddElement(pyxb.binding.basis.element(pyxb.namespace.ExpandedName(None, 'cerberus'), pymc_count_type, scope=pymc_type, location=pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 114, 6)))
 
-pymc_type._AddElement(pyxb.binding.basis.element(pyxb.namespace.ExpandedName(None, 'spectrum'), pymc_count_type, scope=pymc_type, location=pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 114, 6)))
-
-def _BuildAutomaton_7 ():
-    # Remove this helper function from the namespace after it is invoked
-    global _BuildAutomaton_7
-    del _BuildAutomaton_7
-    import pyxb.utils.fac as fac
-
-    counters = set()
-    states = []
-    final_update = set()
-    symbol = pyxb.binding.content.ElementUse(pymc_type._UseForTag(pyxb.namespace.ExpandedName(None, 'cerberus')), pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 113, 6))
-    st_0 = fac.State(symbol, is_initial=True, final_update=final_update, is_unordered_catenation=False)
-    states.append(st_0)
-    transitions = []
-    st_0._set_transitionSet(transitions)
-    return fac.Automaton(states, counters, False, containing_state=st_0)
+pymc_type._AddElement(pyxb.binding.basis.element(pyxb.namespace.ExpandedName(None, 'spectrum'), pymc_count_type, scope=pymc_type, location=pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 115, 6)))
 
 def _BuildAutomaton_8 ():
     # Remove this helper function from the namespace after it is invoked
@@ -625,79 +715,7 @@ def _BuildAutomaton_8 ():
     counters = set()
     states = []
     final_update = set()
-    symbol = pyxb.binding.content.ElementUse(pymc_type._UseForTag(pyxb.namespace.ExpandedName(None, 'spectrum')), pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 114, 6))
-    st_0 = fac.State(symbol, is_initial=True, final_update=final_update, is_unordered_catenation=False)
-    states.append(st_0)
-    transitions = []
-    st_0._set_transitionSet(transitions)
-    return fac.Automaton(states, counters, False, containing_state=st_0)
-
-def _BuildAutomaton_6 ():
-    # Remove this helper function from the namespace after it is invoked
-    global _BuildAutomaton_6
-    del _BuildAutomaton_6
-    import pyxb.utils.fac as fac
-
-    counters = set()
-    states = []
-    sub_automata = []
-    sub_automata.append(_BuildAutomaton_7())
-    sub_automata.append(_BuildAutomaton_8())
-    final_update = set()
-    symbol = pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 112, 4)
-    st_0 = fac.State(symbol, is_initial=True, final_update=final_update, is_unordered_catenation=True)
-    st_0._set_subAutomata(*sub_automata)
-    states.append(st_0)
-    transitions = []
-    st_0._set_transitionSet(transitions)
-    return fac.Automaton(states, counters, False, containing_state=None)
-pymc_type._Automaton = _BuildAutomaton_6()
-
-
-
-
-def _BuildAutomaton_10 ():
-    # Remove this helper function from the namespace after it is invoked
-    global _BuildAutomaton_10
-    del _BuildAutomaton_10
-    import pyxb.utils.fac as fac
-
-    counters = set()
-    states = []
-    final_update = set()
-    symbol = pyxb.binding.content.ElementUse(CTD_ANON._UseForTag(pyxb.namespace.ExpandedName(None, 'controls')), pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 85, 6))
-    st_0 = fac.State(symbol, is_initial=True, final_update=final_update, is_unordered_catenation=False)
-    states.append(st_0)
-    transitions = []
-    st_0._set_transitionSet(transitions)
-    return fac.Automaton(states, counters, False, containing_state=st_0)
-
-def _BuildAutomaton_11 ():
-    # Remove this helper function from the namespace after it is invoked
-    global _BuildAutomaton_11
-    del _BuildAutomaton_11
-    import pyxb.utils.fac as fac
-
-    counters = set()
-    states = []
-    final_update = set()
-    symbol = pyxb.binding.content.ElementUse(CTD_ANON._UseForTag(pyxb.namespace.ExpandedName(None, 'filters')), pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 86, 6))
-    st_0 = fac.State(symbol, is_initial=True, final_update=final_update, is_unordered_catenation=False)
-    states.append(st_0)
-    transitions = []
-    st_0._set_transitionSet(transitions)
-    return fac.Automaton(states, counters, False, containing_state=st_0)
-
-def _BuildAutomaton_12 ():
-    # Remove this helper function from the namespace after it is invoked
-    global _BuildAutomaton_12
-    del _BuildAutomaton_12
-    import pyxb.utils.fac as fac
-
-    counters = set()
-    states = []
-    final_update = set()
-    symbol = pyxb.binding.content.ElementUse(CTD_ANON._UseForTag(pyxb.namespace.ExpandedName(None, 'pymc')), pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 87, 6))
+    symbol = pyxb.binding.content.ElementUse(pymc_type._UseForTag(pyxb.namespace.ExpandedName(None, 'cerberus')), pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 114, 6))
     st_0 = fac.State(symbol, is_initial=True, final_update=final_update, is_unordered_catenation=False)
     states.append(st_0)
     transitions = []
@@ -712,10 +730,146 @@ def _BuildAutomaton_9 ():
 
     counters = set()
     states = []
+    final_update = set()
+    symbol = pyxb.binding.content.ElementUse(pymc_type._UseForTag(pyxb.namespace.ExpandedName(None, 'spectrum')), pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 115, 6))
+    st_0 = fac.State(symbol, is_initial=True, final_update=final_update, is_unordered_catenation=False)
+    states.append(st_0)
+    transitions = []
+    st_0._set_transitionSet(transitions)
+    return fac.Automaton(states, counters, False, containing_state=st_0)
+
+def _BuildAutomaton_7 ():
+    # Remove this helper function from the namespace after it is invoked
+    global _BuildAutomaton_7
+    del _BuildAutomaton_7
+    import pyxb.utils.fac as fac
+
+    counters = set()
+    states = []
     sub_automata = []
-    sub_automata.append(_BuildAutomaton_10())
-    sub_automata.append(_BuildAutomaton_11())
+    sub_automata.append(_BuildAutomaton_8())
+    sub_automata.append(_BuildAutomaton_9())
+    final_update = set()
+    symbol = pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 113, 4)
+    st_0 = fac.State(symbol, is_initial=True, final_update=final_update, is_unordered_catenation=True)
+    st_0._set_subAutomata(*sub_automata)
+    states.append(st_0)
+    transitions = []
+    st_0._set_transitionSet(transitions)
+    return fac.Automaton(states, counters, False, containing_state=None)
+pymc_type._Automaton = _BuildAutomaton_7()
+
+
+
+
+sequester_type._AddElement(pyxb.binding.basis.element(pyxb.namespace.ExpandedName(None, 'target'), target_type, scope=sequester_type, location=pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 126, 6)))
+
+def _BuildAutomaton_10 ():
+    # Remove this helper function from the namespace after it is invoked
+    global _BuildAutomaton_10
+    del _BuildAutomaton_10
+    import pyxb.utils.fac as fac
+
+    counters = set()
+    states = []
+    final_update = set()
+    symbol = pyxb.binding.content.ElementUse(sequester_type._UseForTag(pyxb.namespace.ExpandedName(None, 'target')), pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 126, 6))
+    st_0 = fac.State(symbol, is_initial=True, final_update=final_update, is_unordered_catenation=False)
+    states.append(st_0)
+    transitions = []
+    transitions.append(fac.Transition(st_0, [
+         ]))
+    st_0._set_transitionSet(transitions)
+    return fac.Automaton(states, counters, False, containing_state=None)
+sequester_type._Automaton = _BuildAutomaton_10()
+
+
+
+
+def _BuildAutomaton_12 ():
+    # Remove this helper function from the namespace after it is invoked
+    global _BuildAutomaton_12
+    del _BuildAutomaton_12
+    import pyxb.utils.fac as fac
+
+    counters = set()
+    states = []
+    final_update = set()
+    symbol = pyxb.binding.content.ElementUse(CTD_ANON._UseForTag(pyxb.namespace.ExpandedName(None, 'controls')), pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 85, 6))
+    st_0 = fac.State(symbol, is_initial=True, final_update=final_update, is_unordered_catenation=False)
+    states.append(st_0)
+    transitions = []
+    st_0._set_transitionSet(transitions)
+    return fac.Automaton(states, counters, False, containing_state=st_0)
+
+def _BuildAutomaton_13 ():
+    # Remove this helper function from the namespace after it is invoked
+    global _BuildAutomaton_13
+    del _BuildAutomaton_13
+    import pyxb.utils.fac as fac
+
+    counters = set()
+    states = []
+    final_update = set()
+    symbol = pyxb.binding.content.ElementUse(CTD_ANON._UseForTag(pyxb.namespace.ExpandedName(None, 'filters')), pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 86, 6))
+    st_0 = fac.State(symbol, is_initial=True, final_update=final_update, is_unordered_catenation=False)
+    states.append(st_0)
+    transitions = []
+    st_0._set_transitionSet(transitions)
+    return fac.Automaton(states, counters, False, containing_state=st_0)
+
+def _BuildAutomaton_14 ():
+    # Remove this helper function from the namespace after it is invoked
+    global _BuildAutomaton_14
+    del _BuildAutomaton_14
+    import pyxb.utils.fac as fac
+
+    counters = set()
+    states = []
+    final_update = set()
+    symbol = pyxb.binding.content.ElementUse(CTD_ANON._UseForTag(pyxb.namespace.ExpandedName(None, 'pymc')), pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 87, 6))
+    st_0 = fac.State(symbol, is_initial=True, final_update=final_update, is_unordered_catenation=False)
+    states.append(st_0)
+    transitions = []
+    st_0._set_transitionSet(transitions)
+    return fac.Automaton(states, counters, False, containing_state=st_0)
+
+def _BuildAutomaton_15 ():
+    # Remove this helper function from the namespace after it is invoked
+    global _BuildAutomaton_15
+    del _BuildAutomaton_15
+    import pyxb.utils.fac as fac
+
+    counters = set()
+    cc_0 = fac.CounterCondition(min=0, max=1, metadata=pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 88, 6))
+    counters.add(cc_0)
+    states = []
+    final_update = set()
+    final_update.add(fac.UpdateInstruction(cc_0, False))
+    symbol = pyxb.binding.content.ElementUse(CTD_ANON._UseForTag(pyxb.namespace.ExpandedName(None, 'sequester')), pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 88, 6))
+    st_0 = fac.State(symbol, is_initial=True, final_update=final_update, is_unordered_catenation=False)
+    states.append(st_0)
+    transitions = []
+    transitions.append(fac.Transition(st_0, [
+        fac.UpdateInstruction(cc_0, True) ]))
+    st_0._set_transitionSet(transitions)
+    return fac.Automaton(states, counters, True, containing_state=st_0)
+
+def _BuildAutomaton_11 ():
+    # Remove this helper function from the namespace after it is invoked
+    global _BuildAutomaton_11
+    del _BuildAutomaton_11
+    import pyxb.utils.fac as fac
+
+    counters = set()
+    cc_0 = fac.CounterCondition(min=0, max=1, metadata=pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 88, 6))
+    counters.add(cc_0)
+    states = []
+    sub_automata = []
     sub_automata.append(_BuildAutomaton_12())
+    sub_automata.append(_BuildAutomaton_13())
+    sub_automata.append(_BuildAutomaton_14())
+    sub_automata.append(_BuildAutomaton_15())
     final_update = set()
     symbol = pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 84, 4)
     st_0 = fac.State(symbol, is_initial=True, final_update=final_update, is_unordered_catenation=True)
@@ -724,5 +878,5 @@ def _BuildAutomaton_9 ():
     transitions = []
     st_0._set_transitionSet(transitions)
     return fac.Automaton(states, counters, False, containing_state=None)
-CTD_ANON._Automaton = _BuildAutomaton_9()
+CTD_ANON._Automaton = _BuildAutomaton_11()
 

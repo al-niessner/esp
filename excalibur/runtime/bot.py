@@ -7,12 +7,12 @@ class AnalysisTeam(dawgie.Analysis):
     '''Analytical team'''
     def list(self)->[dawgie.Analyzer]:
         '''list of analysis to be done'''
-        return [ algorithms.create() ]
+        return [algorithms.create()]
     pass
 
 class TaskTeam(dawgie.Task):
     '''Task team'''
     def list(self)->[dawgie.Task]:
         '''list of tasks to perform'''
-        return [ algorithms.autofill() ]
+        return [algorithms.autofill()]
     pass
