@@ -39,7 +39,7 @@ class sim_spectrum(dawgie.Algorithm):
     def run(self, ds, ps):
         '''Top level algorithm call'''
         update = False
-
+        arielcore.init()
         # pylint: disable=protected-access
         target = ds._tn()
 
