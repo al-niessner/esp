@@ -9,7 +9,31 @@ from . import binding
 ENV_NAME = 'EXCALIBUR_LEVER_AND_KNOB_SETTINGS'
 
 def isolate(sv:{}, table:{str:{}}, tn:str)->None:
-    return
+    '''isolate target specific state from the global table'''
+    if table['filters']['includes']:
+        allowed_names = table['filters']['includes']
+    else: allowed_names = binding.filter_names.itervalues()
+    # make a copy of unique names ditching the old types along the way
+    allowed_names = set(allowed_names)
+    for exclude in table['filters']['excludes']: allowed_names.discard(exclude)
+    sv['allowed_filter_names'].extend (allowed_names)
+    for key in ['ariel_simulate_spectra_includeMetallicityDispersion',
+                'cerberus_atmos_fitCloudParameters',
+                'cerberus_atmos_fitNtoO',
+                'cerberus_atmos_fitCtoO',
+                'cerberus_atmos_fitT',
+                'target_autofill_selectMostRecent']:
+        sv[key] = table['controls'][key].new()
+    pymc = table['pymc-cerberus']
+    default = pymc['default'].value()
+    sv['cerberus_steps'] = sv['cerberus_steps'].new(pymc['overrides'].get
+                                                    (tn, default))
+    sv['isValidTarget'] = sv['isValidTarget'].new(tn in table
+                                                  ['sequester']['targets'])
+    pymc = table['pymc-spectrum']
+    default = pymc['default'].value()
+    sv['spectrum_steps'] = sv['spectrum_steps'].new(pymc['overrides'].get
+                                                    (tn, default))
 
 def load(sv_dict:{str:{}}, targets)->None:
     '''load the configuation file into state vectors
@@ -39,7 +63,7 @@ def load(sv_dict:{str:{}}, targets)->None:
             matching_targets = filter (lambda t,rex=regex:rex.match(t), targets)
             if matching_targets:
                 for mt in matching_targets:
-                    sv_dict['sequester']['targets'].append (mt, tn.because)
+                    sv_dict['sequester']['targets'].append ((mt, tn.because))
             else:
                 log.warning ('Sequester regex %s produced no matches',
                              tn.value())

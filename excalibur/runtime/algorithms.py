@@ -16,7 +16,7 @@ class autofill(dawgie.Algorithm):
         '''init autofill'''
         self._version_ = dawgie.VERSION(1,0,0)
         self.__parent = create()
-        self.__status = states.StatusSV
+        self.__status = states.StatusSV()
     def name(self):
         '''database name'''
         return 'autofill'
@@ -68,7 +68,7 @@ class create(dawgie.Analyzer):
                 bot = erb.TaskTeam(pbot.name(), 1, pbot._runid(), tn)  # pylint: disable=protected-access
                 alg = autofill()
                 ds = dawgie.db.connect (alg, bot, tn)
-                alg.run (ds, 1, self.__table, tn)
+                alg.run (ds, 1, self.sv_as_dict(), tn)
         except FileNotFoundError as e:
             log.exception(e)
             raise dawgie.AbortAEError(f'The environment variable {core.ENV_NAME} points to the non-existent file: {os.environ[core.ENV_NAME]}') from e

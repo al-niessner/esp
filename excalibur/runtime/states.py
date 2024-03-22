@@ -16,7 +16,7 @@ class BoolValue(dawgie.Value):
     def features(self):
         '''contains no features'''
         return []
-    def new(self, state):
+    def new(self, state=None):
         '''hide explicit requirement for dawgie'''
         return BoolValue(state if state is not None else self.__state)
     pass
@@ -122,7 +122,7 @@ class StatusSV(dawgie.StateVector):
     def __init__(self):
         '''init the state vector with empty values'''
         self._version_ = dawgie.VERSION(1,0,0)
-        self['allowed_observations'] = excalibur.ValuesList()
+        self['allowed_filter_names'] = excalibur.ValuesList()
         self['ariel_simulate_spectra_includeMetallicityDispersion'] = BoolValue()
         self['cerberus_atmos_fitCloudParameters'] = BoolValue()
         self['cerberus_atmos_fitNtoO'] = BoolValue()
@@ -135,6 +135,10 @@ class StatusSV(dawgie.StateVector):
     def name(self):
         '''database name'''
         return 'status'
+    def proceed(self, ext:str=None):
+        '''determine if those that care should proceed'''
+        return self['isValidTarget'] and \
+               (ext in self['allowed_exts'] if ext else True)
     def view(self, visitor:dawgie.Visitor)->None:
         '''Show the state for this target'''
         return
