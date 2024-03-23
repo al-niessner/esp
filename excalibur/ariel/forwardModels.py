@@ -27,8 +27,9 @@ def init():
     '''
     TAUREX_DATA_ROOT = os.environ.get('TAUREX_DATA_ROOT', excalibur.context['data_dir']+'/taurex')
     OpacityCache().clear_cache()
-    OpacityCache().set_opacity_path(os.path.join (TAUREX_DATA_ROOT,
-                                              'xsec/xsec_sampled_R15000_0.3-50'))
+    OpacityCache().set_opacity_path(os.path.join
+                                    (TAUREX_DATA_ROOT,
+                                     'xsec/xsec_sampled_R15000_0.3-50'))
     CIACache().set_cia_path(os.path.join (TAUREX_DATA_ROOT, 'cia/HITRAN'))
 
 # ----------------------------------------------------------------------------------------------

@@ -10,6 +10,7 @@ from excalibur.ariel.metallicity import \
     massMetalRelation, massMetalRelationDisp, randomCtoO_linear
 from excalibur.ariel.arielInstrumentModel import load_ariel_instrument
 from excalibur.ariel.arielObservingPlan import make_tier_table
+from excalibur.ariel import forwardModels
 from excalibur.ariel.forwardModels import makeTaurexAtmos, makeCerberusAtmos
 from excalibur.cerberus.core import myxsecs
 
@@ -20,6 +21,10 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.constants as cst
+
+def init():
+    '''make sure libraries are initialized'''
+    forwardModels.init()
 
 # ---------------------------- ---------------------------------------
 # -- SV VALIDITY -- --------------------------------------------------
