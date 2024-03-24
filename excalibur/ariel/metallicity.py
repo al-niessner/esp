@@ -16,7 +16,9 @@ def massMetalRelationDisp(logmetStar,Mp,thorngren=False):
 
     # FINESSE used a dispersion of just 0.3
     #  Swain analysis of Thorgren 2016 finds a lot more scatter (0.8)
-    dispersion = 0.8
+    # dispersion = 0.8
+    # march 22, 2024 (RUNID > 923) switching back to 0.3
+    dispersion = 0.3
 
     logmet += np.random.normal(scale=dispersion)
 
@@ -80,6 +82,9 @@ def randomCtoO_linear():
     Allow a small fraction (~5%) of stars to have more C than O
     Actually that's too much.  Consensus at the May2023 JWST conference was less than that I think
     Let's go with -0.2+-0.1, which gives 2.3% with more C than O
+    March 2024 update (allowing planets to have more variety than stars):
+     - use solar C/O as median
+     - have a stdev of 0.3 dex
     '''
 
     # this is from my excel check of Hinkel's Hypatia catalog
@@ -91,10 +96,11 @@ def randomCtoO_linear():
     # in order to see how well FINESSE can do with some oddballs
     # this gives 4.8% with C>O
     # logCtoO=-0.2 + 0.12*np.random.normal()
-    logCtoO=-0.2 + 0.1*np.random.normal()
+    # logCtoO=-0.2 + 0.1*np.random.normal()
 
-    # reminder: solar is -0.26
-    #  we seem to be below average
+    logCtoO_solar = -0.26  # solar C/O is 0.55
+
+    logCtoO = logCtoO_solar + 0.3*np.random.normal()
 
     CtoO = 10.**logCtoO
     return CtoO

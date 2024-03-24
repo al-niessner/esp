@@ -15,7 +15,8 @@ from excalibur.cerberus.forwardModel import \
 from excalibur.cerberus.plotting import rebinData, plot_bestfit, \
     plot_corner, plot_vsPrior, plot_walkerEvolution, \
     plot_fitsVStruths, plot_fitUncertainties, plot_massVSmetals
-# from excalibur.cerberus.bounds import setPriorBound, getProfileLimits, applyProfiling
+from excalibur.cerberus.bounds import setPriorBound
+# getProfileLimits, applyProfiling
 
 import logging
 log = logging.getLogger(__name__)
@@ -94,7 +95,7 @@ def myxsecs(spc, out,
         nugrid = (1e4/np.copy(wgrid))[::-1]
         dwnu = np.concatenate((np.array([np.diff(nugrid)[0]]), np.diff(nugrid)))
         for myexomol in xmspecies:
-            log.warning('>-- %s', str(myexomol))
+            # log.warning('>-- %s', str(myexomol))
             library[myexomol] = {'I':[], 'nu':[], 'T':[],
                                  'Itemp':[], 'nutemp':[], 'Ttemp':[],
                                  'SPL':[], 'SPLNU':[]}
@@ -180,7 +181,7 @@ def myxsecs(spc, out,
                 pass
             pass
         for mycia in cialist:
-            log.warning('>-- %s', str(mycia))
+            # log.warning('>-- %s', str(mycia))
             myfile = '_'.join((os.path.join(ciadir, mycia), '2011.cia'))
             library[mycia] = {'I':[], 'nu':[], 'T':[],
                               'Itemp':[], 'nutemp':[], 'Ttemp':[],
@@ -249,7 +250,7 @@ def myxsecs(spc, out,
                 pass
             pass
         for ks in knownspecies:
-            log.warning('>-- %s', str(ks))
+            # log.warning('>-- %s', str(ks))
             library[ks] = {'MU':[], 'I':[], 'nu':[], 'S':[],
                            'g_air':[], 'g_self':[],
                            'Epp':[], 'eta':[], 'delta':[]}
@@ -323,7 +324,7 @@ def myxsecs(spc, out,
             allwavenumbers = []
             alltemperatures = []
             for Tstep in np.arange(300, 2000, 100):
-                log.warning('>---- %s K', str(Tstep))
+                # log.warning('>---- %s K', str(Tstep))
                 sigma, lsig = absorb(library[ks], qtgrid[ks], Tstep, pressuregrid, mmr,
                                      False, False, wgrid, debug=False)
                 allxsections.append(sigma[0])
@@ -525,6 +526,10 @@ def atmos(fin, xsl, spc, out, ext,
 
             # save the planet params (mass), so that analysis can make a mass-metallicity plot
             out['data'][p]['planet_params'] = orbp[p]
+            # save the tier and #-of-visits (for Ariel-sim targets), for plot labelling
+            if ext=='Ariel-sim':
+                out['data'][p]['tier'] = spc['data'][p][arielModel]['tier']
+                out['data'][p]['visits'] = spc['data'][p][arielModel]['visits']
 
             # eqtemp1 = orbp['T*']*np.sqrt(orbp['R*']*ssc['Rsun/AU']/(2.*orbp[p]['sma']))
             # use of L* might be better than T*,R*; it's more of a direct observable
@@ -600,25 +605,28 @@ def atmos(fin, xsl, spc, out, ext,
                 out['data'][p][model] = {}
 
                 # new method for setting priors (no change, but easier to view in bounds.py)
-                # priorRangesAlt = setPriorBound()
+                priorRangeTable = setPriorBound()
 
                 out['data'][p][model]['prior_ranges'] = {}
                 # keep track of the bounds put on each parameter
                 # this will be helpful for later plotting and analysis
                 prior_ranges = {}
                 nodes = []
+                # with pm.Model() as pmmodel:
                 with pm.Model():
                     fixedParams = {}
 
                     if fitCloudParameters:
                         # CLOUD TOP PRESSURE
-                        prior_ranges['CTP'] = (-6,1)
+                        # prior_ranges['CTP'] = (-6,1)
+                        prior_ranges['CTP'] = priorRangeTable['CTP']
                         ctp = pm.Uniform('CTP', prior_ranges['CTP'][0], prior_ranges['CTP'][1])
                         nodes.append(ctp)
 
                         # HAZE SCAT. CROSS SECTION SCALE FACTOR
-                        prior_ranges['Hscale'] = (-6,6)
-                        hza = pm.Uniform('HScale', prior_ranges['Hscale'][0], prior_ranges['Hscale'][1])
+                        # prior_ranges['Hscale'] = (-6,6)
+                        prior_ranges['HScale'] = priorRangeTable['HScale']
+                        hza = pm.Uniform('HScale', prior_ranges['HScale'][0], prior_ranges['HScale'][1])
                         nodes.append(hza)
                     else:
                         # print('model_params',inputData['model_params'])
@@ -701,12 +709,14 @@ def atmos(fin, xsl, spc, out, ext,
                     # KILL HAZE POWER INDEX FOR SPHERICAL SHELL
                     if sphshell:
                         if fitCloudParameters:
-                            prior_ranges['HLoc'] = (-6,1)
+                            # prior_ranges['HLoc'] = (-6,1)
+                            prior_ranges['HLoc'] = priorRangeTable['HLoc']
                             hzloc = pm.Uniform('HLoc',
                                                prior_ranges['HLoc'][0], prior_ranges['HLoc'][1])
                             nodes.append(hzloc)
 
-                            prior_ranges['HThick'] = (1,20)
+                            # prior_ranges['HThick'] = (1,20)
+                            prior_ranges['HThick'] = priorRangeTable['HThick']
                             hzthick = pm.Uniform('HThick',
                                                  prior_ranges['HThick'][0],prior_ranges['HThick'][1])
                             nodes.append(hzthick)
@@ -715,7 +725,8 @@ def atmos(fin, xsl, spc, out, ext,
                             fixedParams['HThick'] = inputData['model_params']['HThick']
                     else:
                         if fitCloudParameters:
-                            prior_ranges['HIndex'] = (-4,0)
+                            # prior_ranges['HIndex'] = (-4,0)
+                            prior_ranges['HIndex'] = priorRangeTable['HIndex']
                             hzi = pm.Uniform('HIndex',
                                              prior_ranges['HIndex'][0], prior_ranges['HIndex'][1])
                             nodes.append(hzi)
@@ -724,7 +735,9 @@ def atmos(fin, xsl, spc, out, ext,
 
                     # BOOST TEMPERATURE PRIOR TO [75%, 150%] Teq
                     if fitT:
-                        prior_ranges['T'] = (0.75e0*eqtemp, 1.5e0*eqtemp)
+                        # prior_ranges['T'] = (0.75e0*eqtemp, 1.5e0*eqtemp)
+                        prior_ranges['T'] = (priorRangeTable['Tfactor'][0] * eqtemp,
+                                             priorRangeTable['Tfactor'][1] * eqtemp)
                         tpr = pm.Uniform('T', prior_ranges['T'][0], prior_ranges['T'][1])
                         nodes.append(tpr)
                     else:
@@ -732,7 +745,8 @@ def atmos(fin, xsl, spc, out, ext,
 
                     # MODEL SPECIFIC ABSORBERS
                     for param in modparlbl[model]:
-                        dexRange = (-6,6)
+                        # dexRange = (-6,6)
+                        dexRange = priorRangeTable['dexRange']
                         if param=='XtoH':
                             prior_ranges['[X/H]'] = dexRange
                         elif param=='CtoO':
@@ -846,10 +860,11 @@ def atmos(fin, xsl, spc, out, ext,
                     if tracekeys.__len__() > 1:
                         indtrace = int(tracekeys[1].split(']')[0])
                         mctrace[key] = trace[tracekeys[0]][:, indtrace]
-                        pass
-                    else: mctrace[key] = trace[tracekeys[0]]
+                    else:
+                        mctrace[key] = trace[tracekeys[0]]
                     pass
                 out['data'][p][model]['MCTRACE'] = mctrace
+
                 out['data'][p][model]['prior_ranges'] = prior_ranges
             # out['data'][p]['WAVELENGTH'] = np.array(spc['data'][p]['WB'])
             out['data'][p]['WAVELENGTH'] = np.array(inputData['WB'])
@@ -1181,7 +1196,7 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                 # print('T',np.median(atm[p][modelName]['MCTRACE']['T']))
                 # if fitCloudParameters:
                 #     print('CTP',np.median(atm[p][modelName]['MCTRACE']['CTP']))
-                #     print('Hscale',np.median(atm[p][modelName]['MCTRACE']['HScale']))
+                #     print('HScale',np.median(atm[p][modelName]['MCTRACE']['HScale']))
                 #     print('HLoc  ',np.median(atm[p][modelName]['MCTRACE']['HLoc']))
                 #     print('HThick',np.median(atm[p][modelName]['MCTRACE']['HThick']))
                 # print('TEC0',np.median(atm[p][modelName]['MCTRACE']['TEC[0]']))
@@ -1203,7 +1218,7 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                     hloc = np.median(hloctrace)
                     hthc = np.median(hthicktrace)
                     # print('fit results; CTP:',ctp)
-                    # print('fit results; Hscale:',hza)
+                    # print('fit results; HScale:',hza)
                     # print('fit results; HLoc:',hloc)
                     # print('fit results; HThick:',hthc)
                 else:
@@ -1299,7 +1314,7 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                     # print('shape mdp',mdp.shape)
                     # if fitCloudParameters:
                     #    print('fit results; CTP:',ctp)
-                    #    print('fit results; Hscale:',hza)
+                    #    print('fit results; HScale:',hza)
                     #    print('fit results; HLoc:',hloc)
                     #    print('fit results; HThick:',hthc)
                     # print('fit results; T:',tpr)
@@ -1316,8 +1331,11 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                         if fitNtoO:
                             tceqdict['NtoO'] = float(mdp[2])
                         else:
-                            # tceqdict['NtoO'] = atm[p]['TRUTH_MODELPARAMS']['NtoO'] #aasdfasdf
-                            tceqdict['NtoO'] = 0.
+                            if 'NtoO' in atm[p]['TRUTH_MODELPARAMS'].keys():
+                                tceqdict['NtoO'] = atm[p]['TRUTH_MODELPARAMS']['NtoO']
+                            else:
+                                # log.warning('--< NtoO is missing from TRUTH_MODELPARAMS >--')
+                                tceqdict['NtoO'] = 0.
                     elif modelName=='PHOTOCHEM':
                         tceqdict = None
                         mixratio = {}
@@ -1350,10 +1368,12 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
 
                 # _______________BEST-FIT SPECTRUM PLOT________________
                 transitdata = rebinData(transitdata)
+
                 out['data'][p]['plot_spectrum_'+modelName] = plot_bestfit(transitdata,
                                                                           patmos_model, fmcarray,
                                                                           truth_spectrum,
                                                                           anc['data'][p],
+                                                                          atm[p],
                                                                           filt, modelName,
                                                                           trgt, p, saveDir)
 
@@ -1397,135 +1417,198 @@ def analysis(aspects, filt, out, verbose=False):
     #  exit('core stop')
 
     svname = 'cerberus.atmos'
-    param_names = []
-    masses = []
-    truth_values = defaultdict(list)
-    fit_values = defaultdict(list)
-    fit_errors = defaultdict(list)
 
-    targetlists = get_target_lists()
+    alltargetlists = get_target_lists()
+
+    # allow for analysis of multiple target lists
+    analysistargetlists = []
+
     if filt=='Ariel-sim':
-        targets = targetlists['roudier62']
+        # analysistargetlists.append({
+        #    'targetlistname':'Roudier+ 2022',
+        #    'targets':alltargetlists['roudier62']})
+        analysistargetlists.append({
+            'targetlistname':'MCS Nov.2023 Transit-list',
+            'targets':alltargetlists['arielMCS_Nov2023_transit']})
+        analysistargetlists.append({
+            'targetlistname':'MCS Nov.2023 max-visits=25',
+            'targets':alltargetlists['arielMCS_Nov2023_maxVisits25']})
+        # analysistargetlists.append({
+        #    'targetlistname':'MCS Feb.2024 Transit-list',
+        #    'targets':alltargetlists['arielMCS_Feb2024_transit']})
+        # analysistargetlists.append({
+        #    'targetlistname':'MCS Feb.2024 max-visits=25',
+        #    'targets':alltargetlists['arielMCS_Feb2024_maxVisits25']})
     else:
-        targets = targetlists['active']
-        targets = targetlists['roudier62']
+        # analysistargetlists.append({
+        #    'targetlistname':'All Excalibur targets',
+        #    'targets':alltargetlists['active']})
+        analysistargetlists.append({
+            'targetlistname':'Roudier+ 2022',
+            'targets':alltargetlists['roudier62']})
+        analysistargetlists.append({
+            'targetlistname':'All G141 targets',
+            'targets':alltargetlists['G141']})
 
-    # for trgt in filter(lambda tgt: 'STATUS' in aspects[tgt][svname+'.'+filt], targetlists['active']):
-    # JenkinsPEP8 needs this param outside loop
-    # svname_with_filter = svname+'.'+filt
-    # for trgt in filter(lambda tgt: 'STATUS' in aspects[tgt][svname_with_filter], targetlists['active']):
-    # nope! still not jenkins compatible. arg!
-    for trgt in targets:
-        # print('        cycling through targets',trgt)
-        if trgt not in aspects.keys():
-            log.warning('--< TARGET NOT IN ASPECT: %s %s >--',filt,trgt)
-        elif svname+'.'+filt not in aspects[trgt]:
-            # some targets don't have this filter; no problem
-            # log.warning('--< NO CERB.ATMOS for this FILTER+TARGET %s %s >--',filt,trgt)
-            pass
-        elif 'STATUS' not in aspects[trgt][svname+'.'+filt]:
-            log.warning('--< FORMAT ERROR: NO STATUS %s %s >--',filt,trgt)
-        else:
-            # print('target with valid data format for this filter:',filt,trgt)
-            atmosFit = aspects[trgt][svname+'.'+filt]
+    for targetlist in analysistargetlists:
+        param_names = []
+        masses = []
+        truth_values = defaultdict(list)
+        fit_values = defaultdict(list)
+        fit_errors = defaultdict(list)
 
-            # verify SV succeeded for target
-            if not atmosFit['STATUS'][-1]:
-                log.warning('--< STATUS IS FALSE FOR CERB.ATMOS: %s %s >--',filt,trgt)
+        # for trgt in filter(lambda tgt: 'STATUS' in aspects[tgt][svname+'.'+filt], targetlist['targets']):
+        # JenkinsPEP8 needs this param outside loop
+        # svname_with_filter = svname+'.'+filt
+        # for trgt in filter(lambda tgt: 'STATUS' in aspects[tgt][svname_with_filter], targetlist['targets']):
+        # nope! still not jenkins compatible. arg!
+        for trgt in targetlist['targets']:
+            # print('        cycling through targets',trgt)
+            if trgt not in aspects.keys():
+                log.warning('--< CERBERUS ANALYSIS: TARGET NOT IN ASPECT %s %s >--',filt,trgt)
+            elif svname+'.'+filt not in aspects[trgt]:
+                # some targets don't have this filter; no problem
+                # log.warning('--< NO CERB.ATMOS for this FILTER+TARGET %s %s >--',filt,trgt)
+                pass
+            elif 'STATUS' not in aspects[trgt][svname+'.'+filt]:
+                log.warning('--< CERBERUS ANALYSIS: FORMAT ERROR - NO STATUS %s %s >--',filt,trgt)
             else:
-                for planetLetter in atmosFit['data'].keys():
-                    if 'TEC' not in atmosFit['data'][planetLetter]['MODELPARNAMES'].keys():
-                        log.warning('--< BIG PROBLEM theres no TEC model! >--')
-                    else:
-                        if 'planet_params' in atmosFit['data'][planetLetter]:
-                            masses.append(atmosFit['data'][planetLetter]['planet_params']['mass'])
+                # print('target with valid data format for this filter:',filt,trgt)
+                atmosFit = aspects[trgt][svname+'.'+filt]
+
+                # verify SV succeeded for target
+                if not atmosFit['STATUS'][-1]:
+                    log.warning('--< CERBERUS ANALYSIS: STATUS IS FALSE FOR CERB.ATMOS %s %s >--',filt,trgt)
+                else:
+                    for planetLetter in atmosFit['data'].keys():
+                        if 'TEC' not in atmosFit['data'][planetLetter]['MODELPARNAMES']:
+                            log.warning('--< CERBERUS ANALYSIS: BIG PROBLEM theres no TEC model! %s %s >--',filt,trgt)
+                        elif 'prior_ranges' not in atmosFit['data'][planetLetter]['TEC']:
+                            log.warning('--< CERBERUS ANALYSIS: SKIP (no prior info) - %s %s >--',filt,trgt)
                         else:
-                            masses.append(1)
-
-                        # (prior range should be the same for all the targets)
-                        # print('priors',atmosFit['data'][planetLetter]['TEC']['prior_ranges'])
-                        prior_ranges = atmosFit['data'][planetLetter]['TEC']['prior_ranges']
-
-                        alltraces = []
-                        allkeys = []
-                        for key in atmosFit['data'][planetLetter]['TEC']['MCTRACE']:
-                            alltraces.append(atmosFit['data'][planetLetter]['TEC']['MCTRACE'][key])
-
-                            if key=='TEC[0]': allkeys.append('[X/H]')
-                            elif key=='TEC[1]': allkeys.append('[C/O]')
-                            elif key=='TEC[2]': allkeys.append('[N/O]')
-                            else: allkeys.append(key)
-
-                        for key,trace in zip(allkeys,alltraces):
-                            if key not in param_names: param_names.append(key)
-                            fit_values[key].append(np.median(trace))
-                            lo = np.percentile(np.array(trace), 16)
-                            hi = np.percentile(np.array(trace), 84)
-                            fit_errors[key].append((hi-lo)/2)
-
-                        if ('TRUTH_MODELPARAMS' in atmosFit['data'][planetLetter].keys()) and \
-                           (isinstance(atmosFit['data'][planetLetter]['TRUTH_MODELPARAMS'], dict)):
-                            truth_params = atmosFit['data'][planetLetter]['TRUTH_MODELPARAMS'].keys()
-                            # print('truth keys:',truth_params)
-                        else:
-                            truth_params = []
-
-                        for trueparam,fitparam in zip(['Teq','metallicity','C/O','Mp'],
-                                                      ['T','[X/H]','[C/O]','Mp']):
-                            if trueparam in truth_params:
-                                true_value = atmosFit['data'][planetLetter]['TRUTH_MODELPARAMS'][trueparam]
-                                # (metallicity and C/O do not have to be converted to log-solar)
-                                # if trueparam=='metallicity':
-                                #    true_value = np.log10(true_value)
-                                # elif trueparam=='C/O':
-                                #    true_value = np.log10(true_value/0.54951)  # solar is C/O=0.55
-                                # elif trueparam=='N/O':
-                                #     true_value = true_value
-                                truth_values[fitparam].append(true_value)
+                            if 'planet_params' in atmosFit['data'][planetLetter]:
+                                masses.append(atmosFit['data'][planetLetter]['planet_params']['mass'])
                             else:
-                                truth_values[fitparam].append(666)
-                        # print('fits',dict(fit_values))
-                        # print('truths',dict(truth_values))
-                        # print()
+                                masses.append(666)
 
-                    # look out for oddballs
-                    # print('T,fit,err',truth_values['T'][-1],
-                    #      fit_values['T'][-1],fit_errors['T'][-1],
-                    #      (fit_values['T'][-1] - truth_values['T'][-1])/fit_errors['T'][-1],trgt)
+                            # (prior range should be the same for all the targets)
+                            # print('priors',atmosFit['data'][planetLetter]['TEC']['prior_ranges'])
+                            # print('   key check',atmosFit['data'][planetLetter]['TEC'].keys())
+                            # if 'prior_ranges' not in atmosFit['data'][planetLetter]['TEC']:
+                            #    print('check',atmosFit['data'][planetLetter])
+                            prior_ranges = atmosFit['data'][planetLetter]['TEC']['prior_ranges']
 
-    # plot analysis of the results.  save as png and as state vector for states/view
-    saveDir = os.path.join(excalibur.context['data_dir'], 'bryden/')
-    # jenkins doesn't like to have a triple-packed return here because it's fussy
-    if 'sim' in filt:
-        # for simulated data, compare retrieval against the truth
-        plotarray = plot_fitsVStruths(
-            truth_values, fit_values, fit_errors, prior_ranges, filt, saveDir)
-        fitTplot, fitMetalplot, fitCOplot = plotarray[0],plotarray[1],plotarray[2]
-    else:
-        # for real data, make a histogram of the retrieved uncertainties
-        plotarray = plot_fitUncertainties(
-            fit_values, fit_errors, prior_ranges, filt, saveDir)
-        fitTplot, fitMetalplot, fitCOplot = plotarray[0],plotarray[1],plotarray[2]
+                            alltraces = []
+                            allkeys = []
+                            for key in atmosFit['data'][planetLetter]['TEC']['MCTRACE']:
+                                alltraces.append(atmosFit['data'][planetLetter]['TEC']['MCTRACE'][key])
 
-    masses = truth_values['Mp']
-    massMetalsplot = plot_massVSmetals(
-        masses, truth_values, fit_values, fit_errors, prior_ranges, filt, saveDir)
+                                if key=='TEC[0]': allkeys.append('[X/H]')
+                                elif key=='TEC[1]': allkeys.append('[C/O]')
+                                elif key=='TEC[2]': allkeys.append('[N/O]')
+                                else: allkeys.append(key)
 
-    # save the analysis as .csv file? (in /proj/data/spreadsheets/)
-    # savesv(aspects, targetlists)
+                            for key,trace in zip(allkeys,alltraces):
+                                if key not in param_names: param_names.append(key)
+                                fit_values[key].append(np.median(trace))
+                                lo = np.percentile(np.array(trace), 16)
+                                hi = np.percentile(np.array(trace), 84)
+                                fit_errors[key].append((hi-lo)/2)
 
-    # Add to SV
+                            if ('TRUTH_MODELPARAMS' in atmosFit['data'][planetLetter].keys()) and \
+                               (isinstance(atmosFit['data'][planetLetter]['TRUTH_MODELPARAMS'], dict)):
+                                truth_params = atmosFit['data'][planetLetter]['TRUTH_MODELPARAMS'].keys()
+                                # print('truth keys:',truth_params)
+                            else:
+                                truth_params = []
+
+                            for trueparam,fitparam in zip(['Teq','metallicity','C/O','N/O','Mp'],
+                                                          ['T','[X/H]','[C/O]','[N/O]','Mp']):
+                                if trueparam in truth_params:
+                                    true_value = atmosFit['data'][planetLetter]['TRUTH_MODELPARAMS'][trueparam]
+                                    # (metallicity and C/O do not have to be converted to log-solar)
+                                    # if trueparam=='metallicity':
+                                    #    true_value = np.log10(true_value)
+                                    # elif trueparam=='C/O':
+                                    #    true_value = np.log10(true_value/0.54951)  # solar is C/O=0.55
+                                    # elif trueparam=='N/O':
+                                    #     true_value = true_value
+                                    if fitparam=='[N/O]' and true_value==666:
+                                        truth_values[fitparam].append(0)
+                                    else:
+                                        truth_values[fitparam].append(true_value)
+
+                                    if trueparam=='Teq' and true_value > 3333:
+                                        print('strangely high T',trgt,true_value)
+                                    if trueparam=='metallicity' and true_value > 66:
+                                        print('strangely high [X/H]',trgt,true_value)
+                                        print('atmosFit',atmosFit['data'][planetLetter])
+                                    if trueparam=='C/O' and true_value > 0.5:
+                                        print('strangely high [C/O]',trgt,true_value)
+
+                                elif trueparam=='Mp':
+                                    # if the planet mass is not in the Truth dictionary, pull it from system
+                                    # print(' input keys',atmosFit['data'][planetLetter]['planet_params'])
+                                    # print(' planet mass from system params:',
+                                    #      atmosFit['data'][planetLetter]['planet_params']['mass'])
+                                    truth_values[fitparam].append(
+                                        atmosFit['data'][planetLetter]['planet_params']['mass'])
+                                elif trueparam=='N/O':
+                                    truth_values[fitparam].append(0)
+                                else:
+                                    truth_values[fitparam].append(666)
+                            # print('fits',dict(fit_values))
+                            # print('truths',dict(truth_values))
+                            # print('truth_params',truth_params)
+                            # print(' input keys',atmosFit['data'][planetLetter].keys())
+                            # print(' input keys',atmosFit['data'][planetLetter]['planet_params'])
+                            # exit('testtt')
+                            # print(' input truth',atmosFit['data'][planetLetter]['TRUTH_MODELPARAMS'])
+                            # print()
+
+                        # look out for oddballs
+                        # print('T,fit,err',truth_values['T'][-1],
+                        #      fit_values['T'][-1],fit_errors['T'][-1],
+                        #      (fit_values['T'][-1] - truth_values['T'][-1])/fit_errors['T'][-1],trgt)
+
+        # plot analysis of the results.  save as png and as state vector for states/view
+        saveDir = os.path.join(excalibur.context['data_dir'], 'bryden/')
+        # jenkins doesn't like to have a triple-packed return here because it's fussy
+        if 'sim' in filt:
+            # for simulated data, compare retrieval against the truth
+            plotarray = plot_fitsVStruths(
+                truth_values, fit_values, fit_errors, prior_ranges, filt, saveDir)
+            fitTplot, fitMetalplot, fitCOplot, fitNOplot = plotarray[0],plotarray[1],plotarray[2],plotarray[3]
+        else:
+            # for real data, make a histogram of the retrieved uncertainties
+            plotarray = plot_fitUncertainties(
+                fit_values, fit_errors, prior_ranges, filt, saveDir)
+            fitTplot, fitMetalplot, fitCOplot, fitNOplot = plotarray[0],plotarray[1],plotarray[2],plotarray[3]
+
+        masses = truth_values['Mp']
+        massMetalsplot = plot_massVSmetals(
+            masses, truth_values, fit_values, fit_errors, prior_ranges, filt, saveDir)
+
+        # save the analysis as .csv file? (in /proj/data/spreadsheets/)
+        # savesv(aspects, targetlist)
+
+        # targetlistname = targetlist['targetlistname']
+
+        # Add to SV
+        out['data']['truths'] = dict(truth_values)
+        out['data']['values'] = dict(fit_values)
+        out['data']['errors'] = dict(fit_errors)
+        out['data']['plot_massVmetals'] = massMetalsplot
+        out['data']['plot_fitT'] = fitTplot
+        out['data']['plot_fitMetal'] = fitMetalplot
+        out['data']['plot_fitCO'] = fitCOplot
+        out['data']['plot_fitNO'] = fitNOplot
+
     out['data']['params'] = param_names
-    out['data']['truths'] = dict(truth_values)
-    out['data']['values'] = dict(fit_values)
-    out['data']['errors'] = dict(fit_errors)
-    out['data']['plot_fitT'] = fitTplot
-    out['data']['plot_fitMetal'] = fitMetalplot
-    out['data']['plot_fitCO'] = fitCOplot
-    out['data']['plot_massVmetals'] = massMetalsplot
+    out['data']['targetlistnames'] = [
+        targetlist['targetlistname'] for targetlist in analysistargetlists]
+
     out['STATUS'].append(True)
     return out['STATUS'][-1]
 
 # def applyProfiling(target, limits, alltraces, allkeys):
-
-# dummy comment for testing github website glitch

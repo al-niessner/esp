@@ -8,6 +8,7 @@ import excalibur.util.cerberus as crbutil
 
 from excalibur.ariel.metallicity import \
     massMetalRelation, massMetalRelationDisp, randomCtoO_linear
+from excalibur.ariel.clouds import fixedCloudParameters, randomCloudParameters
 from excalibur.ariel.arielInstrumentModel import load_ariel_instrument
 from excalibur.ariel.arielObservingPlan import make_tier_table
 from excalibur.ariel.forwardModels import makeTaurexAtmos, makeCerberusAtmos
@@ -46,10 +47,14 @@ def simulate_spectra(target, system_dict, out):
     4) TEC vs DISEQ models [NOT IMPLEMENTED YET!]
     '''
 
+    sscmks = syscore.ssconstants(mks=True)
+
     # ** two key parameters for adjusting the instrument noise model **
     # no longer necessary; Ariel-rad already does these two steps
     # noise_factor = 1./0.7
     # noise_floor_ppm = 50.
+
+    randomCloudProperties = True  # use the median from Estrella 2022 or a random selection?
 
     observing_plan = make_tier_table()
 
@@ -60,7 +65,9 @@ def simulate_spectra(target, system_dict, out):
     # xslibSaveDir = os.path.join(excalibur.context['data_dir'], 'bryden/')
 
     # specify which models should be calculated (use these as keys within data)
-    atmosModels = ['cerberus']
+    atmosModels = ['cerberus', 'cerberusNoclouds',
+                   'cerberuslowmmw', 'cerberuslowmmwNoclouds']
+    # atmosModels = ['cerberus']
     # atmosModels = ['cerberus', 'cerberusNoclouds']
     #  these 8 models were calculated in 2023 runs; less models used in 2024
     # atmosModels = ['cerberus', 'cerberusNoclouds',
@@ -95,10 +102,12 @@ def simulate_spectra(target, system_dict, out):
 
     completed_at_least_one_planet = False
     for planetLetter in system_params['planets']:
+        out['data'][planetLetter] = {}
+
         # set the random seed as a function of target name
         #  (otherwise all spectra have identical noise realizations!)
         #  (also they would have the same C/O and metallicity offset!)
-        intFromTarget = 1
+        intFromTarget = 1  # arbitrary initialization for the random seed
         for char in target+' '+planetLetter:
             intFromTarget = (123 * intFromTarget + ord(char)) % 1000000
         np.random.seed(intFromTarget)
@@ -130,7 +139,6 @@ def simulate_spectra(target, system_dict, out):
             # Calculate the atmosphere scale height
             #  cerberus wants it, to normalize the spectrum
             #  (some of this code is copied from transit/core)
-            sscmks = syscore.ssconstants(mks=True)
             #  NOTE : sma is system, but should be model value.  EDIT LATER?
             eqtemp = model_params['T*']*np.sqrt(model_params['R*']*sscmks['Rsun/AU']/
                                                 (2.*model_params['sma']))
@@ -153,9 +161,13 @@ def simulate_spectra(target, system_dict, out):
             # print()
             # this limit corresponds to the maximum scale height allowing for ~1e11 pressure range
             # (our actual range is typically 10 bar to 1 microbar, requiring 0.06 max H/R)
-            if HoverRmax > 0.04:
-                # print('SKIP:',target,planetLetter,'  scale height / planet radius =',HoverRmax)
-                log.warning('--< SKIP UNBOUND ATMOS: %s %s ; scale height / planet radius = %s >--',target,planetLetter,HoverRmax)
+            # if HoverRmax > 0.04:
+            #     log.warning('--< WARNING UNBOUND ATMOS: %s %s ; scale height / planet radius = %s >--',
+            #                target,planetLetter,HoverRmax)
+            #     log.warning('--< SKIP UNBOUND ATMOS: %s %s ; scale height / planet radius = %s >--',
+            #                target,planetLetter,HoverRmax)
+            if HoverRmax > 666:
+                pass
             else:
                 # planet metallicity is from an assumed mass-metallicity relation
                 #  with scatter included
@@ -164,6 +176,8 @@ def simulate_spectra(target, system_dict, out):
                 M_p = model_params['Mp']
                 includeMetallicityDispersion = True
                 if includeMetallicityDispersion:
+                    # make sure that the random mass is fixed for each target planet
+                    np.random.seed(intFromTarget + 1234)
                     metallicity_planet_dex = massMetalRelationDisp(metallicity_star_dex, M_p,
                                                                    thorngren=True)
                 else:
@@ -171,7 +185,13 @@ def simulate_spectra(target, system_dict, out):
                                                                thorngren=True)
                 # print('metallicity_star_dex',metallicity_star_dex)
                 # print('metallicity_planet_dex',metallicity_planet_dex)
+                # metallicity_planet_dex_nonrandom = massMetalRelation(metallicity_star_dex, M_p,
+                #                                                     thorngren=True)
+                # print('metallicity_planet_dex (non random)',metallicity_planet_dex_nonrandom)
+                # print('planet mass',M_p)
 
+                # make sure that the random C/O is fixed for each target planet
+                np.random.seed(intFromTarget + 12345)
                 CtoO_planet_linear = randomCtoO_linear()  # this is linear C/O, not dex
                 # print('CtoO_planet_linear',CtoO_planet_linear)
 
@@ -213,6 +233,19 @@ def simulate_spectra(target, system_dict, out):
                         model_params['C/O'] = np.log10(CtoO_planet_linear/0.54951)
                         # print('C/O model param',model_params['C/O'])
 
+                    # check whether this planet+metallicity combo is convergent/bound atmosphere
+                    mixratio, fH2, fHe = crbutil.crbce(pressure, eqtemp,
+                                                       X2Hr=model_params['metallicity'])
+                    # print ('  METALLICITY',model_params['metallicity'])
+                    mmw, fH2, fHe = crbutil.getmmw(mixratio, protosolar=False, fH2=fH2, fHe=fHe)
+                    Hs = cst.Boltzmann * eqtemp / (mmw*cst.m_p*1e-2 *
+                                                   (10.**float(model_params['logg'])))
+                    HoverRp = Hs / (model_params['Rp']*sscmks['Rjup'])
+                    # print('HoverRp,mmw',HoverRp,mmw,atmosModel)
+                    if HoverRp > 0.04:
+                        log.warning('--< WARNING UNBOUND ATMOS: %s %s ; scale height / planet radius = %s %s >--',
+                                    target,planetLetter,HoverRmax,atmosModel)
+
                     if 'cerberus' in atmosModel:
                         # CLOUD PARAMETERS
                         if 'Noclouds' in atmosModel:
@@ -228,11 +261,17 @@ def simulate_spectra(target, system_dict, out):
                             # model_params['HLoc'] = 0.
                             # model_params['HThick'] = 0.
 
-                            # median values from Estrela et al 2022, Table 2 (TEC column)
-                            model_params['CTP'] = -1.52     # 0.03 bar
-                            model_params['HScale'] = -2.10  # 0.008
-                            model_params['HLoc'] = -2.30    # 0.005 bar location (meaningless)
-                            model_params['HThick'] = 9.76   # very wide vertical thickness
+                            if randomCloudProperties:
+                                # make sure that random cloud properties are fixed between runs
+                                np.random.seed(intFromTarget + 123456)
+                                cloudParams = randomCloudParameters()
+                                for paramName in ['CTP','HScale','HLoc','HThick']:
+                                    model_params[paramName] = cloudParams[paramName]
+                            else:
+                                # median values from Estrela et al 2022, Table 2 (TEC column)
+                                cloudParams = fixedCloudParameters()
+                                for paramName in ['CTP','HScale','HLoc','HThick']:
+                                    model_params[paramName] = cloudParams[paramName]
 
                         if 'R' in atmosModel:
                             iwave1 = atmosModel.index('R')
@@ -315,11 +354,13 @@ def simulate_spectra(target, system_dict, out):
                     # print ('Nan check on rebin',np.isnan(np.max(fluxDepth_rebin)))
 
                     # ADD OBSERVATIONAL NOISE TO THE TRUE SPECTRUM
+                    # set the random seed for the instrument noise to be fixed for each planet
+                    np.random.seed(intFromTarget + 1234567)
                     fluxDepth_observed = fluxDepth_rebin + np.random.normal(scale=uncertainties)
 
                     # SAVE THE RESULTS
-                    if planetLetter not in out['data'].keys():
-                        out['data'][planetLetter] = {}
+                    # if planetLetter not in out['data'].keys():
+                    #    out['data'][planetLetter] = {}
 
                     # careful - ES and ESerr are supposed to be radii, not transit depth
                     #  need to take a sqrt of them
@@ -486,4 +527,6 @@ def simulate_spectra(target, system_dict, out):
     if completed_at_least_one_planet: out['STATUS'].append(True)
 
     return True
+    # which option to use here? should blank spectrum create a new RUNID?
+    # return out['STATUS'][-1]
 # ------------------------- ------------------------------------------

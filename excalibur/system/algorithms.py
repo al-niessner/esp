@@ -95,6 +95,7 @@ class finalize(dawgie.Algorithm):
 
     def run(self, ds, ps):
         '''Top level algorithm call'''
+
         update = False
         val = self.__val.sv_as_dict()['parameters']
         valid, errstring = syscore.checksv(val)
@@ -188,6 +189,23 @@ class population(dawgie.Analyzer):
         '''run ds'''
 
         targetlists = get_target_lists()
+
+        # cross-check the 'active' list against __all__
+        checkAll = False
+        if checkAll:
+            for target in targetlists['active']:
+                if target not in aspects:
+                    print('missing from aspect:',target)
+            for target in aspects:
+                if target in targetlists['active']:
+                    # print('ok')
+                    pass
+                elif 'taurex sim' in target:
+                    # print('ok')
+                    pass
+                else:
+                    print('missing from active',target)
+            # exit()
 
         # group together values by attribute
         svname = 'system.finalize.parameters'
