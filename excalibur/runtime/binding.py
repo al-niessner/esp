@@ -1,7 +1,7 @@
 # ./excalibur/runtime/binding.py
 # -*- coding: utf-8 -*-
 # PyXB bindings for NM:e92452c8d3e28a9e27abfc9994d2007779e7f4c9
-# Generated 2024-03-21 10:24:57.023243 by PyXB version 1.2.7-DEV using Python 3.10.12.final.0
+# Generated 2024-03-23 11:01:42.550802 by PyXB version 1.3.2-rc2 using Python 3.10.12.final.0
 # Namespace AbsentNamespace0
 
 from __future__ import unicode_literals
@@ -14,10 +14,10 @@ import pyxb.utils.domutils
 import sys
 import pyxb.utils.six as _six
 # Unique identifier for bindings created at the same time
-_GenerationUID = pyxb.utils.utility.UniqueIdentifier('urn:uuid:f028b20a-e7a7-11ee-9c9f-c9aec4937e1f')
+_GenerationUID = pyxb.utils.utility.UniqueIdentifier('urn:uuid:6796f9ee-e93f-11ee-91fa-e5d1fafcad04')
 
 # Version of PyXB used to generate the bindings
-_PyXBVersion = '1.2.7-DEV'
+_PyXBVersion = '1.3.2-rc2'
 # Generated bindings are not compatible across PyXB versions
 if pyxb.__version__ != _PyXBVersion:
     raise pyxb.PyXBVersionError(_PyXBVersion)
@@ -633,19 +633,14 @@ def _BuildAutomaton_5 ():
     import pyxb.utils.fac as fac
 
     counters = set()
-    cc_0 = fac.CounterCondition(min=0, max=1, metadata=pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 88, 6))
-    counters.add(cc_0)
     states = []
     final_update = set()
-    final_update.add(fac.UpdateInstruction(cc_0, False))
     symbol = pyxb.binding.content.ElementUse(lever_type._UseForTag(pyxb.namespace.ExpandedName(None, 'sequester')), pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 88, 6))
     st_0 = fac.State(symbol, is_initial=True, final_update=final_update, is_unordered_catenation=False)
     states.append(st_0)
     transitions = []
-    transitions.append(fac.Transition(st_0, [
-        fac.UpdateInstruction(cc_0, True) ]))
     st_0._set_transitionSet(transitions)
-    return fac.Automaton(states, counters, True, containing_state=st_0)
+    return fac.Automaton(states, counters, False, containing_state=st_0)
 
 def _BuildAutomaton_ ():
     # Remove this helper function from the namespace after it is invoked
@@ -654,8 +649,6 @@ def _BuildAutomaton_ ():
     import pyxb.utils.fac as fac
 
     counters = set()
-    cc_0 = fac.CounterCondition(min=0, max=1, metadata=pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 88, 6))
-    counters.add(cc_0)
     states = []
     sub_automata = []
     sub_automata.append(_BuildAutomaton_2())
@@ -841,19 +834,14 @@ def _BuildAutomaton_15 ():
     import pyxb.utils.fac as fac
 
     counters = set()
-    cc_0 = fac.CounterCondition(min=0, max=1, metadata=pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 88, 6))
-    counters.add(cc_0)
     states = []
     final_update = set()
-    final_update.add(fac.UpdateInstruction(cc_0, False))
     symbol = pyxb.binding.content.ElementUse(CTD_ANON._UseForTag(pyxb.namespace.ExpandedName(None, 'sequester')), pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 88, 6))
     st_0 = fac.State(symbol, is_initial=True, final_update=final_update, is_unordered_catenation=False)
     states.append(st_0)
     transitions = []
-    transitions.append(fac.Transition(st_0, [
-        fac.UpdateInstruction(cc_0, True) ]))
     st_0._set_transitionSet(transitions)
-    return fac.Automaton(states, counters, True, containing_state=st_0)
+    return fac.Automaton(states, counters, False, containing_state=st_0)
 
 def _BuildAutomaton_11 ():
     # Remove this helper function from the namespace after it is invoked
@@ -862,8 +850,6 @@ def _BuildAutomaton_11 ():
     import pyxb.utils.fac as fac
 
     counters = set()
-    cc_0 = fac.CounterCondition(min=0, max=1, metadata=pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 88, 6))
-    counters.add(cc_0)
     states = []
     sub_automata = []
     sub_automata.append(_BuildAutomaton_12())
