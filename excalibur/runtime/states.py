@@ -81,7 +81,7 @@ class FilterSV(dawgie.StateVector,dawgie.Value):
 
 class PymcSV(dawgie.StateVector,dawgie.Value):
     '''State representation of the filters to be included/excluded'''
-    def __init__(self, name:str):
+    def __init__(self, name:str='undefined'):
         '''init the state vector with empty values'''
         self.__name = f'pymc-{name}'
         self._version_ = dawgie.VERSION(1,0,0)
