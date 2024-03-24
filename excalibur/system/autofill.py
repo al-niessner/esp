@@ -73,7 +73,7 @@ def fillUncertainty(param,param_value,param_uncertainty,error_type):
             elif param in ['rp','sma','mass','R*','M*','RHO*','L*']:
                 # set uncertainty to 10% for planet radius, semi-major axis, mass
                 #   same for stellar radius, mass, density, luminosity
-                fillvalue = float(param_value) * 1.e-1
+                fillvalue = float(param_value) * 0.1
                 if param in ['rp']:
                     fillvalue = float(param_value) / 3.
                     fillvalue = float(param_value) * 0.392  # 90-percentile; 95-percentile is 0.50
@@ -100,10 +100,13 @@ def fillUncertainty(param,param_value,param_uncertainty,error_type):
                 fillvalue = 0.2
             elif param=='trandepth':
                 # transit depth to 20%? S/N=5 seems like a minimum for detection
-                fillvalue = float(param_value) * 1.e-2
+                fillvalue = float(param_value) * 0.2
+            elif param=='trandur':
+                # transit duration to 20%? S/N=5 seems reasonable I guess
+                fillvalue = float(param_value) * 0.2
             else:
                 # fallback option is to set uncertainty to 10%
-                fillvalue = float(param_value) * 1.e-1
+                fillvalue = float(param_value) * 0.1
                 print('another PARAM:',param)
                 pass
             pass

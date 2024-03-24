@@ -613,9 +613,25 @@ def fmcerberus(*crbinputs):
     fmc = np.zeros(ctxt.tspectrum.size)
     if ctxt.model == 'TEC':
         tceqdict = {}
-        tceqdict['XtoH'] = float(mdp[0])
-        tceqdict['CtoO'] = float(mdp[1])
-        tceqdict['NtoO'] = float(mdp[2])
+        mdpindex = 0
+        if 'XtoH' in ctxt.fixedParams:
+            tceqdict['XtoH'] = ctxt.fixedParams['XtoH']
+        else:
+            tceqdict['XtoH'] = float(mdp[mdpindex])
+            mdpindex += 1
+
+        if 'CtoO' in ctxt.fixedParams:
+            tceqdict['CtoO'] = ctxt.fixedParams['CtoO']
+        else:
+            tceqdict['CtoO'] = float(mdp[mdpindex])
+            mdpindex += 1
+
+        if 'NtoO' in ctxt.fixedParams:
+            tceqdict['NtoO'] = ctxt.fixedParams['NtoO']
+        else:
+            tceqdict['NtoO'] = float(mdp[mdpindex])
+        # print('XtoH,CtoO,NtoO =',tceqdict['XtoH'],tceqdict['CtoO'],tceqdict['NtoO'])
+
         fmc = crbmodel(None, float(hza), float(ctp), ctxt.solidr, ctxt.orbp,
                        ctxt.xsl['data'][ctxt.p]['XSECS'],
                        ctxt.xsl['data'][ctxt.p]['QTGRID'],
@@ -652,9 +668,25 @@ def spshfmcerberus(*crbinputs):
     fmc = np.zeros(ctxt.tspectrum.size)
     if ctxt.model == 'TEC':
         tceqdict = {}
-        tceqdict['XtoH'] = float(mdp[0])
-        tceqdict['CtoO'] = float(mdp[1])
-        tceqdict['NtoO'] = float(mdp[2])
+        mdpindex = 0
+        if 'XtoH' in ctxt.fixedParams:
+            tceqdict['XtoH'] = ctxt.fixedParams['XtoH']
+        else:
+            tceqdict['XtoH'] = float(mdp[mdpindex])
+            mdpindex += 1
+
+        if 'CtoO' in ctxt.fixedParams:
+            tceqdict['CtoO'] = ctxt.fixedParams['CtoO']
+        else:
+            tceqdict['CtoO'] = float(mdp[mdpindex])
+            mdpindex += 1
+
+        if 'NtoO' in ctxt.fixedParams:
+            tceqdict['NtoO'] = ctxt.fixedParams['NtoO']
+        else:
+            tceqdict['NtoO'] = float(mdp[mdpindex])
+        # print('XtoH,CtoO,NtoO =',tceqdict['XtoH'],tceqdict['CtoO'],tceqdict['NtoO'])
+
         fmc = crbmodel(None, float(hza), float(ctp), ctxt.solidr, ctxt.orbp,
                        ctxt.xsl['data'][ctxt.p]['XSECS'],
                        ctxt.xsl['data'][ctxt.p]['QTGRID'],

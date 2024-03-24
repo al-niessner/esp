@@ -439,6 +439,33 @@ def buildsp(autofill, out):
             pass
         pass
 
+    # when adding new targets, output star/planet info needed as input for ArielRad
+    newtarget = 0
+    if newtarget:
+        # print(out['priors'].keys())
+        # print(out['priors']['b'].keys())
+        for planetLetter in out['priors']['planets']:
+            print('ArielRad input:   ,',target+','+
+                  out['priors']['M*']+','+
+                  out['priors']['T*']+','+
+                  out['priors']['R*']+','+
+                  out['priors']['dist']+','+
+                  out['priors']['Kmag']+','+
+                  ' '+','+
+                  target,planetLetter+','+
+                  out['priors'][planetLetter]['period']+','+
+                  out['priors'][planetLetter]['teq']+','+
+                  out['priors'][planetLetter]['sma'] *ssc['AU']/100+','+
+                  out['priors'][planetLetter]['rp'] *ssc['Rjup']/ssc['Rearth']+','+
+                  0.3+','+
+                  out['priors'][planetLetter]['mass'] *ssc['Mjup']/ssc['Mearth']+','+
+                  2.3+','+
+                  out['priors'][planetLetter]['trandur']*3600+','+
+                  out['priors'][planetLetter]['impact']+','+
+                  1)
+# units for planet params:
+# [day] [K] [m]	[Rearth] [] [Mearth] [g/mol] [s] []
+
     for p in out['ignore']:
         dropIndices = []
         for value in out['needed']:
