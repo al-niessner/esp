@@ -79,12 +79,15 @@
                   what processing should be done.
         filters: controls what filters should be processed and/or ignored.
         pymc: controls specific to the PYMC processing.
+        restrict_to: when empty do all targets, otherwise just those listed
+        sequester: never do these targets dispite restrict_to
       </xs:documentation>
     </xs:annotation>
     <xs:all>
       <xs:element name="controls" type="control_type"/>
       <xs:element name="filters" type="filter_type"/>
       <xs:element name="pymc" type="pymc_type"/>
+      <xs:element name="run_only" type="sequester_type"/>
       <xs:element name="sequester" type="sequester_type"/>
     </xs:all>
     <xs:attribute default="registry" name="index" type="xs:normalizedString"/>
@@ -123,7 +126,8 @@
       </xs:documentation>
     </xs:annotation>
     <xs:sequence>
-      <xs:element maxOccurs="unbounded" name="target" type="target_type"/>
+      <xs:element maxOccurs="unbounded" minOccurs="0"
+                  name="target" type="target_type"/>
     </xs:sequence>
   </xs:complexType>
 

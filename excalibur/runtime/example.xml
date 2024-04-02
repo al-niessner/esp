@@ -34,4 +34,5 @@
     <target because="alias for GJ 3053">LHS 1140</target>
     <target because="taurex-sim targets waste CPU" isRegex="true">.*\(taurex sim @TS\)$</target>
   </sequester>
+  <run_only/>
 </levers>

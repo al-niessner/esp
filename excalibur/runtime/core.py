@@ -8,6 +8,21 @@ from . import binding
 
 ENV_NAME = 'EXCALIBUR_LEVER_AND_KNOB_SETTINGS'
 
+def _sequester2sv (sequester_type, sv, targets):
+    for tn in sequester_type.target:
+        if tn.isRegex:
+            regex = re.compile(tn.value())
+            matching_targets = filter (lambda t,rex=regex:rex.match(t), targets)
+            if matching_targets:
+                for mt in matching_targets:
+                    sv['targets'].append ((mt, tn.because))
+            else:
+                log.warning ('Sequester regex %s produced no matches',
+                             tn.value())
+        elif tn.value() in targets:
+            sv['targets'].append ((tn.value(), tn.because))
+        else: log.warning ('Sequester target %s is not known', tn.value())
+
 def isolate(sv:{}, table:{str:{}}, tn:str)->None:
     '''isolate target specific state from the global table'''
     if table['filters']['includes']:
@@ -30,6 +45,8 @@ def isolate(sv:{}, table:{str:{}}, tn:str)->None:
                                                     (tn, default))
     sv['isValidTarget'] = sv['isValidTarget'].new(tn in table
                                                   ['sequester']['targets'])
+    if table['run_only']['targets']:
+        sv['runTarget'] = sv['runTarget'].new(tn in table['run_only']['targets'])
     pymc = table['pymc-spectrum']
     default = pymc['default'].value()
     sv['spectrum_steps'] = sv['spectrum_steps'].new(pymc['overrides'].get
@@ -57,16 +74,5 @@ def load(sv_dict:{str:{}}, targets)->None:
         sv['default'] = sv['default'].new (cf.default)
         for override in cf.target:
             sv['overrides'][override.name] = override.steps
-    for tn in settings.sequester.target:
-        if tn.isRegex:
-            regex = re.compile(tn.value())
-            matching_targets = filter (lambda t,rex=regex:rex.match(t), targets)
-            if matching_targets:
-                for mt in matching_targets:
-                    sv_dict['sequester']['targets'].append ((mt, tn.because))
-            else:
-                log.warning ('Sequester regex %s produced no matches',
-                             tn.value())
-        elif tn.value() in targets:
-            sv_dict['sequester']['targets'].append ((tn.value(), tn.because))
-        else: log.warning ('Sequester target %s is not known', tn.value())
+    _sequester2sv(settings.sequester,sv_dict['run_only'], targets)
+    _sequester2sv(settings.sequester,sv_dict['sequester'], targets)

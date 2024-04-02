@@ -48,7 +48,8 @@ class create(dawgie.Analyzer):
         self._version_ = dawgie.VERSION(1,0,0)
         self.__table = [states.ControlsSV(), states.FilterSV(),
                         states.PymcSV('cerberus'), states.PymcSV('spectrum'),
-                        states.SequesterSV()]
+                        states.TargetsSV('run_only'),
+                        states.TargetsSV('sequester')]
         self.__table.append (states.CompositeSV(self.__table))
     def name(self)->str:
         '''database name'''
