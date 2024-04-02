@@ -127,7 +127,7 @@ class StatusSV(dawgie.StateVector):
         if not all([allowed, run, valid]):
             msg = ('Determined that should not process this target for ext:\n'
                    f'  validTarget:    {valid}\n'
-                   f'  run:            {run}\n'
+                   f'  runnable:       {run}\n'
                    f'  ext is allowed: {allowed}')
             log.info(msg)
             raise dawgie.NoValidInputDataError(msg)
