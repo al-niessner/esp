@@ -169,6 +169,12 @@ def dropouts():
            'XO-1 (taurex sim @TS)',
            'XO-2 (taurex sim @TS)',
            'TOI-561 (taurex sim @TS)']
+    # these were in the old 'junk' list, but they're no longer in Excalibur
+    # (also there were several misspelled names that were purged out)
+    #  'K2-11',
+    #  'K2-183',
+    #  'TOI 1040',
+    #  'Kepler-854',  # false-positive planet. was in the 2019 Ariel 1000planet list
     return out
 # ------------------- ------------------------------------------------
 # -- CREATE -- -------------------------------------------------------
@@ -302,6 +308,7 @@ Kepler-12 :
 Kepler-125 :
 Kepler-126 :
 Kepler-127 :
+Kepler-13 :
 Kepler-1339 :
 Kepler-138 :
 Kepler-14 :
@@ -1140,6 +1147,7 @@ Kepler-12 : KEPLER12
 Kepler-125 : KEPLER125
 Kepler-126 : KEPLER126
 Kepler-127 : KEPLER127
+Kepler-13 : KEPLER13
 Kepler-1339 : KEPLER1339
 Kepler-138 : KEPLER138
 Kepler-14 : KEPLER14

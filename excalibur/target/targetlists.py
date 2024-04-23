@@ -10,18 +10,33 @@ def get_target_lists():
     Load in all the various target lists that are compiled here
     '''
 
+    # target list sizes as of March 6, 2024:
+    #  active: 818
+    #  roudier62: 60
+    #  G141:      86
+    #  arielMCS_Nov2023_transit:     300
+    #  arielMCS_Nov2023_maxVisits25: 330
+    #  arielMCS_Feb2024_transit:     226
+    #  arielMCS_Feb2024_maxVisits25: 270
+
     targetlists = {
         'active': targetlist_active(),
-        'junk': targetlist_junk(),
         'roudier62': targetlist_roudier62(),
         'G141': targetlist_G141(),
+        'arielMCS_Nov2023_transit': targetlist_ArielMCSknown('Nov2023',transitCategoryOnly=True),
+        'arielMCS_Nov2023_maxVisits25': targetlist_ArielMCSknown('Nov2023',maxVisits=25),
+        'arielMCS_Feb2024_transit': targetlist_ArielMCSknown('Feb2024',transitCategoryOnly=True),
+        'arielMCS_Feb2024_maxVisits25': targetlist_ArielMCSknown('Feb2024',maxVisits=25),
     }
+
+    # for targetlist in targetlists:
+    #     print('# of targets:',targetlist,len(targetlists[targetlist]))
 
     return targetlists
 # --------------------------------------------------------------------
 def targetlist_active():
     '''
-    all good targets (everything except targetlist_junk)
+    all good targets (everything except target/edit.py/dropouts)
     '''
     targets = [
         '55 Cnc',
@@ -294,10 +309,12 @@ def targetlist_active():
         'Kepler-102',
         'Kepler-104',
         'Kepler-1083',
+        'Kepler-11',
         'Kepler-12',
         'Kepler-125',
         'Kepler-126',
         'Kepler-127',
+        'Kepler-13',
         'Kepler-1339',
         'Kepler-138',
         'Kepler-14',
@@ -928,38 +945,6 @@ def targetlist_roudier62():
 
 # --------------------------------------------------------------------
 
-def targetlist_junk():
-    '''
-    targets that are just junk (mis-spellings, etc)
-    '''
-
-    targets = [
-        '__all__',
-        '',
-        'COROT-1',    # correct spelling is CoRoT-1
-        'GJ-1214',    # correct spelling is GJ 1214
-        'hd 189733',  # correct spelling is HD 189733
-        'HD 189733 (taurex sim @TS)',
-        'HR 8799',    # directly imaged planets
-        'K2-11',
-        'K2-183',
-        # 'Kepler-11',  # ?? seems ok
-        # 'Kepler-13',  # ?? seems ok (but it's not in the current target list)
-        # 'Kepler-51',  # HST/G141 STARE, instead of SCAN. was dropped;added back
-        'LHS 1140',   # alias for GJ 3053
-        'SWEEPS-11',
-        'SWEEPS-4',
-        'TOI 1040',
-        'TOI-150.01',
-        'TOI-216.01', 'TOI-216.02',  # these names are no good; should use 'b','c' not '.01','.02'
-        'Kepler-854',  # false-positive planet. was in the 2019 Ariel 1000planet list
-        'LHS 6343',  # has G141, but is a false-positive candidate planet
-    ]
-
-    return targets
-
-# --------------------------------------------------------------------
-
 def targetlist_G141():
     '''
     all targets with HST G141 spectra.  currently 89 stars
@@ -1062,21 +1047,18 @@ def targetlist_G141():
 
 # --------------------------------------------------------------------
 
-def read_ArielMCS_info():
+def read_ArielMCS_info(filename='Ariel_MCS_Known_2024-02-14.csv'):
     '''
     Load in the MCS table with all the Ariel target info
     The most recent file is 2/14/24, but also consider the 11/20/23 file
     '''
-
-    filename = 'Ariel_MCS_Known_2023-11-20.csv'
-    filename = 'Ariel_MCS_Known_2024-02-14.csv'
 
     arielDir = excalibur.context['data_dir']+'/ariel/'
 
     listofDictionaries = []
 
     if not os.path.isfile(arielDir + filename):
-        log.warning('PROBLEM: Ariel MCS table not found')
+        log.warning('--< PROBLEM: Ariel MCS table not found >--')
     else:
         with open(arielDir + filename, 'r', encoding='ascii') as file:
             csvFile = csv.DictReader(file)
@@ -1088,22 +1070,39 @@ def read_ArielMCS_info():
     return listofDictionaries
 # --------------------------------------------------------------------
 
-def targetlist_ArielMCSknown_transitCategory():
+def targetlist_ArielMCSknown(filedate='Nov2023',
+                             maxVisits=666,
+                             transitCategoryOnly=False):
     '''
     Select a batch of targets from the Ariel MCS list of known planets
 
-    Include all planets in the 'transit' or 'either' category
+    If transitCategoryOnly, include all planets in the 'transit' or 'either' category
+    Otherwise make the selection based on the number of transit visits (<= maxVisits)
     '''
 
-    targetList = []
+    if filedate=='Nov2023':
+        filename = 'Ariel_MCS_Known_2023-11-20.csv'
+    elif filedate=='Feb2024':
+        filename = 'Ariel_MCS_Known_2024-02-14.csv'
+    else:
+        log.warning('--< PROBLEM: Unknown date for the Ariel MCS table >--')
+        filename = 'Ariel_MCS_Known_2023-11-20.csv'
+
+    targetinfo = read_ArielMCS_info(filename=filename)
 
     aliases = arielAliases()
 
-    targetinfo = read_ArielMCS_info()
-
+    targetList = []
     for target in targetinfo:
-        if target['Preferred Method']=='Transit' or target['Preferred Method']=='Either':
+        selected = False
+        if transitCategoryOnly:
+            if target['Preferred Method']=='Transit' or target['Preferred Method']=='Either':
+                selected = True
+        else:
+            if float(target['Tier 2 Transits']) <= maxVisits:
+                selected = True
 
+        if selected:
             # special case for TOI-216.01 and TOI-216.02
             if target['Planet Name'].endswith('.01'):
                 target['Planet Name'] = target['Planet Name'][:-3] + ' b'
@@ -1118,9 +1117,13 @@ def targetlist_ArielMCSknown_transitCategory():
                 target['Star Name'] = alias
                 target['Planet Name'] = alias + target['Planet Name'][-2:]
 
-            targetList.append(target['Planet Name'])
-
-    print('# of targets in the transit+either list:',len(targetList))
+            # save the star names (not the planet names).  that's what's needed for pipeline call
+            # targetList.append(target['Planet Name'])
+            if target['Star Name'] in targetList:
+                # print('skipping a multi-planet entry for',target['Star Name'])
+                pass
+            else:
+                targetList.append(target['Star Name'])
 
     return targetList
 # --------------------------------------------------------------------
@@ -1138,6 +1141,8 @@ def arielAliases():
         'LHS 475':'GJ 4102',
         'TOI-836':'LTT 5972',
         'WASP-94 A':'WASP-94',
+        'GJ 143':'HD 21749',
+        'HIP 41378':'K2-93',
     }
 
     return aliases

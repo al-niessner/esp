@@ -55,7 +55,7 @@ def rebinData(transitdata, binsize=4):
 # --------------------------------------------------------------------
 # --------------------------------------------------------------------
 def plot_bestfit(transitdata, patmos_model, fmcarray,
-                 truth_spectrum, ancillary_data,
+                 truth_spectrum, ancillary_data, atmos_data,
                  filt, modelName, trgt, p, saveDir, savetodisk=False):
     ''' plot the best fit to the data '''
 
@@ -74,12 +74,14 @@ def plot_bestfit(transitdata, patmos_model, fmcarray,
                 yerr=transitdata['binned_error'] * 100,
                 # fmt='o', color='k', markeredgecolor='k', markerfacecolor='w', zorder=5,
                 # fmt='^', color='blue', zorder=5,
-                fmt='o', color='royalblue', zorder=5,
+                # fmt='o', color='royalblue', zorder=5,
+                fmt='o', markeredgecolor='k', color='None', ecolor='k', zorder=5,
                 label='rebinned data')
     # 3) plot the best-fit model
     plt.plot(transitdata['wavelength'],
              patmos_model * 100,
-             c='k', lw=2, zorder=4,
+             # c='k', lw=2, zorder=4,
+             c='orange', lw=2, zorder=4,
              label='best fit')
     # 4) plot a selection of walkers, to see spread
     xlims = plt.xlim()
@@ -89,24 +91,68 @@ def plot_bestfit(transitdata, patmos_model, fmcarray,
         patmos_modeli = fmcexample - np.nanmean(fmcexample) + \
             np.nanmean(transitdata['depth'])
         # print('median pmodel',np.nanmedian(patmos_model))
-        plt.plot(transitdata['wavelength'],
-                 patmos_modeli * 100,
-                 c='grey', lw=0.2, zorder=2)
+        if np.sum(patmos_modeli)==666:
+            plt.plot(transitdata['wavelength'],
+                     patmos_modeli * 100,
+                     c='grey', lw=0.2, zorder=2)
     plt.ylim(ylims)  # revert to the original y-bounds, in case messed up
     # 5) plot the true spectrum, if it is a simulation
     if truth_spectrum is not None:
         plt.plot(truth_spectrum['wavelength'], truth_spectrum['depth']*100,
-                 c='orange', lw=2, zorder=3,
+                 c='k', lw=1.5, zorder=3,
+                 # c='orange', lw=2, zorder=3,
                  label='truth')
 
+    offsets_model = (patmos_model - transitdata['depth']) / transitdata['error']
+    # print('median chi2, model',np.median(offsets_model**2))
+    offsets_truth = (truth_spectrum['depth'] - transitdata['depth']) / transitdata['error']
+    # print('median chi2, truth',np.median(offsets_truth**2))
+
+    flatlineFit = np.average(transitdata['depth'], weights=1/transitdata['error']**2)
+    # print('flatline average',flatlineFit)
+    offsets_flat = (flatlineFit - transitdata['depth']) / transitdata['error']
+    # print('median chi2, flat',np.median(offsets_flat**2))
+
+    chi2model = np.sum(offsets_model**2)
+    chi2truth = np.sum(offsets_truth**2)
+    chi2flat = np.sum(offsets_flat**2)
+
+    numParam_model = 8
+    numParam_truth = 0
+    numParam_flat = 1
+
+    numPoints = len(truth_spectrum['wavelength'])
+    chi2model_red = chi2model / (numPoints - numParam_model)
+    chi2truth_red = chi2truth / (numPoints - numParam_truth)
+    chi2flat_red = chi2flat / (numPoints - numParam_flat)
+
     # add some labels off to the right side
-    # print('ancillary_data',ancillary_data.keys())
-    # print('ancillary_data',ancillary_data['ZFOM'])
+    if 'tier' in atmos_data:
+        plt.text(xlims[1]+0.1,ylims[0]+(ylims[1]-ylims[0])*1.00,
+                 'Tier='+atmos_data['tier'],fontsize=12)
+        plt.text(xlims[1]+0.1,ylims[0]+(ylims[1]-ylims[0])*0.93,
+                 '# of Visits='+atmos_data['visits'],fontsize=12)
     plt.text(xlims[1]+0.1,ylims[0]+(ylims[1]-ylims[0])*0.8,
              'ZFOM='+f"{ancillary_data['ZFOM']:4.1f}"+'-'+
              f"{ancillary_data['ZFOM_max']:4.1f}",fontsize=12)
-    plt.text(xlims[1]+0.1,ylims[0]+(ylims[1]-ylims[0])*0.7,
+    plt.text(xlims[1]+0.1,ylims[0]+(ylims[1]-ylims[0])*0.73,
              'TSM='+f"{ancillary_data['TSM']:5.2f}",fontsize=12)
+    plt.text(xlims[1]+0.1,ylims[0]+(ylims[1]-ylims[0])*0.6,
+             '$\\chi^2$-truth='+f"{chi2truth:5.2f}",fontsize=12)
+    plt.text(xlims[1]+0.1,ylims[0]+(ylims[1]-ylims[0])*0.53,
+             '$\\chi^2$-model='+f"{chi2model:5.2f}",fontsize=12)
+    plt.text(xlims[1]+0.1,ylims[0]+(ylims[1]-ylims[0])*0.46,
+             '$\\chi^2$-flat='+f"{chi2flat:5.2f}",fontsize=12)
+    plt.text(xlims[1]+0.1,ylims[0]+(ylims[1]-ylims[0])*0.36,
+             '$\\chi^2_{red}$-truth='+f"{chi2truth_red:5.2f}",fontsize=12)
+    plt.text(xlims[1]+0.1,ylims[0]+(ylims[1]-ylims[0])*0.29,
+             '$\\chi^2_{red}$-model='+f"{chi2model_red:5.2f}",fontsize=12)
+    plt.text(xlims[1]+0.1,ylims[0]+(ylims[1]-ylims[0])*0.22,
+             '$\\chi^2_{red}$-flat='+f"{chi2flat_red:5.2f}",fontsize=12)
+    plt.text(xlims[1]+0.1,ylims[0]+(ylims[1]-ylims[0])*0.12,
+             '$\\chi^2_{red}$(model/flat)='+f"{(chi2model_red/chi2flat_red):5.2f}",fontsize=12)
+    plt.text(xlims[1]+0.1,ylims[0]+(ylims[1]-ylims[0])*0.05,
+             '$\\Delta\\chi^2$(flat-model)='+f"{(chi2flat-chi2model):5.1f}",fontsize=12)
 
     if filt=='Ariel-sim':
         plt.xlim(0,8)
@@ -376,13 +422,18 @@ def plot_walkerEvolution(allkeys, alltraces, truth_params, prior_ranges,
 # --------------------------------------------------------------------
 def plot_fitsVStruths(truth_values, fit_values, fit_errors, prior_ranges,
                       filt, saveDir, savetodisk=False):
-    ''' compare the retrieved values against the original inputs '''
+    '''
+    Compare the retrieved values against the original inputs
+    Also (optionally) show a histogram of the uncertainty values
+    '''
 
     plot_statevectors = []
-    for param in ['T', '[X/H]', '[C/O]']:
+    for param in ['T', '[X/H]', '[C/O]', '[N/O]']:
 
-        figure = plt.figure(figsize=(5,5))
-        ax = figure.add_subplot(1,1,1)
+        # figure = plt.figure(figsize=(5,5))
+        # ax = figure.add_subplot(1,1,1)
+        figure = plt.figure(figsize=(10,5))
+        ax = figure.add_subplot(1,2,1)
 
         for truth,fit,error in zip(truth_values[param],
                                    fit_values[param],
@@ -393,7 +444,13 @@ def plot_fitsVStruths(truth_values, fit_values, fit_errors, prior_ranges,
             # oh wait also note that errorbar is one-sided, so another factor of 2
             minInfo = 0.5 * 0.68 * 0.5
             newInfo = False
-            if param=='T':
+            if param not in prior_ranges:
+                log.warning('--< Cerb.analysis plotting: Parameter missing from prior_range 1: %s >--',param)
+                if param=='[N/O]':
+                    priorRangeDiff = 12
+                    if error < minInfo * priorRangeDiff:
+                        newInfo = True
+            elif param=='T':
                 priorRangeFactor = prior_ranges[param][1] / prior_ranges[param][0]
                 # prior is normally set to 0.75-1.5 times Teq
                 if error < minInfo * (priorRangeFactor-1) * 0.75*truth:
@@ -419,6 +476,14 @@ def plot_fitsVStruths(truth_values, fit_values, fit_errors, prior_ranges,
                        facecolor=clr,edgecolor=clr, s=ptsiz, zorder=zord+1)
             ax.errorbar(truth, fit, yerr=error,
                         fmt='.', color=clr, lw=lwid, zorder=zord)
+
+            # if param=='T' and truth > 3333:
+            #    print('strangely high T in plot',truth)
+            # if param=='[X/H]' and truth > 66:
+            #    print('strangely high [X/H] in plot',truth)
+            # if param=='[C/O]' and truth > 0.5:
+            #    print('strangely high [C/O] in plot',truth)
+
         # previous was plotting them all at once; now it's one point at a time
         # ax.scatter(truth_values[param],
         #           fit_values[param],
@@ -441,16 +506,42 @@ def plot_fitsVStruths(truth_values, fit_values, fit_errors, prior_ranges,
             ax.plot([-10,10000],[-10*0.75,10000*0.75],'k:', lw=1, zorder=1)
             ax.plot([-10,10000],[-10*1.5,10000*1.5],'k:', lw=1, zorder=1)
 
+        # plot C/O=1 as a dotted vertical line
+        if param=='[C/O]':
+            solarCO = np.log10(0.55)
+            ax.plot([-solarCO,-solarCO],[-100,100],'k--', lw=1, zorder=1)
+
         # ax.set_xlim(overallmin,overallmax)
         # ax.set_ylim(overallmin,overallmax)
         if param=='T':  # the prior for T varies between targets
             ax.set_xlim(0,overallmax)
             ax.set_ylim(0,overallmax)
+        elif param not in prior_ranges:
+            log.warning('--< Cerb.analysis plotting: Parameter missing from prior_range 2: %s >--',param)
+            ax.set_xlim(xrange)
+            if param=='[N/O]':
+                ax.set_ylim(-6,6)
         else:
             # actually, don't use prior range for X/H and X/O on x-axis
             # ax.set_xlim(prior_ranges[param][0],prior_ranges[param][1])
             ax.set_xlim(xrange)
             ax.set_ylim(prior_ranges[param][0],prior_ranges[param][1])
+
+        # UNCERTAINTY HISTOGRAMS IN SECOND PANEL
+        ax = figure.add_subplot(1,2,2)
+        if param=='T':
+            errors = np.log10(fit_errors[param]/np.array(fit_values[param]))
+            ax.set_xlabel('log('+param+' fractional uncertainty)', fontsize=14)
+        else:
+            errors = np.log10(fit_errors[param])
+            ax.set_xlabel('log('+param+' uncertainty)', fontsize=14)
+        lower = errors.min()
+        upper = errors.max()
+        # print('uncertainty range (logged)',param,lower,upper)
+        plt.hist(errors, range=(lower, upper), bins=10,
+                 cumulative=True, density=True,
+                 color='olive', zorder=1, label='')
+        ax.set_ylabel(param+' # of planets', fontsize=14)
 
         figure.tight_layout()
 
@@ -466,13 +557,16 @@ def plot_fitsVStruths(truth_values, fit_values, fit_errors, prior_ranges,
 # --------------------------------------------------------------------
 def plot_fitUncertainties(fit_values, fit_errors, prior_ranges,
                           filt, saveDir, savetodisk=False):
-    ''' make of histogram of the uncertainties, to see how many are better than the prior '''
+    '''
+    Plot uncertainty as a function of the fit value
+    And show a histogram of the uncertainty values
+    '''
 
     plot_statevectors = []
-    for param in ['T', '[X/H]', '[C/O]']:
+    for param in ['T', '[X/H]', '[C/O]', '[N/O]']:
 
-        figure = plt.figure(figsize=(5,5))
-        ax = figure.add_subplot(1,1,1)
+        figure = plt.figure(figsize=(10,5))
+        ax = figure.add_subplot(1,2,1)
 
         for fitvalue,error in zip(fit_values[param],fit_errors[param]):
 
@@ -482,7 +576,13 @@ def plot_fitUncertainties(fit_values, fit_errors, prior_ranges,
             # oh wait also note that errorbar is one-sided, so another factor of 2
             minInfo = 0.5 * 0.68 * 0.5
             newInfo = False
-            if param=='T':
+            if param not in prior_ranges:
+                log.warning('--< Cerb.analysis plotting: Parameter missing from prior_range 3: %s >--',param)
+                if param=='[N/O]':
+                    priorRangeDiff = 12
+                    if error < minInfo * priorRangeDiff:
+                        newInfo = True
+            elif param=='T':
                 priorRangeFactor = prior_ranges[param][1] / prior_ranges[param][0]
                 # prior is normally set to 0.75-1.5 times Teq
                 # if error < minInfo * (priorRangeFactor-1) * 0.75*truth:
@@ -509,9 +609,30 @@ def plot_fitUncertainties(fit_values, fit_errors, prior_ranges,
         ax.set_xlabel(param+' fit value', fontsize=14)
         ax.set_ylabel(param+' fit uncertainty', fontsize=14)
 
+        # plot C/O=1 as a dotted vertical line
+        if param=='[C/O]':
+            solarCO = np.log10(0.55)
+            ax.plot([-solarCO,-solarCO],[-100,100],'k--', lw=1, zorder=1)
+
         # xrange = ax.get_xlim()
         # ax.set_xlim(xrange)
         # ax.set_ylim(prior_ranges[param][0],prior_ranges[param][1])
+
+        # UNCERTAINTY HISTOGRAMS IN SECOND PANEL
+        ax = figure.add_subplot(1,2,2)
+        if param=='T':
+            errors = np.log10(fit_errors[param]/np.array(fit_values[param]))
+            ax.set_xlabel('log('+param+' fractional uncertainty)', fontsize=14)
+        else:
+            errors = np.log10(fit_errors[param])
+            ax.set_xlabel('log('+param+' uncertainty)', fontsize=14)
+        lower = errors.min()
+        upper = errors.max()
+        # print('uncertainty range (logged)',param,lower,upper)
+        plt.hist(errors, range=(lower, upper), bins=10,
+                 cumulative=True, density=True,
+                 color='olive', zorder=1, label='')
+        ax.set_ylabel(param+' # of planets', fontsize=14)
 
         figure.tight_layout()
 
@@ -533,11 +654,14 @@ def plot_massVSmetals(masses, truth_values,
     figure = plt.figure(figsize=(5,5))
     ax = figure.add_subplot(1,1,1)
 
+    # Note: masses_true is not actually used, just masses. (they should be the same thing)
     masses_true = truth_values['Mp']
     metals_true = truth_values['[X/H]']
     metals_fit = fit_values['[X/H]']
     metals_fiterr = fit_errors['[X/H]']
 
+    ilab1 = False
+    ilab2 = False
     for mass,masstrue,metaltrue,metalfit,metalerror in zip(
             masses,masses_true,metals_true,metals_fit,metals_fiterr):
         # check whether there is any real information beyond the prior
@@ -557,10 +681,22 @@ def plot_massVSmetals(masses, truth_values,
             ptsiz = 20
             zord = 2
         if metaltrue not in (666, 666666):
-            ax.scatter(masstrue, metaltrue,
-                       facecolor='w',edgecolor=clr, s=ptsiz, zorder=zord+1)
-        ax.scatter(mass, metalfit,
-                   facecolor=clr,edgecolor=clr, s=ptsiz, zorder=zord+2)
+            if not ilab1:
+                ilab1 = True
+                ax.scatter(masstrue, metaltrue,
+                           label='true value',
+                           facecolor='w',edgecolor=clr, s=ptsiz, zorder=zord+1)
+            else:
+                ax.scatter(masstrue, metaltrue,
+                           facecolor='w',edgecolor=clr, s=ptsiz, zorder=zord+1)
+        if not ilab2:
+            ilab2 = True
+            ax.scatter(mass, metalfit,
+                       label='fit value',
+                       facecolor=clr,edgecolor=clr, s=ptsiz, zorder=zord+2)
+        else:
+            ax.scatter(mass, metalfit,
+                       facecolor=clr,edgecolor=clr, s=ptsiz, zorder=zord+2)
         ax.errorbar(mass, metalfit, yerr=metalerror,
                     fmt='.', color=clr, lw=lwid, zorder=zord)
     # ax.scatter(masses, metals_true,
@@ -575,10 +711,13 @@ def plot_massVSmetals(masses, truth_values,
     xrange = ax.get_xlim()
     yrange = ax.get_ylim()
 
-    # plot the underlying distribution
-    masses = np.logspace(-5,3,100)
-    metals = massMetalRelation(0, masses,thorngren=True)
-    ax.plot(masses,metals, 'k--', lw=1, zorder=1)
+    # plot the underlying distribution (only is this is a simulation)
+    if 'sim' in filt:
+        masses = np.logspace(-5,3,100)
+        metals = massMetalRelation(0, masses,thorngren=True)
+        ax.plot(masses,metals, 'k--', lw=1, zorder=1, label='true relationship')
+
+    plt.legend()
 
     ax.set_xlim(xrange)
     ax.set_ylim(yrange)

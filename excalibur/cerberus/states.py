@@ -234,11 +234,13 @@ class analysisSV(dawgie.StateVector):
                         plotlabel = 'Metallicity'
                     elif savedresult=='plot_fitCO':
                         plotlabel = 'C/O'
+                    elif savedresult=='plot_fitNO':
+                        plotlabel = 'N/O'
                     else:
                         plotlabel = 'unknown plottype plot'
                     # the plot titles are different for real data vs simulated
                     # use __name to decide it it's a comparison against truth
-                    if savedresult in ['plot_fitT','plot_fitMetal','plot_fitCO']:
+                    if savedresult in ['plot_fitT','plot_fitMetal','plot_fitCO','plot_fitNO']:
                         if 'sim' in self.__name:
                             plotlabel = plotlabel + ' : retrieved vs input values'
                         else:

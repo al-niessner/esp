@@ -72,6 +72,7 @@ class xslib(dawgie.Algorithm):
                 if ext=='Ariel-sim':
                     sv = self.__arielsim.sv_as_dict()['parameters']
                     vspc, sspc = crbcore.checksv(sv)
+                    sspc = 'Ariel-sim spectrum not found'
                 else:
                     if ext in self.__spc.sv_as_dict().keys():
                         sv = self.__spc.sv_as_dict()[ext]
@@ -165,6 +166,7 @@ class atmos(dawgie.Algorithm):
                 if ext=='Ariel-sim':
                     sv = self.__arielsim.sv_as_dict()['parameters']
                     vspc, sspc = crbcore.checksv(sv)
+                    sspc = 'Ariel-sim spectrum not found'
                 else:
                     if ext in self.__spc.sv_as_dict().keys():
                         sv = self.__spc.sv_as_dict()[ext]
@@ -424,10 +426,11 @@ class analysis(dawgie.Analyzer):
                        ('cerberus.atmos.'+filt in aspects[trgt]):
                         # print('This filter exists in the cerb.atmos aspect:',filt,trgt)
                         filtersWithResults.append(filt)
-            # filtersWithResults=['Ariel-sim']  # just one filter, while debugging
-            # filtersWithResults=['HST-WFC3-IR-G141-SCAN']  # just one filter, while debugging
             if not filtersWithResults:
                 log.warning('--< CERBERUS ANALYSIS: NO FILTERS WITH ATMOS DATA!!!>--')
+
+            # filtersWithResults=['Ariel-sim']  # just one filter, while debugging
+            # filtersWithResults=['HST-WFC3-IR-G141-SCAN']  # just one filter, while debugging
 
             # only consider filters that have cerb.atmos results loaded in as an aspect
             for filt in filtersWithResults:

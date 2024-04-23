@@ -10,7 +10,19 @@ def setPriorBound():
     Set prior constraints on the spectrum-fitting parameters
     '''
 
-    return None
+    prior_ranges = {}
+
+    prior_ranges['Tfactor'] = (0.75, 1.5)  # multiply this times T_eq
+
+    prior_ranges['dexRange'] = (-6,6)      # use this for [X/H],[C/O],[N/O]
+
+    prior_ranges['CTP'] = (-6,1)
+    prior_ranges['HScale'] = (-6,6)
+    prior_ranges['HLoc'] = (-6,1)
+    prior_ranges['HThick'] = (1,20)
+    prior_ranges['HIndex'] = (-4,0)        # not used; older param for when sphshell is false
+
+    return prior_ranges
 
 def getProfileLimits():
     '''
@@ -44,6 +56,7 @@ def getProfileLimits():
     # limits['HD 189733'] = [['T',0,'>']]
     limits['HD 209458'] = [['T',1000,'>']]  # nice spectrum,  no effect. not in notebook list!
     # limits['K2-3'] = [['T',700,'<']]
+    # large difference in results!
     limits['K2-18'] = [['T',600,'<'],  # no effect
                        ['TEC[0]',0,'>']]  # why?
     limits['KELT-11'] = [['T',2500,'<'],
@@ -56,6 +69,7 @@ def getProfileLimits():
     limits['WASP-31'] = [['T',2000,'<']]
     # limits['WASP-39'] = [['T',0,'>']]
     limits['WASP-43'] = [['T',1750,'<']]
+    # large difference in results!
     limits['WASP-52'] = [['T',1000,'>'],  # slight effect at edge.  but it's flat anyway
                          ['T',2000,'<'],  # no effect
                          ['PHOTOCHEM[1]',0,'>'],
