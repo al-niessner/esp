@@ -2,6 +2,7 @@
 
 latest_tag=$(docker images | grep esp_devel | head -n 1 | awk '{print $2}')
 docker run --detach \
+       -e EXCALIBUR_LEVER_AND_KNOB_SETTINGS=/proj/data/runtime/${USER}.xml
        -e USER=$USER \
        -e USERNAME=$USERNAME \
        -e DAWGIE_DB_NAME=$USER \
@@ -18,4 +19,4 @@ docker run --detach \
        -v ${HOME}/.gnupg:/proj/data/gnupg \
        -v $(realpath $(dirname $0)/..):/proj/src/ae \
        esp_devel:${TAG:-$latest_tag} \
-       python3 -m dawgie.pl -p ${PORT:-${1:-9990}} -l ${USER}.log -L 20
+       python3 -m dawgie.pl -p ${1:-${EXCALIBUR_PP_PORT:-9990}} -l ${USER}.log -L 20
