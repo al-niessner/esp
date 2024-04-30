@@ -43,9 +43,9 @@ else:
     dawgie.db.reopen()
 
     if tn in ['', '__all__']:
-        excalibur.runtime.bot.Agent('runtime', 4, rid).do()
+        excalibur.runtime.bot.AnalysisTeam('runtime', 4, rid).do()
     else:
-        excalibur.runtime.bot.Actor('runtime', 4, rid, tn).do()
+        excalibur.runtime.bot.TaskTeam('runtime', 4, rid, tn).do()
 
     dawgie.db.close()
     dawgie.security.finalize()
