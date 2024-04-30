@@ -19,7 +19,7 @@ dawgie.security.initialize(os.path.expandvars(os.path.expanduser
                                               (dawgie.context.gpg_home)))
 dawgie.db.reopen()
 
-if tn == '':
+if tn in ['', '__all__']:
     excalibur.cerberus.bot.Agent('cerberus', 4, rid).do()
 else:
     excalibur.cerberus.bot.Actor('cerberus', 4, rid, tn).do()

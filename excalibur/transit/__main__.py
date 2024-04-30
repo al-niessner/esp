@@ -17,7 +17,7 @@ if fep: dawgie.util.set_ports(int(fep))
 dawgie.security.initialize(os.path.expandvars(os.path.expanduser
                                               (dawgie.context.gpg_home)))
 dawgie.db.reopen()
-if tn == '':
+if tn in ['', '__all__']:
     excalibur.transit.bot.Agent('transit', 4, rid).do()
 else:
     excalibur.transit.bot.Actor('transit', 4, rid, tn).do()

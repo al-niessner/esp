@@ -415,7 +415,8 @@ def simulate_spectra(target, system_dict, out):
                         'Teq':system_params[planetLetter]['teq'],
                         'Mp':system_params[planetLetter]['mass']}
 
-                    out['data'][planetLetter][atmosModel]['model_params'] = model_params
+                    out['data'][planetLetter][atmosModel]['model_params'] = model_params.copy()
+                    # print('model_params in ariel:',model_params)  # asdf
 
                     # convert to percentage depth (just for plotting, not for the saved results)
                     fluxDepth = 100 * fluxDepth
