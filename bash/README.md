@@ -53,17 +53,17 @@ In bash, one can define an environment variable for the life of a command by pre
 
 The tool will start a private pipeline. If you are on the mentor machines, you must supply an argument because TCP/IP ports cannot be shared amoung private pipelines. Nothing will force you to do this except an error saying port already in use. On your laptop, can just use the default port.
 
-To set the port for the pipeline, can either set the environment variable `EXCALIBUR_PP_PORT`. It is overriden by putting the port number as an argument like `pp_start.sh 12345`. If nothing is defined, then port 9990 is used.
+To set the port for the pipeline, can either set the environment variable `DAWGIE_FE_PORT`. It is overriden by putting the port number as an argument like `pp_start.sh 12345`. If nothing is defined, then port 9990 is used.
 
 Test:
 
 1. `pp_start.sh` uses what port? [9990]
-1. `EXCALIBUR_PP_PORT=45656 pp_start.sh 12345` uses what port? [12345]
-1. `EXCALIBUR_PP_PORTs=12345 pp_start.sh` uses what port? [9990 - trick question because environment variable name is wrong]
-1. `EXCALIBUR_PP_PORT=54321 pp_start.sh` uses what port? [54321]
-1. In .bash_profile `export EXCALIBUR_PP_PORT=12321`. `pp_start.sh` uses what port? [12321]
+1. `DAWGIE_FE_PORT=45656 pp_start.sh 12345` uses what port? [12345]
+1. `DAWGIE_FE_PORTs=12345 pp_start.sh` uses what port? [9990 - trick question because environment variable name is wrong]
+1. `DAWGIE_FE_PORT=54321 pp_start.sh` uses what port? [54321]
+1. In .bash_profile `export DAWGIE_FE_PORT=12321`. `pp_start.sh` uses what port? [12321]
 
-On the mentor cluster, it would be best to put `EXCALIBUR_PP_PORT` in your .bash_profile or your shell's equivalent and set to a value that does not collide with any of the other developers.
+On the mentor cluster, it would be best to put `DAWGIE_FE_PORT` in your .bash_profile or your shell's equivalent and set to a value that does not collide with any of the other developers.
 
 Hence, the most common way to start a private pipeline becomes:
 

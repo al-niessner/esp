@@ -19,4 +19,4 @@ docker run --detach \
        -v ${HOME}/.gnupg:/proj/data/gnupg \
        -v $(realpath $(dirname $0)/..):/proj/src/ae \
        esp_devel:${TAG:-${latest_tag}} \
-       python3 -m dawgie.pl -p ${1:-${EXCALIBUR_PP_PORT:-9990}} -l ${USER}.log -L 20
+       python3 -m dawgie.pl -p ${1:-${DAWGIE_FE_PORT:-9990}} -l ${USER}.log -L 20
