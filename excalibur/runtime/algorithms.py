@@ -66,7 +66,7 @@ class create(dawgie.Analyzer):
             import excalibur.runtime.bot as erb  # pylint: disable=import-outside-toplevel
             pbot = aspects.ds()._bot()  # pylint: disable=protected-access
             for tn in dawgie.db.targets():
-                bot = erb.TaskTeam(pbot.name(), 1, pbot._runid(), tn)  # pylint: disable=protected-access
+                bot = erb.TaskTeam(pbot._name(), 1, pbot._runid(), tn)  # pylint: disable=protected-access
                 alg = autofill()
                 ds = dawgie.db.connect (alg, bot, tn)
                 alg.run (ds, 1, self.sv_as_dict(), tn)

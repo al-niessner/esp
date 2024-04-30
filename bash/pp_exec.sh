@@ -18,7 +18,7 @@ fi
 
 docker exec \
        -e DISPLAY=${DISPLAY} \
-       -e FE_PORT=${DAWGIE_FE_PORT} \
+       -e FE_PORT=${DAWGIE_FE_PORT:-9990} \
        -e RUNID=${RUNID:-17} \
        -e TARGET_NAME="${2}" \
        -e USER=${USER} \
