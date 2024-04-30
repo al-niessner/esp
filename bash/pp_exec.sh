@@ -17,12 +17,12 @@ then
 fi
 
 docker exec \
-       -e DISPLAY=$DISPLAY \
+       -e DISPLAY=${DISPLAY} \
        -e FE_PORT=${DAWGIE_FE_PORT} \
        -e RUNID=${RUNID:-17} \
        -e TARGET_NAME="${2}" \
-       -u $UID:1512 \
-       -e USER=$USER \
-       -e USERNAME=$USERNAME \
+       -e USER=${USER} \
+       -e USERNAME=${USERNAME} \
        -it \
+       -u ${UID}:1512 \
        ${USER}_privatepl python3 -m excalibur.${1}
