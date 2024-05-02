@@ -26,9 +26,9 @@ def load_ariel_instrument_oldmethod(target):
 
     # all targets should have a file, but if not, return None
     if not os.path.isfile(noise_model_filename):
-        print('NOTE: Ariel SNR file missing; failing to simulate spectrum',target)
+        # print('NOTE: Ariel SNR file missing; failing to simulate spectrum',target)
+        log.warning('--< ARIEL SIM_SPECTRUM: SNR file missing >--')
         ariel_instrument = None
-
     else:
         with open(noise_model_filename,'r',encoding='ascii') as file:
             wavelength = []
@@ -76,7 +76,8 @@ def load_ariel_instrument(target):
 
     # all targets should have a file, but if not, return None
     if not os.path.isfile(noise_model_dir + noise_model_filename):
-        print('NOTE: Ariel SNR file missing; failing to simulate spectrum',target)
+        # print('NOTE: Ariel SNR file missing; failing to simulate spectrum',target)
+        log.warning('--< ARIEL SIM_SPECTRUM: SNR file missing >--')
         ariel_instrument = None
 
     else:
@@ -88,7 +89,8 @@ def load_ariel_instrument(target):
             targets = arielRad_results['errorbars_evaluated'].keys()
 
             if target not in targets:
-                print('NOTE: target not in Ariel SNR file; failing to simulate spectrum',target)
+                # print('NOTE: target not in Ariel SNR file; failing to simulate spectrum',target)
+                log.warning('--< ARIEL SIM_SPECTRUM: target not in SNR file; failing to simulate spectrum  %s >--',target)
                 ariel_instrument = None
 
             else:

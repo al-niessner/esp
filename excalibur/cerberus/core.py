@@ -75,7 +75,10 @@ def myxsecs(spc, out,
     planetLetters = []
     for p in spc['data'].keys():
         if len(p)==1:  # filter out non-planetletter keywords, e.g. 'models','target'
-            planetLetters.append(p)
+            if 'WB' in spc['data'][p].keys():  # make sure it has a spectrum (Kepler-37e bug)
+                planetLetters.append(p)
+            else:
+                log.warning('--< CERBERUS.XSLIB: wavelength grid is missing for %s %s >--', spc['data']['target'],p)
     for p in planetLetters:
         out['data'][p] = {}
 
@@ -84,6 +87,7 @@ def myxsecs(spc, out,
         #    arielModel = spc['data']['models'][0]  # arbitrary model choice; all have same WB grid
         #    wgrid = np.array(spc['data'][p][arielModel]['WB'])
         # else:
+
         wgrid = np.array(spc['data'][p]['WB'])
         qtgrid = gettpf(tips, knownspecies)
         library = {}
@@ -466,8 +470,8 @@ def atmos(fin, xsl, spc, out, ext,
         #               'cerberuslowmmw', 'cerberuslowmmwNoclouds',
         #               'taurex', 'taurexNoclouds',
         #               'taurexlowmmw', 'taurexlowmmwNoclouds']
-        # arielModel = 'cerberusNoclouds'
-        arielModel = 'cerberus'
+        arielModel = 'cerberusNoclouds'
+        # arielModel = 'cerberus'
         # arielModel = 'taurex'
 
         # if the ariel sim doesn't have clouds, then don't fit the clouds
@@ -475,6 +479,9 @@ def atmos(fin, xsl, spc, out, ext,
         #  OR
         # don't fit the 4 cloud parameters, even if the model has clouds
         # fitCloudParameters = False
+        #  OR
+        # do fit the 4 cloud parameters, even if the model doesn't have cloud
+        fitCloudParameters = True
 
         # let's fix N/O; one less param to worry about
         # fitNtoO = False
@@ -508,7 +515,10 @@ def atmos(fin, xsl, spc, out, ext,
         #    log.warning('--< OK: skipping a planet letter that is actually a system keyword: %s >--',p)
         #    pass
         # elif len(p)==1:
-        if len(p)==1:
+        # make sure it has a spectrum (Kepler-37e bug)
+        if len(p)==1 and 'WB' not in spc['data'][p].keys():
+            log.warning('--< CERBERUS.ATMOS: wavelength grid is missing for %s %s >--',spc['data']['target'],p)
+        elif len(p)==1 and 'WB' in spc['data'][p].keys():
             if ext=='Ariel-sim':
                 if arielModel in spc['data'][p].keys():
                     inputData = spc['data'][p][arielModel]
@@ -877,6 +887,7 @@ def atmos(fin, xsl, spc, out, ext,
                     # wavelength should be the same as just above, but just in case load it here too
                     out['data'][p]['TRUTH_WAVELENGTH'] = np.array(inputData['true_spectrum']['wavelength_um'])
                     out['data'][p]['TRUTH_MODELPARAMS'] = inputData['model_params']
+                    # print('true modelparams in atmos:',inputData['model_params'])
             out['data'][p]['VALID'] = cleanup
             out['STATUS'].append(True)
             am = True
@@ -1116,7 +1127,7 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
         # check whether this planet was analyzed
         # (some planets are skipped, because they have an unbound atmosphere)
         if p not in atm.keys():
-            log.warning('>-- PROBABLY OK this planet is missing cerb fit: %s %s', trgt, p)
+            log.warning('>-- CERBERUS.RESULTS: this planet is missing cerb fit: %s %s', trgt, p)
 
         else:
             out['data'][p] = {}
@@ -1253,7 +1264,7 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                     if fitCtoO:
                         tceqdict['CtoO'] = float(mdp[1])
                     else:
-                        print('truth params',atm[p]['TRUTH_MODELPARAMS'])
+                        # print('truth params',atm[p]['TRUTH_MODELPARAMS'])
                         tceqdict['CtoO'] = atm[p]['TRUTH_MODELPARAMS']['CtoO']
                     if fitNtoO:
                         tceqdict['NtoO'] = float(mdp[2])
