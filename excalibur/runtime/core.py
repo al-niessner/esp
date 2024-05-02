@@ -65,9 +65,9 @@ def load(sv_dict:{str:{}}, targets)->None:
     settings = binding.CreateFromDocument(xml)
     controls = sv_dict['controls']
     for knob in controls:
-        controls[knob] = controls[knob].new(getattr(settings.controls, knob))
-    sv_dict['filters']['excludes'].extend (settings.filters.exclude)
-    sv_dict['filters']['includes'].extend (settings.filters.include)
+        controls[knob] = controls[knob].new(getattr(settings.controls,knob))
+    sv_dict['filters']['excludes'].extend ([str(s) for s in settings.filters.exclude])
+    sv_dict['filters']['includes'].extend ([str(s) for s in settings.filters.include])
     for pymc in ['cerberus', 'spectrum']:
         cf = getattr(settings.pymc, pymc)
         sv = sv_dict[f'pymc-{pymc}']

@@ -11,7 +11,7 @@ class BoolValue(dawgie.Value):
         return self.__state
     def __init__ (self, state:bool=False):
         '''init the boolean'''
-        self.__state = state if state else False  # change None to false
+        self.__state = True if state else False  # change None to false
         self._version_ = dawgie.VERSION(1,0,0)
         return
     def features(self):
@@ -35,6 +35,7 @@ class CompositeSV(dawgie.StateVector):
         return 'composite'
     def view(self, visitor:dawgie.Visitor)->None:
         '''Show the configutation information'''
+        for key in sorted(self): self[name].view(visitor)
         return
     pass
 
@@ -58,6 +59,11 @@ class ControlsSV(dawgie.StateVector,dawgie.Value):
         return 'controls'
     def view(self, visitor:dawgie.Visitor)->None:
         '''Show the configutation information'''
+        table = visitor.add_table(['Switch', 'State'],
+                                  len(self)+1, 'Processing Control Switches')
+        for row,key in enumerate(sorted(self)):
+            table.get_cell (row+1,0).add_primitive(key)
+            table.get_cell (row+1,1).add_primitive('On' if self[key] else 'off')
         return
     pass
 
