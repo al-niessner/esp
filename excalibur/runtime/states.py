@@ -11,7 +11,7 @@ class BoolValue(dawgie.Value):
         return self.__state
     def __init__ (self, state:bool=False):
         '''init the boolean'''
-        self.__state = True if state else False  # change None to false
+        self.__state = bool(state)
         self._version_ = dawgie.VERSION(1,0,0)
         return
     def features(self):
