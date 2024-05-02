@@ -35,7 +35,7 @@ class CompositeSV(dawgie.StateVector):
         return 'composite'
     def view(self, visitor:dawgie.Visitor)->None:
         '''Show the configutation information'''
-        for key in sorted(self): self[name].view(visitor)
+        for key in sorted(self): self[key].view(visitor)
         return
     pass
 
@@ -63,7 +63,7 @@ class ControlsSV(dawgie.StateVector,dawgie.Value):
                                   len(self)+1, 'Processing Control Switches')
         for row,key in enumerate(sorted(self)):
             table.get_cell (row+1,0).add_primitive(key)
-            table.get_cell (row+1,1).add_primitive('On' if self[key] else 'off')
+            table.get_cell (row+1,1).add_primitive('on' if self[key] else 'off')
         return
     pass
 
