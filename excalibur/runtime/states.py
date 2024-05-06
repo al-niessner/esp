@@ -83,6 +83,18 @@ class FilterSV(dawgie.StateVector,dawgie.Value):
         return 'filters'
     def view(self, visitor:dawgie.Visitor)->None:
         '''Show the configutation information'''
+        table_len = max(len(self['excludes']),len(self['includes']))
+        if table_len == 1:
+            visitior.add_declaration('No target filters set', tag='b')
+        else:
+            self['excludes'].sort()
+            self['includes'].sort()
+            table = visitor.add_table(['Exclude','Include'], table_len+1,
+                                      'Mission-Platform-Instrument-Mode Filters')
+            for row in range(table_len):
+                for col,filt in enumerate(['excludes','includes']):
+                    if col < len(self[filt]):
+                        table.get_cell (row+1,col).add_primitive(self[filt][col])
         return
     pass
 
@@ -90,7 +102,7 @@ class PymcSV(dawgie.StateVector,dawgie.Value):
     '''State representation of the filters to be included/excluded'''
     def __init__(self, name:str='undefined'):
         '''init the state vector with empty values'''
-        self.__name = f'pymc-{name}'
+        self.__name = name
         self._version_ = dawgie.VERSION(1,0,0)
         self['default'] = excalibur.ValueScalar()
         self['overrides'] = excalibur.ValuesDict()
@@ -100,9 +112,20 @@ class PymcSV(dawgie.StateVector,dawgie.Value):
         return []
     def name(self):
         '''database name'''
-        return self.__name
+        return f'pymc-{self.__name}'
     def view(self, visitor:dawgie.Visitor)->None:
         '''Show the configutation information'''
+        visitor.add_declaration(f'PYMC for {self.__name} '
+                                f'default chain length: self["default"]',
+                                tag='b')
+        if self['overrides']:
+            table = visitor.add_table(['Target','Chainlength'],
+                                      len(self['overrides'])+1,
+                                      f'Overrides for {self.__name}')
+            for row,tn in enumerate(sorted(self['overrides'])):
+                table.get_cell(row+1,0).add_primitive(tn)
+                table.get_cell(row+1,1).add_primitive(self['overrides'][tn])
+        else: visitor.add_primitive(' with no overrides')
         return
     pass
 
@@ -158,5 +181,21 @@ class TargetsSV(dawgie.StateVector,dawgie.Value):
         return self._name
     def view (self, visitor:dawgie.Visitor)->None:
         '''Show the configuration information'''
+        if self.__name = 'run_only':
+            title = 'Run only thse targets:'
+            if not self['targets']: title += ' ALL'
+        else:
+            ttile = 'Do not run these targets:'
+            if not self['targets']: title += ' NONE'
+
+        visitor.add_declararion(title, tag='b')
+
+        if self['targets']:
+            table = visitor.add_table(['Target','Why'],
+                                      len(self['targets'])+1,
+                                      'Taarget table')
+            for row,tn in enumerated(sorted(self['targets'},key=lambda t:t[0])):
+                table.get_cell(row+1,0) = tn[0]
+                table.get_cell(row+1,1) = tn[1]
         return
     pass
