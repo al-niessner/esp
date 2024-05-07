@@ -85,7 +85,7 @@ class FilterSV(dawgie.StateVector,dawgie.Value):
         '''Show the configutation information'''
         table_len = max(len(self['excludes']),len(self['includes']))
         if table_len == 1:
-            visitior.add_declaration('No target filters set', tag='b')
+            visitor.add_declaration('No target filters set', tag='b')
         else:
             self['excludes'].sort()
             self['includes'].sort()
@@ -181,11 +181,11 @@ class TargetsSV(dawgie.StateVector,dawgie.Value):
         return self._name
     def view (self, visitor:dawgie.Visitor)->None:
         '''Show the configuration information'''
-        if self.__name = 'run_only':
+        if self._name == 'run_only':
             title = 'Run only thse targets:'
             if not self['targets']: title += ' ALL'
         else:
-            ttile = 'Do not run these targets:'
+            title = 'Do not run these targets:'
             if not self['targets']: title += ' NONE'
 
         visitor.add_declararion(title, tag='b')
@@ -194,8 +194,8 @@ class TargetsSV(dawgie.StateVector,dawgie.Value):
             table = visitor.add_table(['Target','Why'],
                                       len(self['targets'])+1,
                                       'Taarget table')
-            for row,tn in enumerated(sorted(self['targets'},key=lambda t:t[0])):
-                table.get_cell(row+1,0) = tn[0]
-                table.get_cell(row+1,1) = tn[1]
+            for row,tn in enumerate(sorted(self['targets'],key=lambda t:t[0])):
+                table.get_cell(row+1,0).add_primitive(tn[0])
+                table.get_cell(row+1,1).add_primitive(tn[1])
         return
     pass
