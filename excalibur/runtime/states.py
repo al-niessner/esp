@@ -59,11 +59,13 @@ class ControlsSV(dawgie.StateVector,dawgie.Value):
         return 'controls'
     def view(self, visitor:dawgie.Visitor)->None:
         '''Show the configutation information'''
+        visitor.add_declaration_inline('',div='<div>')
         table = visitor.add_table(['Switch', 'State'],
                                   len(self)+1, 'Processing Control Switches')
         for row,key in enumerate(sorted(self)):
             table.get_cell (row+1,0).add_primitive(key)
             table.get_cell (row+1,1).add_primitive('on' if self[key] else 'off')
+        visitor.add_declaration_inline('',div='</div>')
         return
     pass
 
@@ -83,9 +85,10 @@ class FilterSV(dawgie.StateVector,dawgie.Value):
         return 'filters'
     def view(self, visitor:dawgie.Visitor)->None:
         '''Show the configutation information'''
+        visitor.add_declaration_inline('',div='<div>')
         table_len = max(len(self['excludes']),len(self['includes']))
         if table_len == 1:
-            visitor.add_declaration('No target filters set', tag='b')
+            visitor.add_declaration_inline('No target filters set', tag='b')
         else:
             self['excludes'].sort()
             self['includes'].sort()
@@ -95,6 +98,7 @@ class FilterSV(dawgie.StateVector,dawgie.Value):
                 for col,filt in enumerate(['excludes','includes']):
                     if col < len(self[filt]):
                         table.get_cell (row+1,col).add_primitive(self[filt][col])
+        visitor.add_declaration_inline('',div='</div>')
         return
     pass
 
@@ -115,8 +119,9 @@ class PymcSV(dawgie.StateVector,dawgie.Value):
         return f'pymc-{self.__name}'
     def view(self, visitor:dawgie.Visitor)->None:
         '''Show the configutation information'''
-        visitor.add_declaration(f'PYMC for {self.__name} '
-                                f'default chain length: self["default"]',
+        visitor.add_declaration_inline('',div='<div>')
+        visitor.add_declaration_inline(f'PYMC for {self.__name} default '
+                                f'chain length: {self["default"].value()}',
                                 tag='b')
         if self['overrides']:
             table = visitor.add_table(['Target','Chainlength'],
@@ -126,6 +131,7 @@ class PymcSV(dawgie.StateVector,dawgie.Value):
                 table.get_cell(row+1,0).add_primitive(tn)
                 table.get_cell(row+1,1).add_primitive(self['overrides'][tn])
         else: visitor.add_primitive(' with no overrides')
+        visitor.add_declaration_inline('',div='</div>')
         return
     pass
 
@@ -181,6 +187,7 @@ class TargetsSV(dawgie.StateVector,dawgie.Value):
         return self._name
     def view (self, visitor:dawgie.Visitor)->None:
         '''Show the configuration information'''
+        visitor.add_declaration_inline('',div='<div>')
         if self._name == 'run_only':
             title = 'Run only thse targets:'
             if not self['targets']: title += ' ALL'
@@ -188,14 +195,15 @@ class TargetsSV(dawgie.StateVector,dawgie.Value):
             title = 'Do not run these targets:'
             if not self['targets']: title += ' NONE'
 
-        visitor.add_declararion(title, tag='b')
+        visitor.add_declaration_inline(title, tag='b')
 
         if self['targets']:
             table = visitor.add_table(['Target','Why'],
                                       len(self['targets'])+1,
-                                      'Taarget table')
+                                      'Target table')
             for row,tn in enumerate(sorted(self['targets'],key=lambda t:t[0])):
                 table.get_cell(row+1,0).add_primitive(tn[0])
                 table.get_cell(row+1,1).add_primitive(tn[1])
+        visitor.add_declaration_inline('',div='</div>')
         return
     pass

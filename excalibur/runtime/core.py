@@ -74,5 +74,5 @@ def load(sv_dict:{str:{}}, targets)->None:
         sv['default'] = sv['default'].new (cf.default)
         for override in cf.target:
             sv['overrides'][override.name] = override.steps
-    _sequester2sv(settings.sequester,sv_dict['run_only'], targets)
+    _sequester2sv(settings.run_only,sv_dict['run_only'], targets)
     _sequester2sv(settings.sequester,sv_dict['sequester'], targets)
