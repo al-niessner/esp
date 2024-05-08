@@ -120,9 +120,9 @@ class PymcSV(dawgie.StateVector,dawgie.Value):
     def view(self, visitor:dawgie.Visitor)->None:
         '''Show the configutation information'''
         visitor.add_declaration_inline('',div='<div>')
-        visitor.add_declaration_inline(f'PYMC for {self.__name} default '
-                                f'chain length: {self["default"].value()}',
-                                tag='b')
+        visitor.add_declaration_inline(f'PYMC for {self.__name} default chain '
+                                       f'length: {self["default"].value()}',
+                                       tag='b')
         if self['overrides']:
             table = visitor.add_table(['Target','Chainlength'],
                                       len(self['overrides'])+1,
