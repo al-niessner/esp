@@ -182,8 +182,8 @@ class StatusSV(dawgie.StateVector):
         table = visitor.add_table(['Algorithm','Length'], 2)
         table.get_cell(0,0).add_primitive('cerberus')
         table.get_cell(0,1).add_primitive(self['cerberus_steps'].value())
-        table.get_cell(0,0).add_primitive('spectrum')
-        table.get_cell(0,1).add_primitive(self['spectrum_steps'].value())
+        table.get_cell(1,0).add_primitive('spectrum')
+        table.get_cell(1,1).add_primitive(self['spectrum_steps'].value())
         visitor.add_declaration_inline('',div='</div>')
         visitor.add_declaration_inline('',div='<div><hr>')
         visitor.add_declaration_inline('Control switches and their state',
