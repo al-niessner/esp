@@ -173,13 +173,13 @@ class StatusSV(dawgie.StateVector):
             self.proceed()
             visitor.add_declaration_inline('Briefly: process this target',
                                            tag='h3')
-        except dawgie.NoValidInputDataError():
+        except dawgie.NoValidInputDataError:
             visitor.add_declaration_inline('Briefly: DO NOT process this target',
                                            tag='h3')
         visitor.add_declaration_inline('',div='<div><hr>')
         visitor.add_declaration_inline('Chain lengths for PYMC',
                                        tag='b')
-        table = visitor.get_table(['Algorithm','Length'], 2)
+        table = visitor.add_table(['Algorithm','Length'], 2)
         table.get_cell(0,0).add_primitive('cerberus')
         table.get_cell(0,1).add_primitive(self['cerberus_steps'].value())
         table.get_cell(0,0).add_primitive('spectrum')
@@ -196,7 +196,7 @@ class StatusSV(dawgie.StateVector):
                     'isValidTarget',
                     'runTarget',
                     'target_autofill_selectMostRecent']
-        table = visitor.get_table(['Switch', 'State'], len(switches))
+        table = visitor.add_table(['Switch', 'State'], len(switches))
         for row,switch in enumerate(switches):
             table.get_cell(row,0).add_primitive(switch)
             table.get_cell(row,1).add_primitive('on' if self[switch] else 'off')

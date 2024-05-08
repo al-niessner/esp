@@ -43,7 +43,7 @@ def isolate(sv:{}, table:{str:{}}, tn:str)->None:
     default = pymc['default'].value()
     sv['cerberus_steps'] = sv['cerberus_steps'].new(pymc['overrides'].get
                                                     (tn, default))
-    sv['isValidTarget'] = sv['isValidTarget'].new(tn in table
+    sv['isValidTarget'] = sv['isValidTarget'].new(tn not in table
                                                   ['sequester']['targets'])
     if table['run_only']['targets']:
         sv['runTarget'] = sv['runTarget'].new(tn in table['run_only']['targets'])
