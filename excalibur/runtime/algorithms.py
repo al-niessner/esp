@@ -70,7 +70,7 @@ class create(dawgie.Analyzer):
             for tn in dawgie.db.targets():
                 # pylint: disable=protected-access
                 erb.TaskTeam(pbot._name(), 1, pbot._runid(), tn,
-                             table=self.sv_as_dict, this_tn=tn).do()
+                             table=self.sv_as_dict(), this_tn=tn).do()
         except FileNotFoundError as e:
             log.exception(e)
             raise dawgie.AbortAEError(f'The environment variable {core.ENV_NAME} points to the non-existent file: {os.environ[core.ENV_NAME]}') from e

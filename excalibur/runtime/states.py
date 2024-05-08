@@ -97,7 +97,8 @@ class FilterSV(dawgie.StateVector,dawgie.Value):
             for row in range(table_len):
                 for col,filt in enumerate(['excludes','includes']):
                     if col < len(self[filt]):
-                        table.get_cell (row+1,col).add_primitive(self[filt][row])
+                        content = self[filt][row] if row < len(self[filt]) else ' '
+                        table.get_cell (row+1,col).add_primitive(content)
         visitor.add_declaration_inline('',div='</div>')
         return
     pass
@@ -168,6 +169,43 @@ class StatusSV(dawgie.StateVector):
             raise dawgie.NoValidInputDataError(msg)
     def view(self, visitor:dawgie.Visitor)->None:
         '''Show the state for this target'''
+        try:
+            self.proceed()
+            visitor.add_declaration_inline('Briefly: process this target',
+                                           tag='h3')
+        except dawgie.NoValidInputDataError():
+            visitor.add_declaration_inline('Briefly: DO NOT process this target',
+                                           tag='h3')
+        visitor.add_declaration_inline('',div='<div><hr>')
+        visitor.add_declaration_inline('Chain lengths for PYMC',
+                                       tag='b')
+        table = visitor.get_table(['Algorithm','Length'], 2)
+        table.get_cell(0,0).add_primitive('cerberus')
+        table.get_cell(0,1).add_primitive(self['cerberus_steps'].value())
+        table.get_cell(0,0).add_primitive('spectrum')
+        table.get_cell(0,1).add_primitive(self['spectrum_steps'].value())
+        visitor.add_declaration_inline('',div='</div>')
+        visitor.add_declaration_inline('',div='<div><hr>')
+        visitor.add_declaration_inline('Control switches and their state',
+                                       tag='b')
+        switches = ['ariel_simulate_spectra_includeMetallicityDispersion',
+                    'cerberus_atmos_fitCloudParameters',
+                    'cerberus_atmos_fitNtoO',
+                    'cerberus_atmos_fitCtoO',
+                    'cerberus_atmos_fitT',
+                    'isValidTarget',
+                    'runTarget',
+                    'target_autofill_selectMostRecent']
+        table = visitor.get_table(['Switch', 'State'], len(switches))
+        for row,switch in enumerate(switches):
+            table.get_cell(row,0).add_primitive(switch)
+            table.get_cell(row,1).add_primitive('on' if self[switch] else 'off')
+        visitor.add_declaration_inline('',div='</div>')
+        visitor.add_declaration_inline('',div='<div><hr><ul>')
+        visitor.add_declaration_inline('Mission-Platform-Instrument-Mode filters to process', tag='b')
+        for name in self['allowed_filter_names']:
+            visitor.add_declaration_inline (name, tag='li')
+        visitor.add_declaration_inline('',div='</ul></div>')
         return
     pass
 
