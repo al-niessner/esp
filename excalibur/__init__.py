@@ -79,6 +79,11 @@ class Visitor(dawgie.Visitor):
         print ('declaration', text, kwds)
         return
 
+    def add_declaration_inline (self, text:str, **kwds)->None:
+        '''add_declaration ds'''
+        print ('declaration inline', text, kwds)
+        return
+
     def add_image (self, alternate:str, label:str, img:bytes)->None:
         '''add_image ds'''
         print ('image', label, alternate, len(img))
