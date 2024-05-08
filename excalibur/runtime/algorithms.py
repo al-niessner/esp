@@ -12,11 +12,13 @@ from . import states
 
 class autofill(dawgie.Algorithm):
     '''Breaks the levers and knobs global table to target specific'''
-    def __init__ (self):
+    def __init__ (self, table:{str:{}}=None, tn:str=None):
         '''init autofill'''
         self._version_ = dawgie.VERSION(1,0,0)
         self.__parent = create()
         self.__status = states.StatusSV()
+        self.__table = table
+        self.__tn = tn
     def name(self):
         '''database name'''
         return 'autofill'
@@ -29,12 +31,12 @@ class autofill(dawgie.Algorithm):
         import excalibur.runtime  # avoid circular dependency; pylint: disable=import-outside-toplevel
         return [dawgie.SV_REF(excalibur.runtime.analysis, self.__parent,
                               self.__parent.sv_as_dict()['composite'])]
-    def run (self, ds, ps, table:{str:{}}=None, tn=None):
+    def run (self, ds, ps):
         '''isolate target specific information from the global table'''
-        if table is None or tn is None:
+        if self.__table is None or self.__tn is None:
             raise dawgie.NoValidInputDataError('never should be called except'
                                                'from runtime.create')
-        core.isolate (self.__status, table, tn)
+        core.isolate (self.__status, self.__table, self.__tn)
         ds.update()
     def state_vectors(self):
         '''state vectors generated from this algorithm'''
@@ -66,11 +68,9 @@ class create(dawgie.Analyzer):
             import excalibur.runtime.bot as erb  # pylint: disable=import-outside-toplevel
             pbot = aspects.ds()._bot()  # pylint: disable=protected-access
             for tn in dawgie.db.targets():
-                bot = erb.TaskTeam(pbot._name(), 1, pbot._runid(), tn)  # pylint: disable=protected-access
-                bot.do()
-                # alg = autofill()
-                # ds = dawgie.db.connect (alg, bot, tn)
-                # alg.run (ds, 1, self.sv_as_dict(), tn)
+                # pylint: disable=protected-access
+                erb.TaskTeam(pbot._name(), 1, pbot._runid(), tn,
+                             table=self.sv_as_dict, this_tn=tn).do()
         except FileNotFoundError as e:
             log.exception(e)
             raise dawgie.AbortAEError(f'The environment variable {core.ENV_NAME} points to the non-existent file: {os.environ[core.ENV_NAME]}') from e

@@ -59,7 +59,7 @@ class ControlsSV(dawgie.StateVector,dawgie.Value):
         return 'controls'
     def view(self, visitor:dawgie.Visitor)->None:
         '''Show the configutation information'''
-        visitor.add_declaration_inline('',div='<div>')
+        visitor.add_declaration_inline('',div='<div><hr>')
         table = visitor.add_table(['Switch', 'State'],
                                   len(self)+1, 'Processing Control Switches')
         for row,key in enumerate(sorted(self)):
@@ -85,7 +85,7 @@ class FilterSV(dawgie.StateVector,dawgie.Value):
         return 'filters'
     def view(self, visitor:dawgie.Visitor)->None:
         '''Show the configutation information'''
-        visitor.add_declaration_inline('',div='<div>')
+        visitor.add_declaration_inline('',div='<div><hr>')
         table_len = max(len(self['excludes']),len(self['includes']))
         if table_len == 1:
             visitor.add_declaration_inline('No target filters set', tag='b')
@@ -97,7 +97,7 @@ class FilterSV(dawgie.StateVector,dawgie.Value):
             for row in range(table_len):
                 for col,filt in enumerate(['excludes','includes']):
                     if col < len(self[filt]):
-                        table.get_cell (row+1,col).add_primitive(self[filt][col])
+                        table.get_cell (row+1,col).add_primitive(self[filt][row])
         visitor.add_declaration_inline('',div='</div>')
         return
     pass
@@ -119,7 +119,7 @@ class PymcSV(dawgie.StateVector,dawgie.Value):
         return f'pymc-{self.__name}'
     def view(self, visitor:dawgie.Visitor)->None:
         '''Show the configutation information'''
-        visitor.add_declaration_inline('',div='<div>')
+        visitor.add_declaration_inline('',div='<div><hr>')
         visitor.add_declaration_inline(f'PYMC for {self.__name} default chain '
                                        f'length: {self["default"].value()}',
                                        tag='b')
@@ -187,12 +187,12 @@ class TargetsSV(dawgie.StateVector,dawgie.Value):
         return self._name
     def view (self, visitor:dawgie.Visitor)->None:
         '''Show the configuration information'''
-        visitor.add_declaration_inline('',div='<div>')
+        visitor.add_declaration_inline('',div='<div><hr>')
         if self._name == 'run_only':
-            title = 'Run only thse targets:'
-            if not self['targets']: title += ' ALL'
+            title = 'Run only these targets:'
+            if not self['targets']: title = 'Run ALL targets.'
         else:
-            title = 'Do not run these targets:'
+            title = 'Never run these targets:'
             if not self['targets']: title += ' NONE'
 
         visitor.add_declaration_inline(title, tag='b')
