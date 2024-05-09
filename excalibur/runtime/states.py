@@ -169,13 +169,17 @@ class StatusSV(dawgie.StateVector):
             raise dawgie.NoValidInputDataError(msg)
     def view(self, visitor:dawgie.Visitor)->None:
         '''Show the state for this target'''
+        visitor.add_declaration_inline('Briefly: ',
+                                       div='<div><hr><h3>',tag='span')
         try:
             self.proceed()
-            visitor.add_declaration_inline('Briefly: process this target',
-                                           tag='h3')
+            visitor.add_declaration_inline ('process',
+                                            style='color:green', tag='span')
         except dawgie.NoValidInputDataError:
-            visitor.add_declaration_inline('Briefly: DO NOT process this target',
-                                           tag='h3')
+            visitor.add_declaration_inline ('DO NOT process',
+                                            style='color:red', tag='span')
+        visitor.add_declaration_inline(' this target', tag='span')
+        visitor.add_declaration_inline('',div='</h3></div>')
         visitor.add_declaration_inline('',div='<div><hr>')
         visitor.add_declaration_inline('Chain lengths for PYMC',
                                        tag='b')

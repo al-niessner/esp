@@ -1,6 +1,9 @@
 #! /usr/bin/env bash
 
 latest_tag=$(docker images | grep esp_devel | head -n 1 | awk '{print $2}')
+echo "Starting excalibur:"
+echo "   tag:  ${TAG:-${latest_tag}}"
+echo "   port: ${1:-${DAWGIE_FE_PORT:-9990}}"
 docker run --detach \
        -e EXCALIBUR_LEVER_AND_KNOB_SETTINGS=/proj/data/runtime/${USER}.xml \
        -e USER=${USER} \
