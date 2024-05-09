@@ -1,0 +1,190 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+            elementFormDefault="unqualified"
+            attributeFormDefault="unqualified">
+  <!-- How this file is written:
+
+       Each of the types are represented as either named simple types or
+       named complex types to aid with data binding (jaxb/pyxb) rather than a
+       continuous stream of anonymous types.
+
+       All of the complex types are first in alphabetical order of their name.
+       The simple types follow. Normally the simnple types are used to constrain
+       a general schema type. Lastly is the root node for the document.
+
+       The annotation-documentation nodes are used to define the type. -->
+
+  <!-- Template
+  <xs:complexType name="">
+    <xs:annotation>
+      <xs:documentation xml:lang="en">
+      </xs:documentation>
+    </xs:annotation>
+    <xs:sequence>
+    </xs:sequence>
+    <xs:attribute default="" name="" type="" use=""/>
+  </xs:complexType>
+
+  -->
+
+  <xs:complexType name="control_type">
+    <xs:annotation>
+      <xs:documentation xml:lang="en">
+        These attributes allow specific control within the AE. The attribute name
+        is the task.algorithm.varName being set. The value of true means it will
+        be exercised while false means it will not.
+      </xs:documentation>
+    </xs:annotation>
+    <xs:attribute name="cerberus.atmos.fitCloudParameters"
+                  type="xs:boolean" use="required"/>
+    <xs:attribute name="cerberus.atmos.fitNtoO"
+                  type="xs:boolean" use="required"/>
+    <xs:attribute name="cerberus.atmos.fitCtoO"
+                  type="xs:boolean" use="required"/>
+    <xs:attribute name="cerberus.atmos.fitT"
+                  type="xs:boolean" use="required"/>
+    <xs:attribute name="target.autofill.selectMostRecent"
+                  type="xs:boolean" use="required"/>
+    <xs:attribute name="ariel.simulate_spectra.includeMetallicityDispersion"
+                  type="xs:boolean" use="required"/>
+  </xs:complexType>
+
+  <xs:complexType name="filter_type">
+    <xs:annotation>
+      <xs:documentation xml:lang="en">
+        The filters are used to determine which generic state vectors should be
+        computed and which should be ignored.
+
+        If there are no includes, then all filters will be processed unless
+        explicitly named with an exclude.
+
+        If there are includes, then only those in the list will be processed
+        unless explicity named with an exclude.
+      </xs:documentation>
+    </xs:annotation>
+    <xs:sequence>
+      <xs:element name="exclude" minOccurs="0" maxOccurs="unbounded"
+                  type="filter_names"/>
+      <xs:element name="include" minOccurs="0" maxOccurs="unbounded"
+                  type="filter_names"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="lever_type">
+    <xs:annotation>
+      <xs:documentation xml:lang="en">
+        The levers of power (controls) available to the scientist
+        are limited to:
+          
+        controls: these are used by the AE to make decisions on
+                  what processing should be done.
+        filters: controls what filters should be processed and/or ignored.
+        pymc: controls specific to the PYMC processing.
+        restrict_to: when empty do all targets, otherwise just those listed
+        sequester: never do these targets dispite restrict_to
+      </xs:documentation>
+    </xs:annotation>
+    <xs:all>
+      <xs:element name="controls" type="control_type"/>
+      <xs:element name="filters" type="filter_type"/>
+      <xs:element name="pymc" type="pymc_type"/>
+      <xs:element name="run_only" type="sequester_type"/>
+      <xs:element name="sequester" type="sequester_type"/>
+    </xs:all>
+    <xs:attribute default="registry" name="index" type="xs:normalizedString"/>
+  </xs:complexType>
+
+  <xs:complexType name="pymc_count_type">
+    <xs:annotation>
+      <xs:documentation xml:lang="en">
+        Specify how many iterations for MCMC. The default is used for
+        all unspecified targets. Targets can also be individually specified.
+      </xs:documentation>
+    </xs:annotation>
+    <xs:sequence>
+      <xs:element name="target" minOccurs="0" maxOccurs="unbounded"
+                  type="target_override_type"/>
+    </xs:sequence>
+    <xs:attribute name="default" type="xs:positiveInteger" use="required"/>
+  </xs:complexType>
+
+  <xs:complexType name="pymc_type">
+    <xs:annotation>
+      <xs:documentation xml:lang="en">
+        Control the max number of iterations for PYMC.
+      </xs:documentation>
+    </xs:annotation>
+    <xs:all>
+      <xs:element name="cerberus" type="pymc_count_type"/>
+      <xs:element name="spectrum" type="pymc_count_type"/>
+    </xs:all>
+  </xs:complexType>
+
+  <xs:complexType name="sequester_type">
+    <xs:annotation>
+      <xs:documentation xml:lang="en">
+        Sequester the targets to the island of no processing.
+      </xs:documentation>
+    </xs:annotation>
+    <xs:sequence>
+      <xs:element maxOccurs="unbounded" minOccurs="0"
+                  name="target" type="target_type"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="target_type">
+    <xs:annotation>
+      <xs:documentation xml:lang="en">
+        The name of the target to not process and the reason why.
+      </xs:documentation>
+    </xs:annotation>
+    <xs:simpleContent>
+      <xs:extension base="xs:normalizedString">
+        <xs:attribute name="because" type="xs:normalizedString" use="required"/>
+        <xs:attribute default="false" name="isRegex" type="xs:boolean"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="target_override_type">
+    <xs:annotation>
+      <xs:documentation xml:lang="en">
+        Allows a specific target to be named and a given number of iterations.
+      </xs:documentation>
+    </xs:annotation>
+    <xs:attribute name="name" type="xs:normalizedString" use="required"/>
+    <xs:attribute name="steps" type="xs:positiveInteger" use="required"/>
+  </xs:complexType>
+
+  <xs:simpleType name="filter_names">
+    <xs:restriction base="xs:normalizedString">
+      <xs:enumeration value="HST-STIS-CCD-G430L-STARE"/>
+      <xs:enumeration value="HST-STIS-CCD-G750L-STARE"/>
+      <xs:enumeration value="HST-WFC3-IR-G102-SCAN"/>
+      <xs:enumeration value="HST-WFC3-IR-G141-SCAN"/>
+      <xs:enumeration value="JWST-NIRCAM-IMAGE-F210M-WLP8"/>
+      <xs:enumeration value="JWST-NIRCAM-NRCALONG-F322W2-GRISMR"/>
+      <xs:enumeration value="JWST-NIRISS-NIS-CLEAR-GR700XD"/>
+      <xs:enumeration value="JWST-NIRSPEC-NRS-CLEAR-PRISM"/>
+      <xs:enumeration value="JWST-NIRSPEC-NRS-F290LP-G395H"/>
+      <xs:enumeration value="Spitzer-IRAC-IR-36-SUB"/>
+      <xs:enumeration value="Spitzer-IRAC-IR-45-SUB"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:element name="levers">
+    <xs:complexType>
+      <xs:annotation>
+        <xs:documentation xml:lang="en">
+          This terrible construct is so that xjc can autodetect this as the
+          root node for processing. Many things would be better but this is
+          the most workable solution especially if the making of the binding
+          code is automated in the pom. The only other real solution is to
+          modify one of the classes generated by hand.
+        </xs:documentation>
+      </xs:annotation>
+      <xs:complexContent>
+        <xs:extension base="lever_type"/>
+      </xs:complexContent>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

@@ -18,11 +18,19 @@ from taurex.temperature import Guillot2010, Isothermal
 from taurex.cache import OpacityCache, CIACache
 from taurex_ace import ACEChemistry
 
-TAUREX_DATA_ROOT = os.environ.get('TAUREX_DATA_ROOT', excalibur.context['data_dir']+'/taurex')
-OpacityCache().clear_cache()
-OpacityCache().set_opacity_path(os.path.join (TAUREX_DATA_ROOT,
-                                              'xsec/xsec_sampled_R15000_0.3-50'))
-CIACache().set_cia_path(os.path.join (TAUREX_DATA_ROOT, 'cia/HITRAN'))
+def init():
+    '''init the libraries in a function
+
+    .ci/check_05.py is blowing up because these files are not on the computer
+    being used to run the check. Since the checks should not require pipeline
+    data, do the library initialization here.
+    '''
+    TAUREX_DATA_ROOT = os.environ.get('TAUREX_DATA_ROOT', excalibur.context['data_dir']+'/taurex')
+    OpacityCache().clear_cache()
+    OpacityCache().set_opacity_path(os.path.join
+                                    (TAUREX_DATA_ROOT,
+                                     'xsec/xsec_sampled_R15000_0.3-50'))
+    CIACache().set_cia_path(os.path.join (TAUREX_DATA_ROOT, 'cia/HITRAN'))
 
 # ----------------------------------------------------------------------------------------------
 def makeTaurexAtmos(model_params, mixratios=False, clouds=True):

@@ -1,0 +1,38 @@
+<?xml version="1.0" ?>
+<levers>
+  <controls cerberus.atmos.fitCloudParameters="true"
+            cerberus.atmos.fitNtoO="false"
+            cerberus.atmos.fitCtoO="true"
+            cerberus.atmos.fitT="true"
+            target.autofill.selectMostRecent="false"
+            ariel.simulate_spectra.includeMetallicityDispersion="true"/>
+  <filters>
+    <exclude>HST-STIS-CCD-G750L-STARE</exclude>
+    <include>HST-WFC3-IR-G141-SCAN</include>
+    <include>Spitzer-IRAC-IR-36-SUB</include>
+    <include>Spitzer-IRAC-IR-45-SUB</include>
+  </filters>
+  <pymc>
+    <cerberus default="15000">
+      <target name="55 Cnc" steps="10000"/>
+      <target name="HD 189733" steps="20000"/>
+    </cerberus>
+    <spectrum default="10000"/>
+  </pymc>
+  <sequester>
+    <target because="??">HR 8799</target>
+    <target because="does not exist in the Exoplanet Archive">GJ 3193</target>
+    <target because="this is K2-93">HIP 41378</target>
+    <target because="??">HD 185603</target>
+    <target because="??">HD 195689</target>
+    <target because="??">HD 197481</target>
+    <target because="??">KIC 12266812</target>
+    <target because="??">TIC 184892124</target>
+    <target because="has G141, but doesn't exist in the Exoplanet Archive (listed as false positive)">LHS 6343</target>
+    <target because="??">TOI-175</target>
+    <target because="??">TOI-193</target>
+    <target because="alias for GJ 3053">LHS 1140</target>
+    <target because="taurex-sim targets waste CPU" isRegex="true">.*\(taurex sim @TS\)$</target>
+  </sequester>
+  <run_only/>
+</levers>

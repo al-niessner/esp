@@ -64,6 +64,9 @@ class ValueScalar(dawgie.Value):
     def features (self):
         '''features ds'''
         return []
+    def new(self,value):
+        '''method to keep from explicitly needing dawgie'''
+        return ValueScalar(value if value is not None else self.__content)
     def value(self):
         '''value ds'''
         return self.__content
@@ -74,6 +77,11 @@ class Visitor(dawgie.Visitor):
     def add_declaration (self, text:str, **kwds)->None:
         '''add_declaration ds'''
         print ('declaration', text, kwds)
+        return
+
+    def add_declaration_inline (self, text:str, **kwds)->None:
+        '''add_declaration ds'''
+        print ('declaration inline', text, kwds)
         return
 
     def add_image (self, alternate:str, label:str, img:bytes)->None:
