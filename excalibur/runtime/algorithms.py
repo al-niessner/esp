@@ -55,7 +55,7 @@ class create(dawgie.Analyzer):
         self.__table.append (states.CompositeSV(self.__table))
     def name(self)->str:
         '''database name'''
-        return 'settings'
+        return 'create'
     def run(self, aspects:dawgie.Aspect)->None:
         '''load the configuration file then process it'''
         try:
