@@ -31,6 +31,13 @@ class autofill(dawgie.Algorithm):
         import excalibur.runtime  # avoid circular dependency; pylint: disable=import-outside-toplevel
         return [dawgie.SV_REF(excalibur.runtime.analysis, self.__parent,
                               self.__parent.sv_as_dict()['composite'])]
+    def refs_for_proceed(self)->[dawgie.V_REF]:
+        '''return minimum list for StatusSV.proceed() to work'''
+        import excalibur.runtime  # avoid circular dependency; pylint: disable=import-outside-toplevel
+        factory = excalibur.runtime.task
+        return [dawgie.V_REF(factory,self,self.__status,'allowed_exts'),
+                dawgie.V_REF(factory,self,self.__status,'isValidTarget'),
+                dawgie.V_REF(factory,self,self.__status,'runTarget')]
     def run (self, ds, ps):
         '''isolate target specific information from the global table'''
         if self.__table is None or self.__tn is None:
