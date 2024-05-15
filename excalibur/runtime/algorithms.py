@@ -78,9 +78,9 @@ class create(dawgie.Analyzer):
             pbot = aspects.ds()._bot()
             with multiprocessing.Pool(processes=60) as pool:
                 log.info('using the pool to run in parallel')
-                pool.imap (create._do, [((pbot._name(), 1, pbot._runid(), tn),
+                pool.map (create._do, [((pbot._name(), 1, pbot._runid(), tn),
                                         {'table':self.sv_as_dict(),'this_tn':tn})
-                                        for tn in dawgie.db.targets()])
+                                       for tn in dawgie.db.targets()])
             # done under the hood, pylint: enable=protected-access
         except FileNotFoundError as e:
             log.exception(e)
