@@ -55,31 +55,33 @@ class create(dawgie.Analyzer):
                         states.TargetsSV('sequester')]
         self.__table.append (states.CompositeSV(self.__table))
     @staticmethod
-    def _do(task:dawgie.Task): task.do()
+    def _do(arg):
+        # break circular dependencies with
+        # pylint: disable=import-outside-toplevel
+        import excalibur.runtime.bot as erb
+        erb.TaskTeam(*arg[0],**arg[1]).do()
     def name(self)->str:
         '''database name'''
         return 'create'
     def run(self, aspects:dawgie.Aspect)->None:
         '''load the configuration file then process it'''
         try:
+            log.info('starting load of config')
             core.load(self.sv_as_dict(), dawgie.db.targets())
+            log.info('updating state vector')
             aspects.ds().update()
             # Now do the evil bit where the table is divided into target
             # specific state vectors where the information becomes highly
             # condensed and processed. To do this, need to act like dawgie
             # just a little bit and access some hidden information.
-            # break circular dependencies with
-            # pylint: disable=import-outside-toplevel
-            import excalibur.runtime.bot as erb
             # need under the hood for this, pylint: disable=protected-access
             pbot = aspects.ds()._bot()
             with multiprocessing.Pool(processes=60) as pool:
-                pool.imap (create._do, [erb.TaskTeam(pbot._name(), 1,
-                                                     pbot._runid(), tn,
-                                                     table=self.sv_as_dict(),
-                                                     this_tn=tn)
+                log.info('using the pool to run in parallel')
+                pool.imap (create._do, [((pbot._name(), 1, pbot._runid(), tn),
+                                        {'table':self.sv_as_dict(),'this_tn':tn})
                                         for tn in dawgie.db.targets()])
-            # pylint: enable=import-outside-toplevel,protected-access
+            # done under the hood, pylint: enable=protected-access
         except FileNotFoundError as e:
             log.exception(e)
             raise dawgie.AbortAEError(f'The environment variable {core.ENV_NAME} points to the non-existent file: {os.environ[core.ENV_NAME]}') from e
