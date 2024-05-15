@@ -5,6 +5,7 @@ import logging; log = logging.getLogger(__name__)
 import dawgie
 import dawgie.context
 import dawgie.db
+import multiprocessing
 import os
 
 from . import core
@@ -53,6 +54,8 @@ class create(dawgie.Analyzer):
                         states.TargetsSV('run_only'),
                         states.TargetsSV('sequester')]
         self.__table.append (states.CompositeSV(self.__table))
+    @staticmethod
+    def _do(task:dawgie.Task): task.do()
     def name(self)->str:
         '''database name'''
         return 'create'
@@ -65,12 +68,18 @@ class create(dawgie.Analyzer):
             # specific state vectors where the information becomes highly
             # condensed and processed. To do this, need to act like dawgie
             # just a little bit and access some hidden information.
-            import excalibur.runtime.bot as erb  # pylint: disable=import-outside-toplevel
-            pbot = aspects.ds()._bot()  # pylint: disable=protected-access
-            for tn in dawgie.db.targets():
-                # pylint: disable=protected-access
-                erb.TaskTeam(pbot._name(), 1, pbot._runid(), tn,
-                             table=self.sv_as_dict(), this_tn=tn).do()
+            # break circular dependencies with
+            # pylint: disable=import-outside-toplevel
+            import excalibur.runtime.bot as erb
+            # need under the hood for this, pylint: disable=protected-access
+            pbot = aspects.ds()._bot()
+            with multiprocessing.Pool(processes=60) as pool:
+                pool.imap (create._do, [erb.TaskTeam(pbot._name(), 1,
+                                                     pbot._runid(), tn,
+                                                     table=self.sv_as_dict(),
+                                                     this_tn=tn)
+                                        for tn in dawgie.db.targets()])
+            # pylint: enable=import-outside-toplevel,protected-access
         except FileNotFoundError as e:
             log.exception(e)
             raise dawgie.AbortAEError(f'The environment variable {core.ENV_NAME} points to the non-existent file: {os.environ[core.ENV_NAME]}') from e
