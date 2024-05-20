@@ -36,7 +36,8 @@ def processme():
     # out['FILTER']['include'] = []
     # out['FILTER']['include'] = ['NIRSPEC']
     # out['FILTER']['include'] = ['HST', 'Ariel']
-    out['FILTER']['include'] = ['Ariel']
+    # out['FILTER']['include'] = ['Ariel']
+    out['FILTER']['include'] = ['HST']
     out['FILTER']['exclude'] = []
     # out['FILTER']['exclude'] = ['STIS', 'JWST', 'Spitzer', 'Ariel']
     # out['FILTER']['exclude'] = ['HST', 'JWST', 'Spitzer']
@@ -1028,6 +1029,7 @@ WASP-162 :
 WASP-171 :
 WASP-193 :
 WASP-60 :
+HD 110067 :
     '''
 # these two JWST targets are not yet listed in the Exoplanet Archive composite table:
 # GJ 341 : HIP 45908
@@ -1869,6 +1871,7 @@ WASP-162 : WASP162
 WASP-171 : WASP171
 WASP-193 : WASP193
 WASP-60 : WASP60
+HD 110067 : HD110067
     '''
     return
 # -------------------- -----------------------------------------------

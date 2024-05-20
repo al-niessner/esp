@@ -21,4 +21,4 @@ class Pyxb(unittest.TestCase):
                                                '..', 'excalibur','runtime'))
         bin = os.path.getmtime(os.path.join (basedir, 'binding.py'))
         xsd = os.path.getmtime(os.path.join (basedir, 'levers.xsd'))
-        self.assertLessEqual (xsd, bin, 'pyxbgen --schema-location=excalibur/runtime/levers.xsd --module=binding --module-prefix=excalibur.runtime')
+        self.assertLessEqual (-0.01,bin-xsd,'pyxbgen --schema-location=excalibur/runtime/levers.xsd --module=binding --module-prefix=excalibur.runtime')

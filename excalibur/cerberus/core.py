@@ -15,8 +15,7 @@ from excalibur.cerberus.forwardModel import \
 from excalibur.cerberus.plotting import rebinData, plot_bestfit, \
     plot_corner, plot_vsPrior, plot_walkerEvolution, \
     plot_fitsVStruths, plot_fitUncertainties, plot_massVSmetals
-from excalibur.cerberus.bounds import setPriorBound
-# getProfileLimits, applyProfiling
+from excalibur.cerberus.bounds import setPriorBound, getProfileLimits, applyProfiling
 
 import logging
 log = logging.getLogger(__name__)
@@ -634,7 +633,7 @@ def atmos(fin, xsl, spc, out, ext,
                         nodes.append(ctp)
 
                         # HAZE SCAT. CROSS SECTION SCALE FACTOR
-                        # prior_ranges['Hscale'] = (-6,6)
+                        # prior_ranges['HScale'] = (-6,6)
                         prior_ranges['HScale'] = priorRangeTable['HScale']
                         hza = pm.Uniform('HScale', prior_ranges['HScale'][0], prior_ranges['HScale'][1])
                         nodes.append(hza)
@@ -1118,6 +1117,9 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
 
     completed_at_least_one_planet = False
 
+    # load in the table of limits used for profiling
+    profilingLimits = getProfileLimits()
+
     for p in fin['priors']['planets']:
         # print('post-analysis for planet:',p)
 
@@ -1145,27 +1147,35 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                 if modelName in atm[p].keys(): models.append(modelName)
             for modelName in models:
                 # for modelName in atm[p]['MODELPARNAMES']:
-                alltraces = []
-                allkeys = []
+                allTraces = []
+                allKeys = []
                 for key in atm[p][modelName]['MCTRACE']:
                     # print('fillin tru the keys again?',key)
-
-                    alltraces.append(atm[p][modelName]['MCTRACE'][key])
+                    allTraces.append(atm[p][modelName]['MCTRACE'][key])
                     if modelName=='TEC':
-                        if key=='TEC[0]': allkeys.append('[X/H]')
-                        elif key=='TEC[1]': allkeys.append('[C/O]')
-                        elif key=='TEC[2]': allkeys.append('[N/O]')
-                        else: allkeys.append(key)
+                        if key=='TEC[0]': allKeys.append('[X/H]')
+                        elif key=='TEC[1]': allKeys.append('[C/O]')
+                        elif key=='TEC[2]': allKeys.append('[N/O]')
+                        else: allKeys.append(key)
                     elif modelName=='PHOTOCHEM':
-                        if key=='PHOTOCHEM[0]': allkeys.append('HCN')
-                        elif key=='PHOTOCHEM[1]': allkeys.append('CH4')
-                        elif key=='PHOTOCHEM[2]': allkeys.append('C2H2')
-                        elif key=='PHOTOCHEM[3]': allkeys.append('CO2')
-                        elif key=='PHOTOCHEM[4]': allkeys.append('H2CO')
-                        else: allkeys.append(key)
+                        if key=='PHOTOCHEM[0]': allKeys.append('HCN')
+                        elif key=='PHOTOCHEM[1]': allKeys.append('CH4')
+                        elif key=='PHOTOCHEM[2]': allKeys.append('C2H2')
+                        elif key=='PHOTOCHEM[3]': allKeys.append('CO2')
+                        elif key=='PHOTOCHEM[4]': allKeys.append('H2CO')
+                        else: allKeys.append(key)
                     else:
-                        allkeys.append(key)
-                    # print('allkeys',allkeys)
+                        allKeys.append(key)
+                    # print('allKeys',allKeys)
+
+                # remove the traced phase space that is excluded by profiling
+                profileTrace, appliedLimits = applyProfiling(
+                    trgt+' '+p, profilingLimits, allTraces, allKeys)
+                keepers = np.where(profileTrace==1)
+                profiledTraces = []
+                for key in atm[p][modelName]['MCTRACE']:
+                    profiledTraces.append(atm[p][modelName]['MCTRACE'][key][keepers])
+                profiledTraces = np.array(profiledTraces)
 
                 # make note of the bounds placed on each parameter
                 if 'prior_ranges' in atm[p][modelName].keys():
@@ -1173,13 +1183,13 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                 else:
                     prior_ranges = {}
 
-                fitCloudParameters = 'CTP' in allkeys
-                fitNtoO = '[N/O]' in allkeys
-                fitCtoO = '[C/O]' in allkeys
-                fitT = 'T' in allkeys
+                fitCloudParameters = 'CTP' in allKeys
+                fitNtoO = '[N/O]' in allKeys
+                fitCtoO = '[C/O]' in allKeys
+                fitT = 'T' in allKeys
 
-                # ndim = len(alltraces)
-                # nsamples = len(alltraces[0])
+                # ndim = len(allTraces)
+                # nsamples = len(allTraces[0])
                 # print('ndim,nsamples',ndim,nsamples)
 
                 # save the relevant info
@@ -1215,10 +1225,13 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                 # print('TEC2',np.median(atm[p][modelName]['MCTRACE']['TEC[2]']))
 
                 tprtrace = atm[p][modelName]['MCTRACE']['T']
+                tprtraceProfiled = atm[p][modelName]['MCTRACE']['T'][keepers]
                 mdplist = [key for key in atm[p][modelName]['MCTRACE'] if modelName in key]
-                mdptrace = []
                 # print('mdplist',mdplist)
+                mdptrace = []
+                mdptraceProfiled = []
                 for key in mdplist: mdptrace.append(atm[p][modelName]['MCTRACE'][key])
+                for key in mdplist: mdptraceProfiled.append(atm[p][modelName]['MCTRACE'][key][keepers])
                 if fitCloudParameters:
                     ctptrace = atm[p][modelName]['MCTRACE']['CTP']
                     hzatrace = atm[p][modelName]['MCTRACE']['HScale']
@@ -1232,6 +1245,14 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                     # print('fit results; HScale:',hza)
                     # print('fit results; HLoc:',hloc)
                     # print('fit results; HThick:',hthc)
+                    ctptraceProfiled = atm[p][modelName]['MCTRACE']['CTP'][keepers]
+                    hzatraceProfiled = atm[p][modelName]['MCTRACE']['HScale'][keepers]
+                    hloctraceProfiled = atm[p][modelName]['MCTRACE']['HLoc'][keepers]
+                    hthicktraceProfiled = atm[p][modelName]['MCTRACE']['HThick'][keepers]
+                    ctpProfiled = np.median(ctptraceProfiled)
+                    hzaProfiled = np.median(hzatraceProfiled)
+                    hlocProfiled = np.median(hloctraceProfiled)
+                    hthcProfiled = np.median(hthicktraceProfiled)
                 else:
                     # ctp = 3.
                     # hza = 10.
@@ -1245,12 +1266,19 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                     hza = atm[p]['TRUTH_MODELPARAMS']['HScale']
                     hloc = atm[p]['TRUTH_MODELPARAMS']['HLoc']
                     hthc = atm[p]['TRUTH_MODELPARAMS']['HThick']
+                    ctpProfiled = ctp
+                    hzaProfiled = hza
+                    hlocProfiled = hloc
+                    hthcProfiled = hthc
                     # print(' ctp hza hloc hthc',ctp,hza,hloc,hthc)
                 if fitT:
                     tpr = np.median(tprtrace)
+                    tprProfiled = np.median(tprtraceProfiled)
                 else:
                     tpr = atm[p]['TRUTH_MODELPARAMS']['T']
+                    tprProfiled = tpr
                 mdp = np.median(np.array(mdptrace), axis=1)
+                mdpProfiled = np.median(np.array(mdptraceProfiled), axis=1)
                 # print('fit results; T:',tpr)
                 # print('fit results; mdplist:',mdp)
 
@@ -1259,21 +1287,28 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                 if modelName=='TEC':
                     # if len(mdp)!=3: log.warning('--< Expecting 3 molecules for TEQ model! >--')
                     mixratio = None
+                    mixratioProfiled = None
                     tceqdict = {}
+                    tceqdictProfiled = {}
                     tceqdict['XtoH'] = float(mdp[0])
+                    tceqdictProfiled['XtoH'] = float(mdpProfiled[0])
                     if fitCtoO:
                         tceqdict['CtoO'] = float(mdp[1])
+                        tceqdictProfiled['CtoO'] = float(mdpProfiled[1])
                     else:
                         # print('truth params',atm[p]['TRUTH_MODELPARAMS'])
                         tceqdict['CtoO'] = atm[p]['TRUTH_MODELPARAMS']['CtoO']
+                        tceqdictProfiled['CtoO'] = tceqdict['CtoO']
                     if fitNtoO:
                         tceqdict['NtoO'] = float(mdp[2])
+                        tceqdictProfiled['NtoO'] = float(mdpProfiled[2])
                     else:
                         # print('truth params',atm[p]['TRUTH_MODELPARAMS'])
                         if 'NtoO' in atm[p]['TRUTH_MODELPARAMS'].keys():
                             tceqdict['NtoO'] = atm[p]['TRUTH_MODELPARAMS']['NtoO']
                         else:
                             tceqdict['NtoO'] = 0.
+                        tceqdictProfiled['NtoO'] = tceqdict['NtoO']
                 elif modelName=='PHOTOCHEM':
                     if len(mdp)!=5: log.warning('--< Expecting 5 molecules for PHOTOCHEM model! >--')
                     tceqdict = None
@@ -1283,6 +1318,13 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                     mixratio['C2H2'] = float(mdp[2])
                     mixratio['CO2'] = float(mdp[3])
                     mixratio['H2CO'] = float(mdp[4])
+                    tceqdictProfiled = None
+                    mixratioProfiled = {}
+                    mixratioProfiled['HCN'] = float(mdpProfiled[0])
+                    mixratioProfiled['CH4'] = float(mdpProfiled[1])
+                    mixratioProfiled['C2H2'] = float(mdpProfiled[2])
+                    mixratioProfiled['CO2'] = float(mdpProfiled[3])
+                    mixratioProfiled['H2CO'] = float(mdpProfiled[4])
                 else:
                     log.warning('--< Expecting TEQ or PHOTOCHEM model! >--')
 
@@ -1306,6 +1348,17 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                 # print('mean data',np.nanmean(transitdata['depth']))
                 patmos_model = fmc - np.nanmean(fmc) + np.nanmean(transitdata['depth'])
                 # print('median pmodel',np.nanmedian(patmos_model))
+
+                fmcProfiled = np.zeros(transitdata['depth'].size)
+                fmcProfiled = crbmodel(mixratioProfiled, float(hzaProfiled), float(ctpProfiled),
+                                       solidr, fin['priors'],
+                                       xsl[p]['XSECS'], xsl[p]['QTGRID'],
+                                       float(tprProfiled),
+                                       transitdata['wavelength'],
+                                       hzlib=crbhzlib, hzp='AVERAGE', hztop=float(hlocProfiled),
+                                       hzwscale=float(hthcProfiled), cheq=tceqdictProfiled, pnet=p,
+                                       sphshell=True, verbose=False, debug=False)
+                patmos_modelProfiled = fmcProfiled - np.nanmean(fmcProfiled) + np.nanmean(transitdata['depth'])
 
                 # make an array of 10 random walker results
                 nrandomwalkers = 10
@@ -1371,8 +1424,6 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                     # print('stdev model',np.nanstd(fmcrand))
                     fmcarray.append(fmcrand)
 
-                # limits = getProfileLimits()
-
                 # _______________MAKE SOME PLOTS________________
                 saveDir = os.path.join(excalibur.context['data_dir'], 'bryden/')
                 # print('saveDir',saveDir)
@@ -1380,31 +1431,29 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                 # _______________BEST-FIT SPECTRUM PLOT________________
                 transitdata = rebinData(transitdata)
 
-                out['data'][p]['plot_spectrum_'+modelName] = plot_bestfit(transitdata,
-                                                                          patmos_model, fmcarray,
-                                                                          truth_spectrum,
-                                                                          anc['data'][p],
-                                                                          atm[p],
-                                                                          filt, modelName,
-                                                                          trgt, p, saveDir)
+                out['data'][p]['plot_spectrum_'+modelName] = plot_bestfit(
+                    transitdata, patmos_model, patmos_modelProfiled, fmcarray,
+                    truth_spectrum,
+                    anc['data'][p], atm[p],
+                    filt, modelName, trgt, p, saveDir)
 
                 # _______________CORNER PLOT________________
-                out['data'][p]['plot_corner_'+modelName] = plot_corner(allkeys, alltraces,
-                                                                       truth_params, prior_ranges,
-                                                                       filt, modelName,
-                                                                       trgt, p, saveDir)
-
-                # _______________VS-PRIOR PLOT________________
-                out['data'][p]['plot_vsprior_'+modelName] = plot_vsPrior(allkeys, alltraces,
-                                                                         truth_params, prior_ranges,
-                                                                         filt, modelName,
-                                                                         trgt, p, saveDir)
+                out['data'][p]['plot_corner_'+modelName] = plot_corner(
+                    allKeys, allTraces, profiledTraces,
+                    truth_params, prior_ranges,
+                    filt, modelName, trgt, p, saveDir)
 
                 # _______________WALKER-EVOLUTION PLOT________________
-                out['data'][p]['plot_walkerevol_'+modelName] = plot_walkerEvolution(allkeys, alltraces,
-                                                                                    truth_params, prior_ranges,
-                                                                                    filt, modelName,
-                                                                                    trgt, p, saveDir)
+                out['data'][p]['plot_walkerevol_'+modelName] = plot_walkerEvolution(
+                    allKeys, allTraces, profiledTraces,
+                    truth_params, prior_ranges, appliedLimits,
+                    filt, modelName, trgt, p, saveDir)
+
+                # _______________VS-PRIOR PLOT________________
+                out['data'][p]['plot_vsprior_'+modelName] = plot_vsPrior(
+                    allKeys, allTraces, profiledTraces,
+                    truth_params, prior_ranges, appliedLimits,
+                    filt, modelName, trgt, p, saveDir)
 
             out['target'].append(trgt)
             out['planets'].append(p)
@@ -1509,17 +1558,17 @@ def analysis(aspects, filt, out, verbose=False):
                             #    print('check',atmosFit['data'][planetLetter])
                             prior_ranges = atmosFit['data'][planetLetter]['TEC']['prior_ranges']
 
-                            alltraces = []
-                            allkeys = []
+                            allTraces = []
+                            allKeys = []
                             for key in atmosFit['data'][planetLetter]['TEC']['MCTRACE']:
-                                alltraces.append(atmosFit['data'][planetLetter]['TEC']['MCTRACE'][key])
+                                allTraces.append(atmosFit['data'][planetLetter]['TEC']['MCTRACE'][key])
 
-                                if key=='TEC[0]': allkeys.append('[X/H]')
-                                elif key=='TEC[1]': allkeys.append('[C/O]')
-                                elif key=='TEC[2]': allkeys.append('[N/O]')
-                                else: allkeys.append(key)
+                                if key=='TEC[0]': allKeys.append('[X/H]')
+                                elif key=='TEC[1]': allKeys.append('[C/O]')
+                                elif key=='TEC[2]': allKeys.append('[N/O]')
+                                else: allKeys.append(key)
 
-                            for key,trace in zip(allkeys,alltraces):
+                            for key,trace in zip(allKeys,allTraces):
                                 if key not in param_names: param_names.append(key)
                                 fit_values[key].append(np.median(trace))
                                 lo = np.percentile(np.array(trace), 16)
@@ -1621,5 +1670,3 @@ def analysis(aspects, filt, out, verbose=False):
 
     out['STATUS'].append(True)
     return out['STATUS'][-1]
-
-# def applyProfiling(target, limits, alltraces, allkeys):

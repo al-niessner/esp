@@ -54,32 +54,37 @@ def rebinData(transitdata, binsize=4):
     return transitdata
 # --------------------------------------------------------------------
 # --------------------------------------------------------------------
-def plot_bestfit(transitdata, patmos_model, fmcarray,
-                 truth_spectrum, ancillary_data, atmos_data,
+def plot_bestfit(transitdata, patmos_model, patmos_modelProfiled, fmcarray,
+                 truth_spectrum,
+                 ancillary_data, atmos_data,
                  filt, modelName, trgt, p, saveDir, savetodisk=False):
     ''' plot the best fit to the data '''
 
-    figure, ax = plt.subplots(figsize=(8,4))
-    plt.subplots_adjust(left=0.13,right=0.75,bottom=0.15,top=0.93)
+    # figure, ax = plt.subplots(figsize=(8,4))
+    figgy = plt.figure(figsize=(20,4))
+    # figgy = plt.figure(figsize=(8,4))
+    figgy.subplots_adjust(left=0.05,right=0.7,bottom=0.15,top=0.93,wspace=0.8)
+    # ax1 = plt.subplot(1,2,1)
+    plt.subplot(1,2,1)
 
     # 1) plot the data
-    ax.errorbar(transitdata['wavelength'],
-                transitdata['depth'] * 100,
-                yerr=transitdata['error'] * 100,
-                fmt='.', color='lightgray', zorder=1,
-                label='raw data')
+    plt.errorbar(transitdata['wavelength'],
+                 transitdata['depth'] * 100,
+                 yerr=transitdata['error'] * 100,
+                 fmt='.', color='lightgray', zorder=1,
+                 label='raw data')
     # 2) also plot the rebinned data points
-    ax.errorbar(transitdata['binned_wavelength'],
-                transitdata['binned_depth'] * 100,
-                yerr=transitdata['binned_error'] * 100,
-                # fmt='o', color='k', markeredgecolor='k', markerfacecolor='w', zorder=5,
-                # fmt='^', color='blue', zorder=5,
-                # fmt='o', color='royalblue', zorder=5,
-                fmt='o', markeredgecolor='k', color='None', ecolor='k', zorder=5,
-                label='rebinned data')
+    plt.errorbar(transitdata['binned_wavelength'],
+                 transitdata['binned_depth'] * 100,
+                 yerr=transitdata['binned_error'] * 100,
+                 # fmt='o', color='k', markeredgecolor='k', markerfacecolor='w', zorder=5,
+                 # fmt='^', color='blue', zorder=5,
+                 # fmt='o', color='royalblue', zorder=5,
+                 fmt='o', markeredgecolor='k', color='None', ecolor='k', zorder=5,
+                 label='rebinned data')
     # 3) plot the best-fit model
     plt.plot(transitdata['wavelength'],
-             patmos_model * 100,
+             patmos_modelProfiled * 100,
              # c='k', lw=2, zorder=4,
              c='orange', lw=2, zorder=4,
              label='best fit')
@@ -104,55 +109,63 @@ def plot_bestfit(transitdata, patmos_model, fmcarray,
                  label='truth')
 
     offsets_model = (patmos_model - transitdata['depth']) / transitdata['error']
-    # print('median chi2, model',np.median(offsets_model**2))
-    offsets_truth = (truth_spectrum['depth'] - transitdata['depth']) / transitdata['error']
-    # print('median chi2, truth',np.median(offsets_truth**2))
+    offsets_modelProfiled = (patmos_modelProfiled - transitdata['depth']) / transitdata['error']
 
-    flatlineFit = np.average(transitdata['depth'], weights=1/transitdata['error']**2)
+    # the 'average' function (which allows for weights) doesn't have a NaN version,
+    #  so mask out any NaN regions by hand
+    okPart = np.where(np.isfinite(transitdata['depth']))
+    flatlineFit = np.average(transitdata['depth'][okPart],
+                             weights=1/transitdata['error'][okPart]**2)
     # print('flatline average',flatlineFit)
     offsets_flat = (flatlineFit - transitdata['depth']) / transitdata['error']
-    # print('median chi2, flat',np.median(offsets_flat**2))
+    # print('median chi2, flat',np.nanmedian(offsets_flat**2))
 
-    chi2model = np.sum(offsets_model**2)
-    chi2truth = np.sum(offsets_truth**2)
-    chi2flat = np.sum(offsets_flat**2)
+    chi2model = np.nansum(offsets_model**2)
+    chi2modelProfiled = np.nansum(offsets_modelProfiled**2)
+    chi2flat = np.nansum(offsets_flat**2)
 
     numParam_model = 8
     numParam_truth = 0
     numParam_flat = 1
 
-    numPoints = len(truth_spectrum['wavelength'])
+    numPoints = len(patmos_model)
+    # print('numpoints',numPoints)
     chi2model_red = chi2model / (numPoints - numParam_model)
-    chi2truth_red = chi2truth / (numPoints - numParam_truth)
+    chi2modelProfiled_red = chi2modelProfiled / (numPoints - numParam_model)
     chi2flat_red = chi2flat / (numPoints - numParam_flat)
 
     # add some labels off to the right side
+    xoffset = 0.03
+    if truth_spectrum is not None:
+        offsets_truth = (truth_spectrum['depth'] - transitdata['depth']) / transitdata['error']
+        chi2truth = np.nansum(offsets_truth**2)
+        chi2truth_red = chi2truth / (numPoints - numParam_truth)
+        plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.6,
+                 '$\\chi^2$-truth='+f"{chi2truth:5.2f}",fontsize=12)
+        plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.36,
+                 '$\\chi^2_{red}$-truth='+f"{chi2truth_red:5.2f}",fontsize=12)
     if 'tier' in atmos_data:
-        plt.text(xlims[1]+0.1,ylims[0]+(ylims[1]-ylims[0])*1.00,
+        plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*1.00,
                  'Tier='+atmos_data['tier'],fontsize=12)
-        plt.text(xlims[1]+0.1,ylims[0]+(ylims[1]-ylims[0])*0.93,
+        plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.93,
                  '# of Visits='+atmos_data['visits'],fontsize=12)
-    plt.text(xlims[1]+0.1,ylims[0]+(ylims[1]-ylims[0])*0.8,
+    plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.8,
              'ZFOM='+f"{ancillary_data['ZFOM']:4.1f}"+'-'+
              f"{ancillary_data['ZFOM_max']:4.1f}",fontsize=12)
-    plt.text(xlims[1]+0.1,ylims[0]+(ylims[1]-ylims[0])*0.73,
+    plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.73,
              'TSM='+f"{ancillary_data['TSM']:5.2f}",fontsize=12)
-    plt.text(xlims[1]+0.1,ylims[0]+(ylims[1]-ylims[0])*0.6,
-             '$\\chi^2$-truth='+f"{chi2truth:5.2f}",fontsize=12)
-    plt.text(xlims[1]+0.1,ylims[0]+(ylims[1]-ylims[0])*0.53,
-             '$\\chi^2$-model='+f"{chi2model:5.2f}",fontsize=12)
-    plt.text(xlims[1]+0.1,ylims[0]+(ylims[1]-ylims[0])*0.46,
+    plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.53,
+             '$\\chi^2$-model='+f"{chi2modelProfiled:5.2f}",fontsize=12)
+    plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.46,
              '$\\chi^2$-flat='+f"{chi2flat:5.2f}",fontsize=12)
-    plt.text(xlims[1]+0.1,ylims[0]+(ylims[1]-ylims[0])*0.36,
-             '$\\chi^2_{red}$-truth='+f"{chi2truth_red:5.2f}",fontsize=12)
-    plt.text(xlims[1]+0.1,ylims[0]+(ylims[1]-ylims[0])*0.29,
-             '$\\chi^2_{red}$-model='+f"{chi2model_red:5.2f}",fontsize=12)
-    plt.text(xlims[1]+0.1,ylims[0]+(ylims[1]-ylims[0])*0.22,
+    plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.29,
+             '$\\chi^2_{red}$-model='+f"{chi2modelProfiled_red:5.2f}",fontsize=12)
+    plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.22,
              '$\\chi^2_{red}$-flat='+f"{chi2flat_red:5.2f}",fontsize=12)
-    plt.text(xlims[1]+0.1,ylims[0]+(ylims[1]-ylims[0])*0.12,
-             '$\\chi^2_{red}$(model/flat)='+f"{(chi2model_red/chi2flat_red):5.2f}",fontsize=12)
-    plt.text(xlims[1]+0.1,ylims[0]+(ylims[1]-ylims[0])*0.05,
-             '$\\Delta\\chi^2$(flat-model)='+f"{(chi2flat-chi2model):5.1f}",fontsize=12)
+    plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.12,
+             '$\\chi^2_{red}$(model/flat)='+f"{(chi2modelProfiled_red/chi2flat_red):5.2f}",fontsize=12)
+    plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.05,
+             '$\\Delta\\chi^2$(flat-model)='+f"{(chi2flat-chi2modelProfiled):5.1f}",fontsize=12)
 
     if filt=='Ariel-sim':
         plt.xlim(0,8)
@@ -160,6 +173,7 @@ def plot_bestfit(transitdata, patmos_model, fmcarray,
     plt.xlabel(str('Wavelength [$\\mu m$]'), fontsize=14)
     plt.ylabel(str('$(R_p/R_*)^2$ [%]'), fontsize=14)
     plt.legend()
+    # *** add the H scaling back in? ***
     # if ('Hs' in spectrum_dict['data'][p]) and ('RSTAR' in spectrum_dict['data'][p]):
     #    rp0hs = np.sqrt(np.nanmedian(transitdata['depth']))
     #    Hs = atm[p]['Hs'][0]
@@ -169,19 +183,62 @@ def plot_bestfit(transitdata, patmos_model, fmcarray,
     #    ax2.set_ylabel('$\\Delta$ [Hs]')
     #    axmin, axmax = ax.get_ylim()
     #    ax2.set_ylim((np.sqrt(1e-2*axmin) - rp0hs)/Hs, (np.sqrt(1e-2*axmax) - rp0hs)/Hs)
-    # figure.tight_layout()
+
+    #  Plot the pre-profiled result off to the right, if there's been profiling
+    if np.any(patmos_model!=patmos_modelProfiled):
+        # ax2 = plt.subplot(1,2,2)
+        plt.subplot(1,2,2)
+
+        # 1) plot the data
+        plt.errorbar(transitdata['wavelength'],
+                     transitdata['depth'] * 100,
+                     yerr=transitdata['error'] * 100,
+                     fmt='.', color='lightgray', zorder=1,
+                     label='raw data')
+        # 2) also plot the rebinned data points
+        plt.errorbar(transitdata['binned_wavelength'],
+                     transitdata['binned_depth'] * 100,
+                     yerr=transitdata['binned_error'] * 100,
+                     fmt='o', markeredgecolor='k', color='None', ecolor='k', zorder=5,
+                     label='rebinned data')
+        # 3) plot the best-fit model
+        plt.plot(transitdata['wavelength'],
+                 patmos_model * 100,
+                 c='orange', lw=2, zorder=4,
+                 label='best fit')
+        xlims = plt.xlim()
+        ylims = plt.ylim()
+        plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.53,
+                 '$\\chi^2$-model='+f"{chi2model:5.2f}",fontsize=12)
+        plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.46,
+                 '$\\chi^2$-flat='+f"{chi2flat:5.2f}",fontsize=12)
+        plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.29,
+                 '$\\chi^2_{red}$-model='+f"{chi2model_red:5.2f}",fontsize=12)
+        plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.22,
+                 '$\\chi^2_{red}$-flat='+f"{chi2flat_red:5.2f}",fontsize=12)
+        plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.12,
+                 '$\\chi^2_{red}$(model/flat)='+f"{(chi2model_red/chi2flat_red):5.2f}",fontsize=12)
+        plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.05,
+                 '$\\Delta\\chi^2$(flat-model)='+f"{(chi2flat-chi2model):5.1f}",fontsize=12)
+        if filt=='Ariel-sim': plt.xlim(0,8)
+        plt.title(trgt+' '+p+' (no profiling)', fontsize=16)
+        plt.xlabel(str('Wavelength [$\\mu m$]'), fontsize=14)
+        plt.ylabel(str('$(R_p/R_*)^2$ [%]'), fontsize=14)
+        plt.legend()
+
+    # figgy.tight_layout()
     # plt.show()
     if savetodisk: plt.savefig(saveDir + 'bestFit_'+filt+'_'+modelName+'_'+trgt+' '+p+'.png')
     # pdf is so much better, but xv gives error (stick with png for debugging)
 
     # REDUNDANT SAVE - above saves to disk; below saves as state vector
     buf = io.BytesIO()
-    figure.savefig(buf, format='png')
+    figgy.savefig(buf, format='png')
     save_to_state_vector = buf.getvalue()
-    plt.close(figure)
+    plt.close(figgy)
     return save_to_state_vector
 # --------------------------------------------------------------------
-def plot_corner(allkeys, alltraces,
+def plot_corner(allkeys, alltraces, profiletraces,
                 truth_params, prior_ranges,
                 filt, modelName, trgt, p, saveDir, savetodisk=False):
     ''' corner plot showing posterior distributions '''
@@ -190,6 +247,8 @@ def plot_corner(allkeys, alltraces,
     fitcolor = 'firebrick'
 
     mcmcMedian = np.nanmedian(np.array(alltraces), axis=1)
+    # print(' params inside of corner plotting',allkeys)
+    # print('medians inside of corner plotting',mcmcMedian)
     lo = np.nanpercentile(np.array(alltraces), 16, axis=1)
     hi = np.nanpercentile(np.array(alltraces), 84, axis=1)
     # span = hi - lo
@@ -199,12 +258,16 @@ def plot_corner(allkeys, alltraces,
     # OK fixed now. prior ranges are saved as output from atmos and then passed in here
     for ikey,key in enumerate(allkeys):
         # print('param:',key)
-        # print(' old prior range:',priorlo[ikey],priorhi[ikey])
+        # print(' old prior range:',key,priorlo[ikey],priorhi[ikey])
+
+        # special case for older HST state vectors
+        prior_ranges['HScale'] = prior_ranges['Hscale']
+
         if key in prior_ranges.keys():
             priorlo[ikey],priorhi[ikey] = prior_ranges[key]
         # else:
         #    print('TROUBLE: param not found',prior_ranges.keys())
-        # print(' new prior range:',priorlo[ikey],priorhi[ikey])
+        # print(' new prior range:',key,priorlo[ikey],priorhi[ikey])
     # priorspan = priorhi - priorlo
     # priormid = (priorhi + priorlo) / 2.
 
@@ -242,13 +305,22 @@ def plot_corner(allkeys, alltraces,
                 truths.append(666666)
                 log.warning('--< PROBLEM: no truth value for this key: %s >--',thiskey)
         # print('truths in corner plot',truths)
-    figure = corner.corner(np.vstack(np.array(alltraces)).T,
-                           # bins=int(np.sqrt(np.sqrt(nsamples))),
+    # figure = corner.corner(np.vstack(np.array(alltraces)).T,
+    #                       # bins=int(np.sqrt(np.sqrt(nsamples))),
+    #                       bins=10,
+    #                       labels=allkeys, range=trange,
+    #                       truths=truths, truth_color=truthcolor,
+    #                       show_titles=True,
+    #                       quantiles=[0.16, 0.50, 0.84])
+    figure = corner.corner(np.vstack(np.array(profiletraces)).T,
                            bins=10,
                            labels=allkeys, range=trange,
                            truths=truths, truth_color=truthcolor,
                            show_titles=True,
                            quantiles=[0.16, 0.50, 0.84])
+    # smaller size for corner plot might fit better, but this creates a bit of checkerboarding
+    # figure.set_size_inches(16,16)  # this actually makes it smaller
+
     ndim = len(alltraces)
     axes = np.array(figure.axes).reshape((ndim, ndim))
     # use larger font size for the axis labels
@@ -292,7 +364,8 @@ def plot_corner(allkeys, alltraces,
     plt.close(figure)
     return save_to_state_vector
 # --------------------------------------------------------------------
-def plot_vsPrior(allkeys, alltraces, truth_params, prior_ranges,
+def plot_vsPrior(allkeys, alltraces, profiledtraces,
+                 truth_params, prior_ranges, appliedLimits,
                  filt, modelName, trgt, p, saveDir, savetodisk=False):
     ''' compare the fit results against the original prior information '''
 
@@ -302,26 +375,45 @@ def plot_vsPrior(allkeys, alltraces, truth_params, prior_ranges,
     span = hi - lo
     priorlo = np.nanmin(np.array(alltraces), axis=1)
     priorhi = np.nanmax(np.array(alltraces), axis=1)
+
+    mcmcMedianProfiled = np.nanmedian(np.array(profiledtraces), axis=1)
+    loProfiled = np.nanpercentile(np.array(profiledtraces), 16, axis=1)
+    hiProfiled = np.nanpercentile(np.array(profiledtraces), 84, axis=1)
+    spanProfiled = hiProfiled - loProfiled
+    priorloProfiled = np.nanmin(np.array(profiledtraces), axis=1)
+    priorhiProfiled = np.nanmax(np.array(profiledtraces), axis=1)
+
     for ikey,key in enumerate(allkeys):
         # print('param:',key)
         # print(' old prior range:',priorlo[ikey],priorhi[ikey])
         if key in prior_ranges.keys():
             priorlo[ikey],priorhi[ikey] = prior_ranges[key]
+            # *** this needs work; use appliedLimits somehow ***
+            priorloProfiled[ikey],priorhiProfiled[ikey] = prior_ranges[key]
         # print(' new prior range:',priorlo[ikey],priorhi[ikey])
     priorspan = priorhi - priorlo
     priormid = (priorhi + priorlo) / 2.
+    priorspanProfiled = priorhiProfiled - priorloProfiled
+    priormidProfiled = (priorhiProfiled + priorloProfiled) / 2.
 
     figure = plt.figure(figsize=(12,6))
     Nparam = len(mcmcMedian)
     for iparam in range(Nparam):
         ax = figure.add_subplot(2,int((len(mcmcMedian)+1.)/2.),iparam+1)
         ax.scatter(priormid[iparam],priorspan[iparam]*0.34,
-                   facecolor='black',edgecolor='black', s=40, zorder=3)
+                   facecolor='None',edgecolor='black', s=30, zorder=3)
+        ax.scatter(priormidProfiled[iparam],priorspanProfiled[iparam]*0.34,
+                   facecolor='black',edgecolor='black', s=30, zorder=3)
         ax.scatter(mcmcMedian[iparam],span[iparam]/2.,
-                   facecolor='firebrick',edgecolor='firebrick', s=60, zorder=4)
+                   facecolor='None',edgecolor='firebrick', s=50, zorder=4)
+        ax.scatter(mcmcMedianProfiled[iparam],spanProfiled[iparam]/2.,
+                   facecolor='purple',edgecolor='firebrick', s=50, zorder=4)
         ax.plot([priorlo[iparam],priormid[iparam],priorhi[iparam]],
                 [0,priorspan[iparam]*0.34,0],
                 c='k',ls='--',lw=0.5,zorder=2)
+        # ax.plot([priorloProfiled[iparam],priormidProfiled[iparam],priorhiProfiled[iparam]],
+        #        [0,priorspanProfiled[iparam]*0.34,0],
+        #        c='purple',ls=':',lw=1.5,zorder=2)
 
         # highlight the background of successful fits (x2 better precision)
         if span[iparam]/2. < priorspan[iparam]*0.34 / 2:
@@ -345,6 +437,17 @@ def plot_vsPrior(allkeys, alltraces, truth_params, prior_ranges,
                 ax.plot([0,0],[0,priorspan[iparam]],
                         c='k',ls='--',zorder=5)
 
+        # show if there is some profiling for this parameter
+        profiledParams = [limit[0] for limit in appliedLimits]
+        profiledValues = [limit[1] for limit in appliedLimits]
+        if allkeys[iparam] in profiledParams:
+            # print('profiling limit!',allkeys[iparam])
+            iprof = profiledParams.index(allkeys[iparam])
+            # print('  profiled value',profiledValues[iprof],iprof)
+            ax.plot([profiledValues[iprof],profiledValues[iprof]],
+                    [0,priorspan[iparam]],
+                    c='purple',ls=':',lw=2,zorder=4)
+
         ax.set_xlim(priorlo[iparam],priorhi[iparam])
         ax.set_ylim(0,priorspan[iparam]*0.4)
         ax.set_xlabel(allkeys[iparam], fontsize=14)
@@ -359,30 +462,39 @@ def plot_vsPrior(allkeys, alltraces, truth_params, prior_ranges,
     return save_to_state_vector
 
 # --------------------------------------------------------------------
-def plot_walkerEvolution(allkeys, alltraces, truth_params, prior_ranges,
+def plot_walkerEvolution(allkeys, alltraces, profiledtraces,
+                         truth_params, prior_ranges, appliedLimits,
                          filt, modelName, trgt, p, saveDir, savetodisk=False,
                          Nchains=4):
     ''' trace whether or not the MCMC walkers converge '''
 
     mcmcMedian = np.nanmedian(np.array(alltraces), axis=1)
+    # mcmcMedianProfiled = np.nanmedian(np.array(profiledtraces), axis=1)
     Nparam = len(mcmcMedian)
     priorlo = np.nanmin(np.array(alltraces), axis=1)
     priorhi = np.nanmax(np.array(alltraces), axis=1)
+    priorloProfiled = np.nanmin(np.array(profiledtraces), axis=1)
+    priorhiProfiled = np.nanmax(np.array(profiledtraces), axis=1)
     for ikey,key in enumerate(allkeys):
         # print('param:',key)
         # print(' old prior range:',priorlo[ikey],priorhi[ikey])
         if key in prior_ranges.keys():
             priorlo[ikey],priorhi[ikey] = prior_ranges[key]
+            priorloProfiled[ikey],priorhiProfiled[ikey] = prior_ranges[key]
         # print(' new prior range:',priorlo[ikey],priorhi[ikey]
 
     figure = plt.figure(figsize=(12,6))
     linecolors = ['crimson','seagreen','royalblue','darkorange',
                   'coral','deepskyblue','gold','blueviolet']
     chainLength = int(len(alltraces[0]) / Nchains)
+    # chainLengthProfiled = int(len(profiledtraces[0]) / Nchains)
     for iparam in range(Nparam):
         ax = figure.add_subplot(2,int((Nparam+1.)/2.),iparam+1)
         for ic in range(Nchains):
             jump = ic * chainLength
+            # jumpProfiled = ic * chainLengthProfiled
+            # ax.plot(np.arange(chainLengthProfiled)+1,
+            #        profiledtraces[iparam][jumpProfiled:jumpProfiled+chainLengthProfiled],
             ax.plot(np.arange(chainLength)+1,
                     alltraces[iparam][jump:jump+chainLength],
                     c=linecolors[ic % len(linecolors)],
@@ -400,13 +512,35 @@ def plot_walkerEvolution(allkeys, alltraces, truth_params, prior_ranges,
             if truthparam in truth_params:
                 truthvalue = float(truth_params[truthparam])
                 ax.plot([0,2*chainLength], [truthvalue,truthvalue],
-                        c='k',ls='--',zorder=4)
+                        c='k',ls='--',zorder=5)
             elif truthparam=='[N/O]':
                 ax.plot([0,2*chainLength], [0,0],
-                        c='k',ls='--',zorder=4)
+                        c='k',ls='--',zorder=5)
+
+        # show if there is some profiling for this parameter
+        profiledParams = [limit[0] for limit in appliedLimits]
+        profiledValues = [limit[1] for limit in appliedLimits]
+        profiledSigns = [limit[2] for limit in appliedLimits]
+        # print('appliedLimits',appliedLimits)
+        if allkeys[iparam] in profiledParams:
+            # print('profiling limit!',allkeys[iparam])
+            iprof = profiledParams.index(allkeys[iparam])
+            # print('  profiled value',profiledValues[iprof],iprof)
+            ax.plot([0,2*chainLength], [profiledValues[iprof],profiledValues[iprof]],
+                    c='purple',ls=':',lw=2,zorder=4)
+            # add grey shading to the area that's dropped by profiling
+            greyscale = 0.6
+            if profiledSigns[iprof]=='>':
+                ax.axhspan(-1.e5, profiledValues[iprof], alpha=greyscale, color='k', zorder=7)
+            elif profiledSigns[iprof]=='<':
+                ax.axhspan(1.e5, profiledValues[iprof], alpha=greyscale, color='k', zorder=7)
+            # else:
+            #    print(profiledSigns)
+            #    exit('ERROR: limit has to be < or >')
 
         ax.set_xlim(0,chainLength+1)
-        ax.set_ylim(priorlo[iparam],priorhi[iparam])
+        # ax.set_ylim(priorlo[iparam],priorhi[iparam])
+        ax.set_ylim(priorloProfiled[iparam],priorhiProfiled[iparam])
         ax.set_xlabel('MCMC step #', fontsize=14)
         ax.set_ylabel(allkeys[iparam], fontsize=14)
     figure.tight_layout()
