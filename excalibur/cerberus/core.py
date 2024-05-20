@@ -1118,7 +1118,10 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
     completed_at_least_one_planet = False
 
     # load in the table of limits used for profiling
-    profilingLimits = getProfileLimits()
+    if filt=='HST-WFC3-IR-G141-SCAN':
+        profilingLimits = getProfileLimits()
+    else:
+        profilingLimits = []
 
     for p in fin['priors']['planets']:
         # print('post-analysis for planet:',p)
