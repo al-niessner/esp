@@ -43,9 +43,25 @@ else:
     dawgie.db.reopen()
 
     if tn in ['', '__all__']:
-        excalibur.runtime.bot.AnalysisTeam('runtime', 4, rid).do()
+        subtasks = excalibur.runtime.bot.AnalysisTeam('runtime', 4, rid)
+        pass
     else:
-        excalibur.runtime.bot.TaskTeam('runtime', 4, rid, tn).do()
-
+        # -- THIS IS EVIL PYTHON -- --------------------------------------
+        # In case this one gets more than 1 algo someday
+        subtasks = excalibur.runtime.bot.TaskTeam('runtime', 4, rid, tn)
+        fulllist = getattr(subtasks, 'list')
+        def shortlist():
+            '''666'''
+            out = fulllist()
+            # -- Change indexes as needed and look away from those lines
+            # 0 algorithms.autofill(table=self.__table, tn=self.__tn)
+            out = out[0:]
+            # ------------------------- ----------------------------------
+            return out
+        setattr(subtasks, 'list', shortlist)
+        pass
+    try: subtasks.do()
+    except NameError: print('>-- !!! Target name needed !!!')
     dawgie.db.close()
     dawgie.security.finalize()
+    pass

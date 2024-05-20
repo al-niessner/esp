@@ -8,9 +8,9 @@ import excalibur.classifier.algorithms as clsalg
 class Actor(dawgie.Task):
     '''Actor ds'''
     def list(self)->[dawgie.Task]:
-        '''list ds'''
-        return [  # clsalg.inference()
-                  clsalg.flags()
+        '''GMR: Kicked inference() from this'''
+        return [
+            clsalg.flags()
         ]
     pass
 # --------------------------------------------------------------------

@@ -19,10 +19,27 @@ if fep: dawgie.util.set_ports(int(fep))
 dawgie.security.initialize(os.path.expandvars(os.path.expanduser
                                               (dawgie.context.gpg_home)))
 dawgie.db.reopen()
-if tn in ['', '__all__']:
-    excalibur.classifier.bot.Agent('classifier', 4, rid).do()
-else:
-    excalibur.classifier.bot.Actor('classifier', 4, rid, tn).do()
 
+if tn in ['', '__all__']:
+    subtasks = excalibur.classifier.bot.Agent('classifier', 4, rid)
+    pass
+else:
+    # -- THIS IS EVIL PYTHON -- --------------------------------------
+    subtasks = excalibur.classifier.bot.Actor('classifier', 4, rid, tn)
+    fulllist = getattr(subtasks, 'list')
+    def shortlist():
+        '''666'''
+        out = fulllist()
+        # -- Change indexes as needed and look away from those lines
+        # 0: clsalg.inference()
+        # 1: clsalg.flags()
+        out = out[0:]
+        # ------------------------- ----------------------------------
+        return out
+    setattr(subtasks, 'list', shortlist)
+    pass
+
+try: subtasks.do()
+except NameError: print('>-- !!! Target name needed !!!')
 dawgie.db.close()
 dawgie.security.finalize()

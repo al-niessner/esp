@@ -20,9 +20,25 @@ dawgie.security.initialize(os.path.expandvars(os.path.expanduser
 dawgie.db.reopen()
 
 if tn in ['', '__all__']:
-    excalibur.system.bot.Agent('system', 4, rid).do()
+    subtasks = excalibur.system.bot.Agent('system', 4, rid)
+    pass
 else:
-    excalibur.system.bot.Actor('system', 4, rid, tn).do()
+    # -- THIS IS EVIL PYTHON -- --------------------------------------
+    subtasks = excalibur.system.bot.Actor('system', 4, rid, tn)
+    fulllist = getattr(subtasks, 'list')
+    def shortlist():
+        '''666'''
+        out = fulllist()
+        # -- Change indexes as needed and look away from those lines
+        # 0 sysalg.validate(),
+        # 1 sysalg.finalize()
+        out = out[0:]
+        # ------------------------- ----------------------------------
+        return out
+    setattr(subtasks, 'list', shortlist)
+    pass
 
+try: subtasks.do()
+except NameError: print('>-- !!! Target name needed !!!')
 dawgie.db.close()
 dawgie.security.finalize()
