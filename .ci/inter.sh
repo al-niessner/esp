@@ -27,11 +27,13 @@ docker save -o ${1}/server.docker.image mausoleum:latest
 docker rmi mausoleum:latest
 rm .ci/inter.txt.dcp
 kill %1
+repo=$(realpath $PWD)
 cd ${1}
 git clone https://github.com/gbryden/catalogs_for_nexsci.git
+cd catalogs_for_nexsci
 git -c advice.detachedHead=false checkout $(basename ${1})
 cat *nexsci.sv.txt > ../full.nexsci.sv.txt
-cd -
+cd $repo
 echo "work on data"
 /home/niessner/Projects/DAWGIE/Python/dawgie/db/tools/inter.py \
     -B /proj/sdp/data/dbs \
