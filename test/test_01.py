@@ -1,5 +1,6 @@
 '''unit tests for keeping pyxb and xsd up to date'''
 
+import hashlib
 import os
 import unittest
 
@@ -13,12 +14,17 @@ class Pyxb(unittest.TestCase):
         try:
             import excalibur.runtime.binding
             self.assertTrue(True)
-        except: self.assertTrue(False, 'cannot find excalibur.runtime.binding in PYTHONPATH')
+        except: self.assertTrue(False,'problems with excalibur.runtime.binding')
 
     def test_02(self):
         '''check that the binding is newer than the schema'''
         basedir = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                '..', 'excalibur','runtime'))
-        bin = os.path.getmtime(os.path.join (basedir, 'binding.py'))
-        xsd = os.path.getmtime(os.path.join (basedir, 'levers.xsd'))
-        self.assertLessEqual (-0.01,bin-xsd,'pyxbgen --schema-location=excalibur/runtime/levers.xsd --module=binding --module-prefix=excalibur.runtime')
+        with open(os.path.join(basedir,'autogen.md5'), 'rt') as file:
+            for line in file.readlines():
+                cksum,fn = line.split()
+                with open (os.path.join (basedir,fn), 'br') as f:
+                    content = f.read()
+                self.assertEqual (cksum, hashlib.md5(content).hexdigest(),
+                                  'please run .ci/autogen.sh because checksums '
+                                  f'do not match for {fn}')
