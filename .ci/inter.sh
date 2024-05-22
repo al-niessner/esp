@@ -5,7 +5,7 @@ then
     echo "usage: $(basename $0) <release name>"
 fi
 
-[ ! -d ${1} ] && mkdir -p ${1}
+[ ! -d ${1} ] && mkdir -p ${1}/fe
 di=$(docker images | grep esp_server | head -n 1 | gawk -e '{print $1":"$2}')
 echo "docker image: $di"
 cd $(realpath $(dirname $0)/..)
@@ -27,11 +27,16 @@ docker save -o ${1}/server.docker.image mausoleum:latest
 docker rmi mausoleum:latest
 rm .ci/inter.txt.dcp
 kill %1
+cd ${1}
+git clone https://github.com/gbryden/catalogs_for_nexsci.git
+git -c advice.detachedHead=false checkout $(basename ${1})
+cat *nexsci.sv.txt > ../full.nexsci.sv.txt
+cd -
 echo "work on data"
 /home/niessner/Projects/DAWGIE/Python/dawgie/db/tools/inter.py \
     -B /proj/sdp/data/dbs \
     -O ${1} \
-    postgres -b /proj/sdp/data/db/ops.00.bck < /proj/sdp/data/nexsci.sv.txt
+    postgres -b /proj/sdp/data/db/ops.00.bck < ${1}/../full.nexsci.sv.txt
 cp .ci/inter.run.sh ${1}/run.sh
 cp .ci/inter.README.txt ${1}/README.txt
 cp -r /proj/sdp/ops/front-end/* ${1}/fe

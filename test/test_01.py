@@ -13,7 +13,7 @@ class Pyxb(unittest.TestCase):
         try:
             import excalibur.runtime.binding
             self.assertTrue(True)
-        except: self.assertTrue(False)
+        except: self.assertTrue(False, 'cannot find excalibur.runtime.binding in PYTHONPATH')
 
     def test_02(self):
         '''check that the binding is newer than the schema'''
