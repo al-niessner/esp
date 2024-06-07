@@ -9,6 +9,7 @@ from collections import defaultdict
 import excalibur.system as sys
 import excalibur.system.core as syscore
 import excalibur.system.states as sysstates
+import excalibur.system.overwriter as sysoverwriter
 
 import excalibur.target as trg
 import excalibur.target.edit as trgedit
@@ -102,7 +103,7 @@ class finalize(dawgie.Algorithm):
         # pylint: disable=protected-access
         prcd = trgedit.proceed(ds._tn(), 'any filter', verbose=False)
         if valid and prcd:
-            overwrite = trgedit.ppar()
+            overwrite = sysoverwriter.ppar()
             for key in val: self.__out[key] = val.copy()[key]
             # pylint: disable=protected-access
             if ds._tn() in overwrite:
@@ -110,13 +111,13 @@ class finalize(dawgie.Algorithm):
                 update = self._priority(overwrite[ds._tn()], self.__out)
                 if not update:
                     log.warning('>-- STILL MISSING DICT INFO')
-                    log.warning('>-- ADD MORE KEYS TO TARGET/EDIT.PY PPAR()')
+                    log.warning('>-- ADD MORE KEYS TO SYSTEM/OVERWRITER')
                 pass
             elif not self.__out['PP'][-1]:
                 update = True
             else:
                 log.warning('>-- MISSING DICT INFO')
-                log.warning('>-- ADD KEY TO TARGET/EDIT.PY PPAR()')
+                log.warning('>-- ADD KEY TO SYSTEM/OVERWRITER')
                 pass
 
             # consistency checks

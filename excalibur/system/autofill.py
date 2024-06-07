@@ -403,9 +403,20 @@ def derive_LOGGplanet_from_R_and_M(starInfo, planetLetter, verbose=False):
     # print(starInfo[planetLetter].keys())
     # print()
 
-    # this one is different from above - the 'logg' field doesn't exist yet
-    if 'logg' in starInfo[planetLetter].keys() and verbose:
-        print('ERROR: logg field shouldnt exist yet')
+    # this allows for calls from overwrite, where the dictionary is filled with floats, not lists
+    # print(starInfo[planetLetter]['rp'], type(starInfo[planetLetter]['rp']))
+    if not isinstance(starInfo[planetLetter]['rp'], list):
+        starInfo[planetLetter]['rp'] = [starInfo[planetLetter]['rp']]
+        starInfo[planetLetter]['rp_lowerr'] = [starInfo[planetLetter]['rp_lowerr']]
+        starInfo[planetLetter]['rp_uperr'] = [starInfo[planetLetter]['rp_uperr']]
+        starInfo[planetLetter]['mass'] = [starInfo[planetLetter]['mass']]
+        starInfo[planetLetter]['mass_lowerr'] = [starInfo[planetLetter]['mass_lowerr']]
+        starInfo[planetLetter]['mass_uperr'] = [starInfo[planetLetter]['mass_uperr']]
+    else:
+        # this one is different from other subroutines here - the 'logg' field doesn't exist yet
+        if 'logg' in starInfo[planetLetter].keys() and verbose:
+            print('ERROR: logg field shouldnt exist yet')
+
     # for R,Rerr1,Rerr2, M,Merr1,Merr2, logg,loggerr1,loggerr2,loggref in zip(
     for R,Rerr1,Rerr2, M,Merr1,Merr2 in zip(
             starInfo[planetLetter]['rp'],
@@ -551,11 +562,17 @@ def derive_Teqplanet_from_Lstar_and_sma(starInfo, planetLetter):
     T_1AU = 278.33  # K
     # NOTE: this equilibrium temperature assumes albedo=0
 
+    # this allows for calls from overwrite, where the dictionary is filled with floats, not lists
+    # print('sma',starInfo[planetLetter]['sma'], type(starInfo[planetLetter]['sma']))
+    if not isinstance(starInfo[planetLetter]['sma'], list):
+        starInfo[planetLetter]['sma'] = [starInfo[planetLetter]['sma']]
+        starInfo[planetLetter]['sma_lowerr'] = [starInfo[planetLetter]['sma_lowerr']]
+        starInfo[planetLetter]['sma_uperr'] = [starInfo[planetLetter]['sma_uperr']]
+
     Teq_derived = []
     Teq_lowerr_derived = []
     Teq_uperr_derived = []
     Teq_ref_derived = []
-
     for Lstar,Lstarerr1,Lstarerr2, sma,smaerr1,smaerr2, \
         Teq,Teqerr1,Teqerr2,Teqref in zip(
             starInfo['L*'],starInfo['L*_lowerr'],starInfo['L*_uperr'],
@@ -732,6 +749,66 @@ def derive_impactParam_from_inclination(starInfo, planetLetter):
             imp_ref_derived.append(impref)
 
     return imp_derived, imp_lowerr_derived, imp_uperr_derived, imp_ref_derived
+
+# -------------------------------------------------------------------
+def derive_sma_from_ars(starInfo, planetLetter):
+    '''
+    If planet semi-major axis is blank, calculate it a/Rp (e.g. Stassun)
+    '''
+
+    # get Rsun definition
+    sscmks = syscore.ssconstants(cgs=True)
+
+    sma_derived = []
+    sma_lowerr_derived = []
+    sma_uperr_derived = []
+    sma_ref_derived = []
+
+    for Rstar,Rstarerr1,Rstarerr2, ars,arserr1,arserr2, \
+        sma,smaerr1,smaerr2, smaref, in zip(
+            starInfo['R*'],starInfo['R*_lowerr'],starInfo['R*_uperr'],
+            starInfo[planetLetter]['ars'],
+            starInfo[planetLetter]['ars_lowerr'],
+            starInfo[planetLetter]['ars_uperr'],
+            starInfo[planetLetter]['sma'],
+            starInfo[planetLetter]['sma_lowerr'],
+            starInfo[planetLetter]['sma_uperr'],
+            starInfo[planetLetter]['sma_ref']):
+
+        # check for blank semi-major axis
+        #  (but only update it if R* and a/R* are defined)
+        if sma=='' and Rstar!='' and ars!='':
+            newsma = float(ars) * float(Rstar)*sscmks['Rsun/AU']
+
+            sma_derived.append(f'{newsma:6.4f}')
+            sma_ref_derived.append('derived from a/R*')
+
+            # also fill in the uncertainty on sma, based on R*,a/R* uncertainties
+            #  hmm, these are going to be larger than they should
+            #   since the two uncertainties are correlated
+            #  it's probably better to just use the a/R* uncertainty straight up
+            # no wait, forget that.  they are actually two independent measurements
+            if Rstarerr1=='' or arserr1=='':
+                sma_lowerr_derived.append('')
+            else:
+                smafractionalError1 = -numpy.sqrt((float(Rstarerr1)/float(Rstar))**2 +
+                                                  (float(arserr1)/float(ars))**2)
+                # smafractionalError1 = -numpy.sqrt((float(arserr1)/float(ars))**2)
+                sma_lowerr_derived.append(f'{(newsma * smafractionalError1):6.4f}')
+            if Rstarerr2=='' or arserr2=='':
+                sma_uperr_derived.append('')
+            else:
+                smafractionalError2 = numpy.sqrt((float(Rstarerr2)/float(Rstar))**2 +
+                                                 (float(arserr2)/float(ars))**2)
+                # smafractionalError2 = numpy.sqrt((float(arserr2)/float(ars))**2)
+                sma_uperr_derived.append(f'{(newsma * smafractionalError2):6.4f}')
+        else:
+            sma_derived.append(sma)
+            sma_lowerr_derived.append(smaerr1)
+            sma_uperr_derived.append(smaerr2)
+            sma_ref_derived.append(smaref)
+
+    return sma_derived, sma_lowerr_derived, sma_uperr_derived, sma_ref_derived
 
 # -------------------------------------------------------------------
 def fixZeroUncertainties(starInfo, starParam, planetParam):

@@ -103,6 +103,8 @@ def scrapeids(ds:dawgie.Dataset, out, web, genIDs=True):
             dawgie.db.connect(trg.algorithms.create(), ds._bot(), parsedstr[0]).load()
             pass
         pass
+    # new additions 6/5/24:
+    #   lower/upper limit flags (particularly for eccentricity)
     # new additions 4/14/23:
     #   pl_orblper (omega is used as prior in the transit fitting)
     #   pl_trandep (transit depth    is not used, but load it in, in case we want it later)
@@ -114,7 +116,7 @@ def scrapeids(ds:dawgie.Dataset, out, web, genIDs=True):
     #  actually these additional references are only in the PSCompPars table, not the PS table
     # NO  sy_hmag_reflink (H magnitude reference can differ from the star param reference)
     # NO  sy_age_reflink  (age reference can differ from the star param reference)
-    cols = "hostname,pl_letter,rowupdate,st_refname,pl_refname,sy_pnum,pl_orbper,pl_orbpererr1,pl_orbpererr2,pl_orbsmax,pl_orbsmaxerr1,pl_orbsmaxerr2,pl_orbeccen,pl_orbeccenerr1,pl_orbeccenerr2,pl_orbincl,pl_orbinclerr1,pl_orbinclerr2,pl_bmassj,pl_bmassjerr1,pl_bmassjerr2,pl_radj,pl_radjerr1,pl_radjerr2,pl_dens,pl_denserr1,pl_denserr2,pl_eqt,pl_eqterr1,pl_eqterr2,pl_tranmid,pl_tranmiderr1,pl_tranmiderr2,pl_imppar,pl_impparerr1,pl_impparerr2,st_teff,st_tefferr1,st_tefferr2,st_mass,st_masserr1,st_masserr2,st_rad,st_raderr1,st_raderr2,st_lum,st_lumerr1,st_lumerr2,st_logg,st_loggerr1,st_loggerr2,st_dens,st_denserr1,st_denserr2,st_met,st_meterr1,st_meterr2,sy_jmag,sy_jmagerr1,sy_jmagerr2,sy_hmag,sy_hmagerr1,sy_hmagerr2,sy_kmag,sy_kmagerr1,sy_kmagerr2,st_age,st_ageerr1,st_ageerr2,pl_orblper,pl_orblpererr1,pl_orblpererr2,pl_trandep,pl_trandeperr1,pl_trandeperr2,pl_insol,pl_insolerr1,pl_insolerr2,pl_trandur,pl_trandurerr1,pl_trandurerr2,pl_ratdor,pl_ratdorerr1,pl_ratdorerr2,pl_ratror,pl_ratrorerr1,pl_ratrorerr2,sy_dist,sy_disterr1,sy_disterr2,st_spectype"
+    cols = "hostname,pl_letter,rowupdate,st_refname,pl_refname,sy_pnum,pl_orbper,pl_orbpererr1,pl_orbpererr2,pl_orbperlim,pl_orbsmax,pl_orbsmaxerr1,pl_orbsmaxerr2,pl_orbsmaxlim,pl_orbeccen,pl_orbeccenerr1,pl_orbeccenerr2,pl_orbeccenlim,pl_orbincl,pl_orbinclerr1,pl_orbinclerr2,pl_orbincllim,pl_bmassj,pl_bmassjerr1,pl_bmassjerr2,pl_bmassjlim,pl_radj,pl_radjerr1,pl_radjerr2,pl_radjlim,pl_dens,pl_denserr1,pl_denserr2,pl_denslim,pl_eqt,pl_eqterr1,pl_eqterr2,pl_eqtlim,pl_tranmid,pl_tranmiderr1,pl_tranmiderr2,pl_tranmidlim,pl_imppar,pl_impparerr1,pl_impparerr2,pl_impparlim,st_teff,st_tefferr1,st_tefferr2,st_tefflim,st_mass,st_masserr1,st_masserr2,st_masslim,st_rad,st_raderr1,st_raderr2,st_radlim,st_lum,st_lumerr1,st_lumerr2,st_lumlim,st_logg,st_loggerr1,st_loggerr2,st_logglim,st_dens,st_denserr1,st_denserr2,st_denslim,st_met,st_meterr1,st_meterr2,st_metlim,sy_jmag,sy_jmagerr1,sy_jmagerr2,sy_hmag,sy_hmagerr1,sy_hmagerr2,sy_kmag,sy_kmagerr1,sy_kmagerr2,st_age,st_ageerr1,st_ageerr2,st_agelim,pl_orblper,pl_orblpererr1,pl_orblpererr2,pl_orblperlim,pl_trandep,pl_trandeperr1,pl_trandeperr2,pl_trandeplim,pl_insol,pl_insolerr1,pl_insolerr2,pl_insollim,pl_trandur,pl_trandurerr1,pl_trandurerr2,pl_trandurlim,pl_ratdor,pl_ratdorerr1,pl_ratdorerr2,pl_ratdorlim,pl_ratror,pl_ratrorerr1,pl_ratrorerr2,pl_ratrorlim,sy_dist,sy_disterr1,sy_disterr2,st_spectype"
     uri_ipac_query = {
         "select": cols,
         "from": 'ps',
@@ -268,22 +270,22 @@ def autofill(ident, thistarget, out, searchrad=0.2):
     # GMR: They are continuously changing the format: creating translatekeys()
     matchlist = translatekeys(header)
     banlist = ['star', 'planet', 'update', 'ref', 'ref_st', 'ref_pl', 'np']
-    plist = ['period', 'period_uperr', 'period_lowerr', 'period_ref',
-             'sma', 'sma_uperr', 'sma_lowerr', 'sma_ref',
-             'ecc', 'ecc_uperr', 'ecc_lowerr', 'ecc_ref',
-             'inc', 'inc_uperr', 'inc_lowerr', 'inc_ref',
-             'mass', 'mass_uperr', 'mass_lowerr', 'mass_ref',
-             'rp', 'rp_uperr', 'rp_lowerr', 'rp_ref',
-             'rho', 'rho_uperr', 'rho_lowerr', 'rho_ref',
-             'teq', 'teq_uperr', 'teq_lowerr', 'teq_ref',
-             't0', 't0_uperr', 't0_lowerr', 't0_ref',
-             'impact', 'impact_uperr', 'impact_lowerr', 'impact_ref',
-             'omega','omega_uperr','omega_lowerr','omega_ref',
-             'trandepth','trandepth_uperr','trandepth_lowerr','trandepth_ref',
-             'trandur','trandur_uperr','trandur_lowerr','trandur_ref',
-             'insol','insol_uperr','insol_lowerr','insol_ref',
-             'ars','ars_uperr','ars_lowerr','ars_ref',
-             'rprs','rprs_uperr','rprs_lowerr','rprs_ref']
+    plist = ['period', 'period_uperr', 'period_lowerr', 'period_ref', 'period_lim',
+             'sma', 'sma_uperr', 'sma_lowerr', 'sma_ref', 'sma_lim',
+             'ecc', 'ecc_uperr', 'ecc_lowerr', 'ecc_ref', 'ecc_lim',
+             'inc', 'inc_uperr', 'inc_lowerr', 'inc_ref', 'inc_lim',
+             'mass', 'mass_uperr', 'mass_lowerr', 'mass_ref', 'mass_lim',
+             'rp', 'rp_uperr', 'rp_lowerr', 'rp_ref', 'rp_lim',
+             'rho', 'rho_uperr', 'rho_lowerr', 'rho_ref', 'rho_lim',
+             'teq', 'teq_uperr', 'teq_lowerr', 'teq_ref', 'teq_lim',
+             't0', 't0_uperr', 't0_lowerr', 't0_ref', 't0_lim',
+             'impact', 'impact_uperr', 'impact_lowerr', 'impact_ref', 'impact_lim',
+             'omega','omega_uperr','omega_lowerr','omega_ref', 'omega_lim',
+             'trandepth','trandepth_uperr','trandepth_lowerr','trandepth_ref', 'trandepth_lim',
+             'trandur','trandur_uperr','trandur_lowerr','trandur_ref', 'trandur_lim',
+             'insol','insol_uperr','insol_lowerr','insol_ref', 'insol_lim',
+             'ars','ars_uperr','ars_lowerr','ars_ref', 'ars_lim',
+             'rprs','rprs_uperr','rprs_lowerr','rprs_ref', 'rprs_lim']
     for line in response:
         elem = line.split(',')
         elem = clean_elems(elem)  # remove things such as bounding quotation marks
@@ -302,22 +304,22 @@ def autofill(ident, thistarget, out, searchrad=0.2):
                         out['starID'][thistarget][thisplanet][key] = ['']
                         pass
                     # GMR: Inits with empty lists
-                    blank_keys = ['period_units', 'period_ref',
-                                  'sma_units', 'sma_ref',
-                                  'ecc_units', 'ecc_ref',
-                                  'inc_units', 'inc_ref',
-                                  'mass_units', 'mass_ref',
-                                  'rp_units', 'rp_ref',
-                                  'rho_units', 'rho_ref',
-                                  'teq_units', 'teq_ref',
-                                  't0_units', 't0_ref',
-                                  'impact_units', 'impact_ref',
-                                  'omega_units', 'omega_ref',
-                                  'trandepth_units', 'trandepth_ref',
-                                  'trandur_units', 'trandur_ref',
-                                  'insol_units', 'insol_ref',
-                                  'ars_units', 'ars_ref',
-                                  'rprs_units', 'rprs_ref']
+                    blank_keys = ['period_units', 'period_ref', 'period_lim',
+                                  'sma_units', 'sma_ref', 'sma_lim',
+                                  'ecc_units', 'ecc_ref', 'ecc_lim',
+                                  'inc_units', 'inc_ref', 'inc_lim',
+                                  'mass_units', 'mass_ref', 'mass_lim',
+                                  'rp_units', 'rp_ref', 'rp_lim',
+                                  'rho_units', 'rho_ref', 'rho_lim',
+                                  'teq_units', 'teq_ref', 'teq_lim',
+                                  't0_units', 't0_ref', 't0_lim',
+                                  'impact_units', 'impact_ref', 'impact_lim',
+                                  'omega_units', 'omega_ref', 'omega_lim',
+                                  'trandepth_units', 'trandepth_ref', 'trandepth_lim',
+                                  'trandur_units', 'trandur_ref', 'trandur_lim',
+                                  'insol_units', 'insol_ref', 'insol_lim',
+                                  'ars_units', 'ars_ref', 'ars_lim',
+                                  'rprs_units', 'rprs_ref', 'rprs_lim']
                     for key in blank_keys:
                         out['starID'][thistarget][thisplanet][key] = []
                         pass
@@ -359,7 +361,6 @@ def autofill(ident, thistarget, out, searchrad=0.2):
                     out['starID'][thistarget]['spTyp_lowerr'] = []
                     out['starID'][thistarget]['spTyp_units'] = []
                     out['starID'][thistarget]['spTyp_ref'] = []
-                    pass
                 ref_pl = elem[header.index('pl_refname')]
                 ref_pl = ref_pl.split('</a>')[0]
                 ref_pl = ref_pl.split('target=ref>')[-1]
@@ -430,6 +431,7 @@ def autofill(ident, thistarget, out, searchrad=0.2):
             # spectral type doesn't have uncertainties. fill in here by hand
             out['starID'][thistarget]['spTyp_uperr'].append('')
             out['starID'][thistarget]['spTyp_lowerr'].append('')
+            # out['starID'][thistarget]['spTyp_lim'].append('')
             merged = True
             pass
         pass
@@ -437,7 +439,9 @@ def autofill(ident, thistarget, out, searchrad=0.2):
     # AUTOFILL WITH NEXSCI FULL TABLE, INCLUDING NON-DEFAULTS ----------------------------
     response = ident['starIDs']['nexsciFulltable']
     header = response[0].split(',')
+    # print('header',header)
     matchkey = translatekeys(header)
+    # print('matchkey',matchkey)
     for line in response:
         elem = line.split(',')
         elem = clean_elems(elem)
@@ -480,13 +484,16 @@ def autofill(ident, thistarget, out, searchrad=0.2):
                         if key=='spTyp':
                             out['starID'][thistarget][key+'_uperr'].append('')
                             out['starID'][thistarget][key+'_lowerr'].append('')
-                            pass
+                            # out['starID'][thistarget][key+'_lim'].append('')
                         pass
                     pass
                 pass
             merged = True
             pass
         pass
+
+    # print('final out',out['starID'][thistarget])
+    # print('final out',out['starID'][thistarget].keys())
 
     # FINALIZE OUTPUT ------------------------------------------------
     if merged:
@@ -538,109 +545,142 @@ def translatekeys(header):
         elif 'pl_orbper' == thiskey: xclbrkey = 'period'
         elif 'pl_orbpererr1' == thiskey: xclbrkey = 'period_uperr'
         elif 'pl_orbpererr2' == thiskey: xclbrkey = 'period_lowerr'
+        elif 'pl_orbperlim' == thiskey: xclbrkey = 'period_lim'
         elif 'pl_orbperreflink' == thiskey: xclbrkey = 'period_ref'
         elif 'pl_orbsmax' == thiskey: xclbrkey = 'sma'
         elif 'pl_smax' == thiskey: xclbrkey = 'sma'
         elif 'pl_orbsmaxerr1' == thiskey: xclbrkey = 'sma_uperr'
         elif 'pl_smaxerr1' == thiskey: xclbrkey = 'sma_uperr'
         elif 'pl_orbsmaxerr2' == thiskey: xclbrkey = 'sma_lowerr'
+        elif 'pl_orbsmaxlim' == thiskey: xclbrkey = 'sma_lim'
         elif 'pl_smaxerr2' == thiskey: xclbrkey = 'sma_lowerr'
+        elif 'pl_smaxlim' == thiskey: xclbrkey = 'sma_lim'
         elif 'pl_smaxreflink' == thiskey: xclbrkey = 'sma_ref'
         elif 'pl_orbeccen' == thiskey: xclbrkey = 'ecc'
         elif 'pl_eccen' == thiskey: xclbrkey = 'ecc'
         elif 'pl_orbeccenerr1' == thiskey: xclbrkey = 'ecc_uperr'
         elif 'pl_eccenerr1' == thiskey: xclbrkey = 'ecc_uperr'
         elif 'pl_orbeccenerr2' == thiskey: xclbrkey = 'ecc_lowerr'
+        elif 'pl_orbeccenlim' == thiskey: xclbrkey = 'ecc_lim'
         elif 'pl_eccenerr2' == thiskey: xclbrkey = 'ecc_lowerr'
+        elif 'pl_eccenlim' == thiskey: xclbrkey = 'ecc_lim'
         elif 'pl_eccenreflink' == thiskey: xclbrkey = 'ecc_ref'
         elif 'pl_orbincl' == thiskey: xclbrkey = 'inc'
         elif 'pl_orbinclerr1' == thiskey: xclbrkey = 'inc_uperr'
         elif 'pl_orbinclerr2' == thiskey: xclbrkey = 'inc_lowerr'
+        elif 'pl_orbincllim' == thiskey: xclbrkey = 'inc_lim'
         elif 'pl_bmassj' == thiskey: xclbrkey = 'mass'
         elif 'pl_bmassjerr1' == thiskey: xclbrkey = 'mass_uperr'
         elif 'pl_bmassjerr2' == thiskey: xclbrkey = 'mass_lowerr'
+        elif 'pl_bmassjlim' == thiskey: xclbrkey = 'mass_lim'
         elif 'pl_radj' == thiskey: xclbrkey = 'rp'
         elif 'pl_radjerr1' == thiskey: xclbrkey = 'rp_uperr'
         elif 'pl_radjerr2' == thiskey: xclbrkey = 'rp_lowerr'
+        elif 'pl_radjlim' == thiskey: xclbrkey = 'rp_lim'
         elif 'pl_radreflink' == thiskey: xclbrkey = 'rp_ref'
         elif 'pl_dens' == thiskey: xclbrkey = 'rho'
         elif 'pl_denserr1' == thiskey: xclbrkey = 'rho_uperr'
         elif 'pl_denserr2' == thiskey: xclbrkey = 'rho_lowerr'
+        elif 'pl_denslim' == thiskey: xclbrkey = 'rho_lim'
         elif 'pl_eqt' == thiskey: xclbrkey = 'teq'
         elif 'pl_eqterr1' == thiskey: xclbrkey = 'teq_uperr'
         elif 'pl_eqterr2' == thiskey: xclbrkey = 'teq_lowerr'
+        elif 'pl_eqtlim' == thiskey: xclbrkey = 'teq_lim'
         elif 'pl_eqtreflink' == thiskey: xclbrkey = 'teq_ref'
         elif 'pl_tranmid' == thiskey: xclbrkey = 't0'
         elif 'pl_tranmiderr1' == thiskey: xclbrkey = 't0_uperr'
         elif 'pl_tranmiderr2' == thiskey: xclbrkey = 't0_lowerr'
+        elif 'pl_tranmidlim' == thiskey: xclbrkey = 't0_lim'
         elif 'pl_imppar' == thiskey: xclbrkey = 'impact'
         elif 'pl_impparerr1' == thiskey: xclbrkey = 'impact_uperr'
         elif 'pl_impparerr2' == thiskey: xclbrkey = 'impact_lowerr'
+        elif 'pl_impparlim' == thiskey: xclbrkey = 'impact_lim'
         elif 'pl_orblper' == thiskey: xclbrkey = 'omega'
         elif 'pl_orblpererr1' == thiskey: xclbrkey = 'omega_uperr'
         elif 'pl_orblpererr2' == thiskey: xclbrkey = 'omega_lowerr'
+        elif 'pl_orblperlim' == thiskey: xclbrkey = 'omega_lim'
         elif 'pl_trandep' == thiskey: xclbrkey = 'trandepth'
         elif 'pl_trandeperr1' == thiskey: xclbrkey = 'trandepth_uperr'
         elif 'pl_trandeperr2' == thiskey: xclbrkey = 'trandepth_lowerr'
+        elif 'pl_trandeplim' == thiskey: xclbrkey = 'trandepth_lim'
         elif 'pl_trandur' == thiskey: xclbrkey = 'trandur'
         elif 'pl_trandurerr1' == thiskey: xclbrkey = 'trandur_uperr'
         elif 'pl_trandurerr2' == thiskey: xclbrkey = 'trandur_lowerr'
+        elif 'pl_trandurlim' == thiskey: xclbrkey = 'trandur_lim'
         elif 'pl_insol' == thiskey: xclbrkey = 'insol'
         elif 'pl_insolerr1' == thiskey: xclbrkey = 'insol_uperr'
         elif 'pl_insolerr2' == thiskey: xclbrkey = 'insol_lowerr'
+        elif 'pl_insollim' == thiskey: xclbrkey = 'insol_lim'
         elif 'pl_ratdor' == thiskey: xclbrkey = 'ars'
         elif 'pl_ratdorerr1' == thiskey: xclbrkey = 'ars_uperr'
         elif 'pl_ratdorerr2' == thiskey: xclbrkey = 'ars_lowerr'
+        elif 'pl_ratdorlim' == thiskey: xclbrkey = 'ars_lim'
         elif 'pl_ratror' == thiskey: xclbrkey = 'rprs'
         elif 'pl_ratrorerr1' == thiskey: xclbrkey = 'rprs_uperr'
         elif 'pl_ratrorerr2' == thiskey: xclbrkey = 'rprs_lowerr'
+        elif 'pl_ratrorlim' == thiskey: xclbrkey = 'rprs_lim'
         elif 'st_teff' == thiskey: xclbrkey = 'T*'
         elif 'st_tefferr1' == thiskey: xclbrkey = 'T*_uperr'
         elif 'st_tefferr2' == thiskey: xclbrkey = 'T*_lowerr'
+        elif 'st_tefflim' == thiskey: xclbrkey = 'T*_lim'
         elif 'st_teffreflink' == thiskey: xclbrkey = 'T*_ref'
         elif 'st_refname' == thiskey: xclbrkey = 'ref_st'
         elif 'st_mass' == thiskey: xclbrkey = 'M*'
         elif 'st_masserr1' == thiskey: xclbrkey = 'M*_uperr'
         elif 'st_masserr2' == thiskey: xclbrkey = 'M*_lowerr'
+        elif 'st_masslim' == thiskey: xclbrkey = 'M*_lim'
         elif 'st_rad' == thiskey: xclbrkey = 'R*'
         elif 'st_raderr1' == thiskey: xclbrkey = 'R*_uperr'
         elif 'st_raderr2' == thiskey: xclbrkey = 'R*_lowerr'
+        elif 'st_radlim' == thiskey: xclbrkey = 'R*_lim'
         elif 'st_radreflink' == thiskey: xclbrkey = 'R*_ref'
         elif 'st_lum' == thiskey: xclbrkey = 'L*'
         elif 'st_lumerr1' == thiskey: xclbrkey = 'L*_uperr'
         elif 'st_lumerr2' == thiskey: xclbrkey = 'L*_lowerr'
+        elif 'st_lumlim' == thiskey: xclbrkey = 'L*_lim'
         elif 'st_logg' == thiskey: xclbrkey = 'LOGG*'
         elif 'st_loggerr1' == thiskey: xclbrkey = 'LOGG*_uperr'
         elif 'st_loggerr2' == thiskey: xclbrkey = 'LOGG*_lowerr'
+        elif 'st_logglim' == thiskey: xclbrkey = 'LOGG*_lim'
         elif 'st_loggreflink' == thiskey: xclbrkey = 'LOGG*_ref'
         elif 'st_dens' == thiskey: xclbrkey = 'RHO*'
         elif 'st_denserr1' == thiskey: xclbrkey = 'RHO*_uperr'
         elif 'st_denserr2' == thiskey: xclbrkey = 'RHO*_lowerr'
+        elif 'st_denslim' == thiskey: xclbrkey = 'RHO*_lim'
         elif 'st_metfe' == thiskey: xclbrkey = 'FEH*'
         elif 'st_met' == thiskey: xclbrkey = 'FEH*'
         elif 'st_metfeerr1' == thiskey: xclbrkey = 'FEH*_uperr'
         elif 'st_meterr1' == thiskey: xclbrkey = 'FEH*_uperr'
         elif 'st_metfeerr2' == thiskey: xclbrkey = 'FEH*_lowerr'
         elif 'st_meterr2' == thiskey: xclbrkey = 'FEH*_lowerr'
+        elif 'st_metfelim' == thiskey: xclbrkey = 'FEH*_lim'
+        elif 'st_metlim' == thiskey: xclbrkey = 'FEH*_lim'
         elif 'st_metratio' == thiskey: xclbrkey = 'FEH*_units'
         elif 'st_metreflink' == thiskey: xclbrkey = 'FEH*_ref'
         elif 'sy_jmag' == thiskey: xclbrkey = 'Jmag'
         elif 'sy_jmagerr1' == thiskey: xclbrkey = 'Jmag_uperr'
         elif 'sy_jmagerr2' == thiskey: xclbrkey = 'Jmag_lowerr'
+        # elif 'sy_jmaglim' == thiskey: xclbrkey = 'Jmag_lim'
         elif 'sy_hmag' == thiskey: xclbrkey = 'Hmag'
         elif 'sy_hmagerr1' == thiskey: xclbrkey = 'Hmag_uperr'
         elif 'sy_hmagerr2' == thiskey: xclbrkey = 'Hmag_lowerr'
+        # elif 'sy_hmaglim' == thiskey: xclbrkey = 'Hmag_lim'
         elif 'sy_kmag' == thiskey: xclbrkey = 'Kmag'
         elif 'sy_kmagerr1' == thiskey: xclbrkey = 'Kmag_uperr'
         elif 'sy_kmagerr2' == thiskey: xclbrkey = 'Kmag_lowerr'
+        # elif 'sy_kmaglim' == thiskey: xclbrkey = 'Kmag_lim'
         elif 'st_age' == thiskey: xclbrkey = 'AGE*'
         elif 'st_ageerr1' == thiskey: xclbrkey = 'AGE*_uperr'
         elif 'st_ageerr2' == thiskey: xclbrkey = 'AGE*_lowerr'
+        elif 'st_agelim' == thiskey: xclbrkey = 'AGE*_lim'
         elif 'sy_dist' == thiskey: xclbrkey = 'dist'
         elif 'sy_disterr1' == thiskey: xclbrkey = 'dist_uperr'
         elif 'sy_disterr2' == thiskey: xclbrkey = 'dist_lowerr'
+        # elif 'sy_distlim' == thiskey: xclbrkey = 'dist_lim'
         elif 'st_spectype' == thiskey: xclbrkey = 'spTyp'
-        else: xclbrkey = None
+        else:
+            # print('HEY NO MATCH FOR THIS ARCHIVE KEYWORD!',thiskey)
+            xclbrkey = None
         if xclbrkey is not None: matchlist.append(xclbrkey)
         pass
     if len(matchlist) != len(header):

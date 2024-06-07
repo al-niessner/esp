@@ -15,7 +15,7 @@ from excalibur.cerberus.forwardModel import \
 from excalibur.cerberus.plotting import rebinData, plot_bestfit, \
     plot_corner, plot_vsPrior, plot_walkerEvolution, \
     plot_fitsVStruths, plot_fitUncertainties, plot_massVSmetals
-from excalibur.cerberus.bounds import setPriorBound, getProfileLimits, applyProfiling
+from excalibur.cerberus.bounds import setPriorBound, getProfileLimits_HSTG141, applyProfiling
 
 import logging
 log = logging.getLogger(__name__)
@@ -1119,7 +1119,7 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
 
     # load in the table of limits used for profiling
     if filt=='HST-WFC3-IR-G141-SCAN':
-        profilingLimits = getProfileLimits()
+        profilingLimits = getProfileLimits_HSTG141()
     else:
         profilingLimits = []
 

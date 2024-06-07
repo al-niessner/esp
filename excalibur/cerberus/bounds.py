@@ -24,7 +24,7 @@ def setPriorBound():
 
     return prior_ranges
 
-def getProfileLimits():
+def getProfileLimits_HSTG141():
     '''
     Define limits on spectrum-fitting parameters on a target-by-target basis
     '''

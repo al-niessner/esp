@@ -6,16 +6,14 @@ import logging; log = logging.getLogger(__name__)
 
 import excalibur
 
-# import excalibur.target.edit as trgedit
-# overwrite = trgedit.ppar()
-
 from excalibur.system.autofill import \
     bestValue, estimate_mass_from_radius, \
     checkValidData, fixZeroUncertainties, fillUncertainty, \
     derive_RHOstar_from_M_and_R, derive_SMA_from_P_and_Mstar, \
     derive_LOGGstar_from_R_and_M, derive_LOGGplanet_from_R_and_M, \
     derive_Lstar_from_R_and_T, derive_Teqplanet_from_Lstar_and_sma, \
-    derive_inclination_from_impactParam, derive_impactParam_from_inclination
+    derive_inclination_from_impactParam, derive_impactParam_from_inclination, \
+    derive_sma_from_ars
 
 # ------------- ------------------------------------------------------
 # -- SOLAR SYSTEM CONSTANTS -- ---------------------------------------
@@ -133,6 +131,22 @@ def buildsp(autofill, out):
         autofill['starID'][target]['RHO*_lowerr'] = RHO_lowerr_derived
         autofill['starID'][target]['RHO*_uperr'] = RHO_uperr_derived
         autofill['starID'][target]['RHO*_ref'] = RHO_ref_derived
+
+    # use a/Rp to fill in semi-major axis
+    #  (make sure this comes before sma is derived from period,M*)
+    for p in autofill['starID'][target]['planets']:
+        sma_derived, sma_lowerr_derived, sma_uperr_derived, sma_ref_derived = \
+            derive_sma_from_ars(autofill['starID'][target],p)
+        # if autofill['starID'][target][p]['sma'] != sma_derived:
+        #    print('sma before ',autofill['starID'][target][p]['sma'])
+        #    print('sma derived',sma_derived)
+        #    print('sma_ref derived',sma_ref_derived)
+        #    print('sma_ref before ',autofill['starID'][target][p]['sma_ref'])
+        autofill['starID'][target][p]['sma'] = sma_derived
+        autofill['starID'][target][p]['sma_lowerr'] = sma_lowerr_derived
+        autofill['starID'][target][p]['sma_uperr'] = sma_uperr_derived
+        autofill['starID'][target][p]['sma_ref'] = sma_ref_derived
+        autofill['starID'][target][p]['sma_units'] = ['[AU]']*len(sma_derived)
 
     # use orbital period, stellar mass to fill in blank semi-major axis
     for p in autofill['starID'][target]['planets']:
@@ -481,11 +495,11 @@ def buildsp(autofill, out):
             for index in dropIndices:
                 out['needed'].pop(index)
         pass
-    starneed = False
-    for p in out['needed']:
-        if ':' not in p: starneed = True
-        pass
-    if starneed or (len(out['priors']['planets']) < 1): out['PP'].append(True)
+    # starneed = False
+    # for p in out['needed']:
+    #    if ':' not in p: starneed = True
+    #    pass
+    # if starneed or (len(out['priors']['planets']) < 1): out['PP'].append(True)
     # log.warning('>-- FORCE PARAMETER: %s', str(out['PP'][-1]))
     # log.warning('>-- MISSING MANDATORY PARAMETERS: %s', str(out['needed']))
     # log.warning('>-- MISSING PLANET PARAMETERS: %s', str(out['pneeded']))
@@ -500,7 +514,10 @@ def forcepar(overwrite, out):
     '''
 G. ROUDIER: Completes/Overrides parameters using target/edit.py
     '''
-    forced = True
+    # verbose = True
+    verbose = False
+
+    forced = False  # check if any parameters are overwritten
     # print('starting to force')
     # print('edit.py stuff for this guy:',overwrite)
     # print('out.keys',out.keys())
@@ -513,27 +530,31 @@ G. ROUDIER: Completes/Overrides parameters using target/edit.py
                 out['priors'][mainkey] = out['pignore'][mainkey].copy()
                 pass
             for pkey in overwrite[key].keys():
-                if pkey in out['priors'][mainkey].keys():
-                    print('OVERWRITING:',mainkey,pkey,overwrite[mainkey][pkey],
-                          ' current value:',out['priors'][mainkey][pkey])
+                if pkey in out['priors'][mainkey].keys() and \
+                   out['priors'][mainkey][pkey]!='':
+                    if verbose: print('OVERWRITING:',mainkey,pkey,overwrite[mainkey][pkey],
+                                      ' current value:',out['priors'][mainkey][pkey])
                 else:
                     # print(' adding key:',mainkey,pkey)
-                    print('OVERWRITING:',mainkey,pkey,overwrite[mainkey][pkey],
-                          ' current value:')
+                    if verbose: print('OVERWRITING A BLANK:',mainkey,pkey,overwrite[mainkey][pkey])
                 out['priors'][mainkey][pkey] = overwrite.copy()[mainkey][pkey]
                 if not pkey.endswith('ref') and not pkey.endswith('units'):
                     out['autofill'].append('forcepar:'+mainkey+':'+pkey)
-                pass
+                forced = True
             pass
         else:
-            print('OVERWRITING:',key,overwrite[key],
-                  ' current value:',out['priors'][key])
+            if out['priors'][key]=='':
+                if verbose: print('OVERWRITING A BLANK:',key,overwrite[key])
+            else:
+                if verbose: print('OVERWRITING:',key,overwrite[key],
+                                  ' current value:',out['priors'][key])
             out['priors'][key] = overwrite.copy()[key]
             if not key.endswith('ref') and not key.endswith('units'):
                 out['autofill'].append('forcepar:'+key)
-        pass
-    # print('outprior now',key,out['priors'][key])
-    # print('needed',out['needed'])
+            forced = True
+    # if something has been overwritten, save forcepar as true (shows at top of system.finalize)
+    out['PP'].append(forced)
+
     for n in out['needed'].copy():
         if ':' not in n:
             try:
@@ -555,12 +576,10 @@ G. ROUDIER: Completes/Overrides parameters using target/edit.py
             pass
         pass
     ptry = []
-    # print('pneeded',out['pneeded'])
     for p in out['pneeded'].copy():
         pnet = p.split(':')[0]
         pkey = p.split(':')[1]
         ptry.append(pnet)
-        # print('pnet,ptry',pnet,'x',ptry)
         try:
             float(out['priors'][pnet][pkey])
             out['pneeded'].pop(out['pneeded'].index(p))
@@ -569,9 +588,7 @@ G. ROUDIER: Completes/Overrides parameters using target/edit.py
             if ('mass' not in p) and ('rho' not in p): forced = False
             pass
         pass
-    # print('okbott2')
     for p in set(ptry):
-        # print('p bott',p)
         addback = True
         planetchecklist = [k for k in out['pneeded']
                            if k.split(':')[0] not in out['ignore']]
@@ -579,17 +596,14 @@ G. ROUDIER: Completes/Overrides parameters using target/edit.py
             if pkey in [p+':mass', p+':rho']:
                 if 'logg' not in out['priors'][p].keys(): addback = False
                 else: out['pneeded'].pop(out['pneeded'].index(pkey))
-                pass
             else:
                 if p in pkey: addback = False
-                pass
             pass
         if addback: out['priors']['planets'].append(p)
-        pass
     starneed = False
     for p in out['needed']:
         if ':' not in p: starneed = True
-        pass
+
     # these 5 print statements moved from above, so they're after overwriting
     # actually move it out to after call; this print only done if params are forced
     # log.warning('>-- FORCE PARAMETER: %s', str(out['PP'][-1]))
@@ -598,17 +612,15 @@ G. ROUDIER: Completes/Overrides parameters using target/edit.py
     # log.warning('>-- PLANETS IGNORED: %s', str(out['ignore']))
     # log.warning('>-- AUTOFILL: %s', str(out['autofill']))
     if starneed or (len(out['priors']['planets']) < 1):
-        forced = False
+        success = False
         # log.warning('>-- MISSING MANDATORY PARAMETERS')
-        # log.warning('>-- ADD THEM TO TARGET/EDIT.PY PPAR()')
-        log.warning('>-- PARAMETER STILL MISSING; ADD TO TARGET/EDIT.PY PPAR()')
-        pass
+        # log.warning('>-- ADD THEM TO SYSTEM/OVERWRITER')
+        log.warning('>-- PARAMETER STILL MISSING; ADD TO SYSTEM/OVERWRITER')
     else:
-        forced = True
+        success = True
         # log.warning('>-- PRIORITY PARAMETERS SUCCESSFUL')
         log.warning('>-- PARAMETER FORCING SUCCESSFUL')
-        pass
-    return forced
+    return success
 # ---------------------------- ---------------------------------------
 def savesv(aspects, targetlists):
     '''
