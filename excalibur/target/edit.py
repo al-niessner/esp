@@ -33,13 +33,13 @@ def processme():
     '''
     out = {}
     out['FILTER'] = {}
-    # out['FILTER']['include'] = []
+    out['FILTER']['include'] = []
     # out['FILTER']['include'] = ['NIRSPEC']
     # out['FILTER']['include'] = ['HST', 'Ariel']
     # out['FILTER']['include'] = ['Ariel']
-    out['FILTER']['include'] = ['HST']
-    out['FILTER']['exclude'] = []
-    # out['FILTER']['exclude'] = ['STIS', 'JWST', 'Spitzer', 'Ariel']
+    # out['FILTER']['include'] = ['HST']
+    # out['FILTER']['exclude'] = []
+    out['FILTER']['exclude'] = ['STIS', 'JWST', 'Spitzer', 'Ariel']
     # out['FILTER']['exclude'] = ['HST', 'JWST', 'Spitzer']
     out['TARGET'] = {}
     # Best to use a function call that returns a specific list
