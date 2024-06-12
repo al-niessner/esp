@@ -38,7 +38,7 @@ echo "work on data"
 /home/niessner/Projects/DAWGIE/Python/dawgie/db/tools/inter.py \
     -B /proj/sdp/data/dbs \
     -O ${1} \
-    postgres -b /proj/sdp/data/db/ops.00.bck < ${1}/../full.nexsci.sv.txt
+    postgres -b /proj/sdp/data/db/ops.00.bck < ${1}/full.nexsci.sv.txt
 cp .ci/inter.run.sh ${1}/run.sh
 cp .ci/inter.README.txt ${1}/README.txt
 cp -r /proj/sdp/ops/front-end/* ${1}/fe
