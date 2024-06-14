@@ -7,8 +7,10 @@ import logging; log = logging.getLogger(__name__)
 import excalibur
 
 from excalibur.system.autofill import \
-    bestValue, estimate_mass_from_radius, \
-    checkValidData, fixZeroUncertainties, fillUncertainty, \
+    bestValue, calculate_selfConsistency_metric, \
+    estimate_mass_from_radius, \
+    checkValidData, fixZeroUncertainties, fixPublishedLimits, fillUncertainty, \
+    fill_in_some_blank_omegas, \
     derive_RHOstar_from_M_and_R, derive_SMA_from_P_and_Mstar, \
     derive_LOGGstar_from_R_and_M, derive_LOGGplanet_from_R_and_M, \
     derive_Lstar_from_R_and_T, derive_Teqplanet_from_Lstar_and_sma, \
@@ -73,7 +75,7 @@ G. ROUDIER: Tests for empty SV shell
     return valid, errstring
 # ----------------- --------------------------------------------------
 # -- BUILD SYSTEM PRIORS -- ------------------------------------------
-def buildsp(autofill, out):
+def buildsp(autofill, out, verbose=False):
     '''
     G. ROUDIER: Surjection from target.autofill.parameters to dictionary output
     '''
@@ -119,6 +121,25 @@ def buildsp(autofill, out):
     autofill['starID'][target] = fixZeroUncertainties(autofill['starID'][target],
                                                       out['starmdt'],
                                                       out['planetmdt'])
+
+    # some values pulled from the Archive are actually upper/lower limits
+    #  deal with each parameter on a case-by-case basis
+    starLimitReplacements = {'FEH*':'',            # drop this limit on metallicity
+                             'AGE*':'keep value',  # keep the age limit?  better than nothing maybe
+                             }
+    planetLimitReplacements = {'ecc':'0',  # eccentricity upper limits might as well be zero
+                               'rp':'',    # (K2-22 b is actually an upper limit on planet radius)
+                               'mass':'',  # better to use mass-radius relation than mass upper limit
+                               'inc':'keep value',     # lower limits (maybe set to 90?)
+                               'impact':'keep value',  # upper limits (maybe set to 0?)
+                               }
+    # 3 options for inclination/impact parameter   which one???
+    #    1) keep the limit as a value
+    #    2) use the default values (90, 0)
+    #    3) zero it out and hope there's a better one (not good for self-consistency)
+    autofill['starID'][target] = fixPublishedLimits(autofill['starID'][target],
+                                                    starLimitReplacements, planetLimitReplacements)
+
     # use stellar mass,radius to fill in blank stellar density
     RHO_derived, RHO_lowerr_derived, RHO_uperr_derived, RHO_ref_derived = \
         derive_RHOstar_from_M_and_R(autofill['starID'][target])
@@ -257,15 +278,67 @@ def buildsp(autofill, out):
         autofill['starID'][target][p]['impact_ref'] = imp_ref_derived
         autofill['starID'][target][p]['impact_units'] = ['[R*]']*len(imp_derived)
 
+    # if planet argument of periastron is missing and eccentricity is zero, set to zero
+    for p in autofill['starID'][target]['planets']:
+        omega_filled, omega_lowerr_filled, omega_uperr_filled, omega_ref_filled = \
+            fill_in_some_blank_omegas(autofill['starID'][target],p)
+        # if autofill['starID'][target][p]['omega'] != omega_filled:
+        #    print('omega before ',autofill['starID'][target][p]['omega'])
+        #    print('omega filled',omega_filled)
+        #    print('omega_ref filled',omega_ref_filled)
+        #    print('omega_ref before ',autofill['starID'][target][p]['omega_ref'])
+        autofill['starID'][target][p]['omega'] = omega_filled
+        autofill['starID'][target][p]['omega_lowerr'] = omega_lowerr_filled
+        autofill['starID'][target][p]['omega_uperr'] = omega_uperr_filled
+        autofill['starID'][target][p]['omega_ref'] = omega_ref_filled
+        autofill['starID'][target][p]['omega_units'] = ['[degree]']*len(omega_filled)
+
+    # print('AUTOFILL',autofill['starID'][target],'AUTOFILL')
+
+    # determine the best reference to use, based on self-consistent use of that publication
+    _,bestref,bestpubIndices = calculate_selfConsistency_metric(autofill['starID'][target])
+    if verbose:
+        bestscore,bestref,bestpubIndices = calculate_selfConsistency_metric(autofill['starID'][target])
+        print('score/ref',bestscore,bestref)
+
     # loop over both the mandatory and non-mandatory parameters
     # for lbl in out['starmdt']+out['starnonmdt']:
     for lbl in out['starmdt']:
+        # print(' ')
+        # print(' ***',lbl,'***')
+        #  check for upper/lower limits.  these should have been dealt with above (fixPublishedLimits)
+        if lbl+'_lim' in autofill['starID'][target]:
+            # print('limit flag',lbl,autofill['starID'][target])
+            # print('limit flag',lbl,autofill['starID'][target][lbl+'_lim'])
+            for ipub in range(len(autofill['starID'][target][lbl])):
+                # print('ipub',ipub,autofill['starID'][target][lbl][ipub])
+                val = autofill['starID'][target][lbl][ipub]
+                lim = autofill['starID'][target][lbl+'_lim'][ipub]
+                ref = autofill['starID'][target][lbl+'_ref'][ipub]
+                if val!='' or lim!='':  # skip blank fields
+                    if val=='':
+                        if lim!='0':
+                            print('  huh? a blank field has a limit?!',lbl,val,lim,ref)
+                    elif lim=='':  # sometimes limit is missing for derived params
+                        if not ref.startswith('derive'):
+                            print('  huh? blank limit field?!',lbl,val,lim,ref)
+                    elif lbl=='AGE*':
+                        # print('ages are sometimes upper or lower limits; pretend itis a value')
+                        pass
+                    elif lim!='0':  # skip regular measurements (not upper/lower limits)
+                        print('  there is a limit flag in the dataset!',lbl,val,lim,ref)
+        elif lbl in ['Jmag','Hmag','Kmag','dist','spTyp']:
+            pass  # these parameters don't have limit flags
+        else:
+            print('  ERROR: no limit flag for ',lbl)
+
         try:
             values = autofill['starID'][target][lbl].copy()
             uperrs = autofill['starID'][target][lbl+'_uperr'].copy()
             lowerrs = autofill['starID'][target][lbl+'_lowerr'].copy()
             refs = autofill['starID'][target][lbl+'_ref'].copy()
-            value,uperr,lowerr,ref = bestValue(values,uperrs,lowerrs,refs,lbl)
+            value,uperr,lowerr,ref = bestValue(values,uperrs,lowerrs,refs,lbl,
+                                               bestref,bestpubIndices['star'])
         except KeyError:
             value = ''
             uperr = ''
@@ -287,7 +360,6 @@ def buildsp(autofill, out):
             strval = autofill['starID'][target][lbl+'_units'].copy()
             out['priors'][lbl+'_units'] = strval[0]
             out['priors'][lbl+'_ref'] = ref
-            pass
         else:
             out['priors'][lbl] = ''
             for ext in out['exts']: out['priors'][lbl+ext] = ''
@@ -303,8 +375,7 @@ def buildsp(autofill, out):
         if out['priors']['M*'].__len__() > 0:
             Lstar = float(out['priors']['M*'])**4
             print('Note: setting L* = ',Lstar)
-            # out['priors']['ecc'] = str('%6.2f' %Lstar)
-            out['priors']['ecc'] = f"{Lstar:6.2f}"
+            out['priors']['L*'] = f"{Lstar:6.2f}"
             out['priors']['L*_units'] = '[Lsun]'
             out['priors']['L*_ref'] = 'set to M*^4'
             # (this will set uncertainty to 10%)
@@ -319,11 +390,40 @@ def buildsp(autofill, out):
     ssc = ssconstants(cgs=True)
     for p in out['priors']['planets']:
         for lbl in out['planetmdt']:
+
+            #  check for upper/lower limits.  these should have been dealt with above (fixPublishedLimits)
+            if lbl+'_lim' in autofill['starID'][target][p]:
+                # print('limit flag',lbl,autofill['starID'][target][p][lbl+'_lim'])
+                for ipub in range(len(autofill['starID'][target][p][lbl])):
+                    val = autofill['starID'][target][p][lbl][ipub]
+                    lim = autofill['starID'][target][p][lbl+'_lim'][ipub]
+                    ref = autofill['starID'][target][p][lbl+'_ref'][ipub]
+                    if val!='' or lim!='':  # skip blank fields
+                        if val=='':
+                            # ok this is fine (it happens for spectral type)
+                            if lim!='0':
+                                print('  huh? a blank field has a limit?!',lbl,val,lim,ref)
+                        elif lim=='':  # sometimes limit is missing for derived params
+                            if not ref.startswith('derive'):
+                                print('  huh? blank limit field?!',p,lbl,val,lim,ref)
+                        elif lim!='0':  # skip regular measurements (not upper/lower limits)
+                            print('  there is a limit flag in the dataset!',p,lbl,val,lim,ref)
+                        # else:
+                        #    print('  val,lim',p,lbl,val,lim,ref)
+            elif lbl=='logg':
+                pass  # these parameters don't have limit flags
+            else:
+                print('  ERROR: no limit flag for ',lbl)
+
             values = autofill['starID'][target][p][lbl].copy()
             uperrs = autofill['starID'][target][p][lbl+'_uperr'].copy()
             lowerrs = autofill['starID'][target][p][lbl+'_lowerr'].copy()
             refs = autofill['starID'][target][p][lbl+'_ref'].copy()
-            value,uperr,lowerr,ref = bestValue(values,uperrs,lowerrs,refs,lbl)
+            value,uperr,lowerr,ref = bestValue(values,uperrs,lowerrs,refs,lbl,
+                                               bestref,bestpubIndices[p])
+
+            # if lbl=='teq':
+            #     print('best value below',lbl,value,type(value))
             # print('')
             # print(lbl)
             # print(value)
@@ -477,8 +577,8 @@ def buildsp(autofill, out):
                   out['priors'][planetLetter]['trandur']*3600+','+
                   out['priors'][planetLetter]['impact']+','+
                   1)
-# units for planet params:
-# [day] [K] [m]	[Rearth] [] [Mearth] [g/mol] [s] []
+        # units for planet params:
+        # [day] [K] [m]	[Rearth] [] [Mearth] [g/mol] [s] []
 
     for p in out['ignore']:
         dropIndices = []
@@ -510,12 +610,10 @@ def buildsp(autofill, out):
     return True
 # ------------------------- ------------------------------------------
 # -- FORCE PRIOR PARAMETERS -- ---------------------------------------
-def forcepar(overwrite, out):
+def forcepar(overwrite, out, verbose=False):
     '''
-G. ROUDIER: Completes/Overrides parameters using target/edit.py
+    G. ROUDIER: Completes/Overrides parameters using target/edit.py
     '''
-    # verbose = True
-    verbose = False
 
     forced = False  # check if any parameters are overwritten
     # print('starting to force')

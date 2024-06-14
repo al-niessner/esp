@@ -411,10 +411,8 @@ def autofill(ident, thistarget, out, searchrad=0.2):
             for sk in skeys:
                 if out['starID'][thistarget][sk]: addme = ref_st
                 else: addme = ''
-                if not out['starID'][thistarget][sk+'_ref']:
-                    out['starID'][thistarget][sk+'_ref'].append(addme)
-                    pass
-                pass
+                # if not out['starID'][thistarget][sk+'_ref']:
+                out['starID'][thistarget][sk+'_ref'].append(addme)
             # GMR: Adding units to the stellar dict
             out['starID'][thistarget]['R*_units'].append('[Rsun]')
             out['starID'][thistarget]['M*_units'].append('[Msun]')
@@ -758,19 +756,20 @@ def mastapi(tfl, out, dbs, download_url=None, hst_url=None, verbose=False):
         # HST: mast api hack
         if allmiss[irow] in ['HST']:
             thisobsid = row['productFilename'].split('_')[-2]
+            # 6/13/24 note that GJ 1132 STIS is sometimes having trouble here
+            # the MAST downloaded file is ldlm01m0q_flt.fits but it's coming up as a ima.fits maybe?
             if row['project'] in ['CALSTIS']:
                 thisobsid = thisobsid.upper()+'%2F'+thisobsid+'_flt.fits'
-                pass
             else:
                 # want ida504e9 --> IDA504E9Q%2Fida504e9q_ima.fits
                 # and ida504e9q --> IDA504E9QQ%2Fida504e9q_ima.fits
                 # (currently the second one gets a double 'qq' toward the end, which fails)
-                # thisobsid = thisobsid.upper()+'Q%2F'+thisobsid+'q_ima.fits'
+
                 # special case for K2-3 and others with a couple weird 's' files
                 if len(thisobsid)==9 and thisobsid.endswith('s'):
                     thisobsid = thisobsid[:-1].upper()+'QQ%2F'+thisobsid+'_ima.fits'
                 # remove the second double-q (the lower-case one)
-                elif len(thisobsid)==9 and thisobsid.endswith('q'):
+                elif len(thisobsid)==9 and thisobsid.endswith('q') and not thisobsid.startswith('ldl'):
                     thisobsid = thisobsid.upper()+'Q%2F'+thisobsid+'_ima.fits'
                     # thisobsid = thisobsid.replace('qq_ima','q_ima')
                 # special case for K2-3 and others with a couple weird 's' files

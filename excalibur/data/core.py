@@ -2310,6 +2310,7 @@ def stiscal_G750L(_fin, clc, tim, tid, flttype, out,
             diff_list = []
             all_infile = []
             for infile in glob.glob(f'{filefringe}/{name_sel}*_flt.fits'):
+                # print(' infile',infile)
                 hdu = pyfits.open(infile)
                 all_infile.append(infile)
                 header_flat = hdu[0].header
@@ -2320,6 +2321,9 @@ def stiscal_G750L(_fin, clc, tim, tid, flttype, out,
                 diff = abs(time_exp-time_flat_s)
                 diff_list.append(diff)
                 pass
+            # 6/11/24 GB
+            #  There is a bug here where AU Mic and WASP-127 crash.
+            #  The diff_list is empty, so the np.min(diff_list) crashes.
             cond_win = np.where(diff_list == np.min(diff_list))
             all_infile = np.array(all_infile)
             sel_flatfile = all_infile[cond_win][0]
@@ -2838,6 +2842,20 @@ def stiscal_G430L(fin, clc, tim, tid, flttype, out,
         loggerr = np.sqrt(abs(fin['priors']['LOGG*_uperr']*
                               fin['priors']['LOGG*_lowerr']))
         terr = np.sqrt(abs(fin['priors']['T*_uperr']*fin['priors']['T*_lowerr']))
+
+        # 6/11/24 GB
+        # bug for LP 791-18 when running LDPSetCreator called from stiscal_G430L()
+        #  the parameters passed into it are fine:
+        #   teff 2960.0 55.0
+        #   logg 3.0512 0.09
+        #   FEH* -0.09 0.19
+        # print('calling LDPSetCreator')
+        # print('   teff',fin['priors']['T*'], terr)
+        # print('   logg',fin['priors']['b']['logg'], loggerr)
+        # print('   FEH*',fin['priors']['FEH*'], feherr)
+        # print('  filters',filters)
+        loggerr = np.max(loggerr,0.1)
+
         sc = LDPSetCreator(teff=(fin['priors']['T*'], terr),
                            logg=(fin['priors']['b']['logg'], loggerr),
                            z=(fin['priors']['FEH*'], feherr),

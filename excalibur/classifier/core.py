@@ -171,9 +171,9 @@ def lc_resid_classification(transit_whitelight, ext, out):
         magicdir = excalibur.context['data_dir']
 
         if 'Spitzer' in ext:
-            mdl = torch.load(magicdir + '/aarora/spitzer_lc_model.pt')
+            mdl = torch.load(magicdir + '/classifier_models/spitzer_lc_model.pt')
         else:
-            mdl = torch.load(magicdir + '/aarora/hubble_lc_model.pt')
+            mdl = torch.load(magicdir + '/classifier_models/hubble_lc_model.pt')
         mdl.eval()
 
         img = get_img(sep, (wl_flat - model))

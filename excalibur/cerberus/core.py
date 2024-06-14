@@ -456,6 +456,7 @@ def atmos(fin, xsl, spc, out, ext,
     fitT = True
     am = False
     orbp = fin['priors'].copy()
+
     ssc = syscore.ssconstants(mks=True)
     crbhzlib = {'PROFILE':[]}
     hazelib(crbhzlib, hazedir=hazedir, verbose=False)
@@ -566,7 +567,7 @@ def atmos(fin, xsl, spc, out, ext,
             else:
                 # (real data doesn't have any 'model_params' defined)
                 # eqtemp = orbp['T*']*np.sqrt(orbp['R*']*ssc['Rsun/AU']/(2.*orbp[p]['sma']))
-                eqtemp = orbp[p]['teq']
+                eqtemp = float(orbp[p]['teq'])
 
             tspc = np.array(inputData['ES'])
             terr = np.array(inputData['ESerr'])
