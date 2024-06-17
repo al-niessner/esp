@@ -1435,26 +1435,26 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                 # _______________BEST-FIT SPECTRUM PLOT________________
                 transitdata = rebinData(transitdata)
 
-                out['data'][p]['plot_spectrum_'+modelName] = plot_bestfit(
+                out['data'][p]['plot_spectrum_'+modelName],_ = plot_bestfit(
                     transitdata, patmos_model, patmos_modelProfiled, fmcarray,
                     truth_spectrum,
                     anc['data'][p], atm[p],
                     filt, modelName, trgt, p, saveDir)
 
                 # _______________CORNER PLOT________________
-                out['data'][p]['plot_corner_'+modelName] = plot_corner(
+                out['data'][p]['plot_corner_'+modelName],_ = plot_corner(
                     allKeys, allTraces, profiledTraces,
                     truth_params, prior_ranges,
                     filt, modelName, trgt, p, saveDir)
 
                 # _______________WALKER-EVOLUTION PLOT________________
-                out['data'][p]['plot_walkerevol_'+modelName] = plot_walkerEvolution(
+                out['data'][p]['plot_walkerevol_'+modelName],_ = plot_walkerEvolution(
                     allKeys, allTraces, profiledTraces,
                     truth_params, prior_ranges, appliedLimits,
                     filt, modelName, trgt, p, saveDir)
 
                 # _______________VS-PRIOR PLOT________________
-                out['data'][p]['plot_vsprior_'+modelName] = plot_vsPrior(
+                out['data'][p]['plot_vsprior_'+modelName],_ = plot_vsPrior(
                     allKeys, allTraces, profiledTraces,
                     truth_params, prior_ranges, appliedLimits,
                     filt, modelName, trgt, p, saveDir)
@@ -1650,7 +1650,7 @@ def analysis(aspects, filt, out, verbose=False):
             fitTplot, fitMetalplot, fitCOplot, fitNOplot = plotarray[0],plotarray[1],plotarray[2],plotarray[3]
 
         masses = truth_values['Mp']
-        massMetalsplot = plot_massVSmetals(
+        massMetalsplot,_ = plot_massVSmetals(
             masses, truth_values, fit_values, fit_errors, prior_ranges, filt, saveDir)
 
         # save the analysis as .csv file? (in /proj/data/spreadsheets/)

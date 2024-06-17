@@ -42,7 +42,11 @@ def massMetalRelation(logmetStar, Mp, thorngren=False):
         # metallicity for Jupiter mass (trend value; Jupiter itself is lower)
         intercept = np.log10(9.7)
 
-        logmet = logmetStar + intercept + slope*np.log10(Mp)
+        if logmetStar=='':
+            log.warning('--< Star metallicity missing in Ariel-sim : add to overwriter.py >--')
+            logmet = intercept + slope*np.log10(Mp)
+        else:
+            logmet = logmetStar + intercept + slope*np.log10(Mp)
 
     else:
         # mass-metallicity relation from FINESSE proposal (Fortney motivated)

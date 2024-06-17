@@ -101,6 +101,8 @@ class finalize(dawgie.Algorithm):
         val = self.__val.sv_as_dict()['parameters']
         valid, errstring = syscore.checksv(val)
         # pylint: disable=protected-access
+        target = ds._tn()
+        # pylint: disable=protected-access
         prcd = trgedit.proceed(ds._tn(), 'any filter', verbose=False)
         if valid and prcd:
             overwrite = sysoverwriter.ppar()
@@ -126,12 +128,13 @@ class finalize(dawgie.Algorithm):
                 self.__out['autofill'].append('inconsistent:'+inconsistency)
 
             # log warnings moved to the very end (previously were before forcepar)
-            log.warning('>-- FORCE PARAMETER: %s', str(self.__out['PP'][-1]))
-            log.warning('>-- MISSING MANDATORY PARAMETERS: %s', str(self.__out['needed']))
-            log.warning('>-- MISSING PLANET PARAMETERS: %s', str(self.__out['pneeded']))
-            log.warning('>-- PLANETS IGNORED: %s', str(self.__out['ignore']))
-            log.warning('>-- INCONSISTENCIES: %s', str(inconsistencies))
-            log.warning('>-- AUTOFILL: %s', str(self.__out['autofill']))
+            # 6/16/24 target name added to log, otherwise can't tell which one has the error
+            log.warning('>-- FORCE PARAMETER: %s %s', target, str(self.__out['PP'][-1]))
+            log.warning('>-- MISSING MANDATORY PARAMETERS: %s %s', target, str(self.__out['needed']))
+            log.warning('>-- MISSING PLANET PARAMETERS: %s %s', target, str(self.__out['pneeded']))
+            log.warning('>-- PLANETS IGNORED: %s %s', target, str(self.__out['ignore']))
+            log.warning('>-- INCONSISTENCIES: %s %s', target, str(inconsistencies))
+            log.warning('>-- AUTOFILL: %s %s', target, str(self.__out['autofill']))
             pass
         else:
             if not prcd: errstring = ['Kicked by edit.processme()']
@@ -238,10 +241,13 @@ class population(dawgie.Analyzer):
                     for key in pl_keys:
                         pl_attrs[key].append(system_data['priors'][planet_letter][key])
 
+        ntarg = 0
+        nplanet = 0
         #  *** second loop for second (overlapping) histogram ***
         # for trgt in targetlists['roudier62']:
         for trgt in filter(lambda tgt: 'STATUS' in aspects[tgt][svname], targetlists['roudier62']):
             system_data = aspects[trgt][svname]
+            ntarg += 1
 
             # verify SV succeeded for target
             if system_data['STATUS'][-1]:
@@ -255,9 +261,11 @@ class population(dawgie.Analyzer):
                     st_attrs_roudier62[key].append(system_data['priors'][key])
                 # get planetary attributes
                 for planet_letter in system_data['priors']['planets']:
+                    nplanet += 1
                     for key in pl_keys:
                         pl_attrs_roudier62[key].append(system_data['priors'][planet_letter][key])
-
+        # print('system population: # of stars  ',ntarg)
+        # print('system population: # of planets',nplanet)
         # Add to SV
         self.__out['data']['st_attrs'] = st_attrs
         self.__out['data']['st_attrs_roudier62'] = st_attrs_roudier62

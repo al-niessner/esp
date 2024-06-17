@@ -132,6 +132,7 @@ def buildsp(autofill, out, verbose=False):
                                'mass':'',  # better to use mass-radius relation than mass upper limit
                                'inc':'keep value',     # lower limits (maybe set to 90?)
                                'impact':'keep value',  # upper limits (maybe set to 0?)
+                               'period':'',            # K2-93 has both lower and upper limits. strange
                                }
     # 3 options for inclination/impact parameter   which one???
     #    1) keep the limit as a value
@@ -293,8 +294,6 @@ def buildsp(autofill, out, verbose=False):
         autofill['starID'][target][p]['omega_ref'] = omega_ref_filled
         autofill['starID'][target][p]['omega_units'] = ['[degree]']*len(omega_filled)
 
-    # print('AUTOFILL',autofill['starID'][target],'AUTOFILL')
-
     # determine the best reference to use, based on self-consistent use of that publication
     _,bestref,bestpubIndices = calculate_selfConsistency_metric(autofill['starID'][target])
     if verbose:
@@ -368,6 +367,19 @@ def buildsp(autofill, out, verbose=False):
                 out['needed'].append(lbl)
             pass
         pass
+
+    # if stellar metallicity is missing, assume solar
+    if 'FEH*' in out['needed']:
+        out['priors']['FEH*'] = 0
+        out['priors']['FEH*_uperr'] = 0.25
+        out['priors']['FEH*_lowerr'] = -0.25
+        out['priors']['FEH*_units'] = '[dex]'
+        out['priors']['FEH*_ref'] = 'default to solar metallicity'
+        out['autofill'].append('default:FEH*')
+        out['autofill'].append('default:FEH*_uperr')
+        out['autofill'].append('default:FEH*_lowerr')
+        index = out['needed'].index('FEH*')
+        out['needed'].pop(index)
 
     # if star luminosity is missing, assume M^4
     #   5/29/23 note that this conditional is never true.  could delete this
@@ -491,7 +503,7 @@ def buildsp(autofill, out, verbose=False):
             index = out['needed'].index(p+':ecc')
             out['needed'].pop(index)
             out['priors'][p]['ecc_units'] = ''
-            out['priors'][p]['ecc_ref'] = 'assumed circular orbit'
+            out['priors'][p]['ecc_ref'] = 'default: assumed circular orbit'
             # (this will set uncertainty to the min value of 0.1)
             out['priors'][p]['ecc_uperr'],_ = fillUncertainty('ecc',0,'','uperr')
             out['priors'][p]['ecc_lowerr'],_ = fillUncertainty('ecc',0,'','lowerr')
@@ -506,7 +518,7 @@ def buildsp(autofill, out, verbose=False):
             index = out['needed'].index(p+':inc')
             out['needed'].pop(index)
             out['priors'][p]['inc_units'] = '[degree]'
-            out['priors'][p]['inc_ref'] = 'assumed edge-on orbit'
+            out['priors'][p]['inc_ref'] = 'default: assumed edge-on orbit'
             out['priors'][p]['inc_uperr'],_ =fillUncertainty('inc',inc,'','uperr')
             out['priors'][p]['inc_lowerr'],_=fillUncertainty('inc',inc,'','lowerr')
             out['autofill'].append('default:'+p+':inc')
@@ -514,12 +526,14 @@ def buildsp(autofill, out, verbose=False):
             out['autofill'].append('default:'+p+':inc_lowerr')
 
         # if argument of periastron is missing, assume 0 degrees
+        # this check shouldn't be needed anymore,
+        #   but there are some publications that list positive ecc and no omega
         if p+':omega' in out['needed']:
             out['priors'][p]['omega'] = 0
             index = out['needed'].index(p+':omega')
             out['needed'].pop(index)
             out['priors'][p]['omega_units'] = '[degree]'
-            out['priors'][p]['omega_ref'] = 'default'
+            out['priors'][p]['omega_ref'] = 'default: assume 0'
             # give it a large uncertainty, say 120 degrees 1-sigma
             out['priors'][p]['omega_uperr'] = 120
             out['priors'][p]['omega_lowerr'] = 120
@@ -533,7 +547,7 @@ def buildsp(autofill, out, verbose=False):
             index = out['needed'].index(p+':impact')
             out['needed'].pop(index)
             out['priors'][p]['impact_units'] = '[R*]'
-            out['priors'][p]['impact_ref'] = 'default'
+            out['priors'][p]['impact_ref'] = 'default: assumed edge-on orbit'
             out['priors'][p]['impact_uperr'] = 0.5
             out['priors'][p]['impact_lowerr'] = 0.5
             out['autofill'].append('default:'+p+':impact')

@@ -241,7 +241,7 @@ def calculate_selfConsistency_metric(data, verbose=False):
 
         if ipub < Nplanets:
             planet = data['planets'][ipub]
-            ipubplanet = ipub
+            ipubplanet = 0
         else:
             planet = data['planets'][iplanet]
             ipubplanet = ipub - Nplanets + 1 - nplanetsum
@@ -250,12 +250,16 @@ def calculate_selfConsistency_metric(data, verbose=False):
                 nplanetsum += nplanet
                 nplanet = 0  # reset the planet publication counter back to zero
                 iplanet += 1
-        # print('ipub cross match',ipub,planet,ipubplanet)
+        # if verbose: print('ipub cross match',ipub,planet,ipubplanet)
 
         planetRef = data[planet]['rp_ref'][ipubplanet]
         counts[ipub]['planetref'] = planetRef
         counts[ipub]['planetrefcount'] = 0
-        if verbose: print('starRef vs planetRef',planet,ipub,ipubplanet,starRef,planetRef)
+        if verbose:
+            if starRef==planetRef:
+                print('starRef vs planetRef SAME',planet,ipub,ipubplanet,starRef,planetRef)
+            else:
+                print('starRef vs planetRef DIFF',planet,ipub,ipubplanet,starRef,planetRef)
         for planetParam in planetParams:
             if planetParam+'_ref' not in data[planet].keys():
                 print('PROBLEM: missing ref param',planetParam+'_ref')

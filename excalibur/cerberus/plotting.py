@@ -235,8 +235,8 @@ def plot_bestfit(transitdata, patmos_model, patmos_modelProfiled, fmcarray,
     buf = io.BytesIO()
     figgy.savefig(buf, format='png')
     save_to_state_vector = buf.getvalue()
-    plt.close(figgy)
-    return save_to_state_vector
+    # plt.close(figgy)
+    return save_to_state_vector, figgy
 # --------------------------------------------------------------------
 def plot_corner(allkeys, alltraces, profiletraces,
                 truth_params, prior_ranges,
@@ -260,8 +260,9 @@ def plot_corner(allkeys, alltraces, profiletraces,
         # print('param:',key)
         # print(' old prior range:',key,priorlo[ikey],priorhi[ikey])
 
-        # special case for older HST state vectors
-        prior_ranges['HScale'] = prior_ranges['Hscale']
+        # special case for older HST state vectors (probably not needed anymore)
+        if 'Hscale' in prior_ranges:
+            prior_ranges['HScale'] = prior_ranges['Hscale']
 
         if key in prior_ranges.keys():
             priorlo[ikey],priorhi[ikey] = prior_ranges[key]
@@ -361,8 +362,8 @@ def plot_corner(allkeys, alltraces, profiletraces,
     buf = io.BytesIO()
     figure.savefig(buf, format='png')
     save_to_state_vector = buf.getvalue()
-    plt.close(figure)
-    return save_to_state_vector
+    # plt.close(figure)
+    return save_to_state_vector, figure
 # --------------------------------------------------------------------
 def plot_vsPrior(allkeys, alltraces, profiledtraces,
                  truth_params, prior_ranges, appliedLimits,
@@ -458,8 +459,8 @@ def plot_vsPrior(allkeys, alltraces, profiledtraces,
     buf = io.BytesIO()
     figure.savefig(buf, format='png')
     save_to_state_vector = buf.getvalue()
-    plt.close(figure)
-    return save_to_state_vector
+    # plt.close(figure)
+    return save_to_state_vector, figure
 
 # --------------------------------------------------------------------
 def plot_walkerEvolution(allkeys, alltraces, profiledtraces,
@@ -550,8 +551,8 @@ def plot_walkerEvolution(allkeys, alltraces, profiledtraces,
     figure.savefig(buf, format='png')
     # out['data'][p]['plot_walkerevol'] = buf.getvalue()
     plot_as_state_vector = buf.getvalue()
-    plt.close(figure)
-    return plot_as_state_vector
+    # plt.close(figure)
+    return plot_as_state_vector, figure
 
 # --------------------------------------------------------------------
 def plot_fitsVStruths(truth_values, fit_values, fit_errors, prior_ranges,
@@ -865,6 +866,6 @@ def plot_massVSmetals(masses, truth_values,
     buf = io.BytesIO()
     figure.savefig(buf, format='png')
     plot_massMetals = buf.getvalue()
-    plt.close(figure)
+    # plt.close(figure)
 
-    return plot_massMetals
+    return plot_massMetals, figure

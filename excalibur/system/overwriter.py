@@ -1232,21 +1232,27 @@ overwrite[starID] =
              }}
 
     # for the newly added comfirmed-planet Ariel targets, some metallicities are missing
+    #  oh that's funny. the Chen 2021 compilation has zero for these (with no error bar)
+    #   but the source is listed as flag 5, which is the Exoplanet Archive.  fake news!
     overwrite['HATS-50'] = {
         'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
-        'FEH*_units':'[dex]', 'FEH*_ref':'Chen et al. 2021'}
+        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    #    'FEH*_units':'[dex]', 'FEH*_ref':'Chen et al. 2021'}
     overwrite['HATS-51'] = {
         'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
-        'FEH*_units':'[dex]', 'FEH*_ref':'Chen et al. 2021'}
+        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    #    'FEH*_units':'[dex]', 'FEH*_ref':'Chen et al. 2021'}
     overwrite['HATS-52'] = {
         'FEH*':-0.09, 'FEH*_uperr':0.17, 'FEH*_lowerr':-0.17,
         'FEH*_units':'[dex]', 'FEH*_ref':'Magrini et al. 2022'}
     overwrite['HATS-53'] = {
         'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
-        'FEH*_units':'[dex]', 'FEH*_ref':'Chen et al. 2021'}
+        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    #    'FEH*_units':'[dex]', 'FEH*_ref':'Chen et al. 2021'}
     overwrite['HATS-58 A'] = {
         'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
-        'FEH*_units':'[dex]', 'FEH*_ref':'Chen et al. 2021'}
+        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    #    'FEH*_units':'[dex]', 'FEH*_ref':'Chen et al. 2021'}
     overwrite['K2-129'] = {
         'FEH*':0.105, 'FEH*_uperr':0.235, 'FEH*_lowerr':-0.235,
         'FEH*_units':'[dex]', 'FEH*_ref':'Hardagree-Ullman et al. 2020'}
@@ -1569,6 +1575,14 @@ overwrite[starID] =
     # print('logg after',overwrite['L 98-59']['c']['logg'])
     # print('logg after',overwrite['L 98-59']['d']['logg'])
     # print('')
+
+    # these had FEH* upper limits (e.g. >-0.5 for TOI-2081) that were removed
+    overwrite['TOI-2081'] = {
+        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    overwrite['TOI-2081'] = {
+        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
 
     return overwrite
 # -------------------------------------------------------------------
