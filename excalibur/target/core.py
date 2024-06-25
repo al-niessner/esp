@@ -796,7 +796,7 @@ def mastapi(tfl, out, dbs, download_url=None, hst_url=None, verbose=False):
         if verbose: log.warning('>-- %s %s', os.path.getsize(fileout), fileout)
         pass
     locations = [tempdir]
-    new = dbscp(locations, dbs, out)
+    new = dbscp(target, locations, dbs, out)
     shutil.rmtree(tempdir, True)
     return new
 # ---------- ---------------------------------------------------------
@@ -822,21 +822,16 @@ def disk(selfstart, out, diskloc, dbs):
 
     if locations is None:
         log.warning('ADD data subdirectory name to list in target/edit.py!!')
-        # exit('ADD it')
-        pass
 
     # make sure that the data storage directory exists for this star
-    # dang this gives 'permission denied' error for access to /proj/sdp
-    # I guess I'll have to create all the new directories by command-line
     for loc in locations:
         if not os.path.exists(loc): os.makedirs(loc)
-        pass
 
-    if locations is not None: merge = dbscp(locations, dbs, out)
+    if locations is not None: merge = dbscp('on disk', locations, dbs, out)
     return merge
 # ---------- ---------------------------------------------------------
 # -- DBS COPY -- -----------------------------------------------------
-def dbscp(locations, dbs, out, verbose=False):
+def dbscp(target, locations, dbs, out, verbose=False):
     '''Format data into SV'''
     copied = False
     imalist = None
@@ -850,81 +845,99 @@ def dbscp(locations, dbs, out, verbose=False):
                             if '.fits' in imafits])
             pass
         pass
+
+    okfiles = []
+    Nfails = 0
     for fitsfile in imalist:
-        filedict = {'md5':None, 'sha':None, 'loc':None, 'observatory':None,
-                    'instrument':None, 'detector':None, 'filter':None, 'mode':None}
-        m = subprocess.check_output(['md5sum', '-b', fitsfile])
-        s = subprocess.check_output(['sha1sum', '-b', fitsfile])
-        m = m.decode('utf-8').split(' ')
-        s = s.decode('utf-8').split(' ')
-        md5 = m[0]
-        sha = s[0]
-        filedict['md5'] = md5
-        filedict['sha'] = sha
-        filedict['loc'] = fitsfile
-        with pyfits.open(fitsfile) as pf:
-            mainheader = pf[0].header
-            # HST
-            if 'SCI' in mainheader.get('FILETYPE',''):
-                keys = [k for k in mainheader.keys() if k != '']
-                keys = list(set(keys))
-                if 'TELESCOP' in keys: filedict['observatory'] = mainheader['TELESCOP']
-                if 'INSTRUME' in keys: filedict['instrument'] = mainheader['INSTRUME']
-                if 'DETECTOR' in keys:
-                    filedict['detector'] = mainheader['DETECTOR'].replace('-', '.')
-                if 'FILTER' in keys: filedict['filter'] = mainheader['FILTER']
-                if ('SCAN_RAT' in keys) and (mainheader['SCAN_RAT'] > 0):
-                    filedict['mode'] = 'SCAN'
+        try:
+            pyfits.open(fitsfile)
+            okfiles.append(True)
+        except OSError:
+            # print('Failed file read:',fitsfile)
+            okfiles.append(False)
+            Nfails += 1
+    # print('len check',len(okfiles),len(imalist))
+    # Nfails = len(numpy.where(numpy.array(okfiles)==False)[0])
+    log.warning('--< %s: %i out of %i MAST files are unreadable >--',target,Nfails,len(imalist))
+
+    if Nfails==0:
+        for fitsfile in imalist:
+            filedict = {'md5':None, 'sha':None, 'loc':None, 'observatory':None,
+                        'instrument':None, 'detector':None, 'filter':None, 'mode':None}
+            m = subprocess.check_output(['md5sum', '-b', fitsfile])
+            s = subprocess.check_output(['sha1sum', '-b', fitsfile])
+            m = m.decode('utf-8').split(' ')
+            s = s.decode('utf-8').split(' ')
+            md5 = m[0]
+            sha = s[0]
+            filedict['md5'] = md5
+            filedict['sha'] = sha
+            filedict['loc'] = fitsfile
+            with pyfits.open(fitsfile) as pf:
+                mainheader = pf[0].header
+                # HST
+                if 'SCI' in mainheader.get('FILETYPE',''):
+                    keys = [k for k in mainheader.keys() if k != '']
+                    keys = list(set(keys))
+                    if 'TELESCOP' in keys: filedict['observatory'] = mainheader['TELESCOP']
+                    if 'INSTRUME' in keys: filedict['instrument'] = mainheader['INSTRUME']
+                    if 'DETECTOR' in keys:
+                        filedict['detector'] = mainheader['DETECTOR'].replace('-', '.')
+                    if 'FILTER' in keys: filedict['filter'] = mainheader['FILTER']
+                    if ('SCAN_RAT' in keys) and (mainheader['SCAN_RAT'] > 0):
+                        filedict['mode'] = 'SCAN'
+                        pass
+                    else: filedict['mode'] = 'STARE'
+                    if 'FOCUS' in keys and filedict['detector'] is None:
+                        filedict['detector'] = mainheader['FOCUS']
+                        filedict['mode'] = 'IMAGE'
+                        pass
+                    if filedict['instrument'] in ['STIS']:
+                        filedict['filter'] = mainheader['OPT_ELEM']
+                        pass
+                    out['name'][mainheader['ROOTNAME']] = filedict
                     pass
-                else: filedict['mode'] = 'STARE'
-                if 'FOCUS' in keys and filedict['detector'] is None:
-                    filedict['detector'] = mainheader['FOCUS']
-                    filedict['mode'] = 'IMAGE'
+                # Spitzer
+                elif ('spitzer' in mainheader.get('TELESCOP').lower() and
+                      'sci' in mainheader.get('EXPTYPE').lower()):
+                    filedict['observatory'] = mainheader.get('TELESCOP')
+                    filedict['instrument'] = mainheader.get('INSTRUME')
+                    filedict['mode'] = mainheader.get('READMODE')
+                    filedict['detector'] = 'IR'
+                    if mainheader.get('CHNLNUM') == 1: filedict['filter'] = "36"
+                    elif mainheader.get('CHNLNUM') == 2: filedict['filter'] = "45"
+                    else: filedict['filter'] = mainheader.get('CHNLNUM')
+                    out['name'][str(mainheader.get('DPID'))] = filedict
                     pass
-                if filedict['instrument'] in ['STIS']:
-                    filedict['filter'] = mainheader['OPT_ELEM']
+                # JWST
+                elif 'JWST' in mainheader.get('TELESCOP'):
+                    filedict['observatory'] = mainheader.get('TELESCOP')
+                    filedict['instrument'] = mainheader.get('INSTRUME')
+                    filedict['detector'] = mainheader.get('DETECTOR')
+                    filedict['filter'] = mainheader.get('FILTER')
+                    if mainheader.get('PUPIL'): filedict['mode'] = mainheader.get('PUPIL')
+                    else: filedict['mode'] = mainheader.get('GRATING', '')
+                    key = mainheader.get("FILENAME").split('.')[0]
+                    out['name'][key] = filedict
+                    if verbose: log.warning('--< %s: %s %s %s %s %s',
+                                            key,
+                                            filedict['observatory'],
+                                            filedict['instrument'],
+                                            filedict['detector'],
+                                            filedict['filter'],
+                                            filedict['mode'])
                     pass
-                out['name'][mainheader['ROOTNAME']] = filedict
                 pass
-            # Spitzer
-            elif ('spitzer' in mainheader.get('TELESCOP').lower() and
-                  'sci' in mainheader.get('EXPTYPE').lower()):
-                filedict['observatory'] = mainheader.get('TELESCOP')
-                filedict['instrument'] = mainheader.get('INSTRUME')
-                filedict['mode'] = mainheader.get('READMODE')
-                filedict['detector'] = 'IR'
-                if mainheader.get('CHNLNUM') == 1: filedict['filter'] = "36"
-                elif mainheader.get('CHNLNUM') == 2: filedict['filter'] = "45"
-                else: filedict['filter'] = mainheader.get('CHNLNUM')
-                out['name'][str(mainheader.get('DPID'))] = filedict
+            mastout = os.path.join(dbs, md5+'_'+sha)
+            onmast = os.path.isfile(mastout)
+            if not onmast:
+                shutil.copyfile(fitsfile, mastout)
+                os.chmod(mastout, int('0664', 8))
                 pass
-            # JWST
-            elif 'JWST' in mainheader.get('TELESCOP'):
-                filedict['observatory'] = mainheader.get('TELESCOP')
-                filedict['instrument'] = mainheader.get('INSTRUME')
-                filedict['detector'] = mainheader.get('DETECTOR')
-                filedict['filter'] = mainheader.get('FILTER')
-                if mainheader.get('PUPIL'): filedict['mode'] = mainheader.get('PUPIL')
-                else: filedict['mode'] = mainheader.get('GRATING', '')
-                key = mainheader.get("FILENAME").split('.')[0]
-                out['name'][key] = filedict
-                if verbose: log.warning('--< %s: %s %s %s %s %s',
-                                        key,
-                                        filedict['observatory'],
-                                        filedict['instrument'],
-                                        filedict['detector'],
-                                        filedict['filter'],
-                                        filedict['mode'])
-                pass
-            pass
-        mastout = os.path.join(dbs, md5+'_'+sha)
-        onmast = os.path.isfile(mastout)
-        if not onmast:
-            shutil.copyfile(fitsfile, mastout)
-            os.chmod(mastout, int('0664', 8))
             pass
         copied = True
-        out['STATUS'].append(True)
-        pass
+    else:
+        copied = False
+    out['STATUS'].append(copied)
     return copied
 # -------------- -----------------------------------------------------

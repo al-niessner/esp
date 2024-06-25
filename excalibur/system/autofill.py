@@ -251,6 +251,7 @@ def calculate_selfConsistency_metric(data, verbose=False):
                 nplanet = 0  # reset the planet publication counter back to zero
                 iplanet += 1
         # if verbose: print('ipub cross match',ipub,planet,ipubplanet)
+        counts[ipub]['planet'] = planet
 
         planetRef = data[planet]['rp_ref'][ipubplanet]
         counts[ipub]['planetref'] = planetRef
@@ -280,8 +281,8 @@ def calculate_selfConsistency_metric(data, verbose=False):
             counts[ipub]['totalcount'] = counts[ipub]['starrefcount']
             counts[ipub]['totalref'] = counts[ipub]['starref']
 
-    if verbose:
-        for count in counts: print('counts',count)
+    # if verbose:
+    #    for count in counts: print('counts',count)
 
     totalcounts = numpy.array([count['totalcount'] for count in counts])
     bestscore = numpy.max(totalcounts)
@@ -289,6 +290,7 @@ def calculate_selfConsistency_metric(data, verbose=False):
     refs_with_max_score = refs[numpy.where(totalcounts==bestscore)]
     if verbose: print('refs_with_max_score',refs_with_max_score)
     bestyear = 0
+    bestref = 'ZZ'
     for ref in refs_with_max_score:
         try:
             year = int(ref[-4:])
@@ -303,7 +305,58 @@ def calculate_selfConsistency_metric(data, verbose=False):
             else:
                 bestyear = year
                 bestref = ref
-                ref_with_max_score = ref
+                # ref_with_max_score = ref
+
+    # alternate metric: combine total count for all planets, not just individual star+planet lines
+    bestref_oldmethod = bestref
+    for ipub in range(Npublications):
+        counts[ipub]['totalcount_singleplanet'] = counts[ipub]['totalcount']
+    if verbose: print('total counts before',[count['totalcount'] for count in counts])
+    for ipub in range(Npublications):
+        thisref = counts[ipub]['totalref']
+        thisplanet = counts[ipub]['planet']
+        for otherplanet in data['planets']:
+            if otherplanet!=thisplanet:
+                # loop through all the other pubs to find this same ref but for other planets
+                #  there should usually be a match, but not always
+                additionalCounts = 0
+                for iloop in range(Npublications):
+                    if counts[iloop]['totalref']==thisref and \
+                       counts[iloop]['planet']==otherplanet:
+                        # if verbose: print('Found other planet info for this ref:',
+                        #                  ipub,iloop,thisplanet,otherplanet,thisref)
+                        additionalCounts = counts[iloop]['totalcount_singleplanet']
+                # print('additionalCounts',thisplanet,otherplanet,additionalCounts)
+                counts[ipub]['totalcount'] += additionalCounts
+    if verbose: print('total counts after',[count['totalcount'] for count in counts])
+    totalcounts = numpy.array([count['totalcount'] for count in counts])
+    bestscore = numpy.max(totalcounts)
+    refs = numpy.array([count['totalref'] for count in counts])
+    refs_with_max_score = refs[numpy.where(totalcounts==bestscore)]
+    if verbose: print('refs_with_max_score',refs_with_max_score)
+    bestyear = 0
+    bestref = 'ZZ'
+    for ref in refs_with_max_score:
+        try:
+            year = int(ref[-4:])
+        except ValueError:
+            # there are some refs without a year; make them lower priority
+            year = 1
+        # select the most recently published as tiebreaker
+        if year >= bestyear:
+            # use author name as tie-breaker for 2 with same year
+            if year==bestyear and bestref < ref:
+                pass
+            else:
+                bestyear = year
+                bestref = ref
+                # ref_with_max_score = ref
+
+    if verbose:
+        if bestref_oldmethod==bestref:
+            print(' (old,new method give the same result)',bestref)
+        else:
+            print('MULTI-PLANET SELECTION GIVES NEW BEST PUB:',bestref_oldmethod,bestref)
 
     # let's keep track of what parameters are missing
     #  should be a lot with planet mass missing
@@ -325,7 +378,8 @@ def calculate_selfConsistency_metric(data, verbose=False):
         for planet in data['planets']:
             if bestpubIndices[planet]==-1: print('OH NO!: no matching planet pub!',planet)
 
-    return bestscore,ref_with_max_score,bestpubIndices
+    # return bestscore,ref_with_max_score,bestpubIndices
+    return bestscore,bestref,bestpubIndices
 
 # -------------------------------------------------------------------
 def estimate_mass_from_radius(radius_Jup):

@@ -1,9 +1,9 @@
 '''system overwriter ds'''
 
 # import numpy
-import copy
+# import copy
 # import excalibur.system.core as syscore
-from excalibur.system.autofill import derive_LOGGplanet_from_R_and_M, derive_Teqplanet_from_Lstar_and_sma
+# from excalibur.system.autofill import derive_LOGGplanet_from_R_and_M, derive_Teqplanet_from_Lstar_and_sma
 
 # -- PRIORITY PARAMETERS -- ------------------------------------------
 def ppar():
@@ -413,21 +413,21 @@ overwrite[starID] =
     #        'mass_ref':'Hadden & Lithwick et al. 2017',
     #        'mass_units':'Jupiter mass',
     #    }}
-    overwrite['LHS 3844'] = {
-        'FEH*':0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
-        'FEH*_units':'[dex]', 'FEH*_ref':"Kyle's best guess",
-        # this mass is somewhat higher than our assumed M-R relation (0.0063)
-        # 'b':{
-        #    'mass':0.0118,
-        #    'mass_uperr':0.0051,
-        #    'mass_lowerr':-0.0036,
-        #    'mass_ref':'Pearson 2019',
-        #    'mass_units':'Jupiter mass',
-        #    'logg':3.323,
-        #    'logg_lowerr':-0.15, 'logg_uperr':0.16,
-        #    'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
-        # }
-    }
+    # overwrite['LHS 3844'] = {
+    #    'FEH*':0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+    #    'FEH*_units':'[dex]', 'FEH*_ref':"Kyle's best guess",
+    #    # this mass is somewhat higher than our assumed M-R relation (0.0063)
+    #    # 'b':{
+    #    #    'mass':0.0118,
+    #    #    'mass_uperr':0.0051,
+    #    #    'mass_lowerr':-0.0036,
+    #    #    'mass_ref':'Pearson 2019',
+    #    #    'mass_units':'Jupiter mass',
+    #    #    'logg':3.323,
+    #    #    'logg_lowerr':-0.15, 'logg_uperr':0.16,
+    #    #    'logg_ref':'Pearson 2019', 'logg_units':'log10[cm.s-2]'
+    #    # }
+    # }
     # real masses now from Mayo 2023 (0.01353, 0.05695, 0.00944)
     # omega is quite different (124 vs 24.6) but it's best to stay consistent with Mayo
     #  and both have large uncertainty anyway.  more or less junk
@@ -1186,9 +1186,9 @@ overwrite[starID] =
         }
     }
 
-    overwrite['WASP-87'] = {
-        'FEH*':0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
-        'FEH*_units':'[dex]', 'FEH*_ref':"Default to solar metallicity"}
+    # overwrite['WASP-87'] = {
+    #    'FEH*':0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+    #    'FEH*_units':'[dex]', 'FEH*_ref':"Default to solar metallicity"}
 
     # only one system (this one) is missing an H_mag
     #  make a guess at it based on V=16.56,I=15.30
@@ -1234,69 +1234,69 @@ overwrite[starID] =
     # for the newly added comfirmed-planet Ariel targets, some metallicities are missing
     #  oh that's funny. the Chen 2021 compilation has zero for these (with no error bar)
     #   but the source is listed as flag 5, which is the Exoplanet Archive.  fake news!
-    overwrite['HATS-50'] = {
-        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
-        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    # overwrite['HATS-50'] = {
+    #    'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+    #    'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
     #    'FEH*_units':'[dex]', 'FEH*_ref':'Chen et al. 2021'}
-    overwrite['HATS-51'] = {
-        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
-        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    # overwrite['HATS-51'] = {
+    #    'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+    #    'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
     #    'FEH*_units':'[dex]', 'FEH*_ref':'Chen et al. 2021'}
     overwrite['HATS-52'] = {
         'FEH*':-0.09, 'FEH*_uperr':0.17, 'FEH*_lowerr':-0.17,
         'FEH*_units':'[dex]', 'FEH*_ref':'Magrini et al. 2022'}
-    overwrite['HATS-53'] = {
-        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
-        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    # overwrite['HATS-53'] = {
+    #    'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+    #    'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
     #    'FEH*_units':'[dex]', 'FEH*_ref':'Chen et al. 2021'}
-    overwrite['HATS-58 A'] = {
-        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
-        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    # overwrite['HATS-58 A'] = {
+    #    'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+    #    'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
     #    'FEH*_units':'[dex]', 'FEH*_ref':'Chen et al. 2021'}
     overwrite['K2-129'] = {
         'FEH*':0.105, 'FEH*_uperr':0.235, 'FEH*_lowerr':-0.235,
         'FEH*_units':'[dex]', 'FEH*_ref':'Hardagree-Ullman et al. 2020'}
-    overwrite['LHS 1678'] = {
-        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
-        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    # overwrite['LHS 1678'] = {
+    #    'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+    #    'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
     # Ammons 2006 has 0.76+-2.26, which is absurd
-    overwrite['TIC 257060897'] = {
-        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
-        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
-    overwrite['TOI-122'] = {
-        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
-        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
-    overwrite['TOI-1227'] = {
-        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
-        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
-    overwrite['TOI-1442'] = {
-        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
-        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
-    overwrite['TOI-1693'] = {
-        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
-        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
-    overwrite['TOI-237'] = {
-        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
-        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
-    overwrite['TOI-2411'] = {
-        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
-        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
-    overwrite['TOI-2427'] = {
-        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
-        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
-    overwrite['TOI-451'] = {
-        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
-        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
-    overwrite['TOI-540'] = {
-        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
-        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    # overwrite['TIC 257060897'] = {
+    #    'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+    #    'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    # overwrite['TOI-122'] = {
+    #    'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+    #    'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    # overwrite['TOI-1227'] = {
+    #    'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+    #    'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    # overwrite['TOI-1442'] = {
+    #    'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+    #    'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    # overwrite['TOI-1693'] = {
+    #    'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+    #    'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    # overwrite['TOI-237'] = {
+    #    'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+    #    'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    # overwrite['TOI-2411'] = {
+    #    'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+    #    'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    # overwrite['TOI-2427'] = {
+    #    'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+    #    'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    # overwrite['TOI-451'] = {
+    #    'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+    #    'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    # overwrite['TOI-540'] = {
+    #    'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+    #    'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
     # there's a value for this one now (osborne 2023)
     # overwrite['TOI-544'] = {
     #     'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
     #     'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
-    overwrite['TOI-833'] = {
-        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
-        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    # overwrite['TOI-833'] = {
+    #    'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+    #    'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
     # this one is missing JHK photometry.  not sure why; it's in 2MASS/Simbad
     overwrite['K2-295'] = {
         'Jmag':11.807, 'Jmag_uperr':0.027, 'Jmag_lowerr':-0.027,
@@ -1338,9 +1338,9 @@ overwrite[starID] =
     #    'FEH*':0.05, 'FEH*_uperr':0.05, 'FEH*_lowerr':-0.05,
     #    'FEH*_units':'[dex]', 'FEH*_ref':'Dai et al. 2020'}
 
-    overwrite['TOI-1411'] = {
-        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
-        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    # overwrite['TOI-1411'] = {
+    #    'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+    #    'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
 
     # why isn't this in the archive?  non-hipparcos, but still..
     overwrite['TRAPPIST-1'] = {
@@ -1388,13 +1388,13 @@ overwrite[starID] =
     #  (without these system.finalize will crash)
 
     # not much in Vizier.  there's two StarHorse metallicities 0.0698 and -0.101483
-    overwrite['GJ 4102'] = {
-        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
-        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    # overwrite['GJ 4102'] = {
+    #    'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+    #    'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
     # even less in Vizier for this white dwarf.  e.g. C/He and Ca/He both blank
-    overwrite['WD 1856'] = {
-        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
-        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    # overwrite['WD 1856'] = {
+    #    'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+    #    'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
 
     # for the 75 new Ariel targets in the Feb.14,2024 Edwards target list
     #  3 are missing the mandatory stellar metallicity (2 aren't even in SIMBAD!)
@@ -1411,9 +1411,9 @@ overwrite[starID] =
     # and another 100+ new Ariel targets considered (eclipse targets plus Nov.2023 targets)
     #  8 more are missing the mandatory stellar metallicity (toi-4308 is not in simbad even)
     #
-    overwrite['Gaia-1'] = {
-        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
-        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    # overwrite['Gaia-1'] = {
+    #    'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+    #    'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
     overwrite['Gaia-2'] = {
         'FEH*':-0.49, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
         'FEH*_units':'[dex]', 'FEH*_ref':'Ammons et al. 2006'}
@@ -1423,15 +1423,15 @@ overwrite[starID] =
     overwrite['K2-321'] = {
         'FEH*':-0.05, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
         'FEH*_units':'[dex]', 'FEH*_ref':'Ding et al. 2022'}
-    overwrite['K2-417'] = {
-        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
-        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    # overwrite['K2-417'] = {
+    #    'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+    #    'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
     overwrite['TOI-206'] = {
         'FEH*':0.057, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
         'FEH*_units':'[dex]', 'FEH*_ref':'Sprague et al. 2022'}
-    overwrite['TOI-4308'] = {
-        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
-        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    # overwrite['TOI-4308'] = {
+    #    'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+    #    'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
     overwrite['TOI-4342'] = {
         'FEH*':-0.090, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
         'FEH*_units':'[dex]', 'FEH*_ref':'Yu et al. 2023'}
@@ -1478,63 +1478,64 @@ overwrite[starID] =
 
     # (for Raissa's paper on L 98-59)
     # make planets c and d consistent with planet b
-    overwrite['L 98-59'] = {
-        'c':{
-            'rp':0.1236, 'rp_uperr':0.0085, 'rp_lowerr':-0.0067,
-            'rp_ref':'Demangeon et al. 2021',
-            'mass':0.00698, 'mass_uperr':0.00082, 'mass_lowerr':-0.00079,
-            'mass_ref':'Demangeon et al. 2021',
-            'logg_ref':'Demangeon et al. 2021',
-            'teq_ref':'Demangeon et al. 2021',
-            'sma':0.0304, 'sma_uperr':0.0011, 'sma_lowerr':-0.0012,
-            'sma_ref':'Demangeon et al. 2021',
-            'period':3.6906777, 'period_uperr':1.6e-6, 'period_lowerr':-2.6e-6,
-            'period_ref':'Demangeon et al. 2021',
-            't0':2458367.27375, 't0_uperr':0.00013, 't0_lowerr':-0.00022,
-            't0_ref':'Demangeon et al. 2021',
-            'inc':88.11, 'inc_uperr':0.36, 'inc_lowerr':-0.16,
-            'inc_ref':'Demangeon et al. 2021',
-            'ecc':0.103, 'ecc_uperr':0.045, 'ecc_lowerr':-0.058,
-            'ecc_ref':'Demangeon et al. 2021',
-            'omega':261., 'omega_uperr':20., 'omega_lowerr':-10.,
-            'omega_ref':'Demangeon et al. 2021',
-            'impact':0.601, 'impact_uperr':0.081, 'impact_lowerr':-0.066,
-            'impact_ref':'Demangeon et al. 2021',
-            'trandur':1.346, 'trandur_uperr':0.122, 'trandur_lowerr':-0.069,
-            'trandur_ref':'Demangeon et al. 2021',
-            'ars':19.00, 'ars_uperr':1.20, 'ars_lowerr':-0.80,
-            'ars_ref':'Demangeon et al. 2021',
-            'rprs':0.04088, 'rprs_uperr':0.00068, 'rprs_lowerr':-0.00056,
-            'rprs_ref':'Demangeon et al. 2021',
-            },
-        'd':{
-            'rp':0.1357, 'rp_uperr':0.0106, 'rp_lowerr':-0.0087,
-            'rp_ref':'Demangeon et al. 2021',
-            'mass':0.00610, 'mass_uperr':0.00088, 'mass_lowerr':-0.00088,
-            'mass_ref':'Demangeon et al. 2021',
-            'logg_ref':'Demangeon et al. 2021',
-            'teq_ref':'Demangeon et al. 2021',
-            'sma':0.0486, 'sma_uperr':0.0018, 'sma_lowerr':-0.0019,
-            'sma_ref':'Demangeon et al. 2021',
-            'period':7.4507245, 'period_uperr':8.1e-6, 'period_lowerr':-4.6e-6,
-            'period_ref':'Demangeon et al. 2021',
-            't0':2458362.73974, 't0_uperr':0.00031, 't0_lowerr':-0.00040,
-            't0_ref':'Demangeon et al. 2021',
-            'inc':88.449, 'inc_uperr':0.058, 'inc_lowerr':-0.111,
-            'inc_ref':'Demangeon et al. 2021',
-            'ecc':0.0740, 'ecc_uperr':0.0570, 'ecc_lowerr':-0.0460,
-            'ecc_ref':'Demangeon et al. 2021',
-            'omega':180., 'omega_uperr':27., 'omega_lowerr':-50.,
-            'omega_ref':'Demangeon et al. 2021',
-            'impact':0.922, 'impact_uperr':0.059, 'impact_lowerr':-0.059,
-            'impact_ref':'Demangeon et al. 2021',
-            'trandur':0.840, 'trandur_uperr':0.150, 'trandur_lowerr':-0.200,
-            'trandur_ref':'Demangeon et al. 2021',
-            'ars':33.7, 'ars_uperr':1.9, 'ars_lowerr':-1.7,
-            'ars_ref':'Demangeon et al. 2021',
-            'rprs':0.04480, 'rprs_uperr':0.00106, 'rprs_lowerr':-0.00100,
-            'rprs_ref':'Demangeon et al. 2021',
-             }}
+    # 12/23/2024  fixed now with the self-consistent parameter selection
+    # overwrite['L 98-59'] = {
+    #    'c':{
+    #        'rp':0.1236, 'rp_uperr':0.0085, 'rp_lowerr':-0.0067,
+    #        'rp_ref':'Demangeon et al. 2021',
+    #        'mass':0.00698, 'mass_uperr':0.00082, 'mass_lowerr':-0.00079,
+    #        'mass_ref':'Demangeon et al. 2021',
+    #        'logg_ref':'Demangeon et al. 2021',
+    #        'teq_ref':'Demangeon et al. 2021',
+    #        'sma':0.0304, 'sma_uperr':0.0011, 'sma_lowerr':-0.0012,
+    #        'sma_ref':'Demangeon et al. 2021',
+    #        'period':3.6906777, 'period_uperr':1.6e-6, 'period_lowerr':-2.6e-6,
+    #        'period_ref':'Demangeon et al. 2021',
+    #        't0':2458367.27375, 't0_uperr':0.00013, 't0_lowerr':-0.00022,
+    #        't0_ref':'Demangeon et al. 2021',
+    #        'inc':88.11, 'inc_uperr':0.36, 'inc_lowerr':-0.16,
+    #        'inc_ref':'Demangeon et al. 2021',
+    #        'ecc':0.103, 'ecc_uperr':0.045, 'ecc_lowerr':-0.058,
+    #        'ecc_ref':'Demangeon et al. 2021',
+    #        'omega':261., 'omega_uperr':20., 'omega_lowerr':-10.,
+    #        'omega_ref':'Demangeon et al. 2021',
+    #        'impact':0.601, 'impact_uperr':0.081, 'impact_lowerr':-0.066,
+    #        'impact_ref':'Demangeon et al. 2021',
+    #        'trandur':1.346, 'trandur_uperr':0.122, 'trandur_lowerr':-0.069,
+    #        'trandur_ref':'Demangeon et al. 2021',
+    #        'ars':19.00, 'ars_uperr':1.20, 'ars_lowerr':-0.80,
+    #        'ars_ref':'Demangeon et al. 2021',
+    #        'rprs':0.04088, 'rprs_uperr':0.00068, 'rprs_lowerr':-0.00056,
+    #        'rprs_ref':'Demangeon et al. 2021',
+    #        },
+    #    'd':{
+    #        'rp':0.1357, 'rp_uperr':0.0106, 'rp_lowerr':-0.0087,
+    #        'rp_ref':'Demangeon et al. 2021',
+    #        'mass':0.00610, 'mass_uperr':0.00088, 'mass_lowerr':-0.00088,
+    #        'mass_ref':'Demangeon et al. 2021',
+    #        'logg_ref':'Demangeon et al. 2021',
+    #        'teq_ref':'Demangeon et al. 2021',
+    #        'sma':0.0486, 'sma_uperr':0.0018, 'sma_lowerr':-0.0019,
+    #        'sma_ref':'Demangeon et al. 2021',
+    #        'period':7.4507245, 'period_uperr':8.1e-6, 'period_lowerr':-4.6e-6,
+    #        'period_ref':'Demangeon et al. 2021',
+    #        't0':2458362.73974, 't0_uperr':0.00031, 't0_lowerr':-0.00040,
+    #        't0_ref':'Demangeon et al. 2021',
+    #        'inc':88.449, 'inc_uperr':0.058, 'inc_lowerr':-0.111,
+    #        'inc_ref':'Demangeon et al. 2021',
+    #        'ecc':0.0740, 'ecc_uperr':0.0570, 'ecc_lowerr':-0.0460,
+    #        'ecc_ref':'Demangeon et al. 2021',
+    #        'omega':180., 'omega_uperr':27., 'omega_lowerr':-50.,
+    #        'omega_ref':'Demangeon et al. 2021',
+    #        'impact':0.922, 'impact_uperr':0.059, 'impact_lowerr':-0.059,
+    #        'impact_ref':'Demangeon et al. 2021',
+    #        'trandur':0.840, 'trandur_uperr':0.150, 'trandur_lowerr':-0.200,
+    #        'trandur_ref':'Demangeon et al. 2021',
+    #        'ars':33.7, 'ars_uperr':1.9, 'ars_lowerr':-1.7,
+    #        'ars_ref':'Demangeon et al. 2021',
+    #        'rprs':0.04480, 'rprs_uperr':0.00106, 'rprs_lowerr':-0.00100,
+    #        'rprs_ref':'Demangeon et al. 2021',
+    #         }}
 
     # g = sscmks['G'] * float(overwrite['L 98-59']['c']['mass'])*sscmks['Mjup'] / \
     #     (float(overwrite['L 98-59']['c']['rp'])*sscmks['Rjup'])**2
@@ -1545,29 +1546,29 @@ overwrite[starID] =
     # print('logg before',overwrite['L 98-59']['c']['logg'])
     # print('logg before',overwrite['L 98-59']['d']['logg'])
 
-    systemInfo = copy.deepcopy(overwrite['L 98-59'])
-    systemInfo['L*'] = [0.0113]
-    systemInfo['L*_uperr'] = [0.0004]
-    systemInfo['L*_lowerr'] = [-0.0004]
-    for p in ['c','d']:
-        systemInfo[p]['teq'] = ['']
-        systemInfo[p]['teq_uperr'] = ['']
-        systemInfo[p]['teq_lowerr'] = ['']
-        systemInfo[p]['teq_ref'] = ['']
-
-        logg_derived, logg_lowerr_derived, logg_uperr_derived, logg_ref_derived = \
-            derive_LOGGplanet_from_R_and_M(systemInfo, p)
-        overwrite['L 98-59'][p]['logg'] = logg_derived[0]
-        overwrite['L 98-59'][p]['logg_lowerr'] = logg_lowerr_derived[0]
-        overwrite['L 98-59'][p]['logg_uperr'] = logg_uperr_derived[0]
-        overwrite['L 98-59'][p]['logg_ref'] = logg_ref_derived[0]
-
-        teq_derived, teq_lowerr_derived, teq_uperr_derived, teq_ref_derived = \
-            derive_Teqplanet_from_Lstar_and_sma(systemInfo, p)
-        overwrite['L 98-59'][p]['teq'] = teq_derived[0]
-        overwrite['L 98-59'][p]['teq_lowerr'] = teq_lowerr_derived[0]
-        overwrite['L 98-59'][p]['teq_uperr'] = teq_uperr_derived[0]
-        overwrite['L 98-59'][p]['teq_ref'] = teq_ref_derived[0]
+    # systemInfo = copy.deepcopy(overwrite['L 98-59'])
+    # systemInfo['L*'] = [0.0113]
+    # systemInfo['L*_uperr'] = [0.0004]
+    # systemInfo['L*_lowerr'] = [-0.0004]
+    # for p in ['c','d']:
+    #    systemInfo[p]['teq'] = ['']
+    #    systemInfo[p]['teq_uperr'] = ['']
+    #    systemInfo[p]['teq_lowerr'] = ['']
+    #    systemInfo[p]['teq_ref'] = ['']
+    #
+    #    logg_derived, logg_lowerr_derived, logg_uperr_derived, logg_ref_derived = \
+    #        derive_LOGGplanet_from_R_and_M(systemInfo, p)
+    #    overwrite['L 98-59'][p]['logg'] = logg_derived[0]
+    #    overwrite['L 98-59'][p]['logg_lowerr'] = logg_lowerr_derived[0]
+    #    overwrite['L 98-59'][p]['logg_uperr'] = logg_uperr_derived[0]
+    #    overwrite['L 98-59'][p]['logg_ref'] = logg_ref_derived[0]
+    #
+    #    teq_derived, teq_lowerr_derived, teq_uperr_derived, teq_ref_derived = \
+    #        derive_Teqplanet_from_Lstar_and_sma(systemInfo, p)
+    #    overwrite['L 98-59'][p]['teq'] = teq_derived[0]
+    #    overwrite['L 98-59'][p]['teq_lowerr'] = teq_lowerr_derived[0]
+    #    overwrite['L 98-59'][p]['teq_uperr'] = teq_uperr_derived[0]
+    #    overwrite['L 98-59'][p]['teq_ref'] = teq_ref_derived[0]
 
     # print('overwrite final',overwrite['L 98-59'])
     # print(derive_LOGGplanet_from_R_and_M(overwrite['L 98-59'], 'c'))
@@ -1577,12 +1578,10 @@ overwrite[starID] =
     # print('')
 
     # these had FEH* upper limits (e.g. >-0.5 for TOI-2081) that were removed
-    overwrite['TOI-2081'] = {
-        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
-        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
-    overwrite['TOI-2081'] = {
-        'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
-        'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    # overwrite['TOI-2081'] = {
+    #    'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
+    #    'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
+    # (not sure what the second one was; modified output to include target name)
 
     return overwrite
 # -------------------------------------------------------------------

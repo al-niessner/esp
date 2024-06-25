@@ -638,7 +638,7 @@ def forcepar(overwrite, out, verbose=False):
         # print(' key',key)
         if (mainkey not in out.keys()) and (len(mainkey) < 2):
             if mainkey in out['pignore'].keys():
-                print('its in pignore',out['pignore'])
+                # print('its in pignore',out['pignore'])
                 out['priors'][mainkey] = out['pignore'][mainkey].copy()
                 pass
             for pkey in overwrite[key].keys():

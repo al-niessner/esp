@@ -1476,9 +1476,19 @@ def analysis(aspects, filt, out, verbose=False):
     '''
     if verbose: print('cerberus/analysis...')
 
+    aspecttargets = []
+    for a in aspects: aspecttargets.append(a)
+    # print('aspects check','TrES-3' in aspecttargets)
+    # print('aspects check','WASP-33' in aspecttargets)
+
+    # print('aspects',aspects)
     # print('aspect keys',aspects.keys())
     # for a in aspects.keys(): print(a)
-    #  exit('core stop')
+    # for a in aspects: print(a)
+    # print('aspects check','TrES-3' in aspects)
+    # print('aspects check','WASP-33' in aspects)
+    # print('filt',filt)
+    # exit('core stop')
 
     svname = 'cerberus.atmos'
 
@@ -1528,7 +1538,9 @@ def analysis(aspects, filt, out, verbose=False):
         # nope! still not jenkins compatible. arg!
         for trgt in targetlist['targets']:
             # print('        cycling through targets',trgt)
-            if trgt not in aspects.keys():
+            # if trgt not in aspects.keys():
+            # if trgt not in aspects:
+            if trgt not in aspecttargets:
                 log.warning('--< CERBERUS ANALYSIS: TARGET NOT IN ASPECT %s %s >--',filt,trgt)
             elif svname+'.'+filt not in aspects[trgt]:
                 # some targets don't have this filter; no problem

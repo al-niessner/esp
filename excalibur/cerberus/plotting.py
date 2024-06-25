@@ -746,8 +746,10 @@ def plot_fitUncertainties(fit_values, fit_errors, prior_ranges,
 
         # plot C/O=1 as a dotted vertical line
         if param=='[C/O]':
+            yrange = ax.get_ylim()
             solarCO = np.log10(0.55)
             ax.plot([-solarCO,-solarCO],[-100,100],'k--', lw=1, zorder=1)
+            ax.set_ylim(yrange)
 
         # xrange = ax.get_xlim()
         # ax.set_xlim(xrange)
