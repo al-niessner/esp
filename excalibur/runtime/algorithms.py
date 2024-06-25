@@ -20,6 +20,9 @@ class autofill(dawgie.Algorithm):
         self.__status = states.StatusSV()
         self.__table = table
         self.__tn = tn
+    def is_valid(self):
+        '''convenience function'''
+        return self.__status['isValidTarget']
     def name(self):
         '''database name'''
         return 'autofill'
@@ -29,9 +32,29 @@ class autofill(dawgie.Algorithm):
         The pipeline never really runs this task. Instead, it is called from
         runtime.create where the table and target name are given
         '''
-        import excalibur.runtime  # avoid circular dependency; pylint: disable=import-outside-toplevel
+        # avoid circular dependency
+        import excalibur.runtime  # pylint: disable=import-outside-toplevel
         return [dawgie.SV_REF(excalibur.runtime.analysis, self.__parent,
                               self.__parent.sv_as_dict()['composite'])]
+    def proceed(self, ext:str=None):
+        '''convenience function'''
+        return self.__status.proceed(ext)
+    def refs_for_proceed(self)->[dawgie.V_REF]:
+        '''return minimum list for StatusSV.proceed() to work'''
+        # avoid circular dependency
+        import excalibur.runtime  # pylint: disable=import-outside-toplevel
+        return [dawgie.V_REF(excalibur.runtime.task, self,
+                             self.__status,'allowed_exts'),
+                dawgie.V_REF(excalibur.runtime.task, self,
+                             self.__status,'isValidTarget'),
+                dawgie.V_REF(excalibur.runtime.task, self,
+                             self.__status,'runTarget')]
+    def refs_for_validity(self)->[dawgie.V_REF]:
+        '''return minimum list for StatusSV to determine if target is valid'''
+        # avoid circular dependency
+        import excalibur.runtime  # pylint: disable=import-outside-toplevel
+        return [dawgie.V_REF(excalibur.runtime.task, self,
+                             self.__status,'isValidTarget')]
     def run (self, ds, ps):
         '''isolate target specific information from the global table'''
         if self.__table is None or self.__tn is None:

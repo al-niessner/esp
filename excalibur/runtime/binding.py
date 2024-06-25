@@ -1,7 +1,7 @@
 # ./excalibur/runtime/binding.py
 # -*- coding: utf-8 -*-
 # PyXB bindings for NM:e92452c8d3e28a9e27abfc9994d2007779e7f4c9
-# Generated 2024-05-22 10:16:32.651842 by PyXB version 1.3.2 using Python 3.10.12.final.0
+# Generated 2024-05-22 14:32:40.695134 by PyXB version 1.3.2 using Python 3.10.12.final.0
 # Namespace AbsentNamespace0
 
 from __future__ import unicode_literals
@@ -14,7 +14,7 @@ import pyxb.utils.domutils
 import sys
 import pyxb.utils.six as _six
 # Unique identifier for bindings created at the same time
-_GenerationUID = pyxb.utils.utility.UniqueIdentifier('urn:uuid:09227466-185f-11ef-8cb7-0242ac110002')
+_GenerationUID = pyxb.utils.utility.UniqueIdentifier('urn:uuid:d1382270-1882-11ef-b7e0-0242ac110002')
 
 # Version of PyXB used to generate the bindings
 _PyXBVersion = '1.3.2'
@@ -94,6 +94,7 @@ class filter_names (pyxb.binding.datatypes.normalizedString, pyxb.binding.basis.
     _XSDLocation = pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 158, 2)
     _Documentation = None
 filter_names._CF_enumeration = pyxb.binding.facets.CF_enumeration(value_datatype=filter_names, enum_prefix=None)
+filter_names.Ariel_sim = filter_names._CF_enumeration.addEnumeration(unicode_value='Ariel-sim', tag='Ariel_sim')
 filter_names.HST_STIS_CCD_G430L_STARE = filter_names._CF_enumeration.addEnumeration(unicode_value='HST-STIS-CCD-G430L-STARE', tag='HST_STIS_CCD_G430L_STARE')
 filter_names.HST_STIS_CCD_G750L_STARE = filter_names._CF_enumeration.addEnumeration(unicode_value='HST-STIS-CCD-G750L-STARE', tag='HST_STIS_CCD_G750L_STARE')
 filter_names.HST_WFC3_IR_G102_SCAN = filter_names._CF_enumeration.addEnumeration(unicode_value='HST-WFC3-IR-G102-SCAN', tag='HST_WFC3_IR_G102_SCAN')
@@ -510,7 +511,7 @@ class CTD_ANON (lever_type):
     _ContentTypeTag = pyxb.binding.basis.complexTypeDefinition._CT_ELEMENT_ONLY
     _Abstract = False
     _ExpandedName = None
-    _XSDLocation = pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 175, 4)
+    _XSDLocation = pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 176, 4)
     _ElementMap = lever_type._ElementMap.copy()
     _AttributeMap = lever_type._AttributeMap.copy()
     # Base type is lever_type
@@ -535,7 +536,7 @@ class CTD_ANON (lever_type):
 _module_typeBindings.CTD_ANON = CTD_ANON
 
 
-levers = pyxb.binding.basis.element(pyxb.namespace.ExpandedName(Namespace, 'levers'), CTD_ANON, location=pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 174, 2))
+levers = pyxb.binding.basis.element(pyxb.namespace.ExpandedName(Namespace, 'levers'), CTD_ANON, location=pyxb.utils.utility.Location('/home/niessner/Projects/Exoplanet/esp/excalibur/runtime/levers.xsd', 175, 2))
 Namespace.addCategoryObject('elementBinding', levers.name().localName(), levers)
 
 

@@ -13,8 +13,6 @@ import excalibur.transit.algorithms as trnalg
 import excalibur.eclipse as ecl
 import excalibur.eclipse.algorithms as eclalg
 
-import excalibur.target.edit as trgedit
-
 import excalibur.system as sys
 import excalibur.system.algorithms as sysalg
 # import excalibur.system.core as syscore
@@ -27,15 +25,14 @@ import excalibur.classifier.states as clsstates
 import excalibur.data as dat
 import excalibur.data.algorithms as datalg
 
+import excalibur.runtime.binding as rtbind
+
 from excalibur.classifier.core import savesv
 
 # -------------------------------------------------------------------
 # -- ALGO RUN OPTIONS -----------------------------------------------
 # FILTERS
-fltrs = (trgedit.activefilters.__doc__).split('\n')
-fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
-exc_fltrs = ['JWST']
-fltrs = [f for f in fltrs if not any(ins in f for ins in exc_fltrs)]
+fltrs = [str(fn) for fn in rtbind.filter_names.values()]
 # -------------------------------------------------------------------
 # -- ALGORITHMS -----------------------------------------------------
 class inference(dawgie.Algorithm):

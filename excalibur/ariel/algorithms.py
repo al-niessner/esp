@@ -6,9 +6,8 @@ import dawgie
 
 import excalibur.ariel.core as arielcore
 import excalibur.ariel.states as arielstates
-import excalibur.target.edit as trgedit
+import excalibur.runtime.algorithms as rtalg
 import excalibur.system as sys
-import excalibur.system.bot as sysbot
 import excalibur.system.algorithms as sysalg
 
 # ------------- ------------------------------------------------------
@@ -20,6 +19,7 @@ class sim_spectrum(dawgie.Algorithm):
     def __init__(self):
         '''__init__ ds'''
         self._version_ = dawgie.VERSION(1,0,0)
+        self.__rt = rtalg.autofill()
         self.__system_finalize = sysalg.finalize()
         self.__out = arielstates.PriorsSV('parameters')
         return
@@ -30,7 +30,8 @@ class sim_spectrum(dawgie.Algorithm):
 
     def previous(self):
         '''Input State Vectors: system.finalize'''
-        return [dawgie.ALG_REF(sys.task, self.__system_finalize)]
+        return [dawgie.ALG_REF(sys.task, self.__system_finalize)] + \
+               self.__rt.refs_for_proceed()
 
     def state_vectors(self):
         '''Output State Vectors: ariel.sim_spectrum'''
@@ -40,29 +41,18 @@ class sim_spectrum(dawgie.Algorithm):
         '''Top level algorithm call'''
         update = False
         arielcore.init()
-        # pylint: disable=protected-access
-        target = ds._tn()
-
-        # pylint: disable=protected-access
-        prcd = trgedit.proceed(ds._tn(), verbose=False)
-
-        task = sysbot.Actor('system', 4, 999, target)
-        subtask = sysalg.finalize()
-        dataset = dawgie.db.connect(subtask, task, target); dataset.load()
-        system_dict = subtask.sv_as_dict()['parameters']
+        self.__rt.proceed()
+        system_dict = self.__system_finalize.sv_as_dict()['parameters']
         valid, errstring = arielcore.checksv(system_dict)
-        if valid and prcd:
-            update = self._simSpectrum(target, system_dict, self.__out)
+        if valid:
+            # FIXMEE: should not need target name and core needs to be changed
+            update = self._simSpectrum(ds._tn(),  # pylint: disable=protected-access
+                                       system_dict, self.__out)
         else:
-            if valid:
-                if not prcd:
-                    errstring = ['ariel.sim  Kicked by edit.processme()']
-                else:
-                    errstring = ['HUH?! BAD LOGIC HERE']
             self._failure(errstring)
         if update:
             ds.update()
-        elif valid and prcd: raise dawgie.NoValidOutputDataError(
+        elif valid: raise dawgie.NoValidOutputDataError(
                 f'No output created for ARIEL.{self.name()}')
         return
 

@@ -11,23 +11,19 @@ import excalibur.system as sys
 import excalibur.system.algorithms as sysalg
 import excalibur.ancillary as anc
 import excalibur.ancillary.algorithms as ancillaryalg
+import excalibur.runtime.algorithms as rtalg
+import excalibur.runtime.binding as rtbind
 import excalibur.taurex as tau
 import excalibur.taurex.algorithms as taualg
 import excalibur.transit as trn
 import excalibur.transit.algorithms as trnalg
-import excalibur.target.edit as trgedit
 from excalibur import ariel
 import excalibur.ariel.algorithms as arielalg
 import excalibur.cerberus as crb
 import excalibur.cerberus.core as crbcore
 import excalibur.cerberus.states as crbstates
 
-# ------------- ------------------------------------------------------
-# -- ALGOS RUN OPTIONS -- --------------------------------------------
-# FILTERS
-fltrs = (trgedit.activefilters.__doc__).split('\n')
-fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
-fltrs.append('Ariel-sim')
+fltrs = [str(fn) for fn in rtbind.filter_names.values()]
 
 # ----------------------- --------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
@@ -39,6 +35,7 @@ class xslib(dawgie.Algorithm):
         self.__spc = trnalg.spectrum()
         self.__tau = taualg.TransitSpectrumInjection()
         self.__arielsim = arielalg.sim_spectrum()
+        self.__rt = rtalg.autofill()
         self.__out = [crbstates.xslibSV(ext) for ext in fltrs]
         return
 
@@ -50,7 +47,8 @@ class xslib(dawgie.Algorithm):
         '''Input State Vectors: transit.spectrum'''
         return [dawgie.ALG_REF(trn.task, self.__spc),
                 dawgie.ALG_REF(tau.task, self.__tau),
-                dawgie.ALG_REF(ariel.task, self.__arielsim)]
+                dawgie.ALG_REF(ariel.task, self.__arielsim)] + \
+                self.__rt.refs_for_proceed()
 
     def state_vectors(self):
         '''Output State Vectors: cerberus.xslib'''
@@ -81,14 +79,12 @@ class xslib(dawgie.Algorithm):
                         vspc = False
                         sspc = 'This filter doesnt have a spectrum (no data?): ' + ext
 
-            # pylint: disable=protected-access
-            prcd = trgedit.proceed(ds._tn(), ext, verbose=False)
-            if vspc and prcd:
+            self.__rt.proceed(ext)
+            if vspc:
                 log.warning('--< CERBERUS XSLIB: %s >--', ext)
                 update = self._xslib(sv, fltrs.index(ext))
             else:
                 errstr = [m for m in [sspc] if m is not None]
-                if not prcd: errstr = [ext + ' Kicked by edit.processme()']
                 self._failure(errstr[0])
                 pass
             if update: svupdate.append(self.__out[fltrs.index(ext)])
@@ -119,6 +115,7 @@ class xslib(dawgie.Algorithm):
 
 class atmos(dawgie.Algorithm):
     '''Atmospheric retrievial'''
+    # need lots of state info; pylint: disable=too-many-instance-attributes
     def __init__(self):
         '''__init__ ds'''
         self._version_ = crbcore.atmosversion()
@@ -127,6 +124,7 @@ class atmos(dawgie.Algorithm):
         self.__xsl = xslib()
         self.__tau = taualg.TransitSpectrumInjection()
         self.__arielsim = arielalg.sim_spectrum()
+        self.__rt = rtalg.autofill()
         self.__out = [crbstates.atmosSV(ext) for ext in fltrs]
         return
 
@@ -140,7 +138,8 @@ class atmos(dawgie.Algorithm):
                 dawgie.ALG_REF(sys.task, self.__fin),
                 dawgie.ALG_REF(crb.task, self.__xsl),
                 dawgie.ALG_REF(tau.task, self.__tau),
-                dawgie.ALG_REF(ariel.task, self.__arielsim)]
+                dawgie.ALG_REF(ariel.task, self.__arielsim)] + \
+                self.__rt.refs_for_proceed()
 
     def state_vectors(self):
         '''Output State Vectors: cerberus.atmos'''
@@ -175,9 +174,8 @@ class atmos(dawgie.Algorithm):
                         vspc = False
                         sspc = 'This filter doesnt seem to exist: ' + ext
 
-            # pylint: disable=protected-access
-            prcd = trgedit.proceed(ds._tn(), ext, verbose=False)
-            if vfin and vxsl and vspc and prcd:
+            self.__rt.proceed(ext)
+            if vfin and vxsl and vspc:
                 log.warning('--< CERBERUS ATMOS: %s >--', ext)
                 update = self._atmos(self.__fin.sv_as_dict()['parameters'],
                                      self.__xsl.sv_as_dict()[ext],
@@ -185,8 +183,6 @@ class atmos(dawgie.Algorithm):
             else:
                 if not (vfin and vxsl and vspc):
                     errstr = [m for m in [sfin, sspc, sxsl] if m is not None]
-                elif not prcd:
-                    errstr = [ext + ' Kicked by edit.processme()']
                 else:
                     errstr = ['HUH?! BAD LOGIC HERE']
                 self._failure(errstr[0])
@@ -294,6 +290,7 @@ class results(dawgie.Algorithm):
         self.__anc = ancillaryalg.estimate()
         self.__xsl = xslib()
         self.__atm = atmos()
+        self.__rt = rtalg.autofill()
         self.__out = [crbstates.resSV(filt) for filt in fltrs]
         return
 
@@ -306,7 +303,8 @@ class results(dawgie.Algorithm):
         return [dawgie.ALG_REF(sys.task, self.__fin),
                 dawgie.ALG_REF(anc.task, self.__anc),
                 dawgie.ALG_REF(crb.task, self.__xsl),
-                dawgie.ALG_REF(crb.task, self.__atm)]
+                dawgie.ALG_REF(crb.task, self.__atm)] + \
+                self.__rt.refs_for_proceed()
 
     def state_vectors(self):
         '''Output State Vectors: cerberus.results'''
@@ -332,13 +330,13 @@ class results(dawgie.Algorithm):
 
             # for filt in filts:
             for filt in available_filters:
-                # pylint: disable=protected-access
                 vxsl, sxsl = crbcore.checksv(self.__xsl.sv_as_dict()[filt])
                 vatm, satm = crbcore.checksv(self.__atm.sv_as_dict()[filt])
-                prcd = trgedit.proceed(ds._tn(), filt, verbose=False)
-                if vxsl and vatm and prcd:
+                self.__rt.proceed(filt)
+                if vxsl and vatm:
                     log.warning('--< CERBERUS RESULTS: %s >--', filt)
-                    update = self._results(ds._tn(), filt,
+                    update = self._results(ds._tn(),  # pylint: disable=protected-access
+                                           filt,
                                            self.__fin.sv_as_dict()['parameters'],
                                            self.__anc.sv_as_dict()['parameters'],
                                            self.__xsl.sv_as_dict()[filt]['data'],
@@ -348,8 +346,6 @@ class results(dawgie.Algorithm):
                 else:
                     if not (vxsl and vatm):
                         errstr = [m for m in [sxsl, satm] if m is not None]
-                    elif not prcd:
-                        errstr = [filt + ' Kicked by edit.processme()']
                     else:
                         errstr = ['HUH?! BAD LOGIC HERE']
                     self._failure(errstr[0])

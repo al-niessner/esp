@@ -157,6 +157,7 @@
 
   <xs:simpleType name="filter_names">
     <xs:restriction base="xs:normalizedString">
+      <xs:enumeration value="Ariel-sim"/>
       <xs:enumeration value="HST-STIS-CCD-G430L-STARE"/>
       <xs:enumeration value="HST-STIS-CCD-G750L-STARE"/>
       <xs:enumeration value="HST-WFC3-IR-G102-SCAN"/>

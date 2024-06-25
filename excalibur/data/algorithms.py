@@ -10,15 +10,15 @@ import excalibur.data.core as datcore
 import excalibur.data.states as datstates
 
 import excalibur.target as trg
-import excalibur.target.edit as trgedit
 import excalibur.target.states as trgstates
 import excalibur.target.algorithms as trgalg
 import excalibur.system as sys
 import excalibur.system.algorithms as sysalg
+import excalibur.runtime.algorithms as rtalg
+import excalibur.runtime.binding as rtbind
 # ------------- ------------------------------------------------------
 # -- ALGO RUN OPTIONS -- ---------------------------------------------
-fltrs = (trgedit.activefilters.__doc__).split('\n')
-fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
+fltrs = [str(fn) for fn in rtbind.filter_names.values()]
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class collect(dawgie.Algorithm):
@@ -29,6 +29,7 @@ class collect(dawgie.Algorithm):
         '''__init__ ds'''
         self._version_ = datcore.collectversion()
         self.__create = trgalg.create()
+        self.__rt = rtalg.autofill()
         self.__scrape = trgalg.scrape()
         self.__out = trgstates.FilterSV('frames')
         return
@@ -40,7 +41,8 @@ class collect(dawgie.Algorithm):
     def previous(self):
         '''Input State Vectors: target.create, target.scrape'''
         return [dawgie.ALG_REF(trg.analysis, self.__create),
-                dawgie.ALG_REF(trg.task, self.__scrape)]
+                dawgie.ALG_REF(trg.task, self.__scrape)] + \
+                self.__rt.refs_for_proceed()
 
     def state_vectors(self):
         '''Output State Vectors: data.collect'''
@@ -55,11 +57,9 @@ class collect(dawgie.Algorithm):
         if valid:
             for key in create['filters'].keys(): self.__out[key] = create['filters'][key]
             for name in create['filters']['activefilters']['NAMES']:
-                # pylint: disable=protected-access
-                if trgedit.proceed(ds._tn(), ext=name):
-                    ok = self._collect(name, scrape, self.__out)
-                    update = update or ok
-                    pass
+                self.__rt.proceed(ext=name)
+                ok = self._collect(name, scrape, self.__out)
+                update = update or ok
                 pass
             if update: ds.update()
             else: self._raisenoout(self.name())
@@ -95,6 +95,7 @@ class timing(dawgie.Algorithm):
         self._version_ = datcore.timingversion()
         self.__fin = sysalg.finalize()
         self.__col = collect()
+        self.__rt = rtalg.autofill()
         self.__out = [datstates.TimingSV(ext) for ext in fltrs]
         return
 
@@ -105,7 +106,8 @@ class timing(dawgie.Algorithm):
     def previous(self):
         '''Input State Vectors: system.finalize, data.collect'''
         return [dawgie.ALG_REF(sys.task, self.__fin),
-                dawgie.ALG_REF(dat.task, self.__col)]
+                dawgie.ALG_REF(dat.task, self.__col)] + \
+                self.__rt.refs_for_proceed()
 
     def state_vectors(self):
         '''Output State Vectors: data.timing'''
@@ -126,13 +128,10 @@ class timing(dawgie.Algorithm):
         svupdate = []
         if vfin and vcol:
             for ext in validtype:
-                # pylint: disable=protected-access
-                prcd = trgedit.proceed(ds._tn(), ext, verbose=False)
-                if prcd:
-                    update = self._timing(fin, ext, col['activefilters'][ext],
-                                          self.__out[fltrs.index(ext)])
-                    if update: svupdate.append(self.__out[fltrs.index(ext)])
-                    pass
+                self.__rt.proceed(ext)
+                update = self._timing(fin, ext, col['activefilters'][ext],
+                                      self.__out[fltrs.index(ext)])
+                if update: svupdate.append(self.__out[fltrs.index(ext)])
                 pass
             pass
         else:
@@ -172,6 +171,7 @@ class calibration(dawgie.Algorithm):
         self._version_ = dawgie.VERSION(1,4,4)
         self.__fin = sysalg.finalize()
         self.__col = collect()
+        self.__rt = rtalg.autofill()
         self.__tim = timing()
         self.__out = [datstates.CalibrateSV(ext) for ext in fltrs]
         return
@@ -184,7 +184,8 @@ class calibration(dawgie.Algorithm):
         '''Input State Vectors: system.finalize, data.collect, data.timing'''
         return [dawgie.ALG_REF(sys.task, self.__fin),
                 dawgie.ALG_REF(dat.task, self.__col),
-                dawgie.ALG_REF(dat.task, self.__tim)]
+                dawgie.ALG_REF(dat.task, self.__tim)] + \
+                self.__rt.refs_for_proceed()
 
     def state_vectors(self):
         '''Output State Vectors: data.calibration'''
@@ -205,9 +206,9 @@ class calibration(dawgie.Algorithm):
         for datatype in validtype:
             tim = self.__tim.sv_as_dict()[datatype]
             vtim, etim = datcore.checksv(tim)
-            # pylint: disable=protected-access
-            prcd = trgedit.proceed(ds._tn(), datatype, verbose=False)
-            if vfin and vcll and vtim and prcd:
+            self.__rt.proceed(datatype)
+            if vfin and vcll and vtim:
+                # FIXMEE: access to protected target name will be going away
                 # pylint: disable=protected-access
                 update = self._calib(fin, cll['activefilters'][datatype], tim, ds._tn(),
                                      datatype, self.__out[fltrs.index(datatype)], ps)
@@ -215,7 +216,6 @@ class calibration(dawgie.Algorithm):
                 pass
             else:
                 message = [m for m in [sfin, ecll, etim] if m is not None]
-                if not prcd: message = ['Kicked by edit.processme()']
                 self._failure(message[0])
                 pass
             pass

@@ -13,6 +13,7 @@ import logging; log = logging.getLogger(__name__)
 import dawgie
 import dawgie.db
 
+import excalibur.runtime.binding as rtbind
 import excalibur.target as trg
 import excalibur.target.edit as trgedit
 import excalibur.target.mast_api_utils as masttool
@@ -144,9 +145,7 @@ def createfltrs(out):
     Create filter name
     '''
     created = False
-    filters = trgedit.activefilters.__doc__
-    filters = filters.split('\n')
-    filters = [t.strip() for t in filters if t.replace(' ', '')]
+    filters = [str(fn) for fn in rtbind.filter_names.values()]
     out['activefilters']['TOTAL'] = len(filters)
     out['activefilters']['NAMES'] = filters
     if filters:
@@ -172,7 +171,7 @@ def autofillversion():
     '''
     return dawgie.VERSION(2,0,1)
 
-def autofill(ident, thistarget, out, searchrad=0.2):
+def autofill(ident, thistarget, out, proceed, searchrad=0.2):
     '''Queries MAST for available data and parses NEXSCI data into tables'''
 
     out['starID'][thistarget] = ident['starIDs']['starID'][thistarget]
@@ -211,7 +210,7 @@ def autofill(ident, thistarget, out, searchrad=0.2):
         if 'data' not in outjson: outjson['data'] = []  # special case for TOI-1338
         for obs in outjson['data']:
             for f in filters:
-                if trgedit.proceed(thistarget, ext=f):
+                if proceed(ext=f):
                     if obs['obs_collection'] is not None:
                         pfcond = f.split('-')[0].upper() in obs['obs_collection']
                         pass

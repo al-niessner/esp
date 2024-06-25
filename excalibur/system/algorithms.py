@@ -6,13 +6,14 @@ import dawgie
 
 from collections import defaultdict
 
+import excalibur.runtime.algorithms as rtalg
+
 import excalibur.system as sys
 import excalibur.system.core as syscore
 import excalibur.system.states as sysstates
 import excalibur.system.overwriter as sysoverwriter
 
 import excalibur.target as trg
-import excalibur.target.edit as trgedit
 import excalibur.target.algorithms as trgalg
 
 from excalibur.system.consistency import consistency_checks
@@ -28,6 +29,7 @@ class validate(dawgie.Algorithm):
         # self._version_ = dawgie.VERSION(1,1,4)  # typos fixed in core/ssconstants
         self._version_ = dawgie.VERSION(1,2,0)  # new bestValue() parameter selection
         self.__autofill = trgalg.autofill()
+        self.__rt = rtalg.autofill()
         self.__out = sysstates.PriorsSV('parameters')
         return
 
@@ -37,7 +39,8 @@ class validate(dawgie.Algorithm):
 
     def previous(self):
         '''Input State Vectors: target.autofill'''
-        return [dawgie.ALG_REF(trg.task, self.__autofill)]
+        return [dawgie.ALG_REF(trg.task, self.__autofill)] + \
+               self.__rt.refs_for_validity()
 
     def state_vectors(self):
         '''Output State Vectors: system.validate'''
@@ -48,12 +51,11 @@ class validate(dawgie.Algorithm):
         update = False
         autofill = self.__autofill.sv_as_dict()['parameters']
         valid, errstring = syscore.checksv(autofill)
-        # pylint: disable=protected-access
-        prcd = trgedit.proceed(ds._tn(), 'any filter', verbose=False)
+        prcd = self.__rt.is_valid()
         if valid and prcd:
             update = self._validate(autofill, self.__out)
         else:
-            if not prcd: errstring = ['Kicked by edit.processme()']
+            if not prcd: errstring = ['Not a valid target']
             self._failure(errstring)
         if update: ds.update()
         elif valid and prcd: raise dawgie.NoValidOutputDataError(
@@ -78,6 +80,7 @@ class finalize(dawgie.Algorithm):
     throws out incomplete systems'''
     def __init__(self):
         self._version_ = dawgie.VERSION(1,1,4)
+        self.__rt = rtalg.autofill()
         self.__val = validate()
         self.__out = sysstates.PriorsSV('parameters')
         return
@@ -88,7 +91,8 @@ class finalize(dawgie.Algorithm):
 
     def previous(self):
         '''Input State Vectors: system.validate'''
-        return [dawgie.ALG_REF(sys.task, self.__val)]
+        return [dawgie.ALG_REF(sys.task, self.__val)] + \
+               self.__rt.refs_for_validity()
 
     def state_vectors(self):
         '''Output State Vectors: system.finalize'''
@@ -100,14 +104,13 @@ class finalize(dawgie.Algorithm):
         update = False
         val = self.__val.sv_as_dict()['parameters']
         valid, errstring = syscore.checksv(val)
-        # pylint: disable=protected-access
-        target = ds._tn()
-        # pylint: disable=protected-access
-        prcd = trgedit.proceed(ds._tn(), 'any filter', verbose=False)
+        prcd = self.__rt.is_valid()
         if valid and prcd:
             overwrite = sysoverwriter.ppar()
             for key in val: self.__out[key] = val.copy()[key]
+            # FIXMEE: this use of protected-access will be going away
             # pylint: disable=protected-access
+            target = ds._tn()
             if ds._tn() in overwrite:
                 # print('UPDATE overwrite start',ds._tn())
                 update = self._priority(overwrite[ds._tn()], self.__out)
@@ -137,7 +140,7 @@ class finalize(dawgie.Algorithm):
             log.warning('>-- AUTOFILL: %s %s', target, str(self.__out['autofill']))
             pass
         else:
-            if not prcd: errstring = ['Kicked by edit.processme()']
+            if not prcd: errstring = ['Not a valid target']
             self._failure(errstring)
 
         if update: ds.update()

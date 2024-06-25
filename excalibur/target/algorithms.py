@@ -7,9 +7,10 @@ import dawgie
 import dawgie.context
 
 import excalibur
+import excalibur.runtime.algorithms as rtalg
 import excalibur.target as trg
-import excalibur.target.edit as trgedit
 import excalibur.target.core as trgcore
+import excalibur.target.edit as trgedit
 import excalibur.target.monitor as trgmonitor
 import excalibur.target.states as trgstates
 # ------------- ------------------------------------------------------
@@ -104,6 +105,7 @@ class autofill(dawgie.Algorithm):
         '''__init__ ds'''
         self._version_ = trgcore.autofillversion()
         self.__create = create()
+        self.__rt = rtalg.autofill()
         self.__out = trgstates.TargetSV('parameters')
         return
 
@@ -113,7 +115,8 @@ class autofill(dawgie.Algorithm):
 
     def previous(self):
         '''Input State Vectors: target.create'''
-        return [dawgie.ALG_REF(trg.analysis, self.__create)]
+        return [dawgie.ALG_REF(trg.analysis, self.__create)] + \
+               self.__rt.refs_for_proceed()
 
     def state_vectors(self):
         '''Output State Vectors: target.autofill'''
@@ -124,12 +127,14 @@ class autofill(dawgie.Algorithm):
         update = False
         crt = self.__create.sv_as_dict()
         valid, errstring = trgcore.checksv(crt['starIDs'])
+        # converting a table that requires access to target name
         # pylint: disable=protected-access
-        prc = trgedit.proceed(ds._tn())
-        if valid and (ds._tn() in crt['starIDs']['starID']) and prc:
+        prc = self.__rt.is_valid()
+        if prc and valid and (ds._tn() in crt['starIDs']['starID']):
             log.warning('--< TARGET AUTOFILL: %s >--', ds._tn())
             update = self._autofill(crt, ds._tn())
             pass
+        # done with target name; pylint: enable=protected-access
         else: self._failure(errstring)
         if update: ds.update()
         else: raise dawgie.NoValidOutputDataError(
@@ -138,7 +143,7 @@ class autofill(dawgie.Algorithm):
 
     def _autofill(self, crt, thistarget):
         '''Core code call'''
-        solved = trgcore.autofill(crt, thistarget, self.__out)
+        solved = trgcore.autofill(crt, thistarget, self.__out, self.__rt.proceed)
         return solved
 
     @staticmethod
@@ -157,6 +162,7 @@ class scrape(dawgie.Algorithm):
         '''__init__ ds'''
         self._version_ = trgcore.scrapeversion()
         self.__autofill = autofill()
+        self.__rt = rtalg.autofill()
         self.__out = trgstates.DatabaseSV('databases')
         return
 
@@ -166,7 +172,8 @@ class scrape(dawgie.Algorithm):
 
     def previous(self):
         '''Input State Vectors: target.autofill'''
-        return [dawgie.ALG_REF(trg.task, self.__autofill)]
+        return [dawgie.ALG_REF(trg.task, self.__autofill)] + \
+               self.__rt.refs_for_validity()
 
     def state_vectors(self):
         '''Output State Vectors: target.scrape'''
@@ -176,9 +183,9 @@ class scrape(dawgie.Algorithm):
         '''Top level algorithm call'''
         var_autofill = self.__autofill.sv_as_dict()['parameters']
         valid, errstring = trgcore.checksv(var_autofill)
-        # pylint: disable=protected-access
-        if valid and trgedit.proceed(ds._tn()):
-            log.warning('--< TARGET SCRAPE: %s >--', ds._tn())
+        if valid and self.__rt.is_valid():
+            log.warning('--< TARGET SCRAPE: %s >--',
+                        ds._tn())  # pylint: disable=protected-access
             _ = self._scrape(var_autofill, self.__out)
             pass
         else: self._failure(errstring)

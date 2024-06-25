@@ -16,14 +16,15 @@ import excalibur.transit.states as trnstates
 
 import excalibur.data as dat
 import excalibur.data.algorithms as datalg
+import excalibur.runtime.algorithms as rtalg
+import excalibur.runtime.binding as rtbind
 import excalibur.system as sys
 import excalibur.system.algorithms as sysalg
-import excalibur.target.edit as trgedit
+
 # ------------- ------------------------------------------------------
 # -- ALGO RUN OPTIONS -- ---------------------------------------------
 # FILTERS
-fltrs = (trgedit.activefilters.__doc__).split('\n')
-fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
+fltrs = [str(fn) for fn in rtbind.filter_names.values()]
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class normalization(dawgie.Algorithm):
@@ -35,6 +36,7 @@ class normalization(dawgie.Algorithm):
         self._type = 'transit'
         self.__cal = datalg.calibration()
         self.__tme = datalg.timing()
+        self.__rt = rtalg.autofill()
         self.__fin = sysalg.finalize()
         self.__out = [trnstates.NormSV(ext) for ext in fltrs]
         return
@@ -47,7 +49,8 @@ class normalization(dawgie.Algorithm):
         '''Input State Vectors: data.calibration, data.timing, system.finalize'''
         return [dawgie.ALG_REF(dat.task, self.__cal),
                 dawgie.ALG_REF(dat.task, self.__tme),
-                dawgie.ALG_REF(sys.task, self.__fin)]
+                dawgie.ALG_REF(sys.task, self.__fin)] + \
+                self.__rt.refs_for_proceed()
 
     def state_vectors(self):
         '''Output State Vectors: transit.normalization'''
@@ -61,9 +64,8 @@ class normalization(dawgie.Algorithm):
             update = False
             vcal, scal = trncore.checksv(self.__cal.sv_as_dict()[ext])
             vtme, stme = trncore.checksv(self.__tme.sv_as_dict()[ext])
-            # pylint: disable=protected-access
-            prcd = trgedit.proceed(ds._tn(), ext, verbose=False)
-            if vcal and vtme and vfin and prcd:
+            self.__rt.proceed(ext)
+            if vcal and vtme and vfin:
                 log.warning('--< %s NORMALIZATION: %s >--', self._type.upper(), ext)
                 update = self._norm(self.__cal.sv_as_dict()[ext],
                                     self.__tme.sv_as_dict()[ext],
@@ -72,7 +74,6 @@ class normalization(dawgie.Algorithm):
                 pass
             else:
                 errstr = [m for m in [scal, stme, sfin] if m is not None]
-                if not prcd: errstr = [ext + ' Kicked by edit.processme() ']
                 self._failure(errstr[0])
                 pass
             if update: svupdate.append(self.__out[fltrs.index(ext)])
@@ -123,6 +124,7 @@ class whitelight(dawgie.Algorithm):
         self._type = 'transit'
         self._nrm = nrm
         self.__fin = sysalg.finalize()
+        self.__rt = rtalg.autofill()
         self.__out = [trnstates.WhiteLightSV(ext) for ext in fltrs]
         self.__out.append(trnstates.WhiteLightSV('HST'))
         return
@@ -134,7 +136,8 @@ class whitelight(dawgie.Algorithm):
     def previous(self):
         '''Input State Vectors: transit.normalization, system.finalize'''
         return [dawgie.ALG_REF(trn.task, self._nrm),
-                dawgie.ALG_REF(sys.task, self.__fin)]
+                dawgie.ALG_REF(sys.task, self.__fin)] + \
+                self.__rt.refs_for_proceed()
 
     def state_vectors(self):
         '''Output State Vectors: transit.whitelight'''
@@ -158,9 +161,8 @@ class whitelight(dawgie.Algorithm):
                 except KeyError:
                     break
                 vnrm, snrm = trncore.checksv(nrm)
-                # pylint: disable=protected-access
-                prcd = trgedit.proceed(ds._tn(), ext, verbose=False)
-                if vnrm and vfin and prcd:
+                self.__rt.proceed(ext)
+                if vnrm and vfin:
                     log.warning('--< %s MERGING: %s >--', self._type.upper(), ext)
                     allnormdata.append(nrm)
                     allext.append(ext)
@@ -168,7 +170,6 @@ class whitelight(dawgie.Algorithm):
                     pass
                 else:
                     errstr = [m for m in [snrm, sfin] if m is not None]
-                    if not prcd: errstr = [ext + ' Kicked by edit.processme()']
                     self._failure(errstr[0])
                     pass
                 pass
@@ -187,15 +188,13 @@ class whitelight(dawgie.Algorithm):
             index = fltrs.index(ext)
             nrm = self._nrm.sv_as_dict()[ext]
             vnrm, snrm = trncore.checksv(nrm)
-            # pylint: disable=protected-access
-            prcd = trgedit.proceed(ds._tn(), ext, verbose=False)
-            if vnrm and vfin and prcd:
+            self.__rt.proceed(ext)
+            if vnrm and vfin:
                 log.warning('--< %s WHITE LIGHT: %s >--', self._type.upper(), ext)
                 update = self._whitelight(nrm, fin, self.__out[index], ext)
                 pass
             else:
                 errstr = [m for m in [snrm, sfin] if m is not None]
-                if not prcd: errstr = [ext + ' Kicked by edit.processme()']
                 self._failure(errstr[0])
                 pass
             if update: svupdate.append(self.__out[index])
@@ -243,6 +242,7 @@ class spectrum(dawgie.Algorithm):
         self._type = 'transit'
         self.__fin = sysalg.finalize()
         self._nrm = nrm
+        self.__rt = rtalg.autofill()
         self._wht = wht
         self.__out = [trnstates.SpectrumSV(ext) for ext in fltrs]
         if sum(['HST' in ext for ext in fltrs]) > 1:
@@ -259,7 +259,8 @@ class spectrum(dawgie.Algorithm):
         transit.whitelight'''
         return [dawgie.ALG_REF(sys.task, self.__fin),
                 dawgie.ALG_REF(trn.task, self._nrm),
-                dawgie.ALG_REF(trn.task, self._wht)]
+                dawgie.ALG_REF(trn.task, self._wht)] + \
+                self.__rt.refs_for_proceed()
 
     def state_vectors(self):
         '''Output State Vectors: transit.spectrum'''
@@ -273,9 +274,8 @@ class spectrum(dawgie.Algorithm):
             update = False
             vnrm, snrm = trncore.checksv(self._nrm.sv_as_dict()[ext])
             vwht, swht = trncore.checksv(self._wht.sv_as_dict()[ext])
-            # pylint: disable=protected-access
-            prcd = trgedit.proceed(ds._tn(), ext, verbose=False)
-            if vfin and vnrm and vwht and prcd:
+            self.__rt.proceed(ext)
+            if vfin and vnrm and vwht:
                 log.warning('--< %s SPECTRUM: %s >--', self._type.upper(), ext)
                 update = self._spectrum(self.__fin.sv_as_dict()['parameters'],
                                         self._nrm.sv_as_dict()[ext],
@@ -284,7 +284,6 @@ class spectrum(dawgie.Algorithm):
                 pass
             else:
                 errstr = [m for m in [sfin, snrm, swht] if m is not None]
-                if not prcd: errstr = [ext + ' Kicked by edit.processme()']
                 self._failure(errstr[0])
                 pass
             if update: svupdate.append(self.__out[index])
