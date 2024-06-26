@@ -157,7 +157,7 @@ class StatusSV(dawgie.StateVector):
         return 'status'
     def proceed(self, ext:str=None):
         '''determine if those that care should proceed'''
-        allowed = ext in self['allowed_exts'] if ext else True
+        allowed = ext in self['allowed_filter_names'] if ext else True
         run = self['runTarget']
         valid = self['isValidTarget']
         if not all([allowed, run, valid]):
