@@ -60,8 +60,7 @@ else:
             return out
         setattr(subtasks, 'list', shortlist)
         pass
-    try: subtasks.do()
-    except NameError: print('>-- !!! Target name needed !!!')
+    subtasks.do()
     dawgie.db.close()
     dawgie.security.finalize()
     pass

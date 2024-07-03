@@ -7,12 +7,19 @@ import dawgie
 import dawgie.context
 
 import excalibur
+
+import excalibur.runtime as rtime
 import excalibur.runtime.algorithms as rtalg
+import excalibur.runtime.binding as rtbind
+
 import excalibur.target as trg
 import excalibur.target.core as trgcore
 import excalibur.target.edit as trgedit
 import excalibur.target.monitor as trgmonitor
 import excalibur.target.states as trgstates
+
+fltrs = [str(fn) for fn in rtbind.filter_names.values()]
+
 # ------------- ------------------------------------------------------
 # -- ALGO RUN OPTIONS -- ---------------------------------------------
 # GENERATE DATABASE IDs
@@ -115,8 +122,8 @@ class autofill(dawgie.Algorithm):
 
     def previous(self):
         '''Input State Vectors: target.create'''
-        return [dawgie.ALG_REF(trg.analysis, self.__create)] + \
-               self.__rt.refs_for_proceed()
+        return [dawgie.ALG_REF(trg.analysis, self.__create),
+                dawgie.V_REF(rtime.task, self.__rt, self.__rt.sv_as_dict()['status'],'isValidTarget')]
 
     def state_vectors(self):
         '''Output State Vectors: target.autofill'''
@@ -125,12 +132,15 @@ class autofill(dawgie.Algorithm):
     def run(self, ds, ps):
         '''Top level algorithm call'''
         update = False
+
+        # stop here if it is not a runtime target
+        self.__rt.is_valid()
+
         crt = self.__create.sv_as_dict()
         valid, errstring = trgcore.checksv(crt['starIDs'])
         # converting a table that requires access to target name
         # pylint: disable=protected-access
-        prc = self.__rt.is_valid()
-        if prc and valid and (ds._tn() in crt['starIDs']['starID']):
+        if valid and (ds._tn() in crt['starIDs']['starID']):
             log.warning('--< TARGET AUTOFILL: %s >--', ds._tn())
             update = self._autofill(crt, ds._tn())
             pass
@@ -143,7 +153,12 @@ class autofill(dawgie.Algorithm):
 
     def _autofill(self, crt, thistarget):
         '''Core code call'''
-        solved = trgcore.autofill(crt, thistarget, self.__out, self.__rt.proceed)
+        # this call originally passed the self.__rt.proceed function (for use on each filter)
+        #  but it's better to supply the list of available filters
+        # solved = trgcore.autofill(crt, thistarget, self.__out,
+        #                          self.__rt.sv_as_dict()['status']['allowed_filter_names'])
+        # 7/2/24 now we are running target on all filters?  not sure if JWST is working..
+        solved = trgcore.autofill(crt, thistarget, self.__out, fltrs)
         return solved
 
     @staticmethod
@@ -172,8 +187,8 @@ class scrape(dawgie.Algorithm):
 
     def previous(self):
         '''Input State Vectors: target.autofill'''
-        return [dawgie.ALG_REF(trg.task, self.__autofill)] + \
-               self.__rt.refs_for_validity()
+        return [dawgie.ALG_REF(trg.task, self.__autofill),
+                dawgie.V_REF(rtime.task, self.__rt, self.__rt.sv_as_dict()['status'],'isValidTarget')]
 
     def state_vectors(self):
         '''Output State Vectors: target.scrape'''
@@ -181,13 +196,16 @@ class scrape(dawgie.Algorithm):
 
     def run(self, ds, ps):
         '''Top level algorithm call'''
+
+        # stop here if it is not a runtime target
+        self.__rt.is_valid()
+
         var_autofill = self.__autofill.sv_as_dict()['parameters']
         valid, errstring = trgcore.checksv(var_autofill)
-        if valid and self.__rt.is_valid():
+        if valid:
             log.warning('--< TARGET SCRAPE: %s >--',
                         ds._tn())  # pylint: disable=protected-access
             _ = self._scrape(var_autofill, self.__out)
-            pass
         else: self._failure(errstring)
         # GMR: always update.
         # Sims / proceed() do not require data nor full set of system parameters.

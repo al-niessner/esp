@@ -14,6 +14,7 @@ import dawgie
 import dawgie.db
 
 import excalibur.runtime.binding as rtbind
+
 import excalibur.target as trg
 import excalibur.target.edit as trgedit
 import excalibur.target.mast_api_utils as masttool
@@ -171,7 +172,7 @@ def autofillversion():
     '''
     return dawgie.VERSION(2,0,1)
 
-def autofill(ident, thistarget, out, proceed, searchrad=0.2):
+def autofill(ident, thistarget, out, allowed_filters, searchrad=0.2):
     '''Queries MAST for available data and parses NEXSCI data into tables'''
 
     out['starID'][thistarget] = ident['starIDs']['starID'][thistarget]
@@ -206,34 +207,29 @@ def autofill(ident, thistarget, out, proceed, searchrad=0.2):
         # 3 - activefilters filtering on TELESCOPE INSTRUMENT FILTER
         targettable = []
         platformlist = []
-        filters = ident['filters']['activefilters']['NAMES']
         if 'data' not in outjson: outjson['data'] = []  # special case for TOI-1338
         for obs in outjson['data']:
-            for f in filters:
-                if proceed(ext=f):
-                    if obs['obs_collection'] is not None:
-                        pfcond = f.split('-')[0].upper() in obs['obs_collection']
-                        pass
-                    else: pfcond = False
-                    if obs['instrument_name'] is not None:
-                        nscond = f.split('-')[1] in obs['instrument_name']
-                        pass
-                    else: nscond = False
-                    if (f.split('-')[0] not in ['Spitzer']) and (obs['filters'] is not None):
-                        flcond = f.split('-')[3] in obs['filters']
-                        pass
-                    else:
-                        sptzfl = None
-                        if f.split('-')[3] in ['36']: sptzfl = 'IRAC1'
-                        if f.split('-')[3] in ['45']: sptzfl = 'IRAC2'
-                        if obs['filters'] is not None: flcond = sptzfl in obs['filters']
-                        else: flcond = False
-                        pass
-                    if pfcond and nscond and flcond:
-                        targettable.append(obs)
-                        platformlist.append(obs['obs_collection'])
-                        pass
-                    pass
+            for f in allowed_filters:
+                if obs['obs_collection'] is not None:
+                    pfcond = f.split('-')[0].upper() in obs['obs_collection']
+                else: pfcond = False
+                if obs['instrument_name'] is not None:
+                    nscond = f.split('-')[1] in obs['instrument_name']
+                else:
+                    nscond = False
+                if f.split('-')[1]=='sim':  # skip any simulated instruments
+                    flcond = False
+                elif (f.split('-')[0] not in ['Spitzer']) and (obs['filters'] is not None):
+                    flcond = f.split('-')[3] in obs['filters']
+                else:
+                    sptzfl = None
+                    if f.split('-')[3] in ['36']: sptzfl = 'IRAC1'
+                    if f.split('-')[3] in ['45']: sptzfl = 'IRAC2'
+                    if obs['filters'] is not None: flcond = sptzfl in obs['filters']
+                    else: flcond = False
+                if pfcond and nscond and flcond:
+                    targettable.append(obs)
+                    platformlist.append(obs['obs_collection'])
                 pass
             pass
         if not targettable: solved = False

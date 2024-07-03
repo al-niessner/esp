@@ -75,7 +75,7 @@ G. ROUDIER: Tests for empty SV shell
     return valid, errstring
 # ----------------- --------------------------------------------------
 # -- BUILD SYSTEM PRIORS -- ------------------------------------------
-def buildsp(autofill, out, verbose=False):
+def buildsp(autofill, runtime_params, out, verbose=False):
     '''
     G. ROUDIER: Surjection from target.autofill.parameters to dictionary output
     '''
@@ -336,8 +336,12 @@ def buildsp(autofill, out, verbose=False):
             uperrs = autofill['starID'][target][lbl+'_uperr'].copy()
             lowerrs = autofill['starID'][target][lbl+'_lowerr'].copy()
             refs = autofill['starID'][target][lbl+'_ref'].copy()
-            value,uperr,lowerr,ref = bestValue(values,uperrs,lowerrs,refs,lbl,
-                                               bestref,bestpubIndices['star'])
+
+            value,uperr,lowerr,ref = bestValue(
+                values,uperrs,lowerrs,refs,lbl,
+                bestref,bestpubIndices['star'],
+                maximizeSelfConsistency=runtime_params.maximizeSelfConsistency,
+                selectMostRecent=runtime_params.selectMostRecent)
         except KeyError:
             value = ''
             uperr = ''

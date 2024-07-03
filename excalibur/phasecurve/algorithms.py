@@ -41,7 +41,7 @@ class pcnormalization(dawgie.Algorithm):
         self.__tme = datalg.timing()
         self.__rt = rtalg.autofill()
         self.__fin = sysalg.finalize()
-        self.__out = [phcstates.NormSV(ext) for ext in fltrs]
+        self.__out = [phcstates.NormSV(fltr) for fltr in fltrs]
         return
 
     def name(self):
@@ -57,25 +57,29 @@ class pcnormalization(dawgie.Algorithm):
         return self.__out
 
     def run(self, ds, ps):
-        svupdate = []
+
         vfin, sfin = trncore.checksv(self.__fin.sv_as_dict()['parameters'])
-        for ext in fltrs:
+
+        svupdate = []
+        for fltr in self.__rt.sv_as_dict()['status']['allowed_filter_names']:
+            # stop here if it is not a runtime target
+            self.__rt.proceed(fltr)
+
             update = False
-            vcal, scal = trncore.checksv(self.__cal.sv_as_dict()[ext])
-            vtme, stme = trncore.checksv(self.__tme.sv_as_dict()[ext])
-            self.__rt.proceed(ext)
+            vcal, scal = trncore.checksv(self.__cal.sv_as_dict()[fltr])
+            vtme, stme = trncore.checksv(self.__tme.sv_as_dict()[fltr])
             if vcal and vtme and vfin:
-                log.warning('--< %s NORMALIZATION: %s >--', self._type.upper(), ext)
-                update = self._norm(self.__cal.sv_as_dict()[ext],
-                                    self.__tme.sv_as_dict()[ext],
+                log.warning('--< %s NORMALIZATION: %s >--', self._type.upper(), fltr)
+                update = self._norm(self.__cal.sv_as_dict()[fltr],
+                                    self.__tme.sv_as_dict()[fltr],
                                     self.__fin.sv_as_dict()['parameters'],
-                                    fltrs.index(ext))
+                                    fltrs.index(fltr))
                 pass
             else:
                 errstr = [m for m in [scal, stme, sfin] if m is not None]
                 self._failure(errstr[0])
                 pass
-            if update: svupdate.append(self.__out[fltrs.index(ext)])
+            if update: svupdate.append(self.__out[fltrs.index(fltr)])
             pass
         self.__out = svupdate
         if self.__out: ds.update()
@@ -106,7 +110,7 @@ class pcwhitelight(dawgie.Algorithm):
         self._nrm = nrm
         self.__rt = rtalg.autofill()
         self.__fin = sysalg.finalize()
-        self.__out = [phcstates.WhiteLightSV(ext) for ext in fltrs]
+        self.__out = [phcstates.WhiteLightSV(fltr) for fltr in fltrs]
         return
 
     def name(self):
@@ -121,17 +125,21 @@ class pcwhitelight(dawgie.Algorithm):
         return self.__out
 
     def run(self, ds, ps):
-        svupdate = []
+
         fin = self.__fin.sv_as_dict()['parameters']
         vfin, sfin = trncore.checksv(fin)
-        for ext in fltrs:
+
+        svupdate = []
+        for fltr in self.__rt.sv_as_dict()['status']['allowed_filter_names']:
+            # stop here if it is not a runtime target
+            self.__rt.proceed(fltr)
+
             update = False
-            index = fltrs.index(ext)
-            nrm = self._nrm.sv_as_dict()[ext]
+            index = fltrs.index(fltr)
+            nrm = self._nrm.sv_as_dict()[fltr]
             vnrm, snrm = trncore.checksv(nrm)
-            self.__rt.proceed(ext)
             if vnrm and vfin:
-                log.warning('--< %s WHITE LIGHT: %s >--', self._type.upper(), ext)
+                log.warning('--< %s WHITE LIGHT: %s >--', self._type.upper(), fltr)
                 update = self._whitelight(nrm, fin, self.__out[index], index)
                 pass
             else:

@@ -11,6 +11,8 @@ import excalibur.ancillary as anc
 import excalibur.ancillary.core as anccore
 import excalibur.ancillary.states as ancstates
 
+import excalibur.runtime.algorithms as rtalg
+
 import excalibur.system as sys
 import excalibur.system.algorithms as sysalg
 
@@ -26,6 +28,7 @@ class estimate(dawgie.Algorithm):
         '''__init__ ds'''
         self._version_ = anccore.estimateversion()
         self._type = 'ancillary'
+        self.__rt = rtalg.autofill()
         self.__fin = sysalg.finalize()
         self.__out = [ancstates.EstimateSV('parameters')]
         return
@@ -36,7 +39,8 @@ class estimate(dawgie.Algorithm):
 
     def previous(self):
         '''previous ds'''
-        return [dawgie.ALG_REF(sys.task, self.__fin)]
+        return [dawgie.ALG_REF(sys.task, self.__fin)] + \
+                self.__rt.refs_for_validity()
 
     def state_vectors(self):
         '''state_vectors ds'''
@@ -44,6 +48,10 @@ class estimate(dawgie.Algorithm):
 
     def run(self, ds, ps):
         '''run ds'''
+
+        # stop here if it is not a runtime target
+        self.__rt.is_valid()
+
         update = False
         vfin, _ = anccore.checksv(self.__fin.sv_as_dict()['parameters'])
         if vfin:

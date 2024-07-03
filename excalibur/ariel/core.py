@@ -42,7 +42,7 @@ def checksv(sv):
     return valid, errstring
 # ----------------- --------------------------------------------------
 # -- SIMULATE ARIEL SPECTRA ------------------------------------------
-def simulate_spectra(target, system_dict, out):
+def simulate_spectra(target, system_dict, runtime_params, out):
     '''
     Simulate Ariel spectra, adding noise based on the Ariel instrument model
     Mulitple spectra are now calculated, allowing a choice within cerberus.atmos fitting
@@ -51,15 +51,10 @@ def simulate_spectra(target, system_dict, out):
     3) two models for metallicity/mmw (mmw=2.3 or FINESSE mass-metallicity relation)
     4) TEC vs DISEQ models [NOT IMPLEMENTED YET!]
     '''
+    # print(runtime_params)
+    # print('metallicity dispersion?',runtime_params.includeMetallicityDispersion)
 
     sscmks = syscore.ssconstants(mks=True)
-
-    # ** two key parameters for adjusting the instrument noise model **
-    # no longer necessary; Ariel-rad already does these two steps
-    # noise_factor = 1./0.7
-    # noise_floor_ppm = 50.
-
-    randomCloudProperties = True  # use the median from Estrella 2022 or a random selection?
 
     observing_plan = make_tier_table()
 
@@ -179,19 +174,20 @@ def simulate_spectra(target, system_dict, out):
                 # planet metallicity should be defined relative to the stellar metallicity
                 metallicity_star_dex = system_params['FEH*']
                 M_p = model_params['Mp']
-                includeMetallicityDispersion = True
-                if includeMetallicityDispersion:
+                if runtime_params.includeMetallicityDispersion:
                     # make sure that the random mass is fixed for each target planet
                     np.random.seed(intFromTarget + 1234)
-                    metallicity_planet_dex = massMetalRelationDisp(metallicity_star_dex, M_p,
-                                                                   thorngren=True)
+                    metallicity_planet_dex = massMetalRelationDisp(
+                        metallicity_star_dex, M_p,
+                        thorngren=runtime_params.thorgrenMassMetals)
                 else:
-                    metallicity_planet_dex = massMetalRelation(metallicity_star_dex, M_p,
-                                                               thorngren=True)
+                    metallicity_planet_dex = massMetalRelation(
+                        metallicity_star_dex, M_p,
+                        thorngren=runtime_params.thorgrenMassMetals)
                 # print('metallicity_star_dex',metallicity_star_dex)
                 # print('metallicity_planet_dex',metallicity_planet_dex)
                 # metallicity_planet_dex_nonrandom = massMetalRelation(metallicity_star_dex, M_p,
-                #                                                     thorngren=True)
+                #              thorngren=runtime_params.thorgrenMassMetals)
                 # print('metallicity_planet_dex (non random)',metallicity_planet_dex_nonrandom)
                 # print('planet mass',M_p)
 
@@ -266,7 +262,8 @@ def simulate_spectra(target, system_dict, out):
                             # model_params['HLoc'] = 0.
                             # model_params['HThick'] = 0.
 
-                            if randomCloudProperties:
+                            # use the median from Estrella 2022 or a random selection?
+                            if runtime_params.randomCloudProperties:
                                 # make sure that random cloud properties are fixed between runs
                                 np.random.seed(intFromTarget + 123456)
                                 cloudParams = randomCloudParameters()
@@ -303,10 +300,6 @@ def simulate_spectra(target, system_dict, out):
                                 existingPlanetLetter = list(xslib['data'].keys())[-1]
                                 # print('existingPlanetLetter',existingPlanetLetter)
                                 xslib['data'][planetLetter] = xslib['data'][existingPlanetLetter]
-                        # print('xslib check',xslib.keys())
-                        # print('xslib status',xslib['STATUS'])
-                        # print('xslib data keys:',xslib['data'].keys())
-                        # print('xslib data keys:',list(xslib['data'].keys())[-1])
 
                         cerbModel, cerbModel_by_molecule = makeCerberusAtmos(
                             wavelength_um, model_params, xslib, planetLetter, Hsmax=20)
@@ -503,15 +496,11 @@ def simulate_spectra(target, system_dict, out):
 
                     # RID = int(os.environ.get('RUNID', None))
                     RID = os.environ.get('RUNID', None)
-                    # print('RID',RID)
                     if RID:
                         RID = f'{int(RID):03}'
                     else:
                         RID = '666'
-                    # print('RID',RID)
 
-                    # plotDir = excalibur.context['data_dir'] + f"/ariel/RID{RID:03i}"
-                    # plotDir = excalibur.context['data_dir'] + f"/ariel/RID{RID:03}"
                     plotDir = excalibur.context['data_dir'] + '/ariel/RID' + RID
                     if not os.path.exists(plotDir): os.mkdir(plotDir)
 

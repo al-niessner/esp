@@ -14,6 +14,9 @@ class BoolValue(dawgie.Value):
         self.__state = bool(state)
         self._version_ = dawgie.VERSION(1,0,0)
         return
+    def __str__(self):
+        '''define the string format of this class'''
+        return str(self.__state)
     def features(self):
         '''contains no features'''
         return []

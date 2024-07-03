@@ -443,18 +443,20 @@ def atmosversion():
     '''
     return dawgie.VERSION(1,3,2)
 
-def atmos(fin, xsl, spc, out, ext,
+def atmos(fin, xsl, spc, runtime_params, out, ext,
           hazedir=os.path.join(excalibur.context['data_dir'], 'CERBERUS/HAZE'),
           singlemod=None, mclen=int(1e4), sphshell=False, verbose=False):
     '''
     G. ROUDIER: Cerberus retrieval
     '''
-    fitCloudParameters = True
-    # fitNtoO = True
-    fitNtoO = False
-    fitCtoO = True
-    fitT = True
-    am = False
+
+    fitCloudParameters = runtime_params.fitCloudParameters
+    fitT = runtime_params.fitT
+    fitCtoO = runtime_params.fitCtoO
+    fitNtoO = runtime_params.fitNtoO
+    # print('fit clouds, T, C/O, N/O',fitCloudParameters, fitT, fitCtoO, fitNtoO)
+
+    okfit = False
     orbp = fin['priors'].copy()
 
     ssc = syscore.ssconstants(mks=True)
@@ -503,6 +505,10 @@ def atmos(fin, xsl, spc, out, ext,
         modfam = ['TEC', 'PHOTOCHEM']
         modparlbl = {'TEC':['XtoH', 'CtoO', 'NtoO'],
                      'PHOTOCHEM':['HCN', 'CH4', 'C2H2', 'CO2', 'H2CO']}
+#        if not fitNtoO:
+#            modparlbl['TEC'].remove('NtoO')
+        if not fitCtoO:
+            modparlbl['TEC'].remove('CtoO')
 
     if (singlemod is not None) and (singlemod in modfam):
         modfam = [modfam[modfam.index(singlemod)]]
@@ -773,11 +779,13 @@ def atmos(fin, xsl, spc, out, ext,
                     modelpar = pm.Uniform(model, lower=dexRange[0], upper=dexRange[1],
                                           shape=numAbundanceParams)
                     nodes.append(modelpar)
+                    # print('setting fixed params.  fitNtoO',bool(fitNtoO))
                     if not fitNtoO:
                         fixedParams['NtoO'] = 0.
                     if not fitCtoO:
                         # print('model params',inputData['model_params'])
                         fixedParams['CtoO'] = inputData['model_params']['C/O']
+                    # print('fixedparams',fixedParams)
 
                     # before calling MCMC, save the fixed-parameter info in the context
                     ctxtupdt(cleanup=cleanup, model=model, p=p, solidr=solidr, orbp=orbp,
@@ -876,7 +884,6 @@ def atmos(fin, xsl, spc, out, ext,
                 out['data'][p][model]['MCTRACE'] = mctrace
 
                 out['data'][p][model]['prior_ranges'] = prior_ranges
-            # out['data'][p]['WAVELENGTH'] = np.array(spc['data'][p]['WB'])
             out['data'][p]['WAVELENGTH'] = np.array(inputData['WB'])
             out['data'][p]['SPECTRUM'] = np.array(inputData['ES'])
             out['data'][p]['ERRORS'] = np.array(inputData['ESerr'])
@@ -890,9 +897,9 @@ def atmos(fin, xsl, spc, out, ext,
                     # print('true modelparams in atmos:',inputData['model_params'])
             out['data'][p]['VALID'] = cleanup
             out['STATUS'].append(True)
-            am = True
+            okfit = True
             pass
-    return am
+    return okfit
 # ----------------------------------- --------------------------------
 # -- HAZE DENSITY PROFILE LIBRARY -- ---------------------------------
 def hazelib(sv,
@@ -1590,7 +1597,14 @@ def analysis(aspects, filt, out, verbose=False):
                                 lo = np.percentile(np.array(trace), 16)
                                 hi = np.percentile(np.array(trace), 84)
                                 fit_errors[key].append((hi-lo)/2)
-
+                                if verbose:
+                                    if key=='[N/O]':
+                                        print('N/O',trgt,np.median(trace),(hi-lo)/2)
+                                        if (hi-lo)/2 < 2:
+                                            print('  this one!!!!')
+                                            print()
+                                    else:
+                                        print('  else key',key)
                             if ('TRUTH_MODELPARAMS' in atmosFit['data'][planetLetter].keys()) and \
                                (isinstance(atmosFit['data'][planetLetter]['TRUTH_MODELPARAMS'], dict)):
                                 truth_params = atmosFit['data'][planetLetter]['TRUTH_MODELPARAMS'].keys()
@@ -1614,13 +1628,14 @@ def analysis(aspects, filt, out, verbose=False):
                                     else:
                                         truth_values[fitparam].append(true_value)
 
-                                    if trueparam=='Teq' and true_value > 3333:
-                                        print('strangely high T',trgt,true_value)
-                                    if trueparam=='metallicity' and true_value > 66:
-                                        print('strangely high [X/H]',trgt,true_value)
-                                        print('atmosFit',atmosFit['data'][planetLetter])
-                                    if trueparam=='C/O' and true_value > 0.5:
-                                        print('strangely high [C/O]',trgt,true_value)
+                                    if verbose:
+                                        if trueparam=='Teq' and true_value > 3333:
+                                            print('strangely high T',trgt,true_value)
+                                        if trueparam=='metallicity' and true_value > 66:
+                                            print('strangely high [X/H]',trgt,true_value)
+                                            print('atmosFit',atmosFit['data'][planetLetter])
+                                        if trueparam=='C/O' and true_value > 0.5:
+                                            print('strangely high [C/O]',trgt,true_value)
 
                                 elif trueparam=='Mp':
                                     # if the planet mass is not in the Truth dictionary, pull it from system

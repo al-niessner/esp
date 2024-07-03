@@ -1,6 +1,7 @@
 '''system algorithms ds'''
 # -- IMPORTS -- ------------------------------------------------------
 import logging; log = logging.getLogger(__name__)
+from collections import namedtuple
 
 import dawgie
 
@@ -48,24 +49,35 @@ class validate(dawgie.Algorithm):
 
     def run(self, ds, ps):
         '''Top level algorithm call'''
-        update = False
+
+        # stop here if it is not a runtime target
+        self.__rt.is_valid()
+
         autofill = self.__autofill.sv_as_dict()['parameters']
+        runtime = self.__rt.sv_as_dict()['status']
+
+        system_params = namedtuple('system_params_from_runtime',[
+            'maximizeSelfConsistency',
+            'selectMostRecent'])
+        runtime_params = system_params(
+            maximizeSelfConsistency=True,
+            selectMostRecent=runtime['target_autofill_selectMostRecent'])
+
+        update = False
         valid, errstring = syscore.checksv(autofill)
-        prcd = self.__rt.is_valid()
-        if valid and prcd:
-            update = self._validate(autofill, self.__out)
+        if valid:
+            update = self._validate(autofill, runtime_params, self.__out)
         else:
-            if not prcd: errstring = ['Not a valid target']
             self._failure(errstring)
         if update: ds.update()
-        elif valid and prcd: raise dawgie.NoValidOutputDataError(
+        elif valid: raise dawgie.NoValidOutputDataError(
                 f'No output created for SYSTEM.{self.name()}')
         return
 
     @staticmethod
-    def _validate(autofill, out):
+    def _validate(autofill, runtime_params, out):
         '''Core code call'''
-        afilled = syscore.buildsp(autofill, out)
+        afilled = syscore.buildsp(autofill, runtime_params, out)
         return afilled
 
     @staticmethod
@@ -101,11 +113,13 @@ class finalize(dawgie.Algorithm):
     def run(self, ds, ps):
         '''Top level algorithm call'''
 
+        # stop here if it is not a runtime target
+        self.__rt.is_valid()
+
         update = False
         val = self.__val.sv_as_dict()['parameters']
         valid, errstring = syscore.checksv(val)
-        prcd = self.__rt.is_valid()
-        if valid and prcd:
+        if valid:
             overwrite = sysoverwriter.ppar()
             for key in val: self.__out[key] = val.copy()[key]
             # FIXMEE: this use of protected-access will be going away
@@ -140,11 +154,10 @@ class finalize(dawgie.Algorithm):
             log.warning('>-- AUTOFILL: %s %s', target, str(self.__out['autofill']))
             pass
         else:
-            if not prcd: errstring = ['Not a valid target']
             self._failure(errstring)
 
         if update: ds.update()
-        elif valid and prcd: raise dawgie.NoValidOutputDataError(
+        elif valid: raise dawgie.NoValidOutputDataError(
                 f'No output created for SYSTEM.{self.name()}')
         return
 

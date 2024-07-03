@@ -59,29 +59,32 @@ def collect(name, scrape, out):
     G. ROUDIER: Filters data from target.scrape.databases according to active filters
     '''
     collected = False
-    obs, ins, det, fil, mod = name.split('-')
-    for rootname in scrape['name'].keys():
-        ok = scrape['name'][rootname]['observatory'] in [obs.strip()]
-        ok = ok and (scrape['name'][rootname]['instrument'] in [ins.strip()])
-        ok = ok and (det.strip() in scrape['name'][rootname]['detector'])
-        ok = ok and (scrape['name'][rootname]['filter'] in [fil.strip()])
-        ok = ok and (scrape['name'][rootname]['mode'] in [mod.strip()])
-        if ok:
-            out['activefilters'][name]['ROOTNAME'].append(rootname)
-            loc = scrape['name'][rootname]['md5']+'_'+scrape['name'][rootname]['sha']
-            out['activefilters'][name]['LOC'].append(loc)
-            out['activefilters'][name]['TOTAL'].append(True)
-            collected = True
+    if name.split('-')[1]=='sim':  # for simulated instrument, there is no data to collect
+        pass
+    else:
+        obs, ins, det, fil, mod = name.split('-')
+        for rootname in scrape['name'].keys():
+            ok = scrape['name'][rootname]['observatory'] in [obs.strip()]
+            ok = ok and (scrape['name'][rootname]['instrument'] in [ins.strip()])
+            ok = ok and (det.strip() in scrape['name'][rootname]['detector'])
+            ok = ok and (scrape['name'][rootname]['filter'] in [fil.strip()])
+            ok = ok and (scrape['name'][rootname]['mode'] in [mod.strip()])
+            if ok:
+                out['activefilters'][name]['ROOTNAME'].append(rootname)
+                loc = scrape['name'][rootname]['md5']+'_'+scrape['name'][rootname]['sha']
+                out['activefilters'][name]['LOC'].append(loc)
+                out['activefilters'][name]['TOTAL'].append(True)
+                collected = True
+                pass
             pass
         pass
     if collected:
-        log.warning('>-- %s', str(int(np.sum(out['activefilters'][name]['TOTAL']))))
+        log.warning('--< DATA COLLECT: %s in %s >--',
+                    str(int(np.sum(out['activefilters'][name]['TOTAL']))), name)
         out['STATUS'].append(True)
-        pass
     else:
-        log.warning('>-- NO DATA')
+        log.warning('--< DATA COLLECT: NO DATA in %s >--', name)
         out['activefilters'].pop(name, None)
-        pass
     return collected
 # ------------------ -------------------------------------------------
 # -- TIMING -- -------------------------------------------------------

@@ -1,11 +1,13 @@
 '''ariel algorithms ds'''
 # -- IMPORTS -- ------------------------------------------------------
 import logging; log = logging.getLogger(__name__)
+from collections import namedtuple
 
 import dawgie
 
 import excalibur.ariel.core as arielcore
 import excalibur.ariel.states as arielstates
+import excalibur.runtime as rtime
 import excalibur.runtime.algorithms as rtalg
 import excalibur.system as sys
 import excalibur.system.algorithms as sysalg
@@ -30,8 +32,10 @@ class sim_spectrum(dawgie.Algorithm):
 
     def previous(self):
         '''Input State Vectors: system.finalize'''
-        return [dawgie.ALG_REF(sys.task, self.__system_finalize)] + \
-               self.__rt.refs_for_proceed()
+        return [dawgie.ALG_REF(sys.task, self.__system_finalize),
+                dawgie.V_REF(rtime.task, self.__rt, self.__rt.sv_as_dict()['status'],
+                             'includeMetallicityDispersion')] + \
+               self.__rt.refs_for_validity()
 
     def state_vectors(self):
         '''Output State Vectors: ariel.sim_spectrum'''
@@ -41,13 +45,27 @@ class sim_spectrum(dawgie.Algorithm):
         '''Top level algorithm call'''
         update = False
         arielcore.init()
-        self.__rt.proceed()
+
+        # stop here if it is not a runtime target
+        self.__rt.is_valid()
+
         system_dict = self.__system_finalize.sv_as_dict()['parameters']
         valid, errstring = arielcore.checksv(system_dict)
         if valid:
+            runtime = self.__rt.sv_as_dict()['status']
+            ariel_params = namedtuple('ariel_params_from_runtime',[
+                'randomCloudProperties',
+                'thorgrenMassMetals',
+                'includeMetallicityDispersion'])
+            runtime_params = ariel_params(
+                randomCloudProperties=True,
+                thorgrenMassMetals=True,
+                includeMetallicityDispersion=runtime[
+                    'ariel_simulate_spectra_includeMetallicityDispersion'])
+
             # FIXMEE: should not need target name and core needs to be changed
             update = self._simSpectrum(ds._tn(),  # pylint: disable=protected-access
-                                       system_dict, self.__out)
+                                       system_dict, runtime_params, self.__out)
         else:
             self._failure(errstring)
         if update:
@@ -57,9 +75,9 @@ class sim_spectrum(dawgie.Algorithm):
         return
 
     @staticmethod
-    def _simSpectrum(target, system_dict, out):
+    def _simSpectrum(target, system_dict, runtime_params, out):
         '''Core code call'''
-        filled = arielcore.simulate_spectra(target, system_dict, out)
+        filled = arielcore.simulate_spectra(target, system_dict, runtime_params, out)
         return filled
 
     @staticmethod

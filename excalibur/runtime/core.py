@@ -43,10 +43,11 @@ def isolate(sv:{}, table:{str:{}}, tn:str)->None:
     default = pymc['default'].value()
     sv['cerberus_steps'] = sv['cerberus_steps'].new(pymc['overrides'].get
                                                     (tn, default))
-    sv['isValidTarget'] = sv['isValidTarget'].new(tn not in table
-                                                  ['sequester']['targets'])
+    sv['isValidTarget'] = sv['isValidTarget'].new(tn not in [
+        targetandreason[0] for targetandreason in table['sequester']['targets']])
     if table['run_only']['targets']:
-        sv['runTarget'] = sv['runTarget'].new(tn in table['run_only']['targets'])
+        sv['runTarget'] = sv['runTarget'].new(tn in [
+            targetandreason[0] for targetandreason in table['run_only']['targets']])
     pymc = table['pymc-spectrum']
     default = pymc['default'].value()
     sv['spectrum_steps'] = sv['spectrum_steps'].new(pymc['overrides'].get

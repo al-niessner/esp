@@ -121,7 +121,10 @@ def fillUncertainty(param,param_value,param_uncertainty,error_type):
     return fillvalue,autofilled
 # ----------------- --------------------------------------------------
 # -- SELECT THE BEST PARAMETER VALUE FROM VARIOUS ARCHIVE VALUES -----
-def bestValue(values,uperrs,lowerrs,refs,lbl,bestref,bestpubIndex,verbose=False):
+def bestValue(values,uperrs,lowerrs,refs,lbl,bestref,bestpubIndex,
+              maximizeSelfConsistency=True,
+              selectMostRecent=False,
+              verbose=False):
     '''
     From a list of parameter values, determine the most trustworthy value
     There are three options here:
@@ -130,11 +133,8 @@ def bestValue(values,uperrs,lowerrs,refs,lbl,bestref,bestpubIndex,verbose=False)
     3) use the publication that can fill in needed params self-consistently
     '''
 
-    maximizeSelfConsistency = True
-
-    selectMostRecent = lbl in ('period', 't0')
-    # turn off the new period/T0 selection, to see how much effect it has
-    selectMostRecent = False
+    # option to select the most recent publication for period and T0
+    if selectMostRecent: selectMostRecent = lbl in ('period', 't0')
 
     if maximizeSelfConsistency:
         # push the best values into the default index ([0])

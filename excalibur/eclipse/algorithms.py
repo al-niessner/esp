@@ -7,15 +7,10 @@ import logging; log = logging.getLogger(__name__)
 
 import excalibur.eclipse as ecl
 
-import excalibur.runtime.binding as rtbind
 import excalibur.system as sys
 import excalibur.transit.algorithms as trnalg
 import excalibur.transit.core as trncore
 
-# ------------- ------------------------------------------------------
-# -- ALGO RUN OPTIONS -- ---------------------------------------------
-# FILTERS
-fltrs = [str(fn) for fn in rtbind.filter_names.values()]
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 # ECLIPSE CLASSES INHERIT FROM TRANSIT CLASSES

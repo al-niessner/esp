@@ -44,7 +44,7 @@ class autofill(dawgie.Algorithm):
         # avoid circular dependency
         import excalibur.runtime  # pylint: disable=import-outside-toplevel
         return [dawgie.V_REF(excalibur.runtime.task, self,
-                             self.__status,'allowed_exts'),
+                             self.__status,'allowed_filter_names'),
                 dawgie.V_REF(excalibur.runtime.task, self,
                              self.__status,'isValidTarget'),
                 dawgie.V_REF(excalibur.runtime.task, self,
