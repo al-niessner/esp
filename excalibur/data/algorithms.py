@@ -62,10 +62,8 @@ class collect(dawgie.Algorithm):
         valid, errstring = datcore.checksv(scrape)
         if valid:
             for key in create['filters'].keys(): self.__out[key] = create['filters'][key]
+            # 7/2/24 we want to collect all filters, so don't use proceed(fltr) here
             # for fltr in self.__rt.sv_as_dict()['status']['allowed_filter_names']:
-            #    # stop here if it is not a runtime target
-            #    self.__rt.proceed(fltr)
-            # 7/2/24 we probably want to collect all filters. let's try it out
             for fltr in fltrs:
                 ok = self._collect(fltr, scrape, self.__out)
                 update = update or ok
@@ -83,7 +81,7 @@ class collect(dawgie.Algorithm):
     @staticmethod
     def _collect(fltr, scrape, out):
         '''Core code call'''
-        # log.warning('--< DATA COLLECT: %s >--', fltr)
+        log.warning('--< DATA COLLECT: %s >--', fltr)
         collected = datcore.collect(fltr, scrape, out)
         return collected
 

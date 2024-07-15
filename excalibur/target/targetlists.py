@@ -23,6 +23,8 @@ def get_target_lists():
         'active': targetlist_active(),
         'roudier62': targetlist_roudier62(),
         'G141': targetlist_G141(),
+        'JWST': targetlist_JWST(),
+        'Spitzer': targetlist_Spitzer(),
         'arielMCS_Nov2023_transit': targetlist_ArielMCSknown('Nov2023',transitCategoryOnly=True),
         'arielMCS_Nov2023_maxVisits25': targetlist_ArielMCSknown('Nov2023',maxVisits=25),
         'arielMCS_Feb2024_transit': targetlist_ArielMCSknown('Feb2024',transitCategoryOnly=True),
@@ -954,6 +956,7 @@ def targetlist_G141():
     targets = [
         '55 Cnc',
         'AU Mic',
+        'CoRoT-1',  # STARE, not SCAN
         'GJ 1132',
         'GJ 1214',
         'GJ 3053',
@@ -993,6 +996,8 @@ def targetlist_G141():
         'KELT-20',
         'KELT-7',
         'KELT-9',
+        'Kepler-11',  # STARE, not SCAN
+        'Kepler-13',  # STARE, not SCAN
         'Kepler-138',
         'Kepler-16',
         # 'Kepler-1625',  # G141 is STARE only, not SCAN
@@ -1006,9 +1011,13 @@ def targetlist_G141():
         # 'TIC 184892124',  # G141 is STARE only, not SCAN
         'TOI-1201',
         'TOI-1231',
+        'TOI-1759',
         'TOI-270',
+        'TOI-431',
+        'TOI-561',
         'TOI-674',
         'TRAPPIST-1',
+        'TrES-4',  # STARE, not SCAN
         'V1298 Tau',
         'WASP-101',
         'WASP-103',
@@ -1043,6 +1052,261 @@ def targetlist_G141():
         'XO-2',
         'HAT-P-14',
         'HD 86226']
+
+    return targets
+
+# --------------------------------------------------------------------
+def targetlist_JWST():
+    '''
+    all targets with JWST spectra.  currently XX stars
+    '''
+
+    targets = [
+        # '55 Cnc',
+        # 'GJ 1214',
+        'CoRoT-5',
+        'GJ 357',
+        'GJ 367',
+        'GJ 4102',
+        'GJ 4332',
+        'GJ 486',
+        'HAT-P-14',
+        'HAT-P-24',
+        'HAT-P-70',
+        'HATS-72',
+        'HD 15337',
+        'HD 191939',
+        'HD 260655',
+        'HD 80606',
+        'HD 86226',
+        'HIP 67522',
+        'K2-33',
+        'KELT-9',
+        'Kepler-138',
+        'Kepler-293',
+        'Kepler-444',
+        'Kepler-51',
+        'L 98-59',
+        'LP 791-18',
+        'LTT 1445 A',
+        'LTT 5972',
+        'LTT 9779',
+        'NGTS-10',
+        'TOI-270',
+        'TOI-776',
+        'TOI-3714',
+        'WASP-107',
+        'WASP-117',
+        'WASP-163',
+        'WASP-166',
+        'WASP-178',
+        'WASP-25',
+        'WASP-54',
+        'WASP-98',
+        'GJ 486',   # NIRSPEC data.timing
+        'GJ 1132',  # NIRSPEC data.timing
+        'WASP-19',  # NIRISS data.timing
+        'WASP-39',  # NIRISS data.timing
+    ]
+
+    return targets
+
+# --------------------------------------------------------------------
+
+def targetlist_Spitzer():
+    '''
+    all targets with Spitzer lightcurves.  currently 187 stars
+    '''
+
+    targets = [
+        '55 Cnc',
+        'AU Mic',
+        'CoRoT-2',
+        'CoRoT-5',  # new
+        'DS Tuc A',
+        'GJ 1132',
+        'GJ 1214',
+        'GJ 1252',
+        'GJ 3053',
+        'GJ 3470',
+        'GJ 357',  # new
+        'GJ 367',  # new
+        'GJ 4332',  # new
+        'GJ 436',
+        'GJ 486',  # new
+        'GJ 4102',  # new
+        'GJ 9827',
+        'HAT-P-1',
+        'HAT-P-11',
+        'HAT-P-12',
+        'HAT-P-13',
+        'HAT-P-14',  # new
+        'HAT-P-15',
+        'HAT-P-17',
+        'HAT-P-18',
+        'HAT-P-19',
+        'HAT-P-2',
+        'HAT-P-20',
+        'HAT-P-22',
+        'HAT-P-23',
+        'HAT-P-24',  # new
+        'HAT-P-26',
+        'HAT-P-3',
+        'HAT-P-30',
+        'HAT-P-32',
+        'HAT-P-33',
+        'HAT-P-34',
+        'HAT-P-38',
+        'HAT-P-40',
+        'HAT-P-41',
+        'HAT-P-6',
+        'HAT-P-7',
+        'HAT-P-70',  # new
+        'HAT-P-8',
+        'HATS-3',
+        'HATS-7',
+        'HATS-72',  # new
+        'HD 15337',  # new
+        'HD 106315',
+        'HD 149026',
+        'HD 189733',
+        'HD 191939',  # new
+        'HD 202772 A',
+        'HD 260655',  # new
+        'HD 209458',
+        'HD 213885',
+        'HD 219134',
+        'HD 219666',
+        'HD 23472',
+        'HD 80606',  # new
+        'HD 86226',  # new
+        'HD 97658',
+        'HIP 67522',  # new
+        'HIP 116454',  # new
+        'HR 858',
+        'K2-132',
+        'K2-136',
+        'K2-138',
+        'K2-141',
+        'K2-167',
+        'K2-174',
+        'K2-18',
+        'K2-19',
+        'K2-21',
+        'K2-212',
+        'K2-24',
+        'K2-25',
+        'K2-28',
+        'K2-3',
+        'K2-32',
+        'K2-33',
+        'K2-79',
+        'K2-96',
+        'K2-97',
+        'KELT-1',
+        'KELT-11',
+        'KELT-14',
+        'KELT-16',
+        'KELT-2 A',
+        'KELT-20',
+        'KELT-3',
+        'KELT-7',
+        'KELT-9',
+        'Kepler-138',
+        'Kepler-1485',
+        'Kepler-18',
+        'Kepler-293',  # new
+        'Kepler-32',
+        'Kepler-37',
+        'Kepler-444',  # new
+        'Kepler-45',
+        'Kepler-68',
+        'Kepler-9',
+        'Kepler-93',
+        'LHS 1140',
+        'LHS 3844',
+        'L 98-59',  # new
+        'LP 791-18',
+        'LTT 1445 A',  # new
+        'MASCARA-1',
+        'Qatar-1',
+        'Qatar-2',
+        'TOI-270',
+        'TOI-700',
+        'TOI-776',  # new
+        'TRAPPIST-1',
+        'TrES-2',
+        'TrES-3',
+        'V1298 Tau',
+        'WASP-1',
+        'WASP-10',
+        'WASP-100',
+        'WASP-101',
+        'WASP-104',
+        'WASP-107',
+        'WASP-11',
+        'WASP-117',  # new
+        'WASP-12',
+        'WASP-121',
+        'WASP-127',
+        'WASP-13',
+        'WASP-131',
+        'WASP-14',
+        'WASP-140',
+        'WASP-15',
+        'WASP-16',
+        'WASP-163',  # new
+        'WASP-166',  # new
+        'WASP-178',  # new
+        'WASP-17',
+        'WASP-18',
+        'WASP-19',
+        'WASP-21',
+        'WASP-25',  # new
+        'WASP-29',
+        'WASP-3',
+        'WASP-31',
+        'WASP-33',
+        'WASP-34',
+        'WASP-36',
+        'WASP-38',
+        'WASP-39',
+        'WASP-4',
+        'WASP-43',
+        'WASP-46',
+        'WASP-49',
+        'WASP-50',
+        'WASP-52',
+        'WASP-54',  # new
+        'WASP-6',
+        'WASP-62',
+        'WASP-63',
+        'WASP-64',
+        'WASP-65',
+        'WASP-67',
+        'WASP-69',
+        'WASP-7',
+        'WASP-72',
+        'WASP-74',
+        'WASP-75',  # new
+        'WASP-76',
+        'WASP-77',
+        'WASP-78',
+        'WASP-79',
+        'WASP-8',
+        'WASP-80',
+        'WASP-87',
+        'WASP-94',
+        'WASP-95',
+        'WASP-96',
+        'WASP-97',
+        'WASP-98',  # new
+        'Wolf 503',
+        'XO-1',
+        'XO-2',
+        'XO-3',
+        'XO-4',
+    ]
 
     return targets
 

@@ -54,6 +54,203 @@ def rebinData(transitdata, binsize=4):
     return transitdata
 # --------------------------------------------------------------------
 # --------------------------------------------------------------------
+def plot_spectrumfit(transitdata,
+                     patmos_model, patmos_modelProfiled,
+                     patmos_bestfit, fmcarray,
+                     truth_spectrum,
+                     ancillary_data, atmos_data,
+                     filt, modelName, trgt, p, saveDir, savetodisk=False):
+    ''' plot the best fit to the data '''
+
+    # figure, ax = plt.subplots(figsize=(8,4))
+    figgy = plt.figure(figsize=(20,4))
+    # figgy = plt.figure(figsize=(8,4))
+    figgy.subplots_adjust(left=0.05,right=0.7,bottom=0.15,top=0.93,wspace=0.8)
+    # ax1 = plt.subplot(1,2,1)
+    plt.subplot(1,2,1)
+
+    # 1) plot the data
+    plt.errorbar(transitdata['wavelength'],
+                 transitdata['depth'] * 100,
+                 yerr=transitdata['error'] * 100,
+                 fmt='.', color='lightgray', zorder=1,
+                 label='raw data')
+    # 2) also plot the rebinned data points
+    plt.errorbar(transitdata['binned_wavelength'],
+                 transitdata['binned_depth'] * 100,
+                 yerr=transitdata['binned_error'] * 100,
+                 # fmt='o', color='k', markeredgecolor='k', markerfacecolor='w', zorder=5,
+                 # fmt='^', color='blue', zorder=5,
+                 # fmt='o', color='royalblue', zorder=5,
+                 fmt='o', markeredgecolor='k', color='None', ecolor='k', zorder=5,
+                 label='rebinned data')
+    # 3a) plot the best-fit model - old posterior-median method
+    plt.plot(transitdata['wavelength'],
+             patmos_modelProfiled * 100,
+             # c='k', lw=2, zorder=4,
+             c='orange', lw=2, ls='--', zorder=4,
+             label='best fit (old method)')
+    # 3b) plot the best-fit model - new random selection parameter-set checking
+    plt.plot(transitdata['wavelength'],
+             patmos_bestfit * 100,
+             # c='k', lw=2, zorder=4,
+             c='orange', lw=2, zorder=4,
+             label='best fit (new method)')
+    # 4) plot a selection of walkers, to see spread
+    xlims = plt.xlim()
+    ylims = plt.ylim()
+    # print('median pmodel',np.nanmedian(patmos_model))
+    for fmcexample in fmcarray:
+        patmos_modeli = fmcexample - np.nanmean(fmcexample) + \
+            np.nanmean(transitdata['depth'])
+        # print('median pmodel',np.nanmedian(patmos_model))
+        if np.sum(patmos_modeli)!=666:
+            plt.plot(transitdata['wavelength'],
+                     patmos_modeli * 100,
+                     c='grey', lw=0.2, zorder=2)
+    plt.ylim(ylims)  # revert to the original y-bounds, in case messed up
+    # 5) plot the true spectrum, if it is a simulation
+    if truth_spectrum is not None:
+        plt.plot(truth_spectrum['wavelength'], truth_spectrum['depth']*100,
+                 c='k', lw=1.5, zorder=3,
+                 # c='orange', lw=2, zorder=3,
+                 label='truth')
+
+    offsets_model = (patmos_model - transitdata['depth']) / transitdata['error']
+    offsets_modelProfiled = (patmos_modelProfiled - transitdata['depth']) / transitdata['error']
+
+    # the 'average' function (which allows for weights) doesn't have a NaN version,
+    #  so mask out any NaN regions by hand
+    okPart = np.where(np.isfinite(transitdata['depth']))
+    flatlineFit = np.average(transitdata['depth'][okPart],
+                             weights=1/transitdata['error'][okPart]**2)
+    # print('flatline average',flatlineFit)
+    offsets_flat = (flatlineFit - transitdata['depth']) / transitdata['error']
+    # print('median chi2, flat',np.nanmedian(offsets_flat**2))
+
+    chi2model = np.nansum(offsets_model**2)
+    chi2modelProfiled = np.nansum(offsets_modelProfiled**2)
+    chi2flat = np.nansum(offsets_flat**2)
+
+    numParam_model = 8
+    numParam_truth = 0
+    numParam_flat = 1
+
+    numPoints = len(patmos_model)
+    # print('numpoints',numPoints)
+    chi2model_red = chi2model / (numPoints - numParam_model)
+    chi2modelProfiled_red = chi2modelProfiled / (numPoints - numParam_model)
+    chi2flat_red = chi2flat / (numPoints - numParam_flat)
+
+    # add some labels off to the right side
+    xoffset = 0.03
+    if truth_spectrum is not None:
+        offsets_truth = (truth_spectrum['depth'] - transitdata['depth']) / transitdata['error']
+        chi2truth = np.nansum(offsets_truth**2)
+        chi2truth_red = chi2truth / (numPoints - numParam_truth)
+        plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.6,
+                 '$\\chi^2$-truth='+f"{chi2truth:5.2f}",fontsize=12)
+        plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.36,
+                 '$\\chi^2_{red}$-truth='+f"{chi2truth_red:5.2f}",fontsize=12)
+    if 'tier' in atmos_data:
+        plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*1.00,
+                 'Tier='+atmos_data['tier'],fontsize=12)
+        plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.93,
+                 '# of Visits='+atmos_data['visits'],fontsize=12)
+    plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.8,
+             'ZFOM='+f"{ancillary_data['ZFOM']:4.1f}"+'-'+
+             f"{ancillary_data['ZFOM_max']:4.1f}",fontsize=12)
+    plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.73,
+             'TSM='+f"{ancillary_data['TSM']:5.2f}",fontsize=12)
+    plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.53,
+             '$\\chi^2$-model='+f"{chi2modelProfiled:5.2f}",fontsize=12)
+    plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.46,
+             '$\\chi^2$-flat='+f"{chi2flat:5.2f}",fontsize=12)
+    plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.29,
+             '$\\chi^2_{red}$-model='+f"{chi2modelProfiled_red:5.2f}",fontsize=12)
+    plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.22,
+             '$\\chi^2_{red}$-flat='+f"{chi2flat_red:5.2f}",fontsize=12)
+    plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.12,
+             '$\\chi^2_{red}$(model/flat)='+f"{(chi2modelProfiled_red/chi2flat_red):5.2f}",fontsize=12)
+    plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.05,
+             '$\\Delta\\chi^2$(flat-model)='+f"{(chi2flat-chi2modelProfiled):5.1f}",fontsize=12)
+
+    if filt=='Ariel-sim':
+        plt.xlim(0,8)
+    plt.title(trgt+' '+p, fontsize=16)
+    plt.xlabel(str('Wavelength [$\\mu m$]'), fontsize=14)
+    plt.ylabel(str('$(R_p/R_*)^2$ [%]'), fontsize=14)
+    plt.legend()
+    # *** add the H scaling back in? ***
+    # if ('Hs' in spectrum_dict['data'][p]) and ('RSTAR' in spectrum_dict['data'][p]):
+    #    rp0hs = np.sqrt(np.nanmedian(transitdata['depth']))
+    #    Hs = atm[p]['Hs'][0]
+    #    # Retro compatibility for Hs in [m]
+    #    if Hs > 1: Hs = Hs/(fin[p]['RSTAR'][0])
+    #    ax2 = ax.twinx()
+    #    ax2.set_ylabel('$\\Delta$ [Hs]')
+    #    axmin, axmax = ax.get_ylim()
+    #    ax2.set_ylim((np.sqrt(1e-2*axmin) - rp0hs)/Hs, (np.sqrt(1e-2*axmax) - rp0hs)/Hs)
+
+    #  Plot the pre-profiled result off to the right, if there's been profiling
+    if np.any(patmos_model!=patmos_modelProfiled):
+        # ax2 = plt.subplot(1,2,2)
+        plt.subplot(1,2,2)
+
+        # 1) plot the data
+        plt.errorbar(transitdata['wavelength'],
+                     transitdata['depth'] * 100,
+                     yerr=transitdata['error'] * 100,
+                     fmt='.', color='lightgray', zorder=1,
+                     label='raw data')
+        # 2) also plot the rebinned data points
+        plt.errorbar(transitdata['binned_wavelength'],
+                     transitdata['binned_depth'] * 100,
+                     yerr=transitdata['binned_error'] * 100,
+                     fmt='o', markeredgecolor='k', color='None', ecolor='k', zorder=5,
+                     label='rebinned data')
+        # 3a) plot the best-fit model - old posterior-median method
+        plt.plot(transitdata['wavelength'],
+                 patmos_model * 100,
+                 c='orange', lw=2, ls='--', zorder=4,
+                 label='best fit (old method)')
+        # 3b) plot the best-fit model - new random selection parameter-set checking
+        plt.plot(transitdata['wavelength'],
+                 patmos_bestfit * 100,
+                 c='orange', lw=2, zorder=4,
+                 label='best fit (new method)')
+        xlims = plt.xlim()
+        ylims = plt.ylim()
+        plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.53,
+                 '$\\chi^2$-model='+f"{chi2model:5.2f}",fontsize=12)
+        plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.46,
+                 '$\\chi^2$-flat='+f"{chi2flat:5.2f}",fontsize=12)
+        plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.29,
+                 '$\\chi^2_{red}$-model='+f"{chi2model_red:5.2f}",fontsize=12)
+        plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.22,
+                 '$\\chi^2_{red}$-flat='+f"{chi2flat_red:5.2f}",fontsize=12)
+        plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.12,
+                 '$\\chi^2_{red}$(model/flat)='+f"{(chi2model_red/chi2flat_red):5.2f}",fontsize=12)
+        plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.05,
+                 '$\\Delta\\chi^2$(flat-model)='+f"{(chi2flat-chi2model):5.1f}",fontsize=12)
+        if filt=='Ariel-sim': plt.xlim(0,8)
+        plt.title(trgt+' '+p+' (no profiling)', fontsize=16)
+        plt.xlabel(str('Wavelength [$\\mu m$]'), fontsize=14)
+        plt.ylabel(str('$(R_p/R_*)^2$ [%]'), fontsize=14)
+        plt.legend()
+
+    # figgy.tight_layout()
+    # plt.show()
+    if savetodisk: plt.savefig(saveDir + 'bestFit_'+filt+'_'+modelName+'_'+trgt+' '+p+'.png')
+    # pdf is so much better, but xv gives error (stick with png for debugging)
+
+    # REDUNDANT SAVE - above saves to disk; below saves as state vector
+    buf = io.BytesIO()
+    figgy.savefig(buf, format='png')
+    save_to_state_vector = buf.getvalue()
+    # plt.close(figgy)
+    return save_to_state_vector, figgy
+# --------------------------------------------------------------------
 def plot_bestfit(transitdata, patmos_model, patmos_modelProfiled, fmcarray,
                  truth_spectrum,
                  ancillary_data, atmos_data,
@@ -239,16 +436,17 @@ def plot_bestfit(transitdata, patmos_model, patmos_modelProfiled, fmcarray,
     return save_to_state_vector, figgy
 # --------------------------------------------------------------------
 def plot_corner(allkeys, alltraces, profiletraces,
-                truth_params, prior_ranges,
+                paramValues_bestFit, truth_params, prior_ranges,
                 filt, modelName, trgt, p, saveDir, savetodisk=False):
     ''' corner plot showing posterior distributions '''
 
     truthcolor = 'darkgreen'
     fitcolor = 'firebrick'
 
-    mcmcMedian = np.nanmedian(np.array(alltraces), axis=1)
+    mcmcMedian = np.nanmedian(np.array(profiletraces), axis=1)
     # print(' params inside of corner plotting',allkeys)
     # print('medians inside of corner plotting',mcmcMedian)
+    # print('bestfit inside of corner plotting',paramValues_bestFit)
     lo = np.nanpercentile(np.array(alltraces), 16, axis=1)
     hi = np.nanpercentile(np.array(alltraces), 84, axis=1)
     # span = hi - lo
@@ -336,9 +534,12 @@ def plot_corner(allkeys, alltraces, profiletraces,
     for yi in range(ndim):
         for xi in range(yi):
             ax = axes[yi, xi]
-            ax.axvline(mcmcMedian[xi], color=fitcolor)
-            ax.axhline(mcmcMedian[yi], color=fitcolor)
-            ax.plot(mcmcMedian[xi], mcmcMedian[yi], marker='s', c=fitcolor)
+            # ax.axvline(mcmcMedian[xi], color=fitcolor)
+            # ax.axhline(mcmcMedian[yi], color=fitcolor)
+            # ax.plot(mcmcMedian[xi], mcmcMedian[yi], marker='s', c=fitcolor)
+            ax.axvline(paramValues_bestFit[xi], color=fitcolor)
+            ax.axhline(paramValues_bestFit[yi], color=fitcolor)
+            ax.plot(paramValues_bestFit[xi], paramValues_bestFit[yi], marker='s', c=fitcolor)
     for i in range(ndim):
         ax = axes[i, i]
         # draw light-colored vertical lines in each hisogram for the prior
@@ -355,7 +556,8 @@ def plot_corner(allkeys, alltraces, profiletraces,
         #  make the median fit a solid line
         #  and maybe change the color to match the central panels
         #  hmm, it's not covering up the dashed line; increase lw and maybe zorder
-        ax.axvline(mcmcMedian[i], color=fitcolor, lw=2, zorder=12)
+        # ax.axvline(mcmcMedian[i], color=fitcolor, lw=2, zorder=12)
+        ax.axvline(paramValues_bestFit[i], color=fitcolor, lw=2, zorder=12)
 
     if savetodisk: plt.savefig(saveDir + 'corner_'+filt+'_'+modelName+'_'+trgt+' '+p+'.png')
     # REDUNDANT SAVE - above saves to disk; below saves as state vector

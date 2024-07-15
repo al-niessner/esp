@@ -12,7 +12,7 @@ from excalibur.cerberus.forwardModel import \
     crbmodel, fmcerberus, spshfmcerberus, clearfmcerberus, offcerberus, \
     offcerberus1, offcerberus2, offcerberus3, offcerberus4, \
     offcerberus5, offcerberus6, offcerberus7, offcerberus8
-from excalibur.cerberus.plotting import rebinData, plot_bestfit, \
+from excalibur.cerberus.plotting import rebinData, plot_spectrumfit, \
     plot_corner, plot_vsPrior, plot_walkerEvolution, \
     plot_fitsVStruths, plot_fitUncertainties, plot_massVSmetals
 from excalibur.cerberus.bounds import setPriorBound, getProfileLimits_HSTG141, applyProfiling
@@ -29,8 +29,17 @@ import numpy as np
 import matplotlib.image as img
 import matplotlib.pyplot as plt
 from collections import defaultdict
+from collections import namedtuple
 
 from scipy.interpolate import interp1d as itp
+
+# does this really go here? CIcheck needs it back in algorithms
+CERB_PARAMS = namedtuple('cerberus_params_from_runtime',[
+    'MCMC_chain_length',
+    'fitCloudParameters',
+    'fitT',
+    'fitCtoO',
+    'fitNtoO'])
 
 # ------------- ------------------------------------------------------
 # -- SV VALIDITY -- --------------------------------------------------
@@ -450,11 +459,8 @@ def atmos(fin, xsl, spc, runtime_params, out, ext,
     G. ROUDIER: Cerberus retrieval
     '''
 
-    fitCloudParameters = runtime_params.fitCloudParameters
-    fitT = runtime_params.fitT
-    fitCtoO = runtime_params.fitCtoO
-    fitNtoO = runtime_params.fitNtoO
-    # print('fit clouds, T, C/O, N/O',fitCloudParameters, fitT, fitCtoO, fitNtoO)
+    # print('fit clouds, T, C/O, N/O',runtime_params.fitCloudParameters
+    #   runtime_params.fitT, runtime_params.fitCtoO, runtime_params.fitNtoO)
 
     okfit = False
     orbp = fin['priors'].copy()
@@ -477,27 +483,23 @@ def atmos(fin, xsl, spc, runtime_params, out, ext,
         # arielModel = 'taurex'
 
         # if the ariel sim doesn't have clouds, then don't fit the clouds
-        fitCloudParameters = 'Noclouds' not in arielModel
+        # fitCloudParameters = 'Noclouds' not in arielModel
         #  OR
         # don't fit the 4 cloud parameters, even if the model has clouds
         # fitCloudParameters = False
         #  OR
         # do fit the 4 cloud parameters, even if the model doesn't have cloud
-        fitCloudParameters = True
+        # fitCloudParameters = True
 
-        # let's fix N/O; one less param to worry about
-        # fitNtoO = False
-        if not fitNtoO:
+        # option to fix N/O
+        if not runtime_params.fitNtoO:
             modparlbl = {'TEC':['XtoH', 'CtoO']}
-        # let's fix C/O, to see if this parameter is the problem
-        # fitCtoO = False
-        if not fitCtoO:
+        # option to fix C/O
+        if not runtime_params.fitCtoO:
             modparlbl = {'TEC':['XtoH']}
-        # maybe fix the planet temperature?
-        # fitT = False  # not tested yet
 
         # print('name of the forward model:',arielModel)
-        # print('fitCloudParameters for retrieved model:',fitCloudParameters)
+        # print('fitCloudParameters for retrieved model:',runtime_params.fitCloudParameters)
         # print('available models',spc['data']['models'])
         if arielModel not in spc['data']['models']:
             log.warning('--< BIG PROB: ariel model doesnt exist!!! >--')
@@ -505,9 +507,9 @@ def atmos(fin, xsl, spc, runtime_params, out, ext,
         modfam = ['TEC', 'PHOTOCHEM']
         modparlbl = {'TEC':['XtoH', 'CtoO', 'NtoO'],
                      'PHOTOCHEM':['HCN', 'CH4', 'C2H2', 'CO2', 'H2CO']}
-#        if not fitNtoO:
-#            modparlbl['TEC'].remove('NtoO')
-        if not fitCtoO:
+        if not runtime_params.fitNtoO:
+            modparlbl['TEC'].remove('NtoO')
+        if not runtime_params.fitCtoO:
             modparlbl['TEC'].remove('CtoO')
 
     if (singlemod is not None) and (singlemod in modfam):
@@ -632,7 +634,7 @@ def atmos(fin, xsl, spc, runtime_params, out, ext,
                 with pm.Model():
                     fixedParams = {}
 
-                    if fitCloudParameters:
+                    if runtime_params.fitCloudParameters:
                         # CLOUD TOP PRESSURE
                         # prior_ranges['CTP'] = (-6,1)
                         prior_ranges['CTP'] = priorRangeTable['CTP']
@@ -724,7 +726,7 @@ def atmos(fin, xsl, spc, runtime_params, out, ext,
                                 nodes.append(off0)
                     # KILL HAZE POWER INDEX FOR SPHERICAL SHELL
                     if sphshell:
-                        if fitCloudParameters:
+                        if runtime_params.fitCloudParameters:
                             # prior_ranges['HLoc'] = (-6,1)
                             prior_ranges['HLoc'] = priorRangeTable['HLoc']
                             hzloc = pm.Uniform('HLoc',
@@ -740,7 +742,7 @@ def atmos(fin, xsl, spc, runtime_params, out, ext,
                             fixedParams['HLoc'] = inputData['model_params']['HLoc']
                             fixedParams['HThick'] = inputData['model_params']['HThick']
                     else:
-                        if fitCloudParameters:
+                        if runtime_params.fitCloudParameters:
                             # prior_ranges['HIndex'] = (-4,0)
                             prior_ranges['HIndex'] = priorRangeTable['HIndex']
                             hzi = pm.Uniform('HIndex',
@@ -750,7 +752,7 @@ def atmos(fin, xsl, spc, runtime_params, out, ext,
                             fixedParams['HIndex'] = -2
 
                     # BOOST TEMPERATURE PRIOR TO [75%, 150%] Teq
-                    if fitT:
+                    if runtime_params.fitT:
                         # prior_ranges['T'] = (0.75e0*eqtemp, 1.5e0*eqtemp)
                         prior_ranges['T'] = (priorRangeTable['Tfactor'][0] * eqtemp,
                                              priorRangeTable['Tfactor'][1] * eqtemp)
@@ -773,19 +775,17 @@ def atmos(fin, xsl, spc, runtime_params, out, ext,
                             prior_ranges[param] = dexRange
                     numAbundanceParams = len(modparlbl[model])
                     # make sure that there's at least two parameters here, or the decorator crashes
-                    # if fitCtoO: numAbundanceParams += 1
                     numAbundanceParams = max(numAbundanceParams, 2)
                     # print('numAbundanceParams',numAbundanceParams)
                     modelpar = pm.Uniform(model, lower=dexRange[0], upper=dexRange[1],
                                           shape=numAbundanceParams)
                     nodes.append(modelpar)
-                    # print('setting fixed params.  fitNtoO',bool(fitNtoO))
-                    if not fitNtoO:
+                    print('setting fixed params.  fitNtoO',bool(runtime_params.fitNtoO))
+                    if not runtime_params.fitNtoO:
                         fixedParams['NtoO'] = 0.
-                    if not fitCtoO:
-                        # print('model params',inputData['model_params'])
+                    if not runtime_params.fitCtoO:
                         fixedParams['CtoO'] = inputData['model_params']['C/O']
-                    # print('fixedparams',fixedParams)
+                    print('fixedparams',fixedParams)
 
                     # before calling MCMC, save the fixed-parameter info in the context
                     ctxtupdt(cleanup=cleanup, model=model, p=p, solidr=solidr, orbp=orbp,
@@ -793,7 +793,7 @@ def atmos(fin, xsl, spc, runtime_params, out, ext,
                              hzlib=crbhzlib, fixedParams=fixedParams)
 
                     # CERBERUS MCMC
-                    if not fitCloudParameters:
+                    if not runtime_params.fitCloudParameters:
                         log.warning('--< RUNNING MCMC - NO CLOUDS! >--')
                         _mcdata = pm.Normal('mcdata', mu=clearfmcerberus(*nodes),
                                             tau=1e0/(np.nanmedian(tspecerr[cleanup])**2),
@@ -1177,7 +1177,7 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                         else: allKeys.append(key)
                     else:
                         allKeys.append(key)
-                    # print('allKeys',allKeys)
+                # print('allKeys',allKeys)
 
                 # remove the traced phase space that is excluded by profiling
                 profileTrace, appliedLimits = applyProfiling(
@@ -1293,6 +1293,19 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                 # print('fit results; T:',tpr)
                 # print('fit results; mdplist:',mdp)
 
+                paramValues_median = [666]*len(allKeys)
+                paramValues_profiled = [666]*len(allKeys)
+                paramValues_median[allKeys.index('T')] = tpr
+                paramValues_median[allKeys.index('CTP')] = ctp
+                paramValues_median[allKeys.index('HScale')] = hza
+                paramValues_median[allKeys.index('HLoc')] = hloc
+                paramValues_median[allKeys.index('HThick')] = hthc
+                paramValues_profiled[allKeys.index('T')] = tprProfiled
+                paramValues_profiled[allKeys.index('CTP')] = ctpProfiled
+                paramValues_profiled[allKeys.index('HScale')] = hzaProfiled
+                paramValues_profiled[allKeys.index('HLoc')] = hlocProfiled
+                paramValues_profiled[allKeys.index('HThick')] = hthcProfiled
+
                 solidr = fin['priors'][p]['rp'] * ssc['Rjup']
 
                 if modelName=='TEC':
@@ -1320,6 +1333,12 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                         else:
                             tceqdict['NtoO'] = 0.
                         tceqdictProfiled['NtoO'] = tceqdict['NtoO']
+                    paramValues_median[allKeys.index('[X/H]')] = tceqdict['XtoH']
+                    paramValues_median[allKeys.index('[C/O]')] = tceqdict['CtoO']
+                    paramValues_median[allKeys.index('[N/O]')] = tceqdict['NtoO']
+                    paramValues_profiled[allKeys.index('[X/H]')] = tceqdictProfiled['XtoH']
+                    paramValues_profiled[allKeys.index('[C/O]')] = tceqdictProfiled['CtoO']
+                    paramValues_profiled[allKeys.index('[N/O]')] = tceqdictProfiled['NtoO']
                 elif modelName=='PHOTOCHEM':
                     if len(mdp)!=5: log.warning('--< Expecting 5 molecules for PHOTOCHEM model! >--')
                     tceqdict = None
@@ -1336,6 +1355,17 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                     mixratioProfiled['C2H2'] = float(mdpProfiled[2])
                     mixratioProfiled['CO2'] = float(mdpProfiled[3])
                     mixratioProfiled['H2CO'] = float(mdpProfiled[4])
+
+                    paramValues_median[allKeys.index('HCN')] = mixratio['HCN']
+                    paramValues_median[allKeys.index('CH4')] = mixratio['CH4']
+                    paramValues_median[allKeys.index('C2H2')] = mixratio['C2H2']
+                    paramValues_median[allKeys.index('CO2')] = mixratio['CO2']
+                    paramValues_median[allKeys.index('H2CO')] = mixratio['H2CO']
+                    paramValues_profiled[allKeys.index('HCN')] = mixratioProfiled['HCN']
+                    paramValues_profiled[allKeys.index('CH4')] = mixratioProfiled['CH4']
+                    paramValues_profiled[allKeys.index('C2H2')] = mixratioProfiled['C2H2']
+                    paramValues_profiled[allKeys.index('CO2')] = mixratioProfiled['CO2']
+                    paramValues_profiled[allKeys.index('H2CO')] = mixratioProfiled['H2CO']
                 else:
                     log.warning('--< Expecting TEQ or PHOTOCHEM model! >--')
 
@@ -1371,9 +1401,31 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                                        sphshell=True, verbose=False, debug=False)
                 patmos_modelProfiled = fmcProfiled - np.nanmean(fmcProfiled) + np.nanmean(transitdata['depth'])
 
+                # calculate chi2 values to see which is the best fit
+                offsets_model = (patmos_model - transitdata['depth']) / transitdata['error']
+                chi2model = np.nansum(offsets_model**2)
+                # print('chi2',chi2model)
+
+                # actually the profiled chi2 isn't used below just now, so has to be commented out
+                # offsets_modelProfiled = (patmos_modelProfiled - transitdata['depth']) / transitdata['error']
+                # chi2modelProfiled = np.nansum(offsets_modelProfiled**2)
+                # print('chi2 after profiling',chi2modelProfiled)
+
                 # make an array of 10 random walker results
                 nrandomwalkers = 10
                 nrandomwalkers = 100
+                nrandomwalkers = 1000
+
+                # fix the random seed for each target/planet, so that results are reproducable
+                intFromTarget = 1  # arbitrary initialization for the random seed
+                for char in trgt+' '+p:
+                    intFromTarget = (123 * intFromTarget + ord(char)) % 100000
+                np.random.seed(intFromTarget)
+
+                chi2best = chi2model
+                # fmcbest = fmc
+                patmos_bestFit = patmos_model
+                paramValues_bestFit = paramValues_profiled
                 fmcarray = []
                 for _ in range(nrandomwalkers):
                     iwalker = int(len(tprtrace) * np.random.rand())
@@ -1395,6 +1447,13 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                     # print('fit results; T:',tpr)
                     # print('fit results; mdplist:',mdp)
 
+                    paramValues = [666]*len(allKeys)
+                    paramValues[allKeys.index('T')] = tpr
+                    paramValues[allKeys.index('CTP')] = ctp
+                    paramValues[allKeys.index('HScale')] = hza
+                    paramValues[allKeys.index('HLoc')] = hloc
+                    paramValues[allKeys.index('HThick')] = hthc
+
                     if modelName=='TEC':
                         mixratio = None
                         tceqdict = {}
@@ -1411,6 +1470,10 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                             else:
                                 # log.warning('--< NtoO is missing from TRUTH_MODELPARAMS >--')
                                 tceqdict['NtoO'] = 0.
+                        paramValues[allKeys.index('[X/H]')] = tceqdict['XtoH']
+                        paramValues[allKeys.index('[C/O]')] = tceqdict['CtoO']
+                        paramValues[allKeys.index('[N/O]')] = tceqdict['NtoO']
+
                     elif modelName=='PHOTOCHEM':
                         tceqdict = None
                         mixratio = {}
@@ -1419,6 +1482,11 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                         mixratio['C2H2'] = float(mdp[2])
                         mixratio['CO2'] = float(mdp[3])
                         mixratio['H2CO'] = float(mdp[4])
+                        paramValues[allKeys.index('HCN')] = mixratio['HCN']
+                        paramValues[allKeys.index('CH4')] = mixratio['CH4']
+                        paramValues[allKeys.index('C2H2')] = mixratio['C2H2']
+                        paramValues[allKeys.index('CO2')] = mixratio['CO2']
+                        paramValues[allKeys.index('H2CO')] = mixratio['H2CO']
 
                     fmcrand = np.zeros(transitdata['depth'].size)
                     fmcrand = crbmodel(mixratio, float(hza), float(ctp),
@@ -1435,6 +1503,18 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                     # print('stdev model',np.nanstd(fmcrand))
                     fmcarray.append(fmcrand)
 
+                    # check to see if this model is the best one
+                    patmos_modelrand = fmcrand - np.nanmean(fmcrand) + np.nanmean(transitdata['depth'])
+                    offsets_modelrand = (patmos_modelrand - transitdata['depth']) / transitdata['error']
+                    chi2modelrand = np.nansum(offsets_modelrand**2)
+                    # print('chi2 for a random walker',chi2modelrand)
+                    if chi2modelrand < chi2best:
+                        # print('  using this as best',chi2modelrand)
+                        chi2best = chi2modelrand
+                        # fmcbest = fmcrand
+                        patmos_bestFit = patmos_modelrand
+                        paramValues_bestFit = paramValues
+
                 # _______________MAKE SOME PLOTS________________
                 saveDir = os.path.join(excalibur.context['data_dir'], 'bryden/')
                 # print('saveDir',saveDir)
@@ -1442,16 +1522,22 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                 # _______________BEST-FIT SPECTRUM PLOT________________
                 transitdata = rebinData(transitdata)
 
-                out['data'][p]['plot_spectrum_'+modelName],_ = plot_bestfit(
-                    transitdata, patmos_model, patmos_modelProfiled, fmcarray,
+                out['data'][p]['plot_spectrum_'+modelName],_ = plot_spectrumfit(
+                    transitdata, patmos_model, patmos_modelProfiled,
+                    patmos_bestFit, fmcarray,
                     truth_spectrum,
                     anc['data'][p], atm[p],
                     filt, modelName, trgt, p, saveDir)
 
+                if verbose:
+                    print('paramValues median  ',paramValues_median)
+                    print('paramValues profiled',paramValues_profiled)
+                    print('paramValues bestFit ',paramValues_bestFit)
+
                 # _______________CORNER PLOT________________
                 out['data'][p]['plot_corner_'+modelName],_ = plot_corner(
                     allKeys, allTraces, profiledTraces,
-                    truth_params, prior_ranges,
+                    paramValues_bestFit, truth_params, prior_ranges,
                     filt, modelName, trgt, p, saveDir)
 
                 # _______________WALKER-EVOLUTION PLOT________________
@@ -1598,13 +1684,8 @@ def analysis(aspects, filt, out, verbose=False):
                                 hi = np.percentile(np.array(trace), 84)
                                 fit_errors[key].append((hi-lo)/2)
                                 if verbose:
-                                    if key=='[N/O]':
+                                    if key=='[N/O]' and (hi-lo)/2 < 2:
                                         print('N/O',trgt,np.median(trace),(hi-lo)/2)
-                                        if (hi-lo)/2 < 2:
-                                            print('  this one!!!!')
-                                            print()
-                                    else:
-                                        print('  else key',key)
                             if ('TRUTH_MODELPARAMS' in atmosFit['data'][planetLetter].keys()) and \
                                (isinstance(atmosFit['data'][planetLetter]['TRUTH_MODELPARAMS'], dict)):
                                 truth_params = atmosFit['data'][planetLetter]['TRUTH_MODELPARAMS'].keys()

@@ -5,7 +5,6 @@ import dawgie.context
 
 import numexpr; numexpr.ncores = 1  # this is actually a performance enhancer!
 
-from collections import namedtuple
 import logging; log = logging.getLogger(__name__)
 
 import excalibur.system as sys
@@ -24,6 +23,15 @@ import excalibur.ariel.algorithms as arielalg
 import excalibur.cerberus as crb
 import excalibur.cerberus.core as crbcore
 import excalibur.cerberus.states as crbstates
+
+from collections import namedtuple
+
+CERB_PARAMS = namedtuple('cerberus_params_from_runtime',[
+    'MCMC_chain_length',
+    'fitCloudParameters',
+    'fitT',
+    'fitCtoO',
+    'fitNtoO'])
 
 fltrs = [str(fn) for fn in rtbind.filter_names.values()]
 
@@ -195,19 +203,7 @@ class atmos(dawgie.Algorithm):
                 log.warning('--< CERBERUS ATMOS: %s >--', fltr)
                 runtime = self.__rt.sv_as_dict()['status']
 
-                # runtime_params = {
-                #    'MCMC_chain_length':runtime['cerberus_steps'],
-                #    'fitCloudParameters':runtime['cerberus_atmos_fitCloudParameters'],
-                #    'fitT':runtime['cerberus_atmos_fitT'],
-                #    'fitCtoO':runtime['cerberus_atmos_fitCtoO'],
-                #    'fitNtoO':runtime['cerberus_atmos_fitNtoO']}
-                cerb_params = namedtuple('cerberus_params_from_runtime',[
-                    'MCMC_chain_length',
-                    'fitCloudParameters',
-                    'fitT',
-                    'fitCtoO',
-                    'fitNtoO'])
-                runtime_params = cerb_params(
+                runtime_params = CERB_PARAMS(
                     MCMC_chain_length=runtime['cerberus_steps'],
                     fitCloudParameters=runtime['cerberus_atmos_fitCloudParameters'],
                     fitT=runtime['cerberus_atmos_fitT'],

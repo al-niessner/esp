@@ -1605,9 +1605,9 @@ def createldgrid(minmu, maxmu, orbp,
     feherr = np.sqrt(abs(orbp['FEH*_uperr']*orbp['FEH*_lowerr']))
     loggstar = orbp['LOGG*']
     loggerr = np.sqrt(abs(orbp['LOGG*_uperr']*orbp['LOGG*_lowerr']))
-    log.warning('>-- Temperature: %s +/- %s', str(tstar), str(terr))
-    log.warning('>-- Metallicity: %s +/- %s', str(fehstar), str(feherr))
-    log.warning('>-- Surface Gravity: %s +/- %s', str(loggstar), str(loggerr))
+    # log.warning('>-- Temperature: %s +/- %s', str(tstar), str(terr))
+    # log.warning('>-- Metallicity: %s +/- %s', str(fehstar), str(feherr))
+    # log.warning('>-- Surface Gravity: %s +/- %s', str(loggstar), str(loggerr))
     niter = int(len(minmu)/segmentation) + 1
     allcl = None
     allel = None
@@ -1684,10 +1684,9 @@ def createldgrid(minmu, maxmu, orbp,
     out['MU'] = avmu
     out['LD'] = allcl.T
     out['ERR'] = allel.T
-    for i, _m in enumerate(allcl.T):
-        log.warning('>-- LD%s: %s +/- %s',
-                    str(int(i)), str(float(allcl.T[i])), str(float(allel.T[i])))
-        pass
+    # for i, _m in enumerate(allcl.T):
+    #     log.warning('>-- LD%s: %s +/- %s',
+    #                str(int(i)), str(float(allcl.T[i])), str(float(allel.T[i])))
     return out
 # -------------------- -----------------------------------------------
 # -- LDX -- ----------------------------------------------------------

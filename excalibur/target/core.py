@@ -200,6 +200,7 @@ def autofill(ident, thistarget, out, allowed_filters, searchrad=0.2):
                              'dec':dec,
                              'radius':searchrad},
                    'format':'json',
+                   'pagesize':250000,  # this seems to help HD 209458 (~221K obs)
                    'removenullcolumns':True,
                    'removecache':True}
         _h, outstr = masttool.mast_query(request)
@@ -208,6 +209,7 @@ def autofill(ident, thistarget, out, allowed_filters, searchrad=0.2):
         targettable = []
         platformlist = []
         if 'data' not in outjson: outjson['data'] = []  # special case for TOI-1338
+        log.warning('--< TARGET AUTOFILL #-of-obs: %s %s >--', len(outjson['data']),thistarget)
         for obs in outjson['data']:
             for f in allowed_filters:
                 if obs['obs_collection'] is not None:

@@ -1,6 +1,7 @@
 '''ariel core ds'''
 # -- IMPORTS -- ------------------------------------------------------
 import logging; log = logging.getLogger(__name__)
+from collections import namedtuple
 
 import excalibur
 import excalibur.system.core as syscore
@@ -22,6 +23,13 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.constants as cst
+
+# does this really go here? CIcheck needs it back in algorithms
+ARIEL_PARAMS = namedtuple('ariel_params_from_runtime',[
+    'randomSeed',
+    'randomCloudProperties',
+    'thorgrenMassMetals',
+    'includeMetallicityDispersion'])
 
 def init():
     '''make sure libraries are initialized'''
@@ -109,7 +117,8 @@ def simulate_spectra(target, system_dict, runtime_params, out):
         #  (also they would have the same C/O and metallicity offset!)
         intFromTarget = 1  # arbitrary initialization for the random seed
         for char in target+' '+planetLetter:
-            intFromTarget = (123 * intFromTarget + ord(char)) % 1000000
+            intFromTarget = (runtime_params.randomSeed *
+                             intFromTarget + ord(char)) % 1000000
         np.random.seed(intFromTarget)
 
         # check for Ariel targets that are not in excalibur

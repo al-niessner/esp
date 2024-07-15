@@ -1,7 +1,6 @@
 '''ariel algorithms ds'''
 # -- IMPORTS -- ------------------------------------------------------
 import logging; log = logging.getLogger(__name__)
-from collections import namedtuple
 
 import dawgie
 
@@ -11,6 +10,13 @@ import excalibur.runtime as rtime
 import excalibur.runtime.algorithms as rtalg
 import excalibur.system as sys
 import excalibur.system.algorithms as sysalg
+
+from collections import namedtuple
+ARIEL_PARAMS = namedtuple('ariel_params_from_runtime',[
+    'randomSeed',
+    'randomCloudProperties',
+    'thorgrenMassMetals',
+    'includeMetallicityDispersion'])
 
 # ------------- ------------------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
@@ -53,11 +59,8 @@ class sim_spectrum(dawgie.Algorithm):
         valid, errstring = arielcore.checksv(system_dict)
         if valid:
             runtime = self.__rt.sv_as_dict()['status']
-            ariel_params = namedtuple('ariel_params_from_runtime',[
-                'randomCloudProperties',
-                'thorgrenMassMetals',
-                'includeMetallicityDispersion'])
-            runtime_params = ariel_params(
+            runtime_params = ARIEL_PARAMS(
+                randomSeed=123,
                 randomCloudProperties=True,
                 thorgrenMassMetals=True,
                 includeMetallicityDispersion=runtime[

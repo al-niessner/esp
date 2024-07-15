@@ -42,8 +42,8 @@ def getProfileLimits_HSTG141():
     limits['HAT-P-11 b'] = [['HScale',-2,'<']]
     # limits['HAT-P-12 b'] = [['T',0,'>']]  # no effect
     # limits['HAT-P-17 b'] = [['T',1500,'<'],  # no effect
-    limits['HAT-P-17 b'] = [['PHOTOCHEM[1]',-1,'>'],  # its flat
-                            ['PHOTOCHEM[4]',0,'<'],
+    limits['HAT-P-17 b'] = [['CH4',-1,'>'],  # its flat
+                            ['H2CO',0,'<'],
                             ['HScale',0,'<']]
     # limits['HAT-P-18 b'] = [['T',1500,'<']]  # no effect
     # limits['HAT-P-26 b'] = [['T',1500,'<']]  # no effect.   nice spectrum
@@ -52,7 +52,7 @@ def getProfileLimits_HSTG141():
     limits['HAT-P-41 b'] = [['T',2500,'<']]
     limits['HD 97658 b'] = [['T',1000,'<']]
     limits['HD 149026 b'] = [['T',2000,'<'],
-                             ['PHOTOCHEM[2]',0,'>']]
+                             ['C2H2',0,'>']]
     # limits['HD 189733 b'] = [['T',0,'>']]
     # limits['HD 209458 b'] = [['T',1000,'>']]  # nice spectrum,  no effect. not in notebook list!
     # limits['K2-3 c'] = [['T',700,'<']]
@@ -60,7 +60,7 @@ def getProfileLimits_HSTG141():
     # limits['K2-18 b'] = [['T',600,'<'],  # no effect
     #                     ['TEC[0]',0,'>']]  # undefined. modify if needed
     limits['KELT-11 b'] = [['T',2500,'<'],
-                           ['PHOTOCHEM[2]',-2,'<']]
+                           ['C2H2',-2,'<']]
     # limits['TRAPPIST-1 b'] = [['T',600,'<']]
     # limits['TRAPPIST-1 c'] = [['T',600,'<']]
     limits['WASP-6 b'] = [['T',1500,'<']]
@@ -73,7 +73,7 @@ def getProfileLimits_HSTG141():
     # large difference in results!
     limits['WASP-52 b'] = [['T',1000,'>'],  # slight effect at edge.  but it's flat anyway
                            # ['T',2000,'<'],  # no effect
-                           ['PHOTOCHEM[1]',0,'>'],
+                           ['CH4',0,'>'],
                            ['HScale',0,'<']]  # has a jump suggesting should be >0 maybe?
     limits['WASP-63 b'] = [['T',2000,'<']]
     # limits['WASP-69 b'] = [['T',2000,'<'],  # no effect
