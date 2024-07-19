@@ -143,7 +143,6 @@ class autofill(dawgie.Algorithm):
         if valid and (ds._tn() in crt['starIDs']['starID']):
             log.warning('--< TARGET AUTOFILL: %s >--', ds._tn())
             update = self._autofill(crt, ds._tn())
-            pass
         # done with target name; pylint: enable=protected-access
         else: self._failure(errstring)
         if update: ds.update()

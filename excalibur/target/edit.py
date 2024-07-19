@@ -856,6 +856,7 @@ WASP-171 :
 WASP-193 :
 WASP-60 :
 HD 110067 :
+TOI-3261 :
     '''
 # these two JWST targets are not yet listed in the Exoplanet Archive composite table:
 # GJ 341 : HIP 45908
@@ -1698,6 +1699,7 @@ WASP-171 : WASP171
 WASP-193 : WASP193
 WASP-60 : WASP60
 HD 110067 : HD110067
+TOI-3261 : TOI3261
     '''
     return
 # -------------------- -----------------------------------------------

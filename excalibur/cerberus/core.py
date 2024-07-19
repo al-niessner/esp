@@ -1320,15 +1320,20 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                         tceqdict['CtoO'] = float(mdp[1])
                         tceqdictProfiled['CtoO'] = float(mdpProfiled[1])
                     else:
-                        # print('truth params',atm[p]['TRUTH_MODELPARAMS'])
-                        tceqdict['CtoO'] = atm[p]['TRUTH_MODELPARAMS']['CtoO']
+                        if ('TRUTH_MODELPARAMS' in atm[p]) and ('CtoO' in atm[p]['TRUTH_MODELPARAMS']):
+                            # print('truth params',atm[p]['TRUTH_MODELPARAMS'])
+                            tceqdict['CtoO'] = atm[p]['TRUTH_MODELPARAMS']['CtoO']
+                        else:
+                            # default is C/O=1.  Maybe the default should actually be Solar?
+                            tceqdict['CtoO'] = 0.
                         tceqdictProfiled['CtoO'] = tceqdict['CtoO']
+
                     if fitNtoO:
                         tceqdict['NtoO'] = float(mdp[2])
                         tceqdictProfiled['NtoO'] = float(mdpProfiled[2])
                     else:
-                        # print('truth params',atm[p]['TRUTH_MODELPARAMS'])
-                        if 'NtoO' in atm[p]['TRUTH_MODELPARAMS'].keys():
+                        if ('TRUTH_MODELPARAMS' in atm[p]) and ('NtoO' in atm[p]['TRUTH_MODELPARAMS']):
+                            # print('truth params',atm[p]['TRUTH_MODELPARAMS'])
                             tceqdict['NtoO'] = atm[p]['TRUTH_MODELPARAMS']['NtoO']
                         else:
                             tceqdict['NtoO'] = 0.
@@ -1594,9 +1599,9 @@ def analysis(aspects, filt, out, verbose=False):
         # analysistargetlists.append({
         #    'targetlistname':'Roudier+ 2022',
         #    'targets':alltargetlists['roudier62']})
-        analysistargetlists.append({
-            'targetlistname':'MCS Nov.2023 Transit-list',
-            'targets':alltargetlists['arielMCS_Nov2023_transit']})
+        # analysistargetlists.append({
+        #    'targetlistname':'MCS Nov.2023 Transit-list',
+        #    'targets':alltargetlists['arielMCS_Nov2023_transit']})
         analysistargetlists.append({
             'targetlistname':'MCS Nov.2023 max-visits=25',
             'targets':alltargetlists['arielMCS_Nov2023_maxVisits25']})
@@ -1607,17 +1612,18 @@ def analysis(aspects, filt, out, verbose=False):
         #    'targetlistname':'MCS Feb.2024 max-visits=25',
         #    'targets':alltargetlists['arielMCS_Feb2024_maxVisits25']})
     else:
+        analysistargetlists.append({
+            'targetlistname':'All Excalibur targets',
+            'targets':alltargetlists['active']})
         # analysistargetlists.append({
-        #    'targetlistname':'All Excalibur targets',
-        #    'targets':alltargetlists['active']})
-        analysistargetlists.append({
-            'targetlistname':'Roudier+ 2022',
-            'targets':alltargetlists['roudier62']})
-        analysistargetlists.append({
-            'targetlistname':'All G141 targets',
-            'targets':alltargetlists['G141']})
+        #    'targetlistname':'Roudier+ 2022',
+        #    'targets':alltargetlists['roudier62']})
+        # analysistargetlists.append({
+        #    'targetlistname':'All G141 targets',
+        #    'targets':alltargetlists['G141']})
 
     for targetlist in analysistargetlists:
+        # print('  running targetlist=',targetlist['targetlistname'])
         param_names = []
         masses = []
         truth_values = defaultdict(list)
@@ -1745,17 +1751,28 @@ def analysis(aspects, filt, out, verbose=False):
 
         # plot analysis of the results.  save as png and as state vector for states/view
         saveDir = os.path.join(excalibur.context['data_dir'], 'bryden/')
-        # jenkins doesn't like to have a triple-packed return here because it's fussy
+        fitCOplot = False
+        fitNOplot = False
         if 'sim' in filt:
             # for simulated data, compare retrieval against the truth
+            #  note that the length of plotarray depends on whether N/O and C/O are fit parameters
+            # jenkins doesn't like to have a triple-packed return here because it's fussy
             plotarray = plot_fitsVStruths(
                 truth_values, fit_values, fit_errors, prior_ranges, filt, saveDir)
-            fitTplot, fitMetalplot, fitCOplot, fitNOplot = plotarray[0],plotarray[1],plotarray[2],plotarray[3]
+            # fitTplot, fitMetalplot, fitCOplot, fitNOplot = plotarray[0],plotarray[1],plotarray[2],plotarray[3]
+            fitTplot = plotarray[0]
+            fitMetalplot = plotarray[1]
+            if len(plotarray) > 2: fitCOplot = plotarray[2]
+            if len(plotarray) > 3: fitNOplot = plotarray[3]
         else:
             # for real data, make a histogram of the retrieved uncertainties
+            #  note that the length of plotarray depends on whether N/O and C/O are fit parameters
             plotarray = plot_fitUncertainties(
                 fit_values, fit_errors, prior_ranges, filt, saveDir)
-            fitTplot, fitMetalplot, fitCOplot, fitNOplot = plotarray[0],plotarray[1],plotarray[2],plotarray[3]
+            fitTplot = plotarray[0]
+            fitMetalplot = plotarray[1]
+            if len(plotarray) > 2: fitCOplot = plotarray[2]
+            if len(plotarray) > 3: fitNOplot = plotarray[3]
 
         masses = truth_values['Mp']
         massMetalsplot,_ = plot_massVSmetals(
@@ -1773,8 +1790,8 @@ def analysis(aspects, filt, out, verbose=False):
         out['data']['plot_massVmetals'] = massMetalsplot
         out['data']['plot_fitT'] = fitTplot
         out['data']['plot_fitMetal'] = fitMetalplot
-        out['data']['plot_fitCO'] = fitCOplot
-        out['data']['plot_fitNO'] = fitNOplot
+        if fitCOplot: out['data']['plot_fitCO'] = fitCOplot
+        if fitNOplot: out['data']['plot_fitNO'] = fitNOplot
 
     out['data']['params'] = param_names
     out['data']['targetlistnames'] = [

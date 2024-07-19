@@ -44,7 +44,7 @@ class collect(dawgie.Algorithm):
         '''Input State Vectors: target.create, target.scrape'''
         return [dawgie.ALG_REF(trg.analysis, self.__create),
                 dawgie.ALG_REF(trg.task, self.__scrape)] + \
-               self.__rt.refs_for_validity()
+                self.__rt.refs_for_validity()
 
     def state_vectors(self):
         '''Output State Vectors: data.collect'''
@@ -62,14 +62,24 @@ class collect(dawgie.Algorithm):
         valid, errstring = datcore.checksv(scrape)
         if valid:
             for key in create['filters'].keys(): self.__out[key] = create['filters'][key]
-            # 7/2/24 we want to collect all filters, so don't use proceed(fltr) here
+            # 7/2/24 we want to always collect all filters, so don't use proceed(fltr) here
             # for fltr in self.__rt.sv_as_dict()['status']['allowed_filter_names']:
             for fltr in fltrs:
                 ok = self._collect(fltr, scrape, self.__out)
                 update = update or ok
+
+            # pylint: disable=protected-access
+            trgt = ds._tn()
+            if trgt in ['CoRoT-1','Kepler-11','Kepler-13','Tres-4']:
+                blankFilter = 'HST_WFC3_IR_G141_SCAN'
+                if blankFilter not in self.__out['activefilters']:
+                    log.warning('--< DATA COLLECT: adding a blank filter %s %s >--',trgt,blankFilter)
+                    self.__out['activefilters'][blankFilter] = {'ROOTNAME':[], 'LOC':[], 'TOTAL':[]}
+                    self.__out['STATUS'].append(True)
+                    update = True
+
             if update: ds.update()
             else: self._raisenoout(self.name())
-            pass
         else: self._failure(errstring)
         return
 
@@ -81,7 +91,6 @@ class collect(dawgie.Algorithm):
     @staticmethod
     def _collect(fltr, scrape, out):
         '''Core code call'''
-        log.warning('--< DATA COLLECT: %s >--', fltr)
         collected = datcore.collect(fltr, scrape, out)
         return collected
 

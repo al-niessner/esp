@@ -237,7 +237,6 @@ def buildsp(autofill, runtime_params, out, verbose=False):
             print('ERROR: logg field shouldnt exist yet')
         if 'mass' not in autofill['starID'][target][p].keys():
             print('ERROR: mass field should exist already')
-        # if autofill['starID'][target][p]['logg'] != logg_derived:
         # print('logg before ',autofill['starID'][target][p]['logg'])
         # print('logg derived',logg_derived)
         # print('logg_ref derived',logg_ref_derived)
@@ -482,24 +481,30 @@ def buildsp(autofill, runtime_params, out, verbose=False):
             out['autofill'].append('MRrelation:'+p+':mass_uperr')
             out['autofill'].append('MRrelation:'+p+':mass_lowerr')
 
-            # careful here - logg also has to be filled in
-            if p+':logg' in out['needed']:
-                g = ssc['G'] * assumed_planet_mass*ssc['Mjup'] \
-                    / (float(planet_radius)*ssc['Rjup'])**2
-                logg = np.log10(g)
-                out['priors'][p]['logg'] = f'{logg:6.4f}'
-                index = out['needed'].index(p+':logg')
-                out['needed'].pop(index)
-                # uncertainty is pretty large here; let's say 0.2 dex
-                out['priors'][p]['logg_uperr'] = 0.2
-                out['priors'][p]['logg_lowerr'] = -0.2
-                out['priors'][p]['logg_units'] = 'log10[cm.s-2]'
-                out['priors'][p]['logg_ref'] = 'assumed mass/radius relation'
+        # careful here - logg also has to be filled in
+        # TOI-1136 is a major troublemaker.  planets have radius in one ref and mass in another
+        #  otherwise this if statement would belong inside of the previous if statement
+        if p+':logg' in out['needed']:
+            g = ssc['G'] * out['priors'][p]['mass']*ssc['Mjup'] \
+                / (float(out['priors'][p]['rp'])*ssc['Rjup'])**2
+            logg = np.log10(g)
+            out['priors'][p]['logg'] = f'{logg:6.4f}'
+            index = out['needed'].index(p+':logg')
+            out['needed'].pop(index)
+            # uncertainty is dominated by mass, but might as well include radius too
+            mass_fractionalerror = (out['priors'][p]['mass_uperr'] - out['priors'][p]['mass_lowerr']
+                                    ) / 2 / out['priors'][p]['mass']
+            radius_fractionalerror = (out['priors'][p]['rp_uperr'] - out['priors'][p]['rp_lowerr']
+                                      ) / 2 / out['priors'][p]['rp']
+            out['priors'][p]['logg_uperr'] = np.sqrt(mass_fractionalerror**2 +
+                                                     (2*radius_fractionalerror)**2)
+            out['priors'][p]['logg_lowerr'] = -out['priors'][p]['logg_uperr']
+            out['priors'][p]['logg_units'] = 'log10[cm.s-2]'
+            out['priors'][p]['logg_ref'] = 'derived from radius+mass'
+            if 'MRrelation:'+p+':mass' in out['autofill']:
                 out['autofill'].append('MRrelation:'+p+':logg')
                 out['autofill'].append('MRrelation:'+p+':logg_uperr')
                 out['autofill'].append('MRrelation:'+p+':logg_lowerr')
-            else:
-                print('STRANGE: why was there logg but no mass')
 
         # if planet eccentricity is missing, assume 0
         if p+':ecc' in out['needed']:

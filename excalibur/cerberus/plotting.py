@@ -764,12 +764,18 @@ def plot_fitsVStruths(truth_values, fit_values, fit_errors, prior_ranges,
     Also (optionally) show a histogram of the uncertainty values
     '''
 
-    plot_statevectors = []
+    paramlist = []
     for param in ['T', '[X/H]', '[C/O]', '[N/O]']:
+        if len(fit_values[param])==0 or len(np.where(fit_values[param]!=fit_values[param][0])[0])==0:
+            # print('drop a blank truth parameter',param)  # (N/O sometimes dropped)
+            pass
+        else:
+            paramlist.append(param)
 
-        # figure = plt.figure(figsize=(5,5))
-        # ax = figure.add_subplot(1,1,1)
-        figure = plt.figure(figsize=(10,5))
+    plot_statevectors = []
+    for param in paramlist:
+
+        figure = plt.figure(figsize=(11,5))
         ax = figure.add_subplot(1,2,1)
 
         for truth,fit,error in zip(truth_values[param],
@@ -782,11 +788,12 @@ def plot_fitsVStruths(truth_values, fit_values, fit_errors, prior_ranges,
             minInfo = 0.5 * 0.68 * 0.5
             newInfo = False
             if param not in prior_ranges:
-                log.warning('--< Cerb.analysis plotting: Parameter missing from prior_range 1: %s >--',param)
                 if param=='[N/O]':
                     priorRangeDiff = 12
                     if error < minInfo * priorRangeDiff:
                         newInfo = True
+                else:
+                    log.warning('--< Cerb.analysis: Parameter missing from prior_range 1: %s >--',param)
             elif param=='T':
                 priorRangeFactor = prior_ranges[param][1] / prior_ranges[param][0]
                 # prior is normally set to 0.75-1.5 times Teq
@@ -796,9 +803,6 @@ def plot_fitsVStruths(truth_values, fit_values, fit_errors, prior_ranges,
                 priorRangeDiff = prior_ranges[param][1] - prior_ranges[param][0]
                 if error < minInfo * priorRangeDiff:
                     newInfo = True
-#                if param=='[X/H]':
-#                    print('met,fit,err',truth,fit,error,
-#                          prior_ranges[param][1] - prior_ranges[param][0],newInfo)
             if newInfo:
                 clr = 'k'
                 lwid = 1
@@ -821,15 +825,6 @@ def plot_fitsVStruths(truth_values, fit_values, fit_errors, prior_ranges,
             # if param=='[C/O]' and truth > 0.5:
             #    print('strangely high [C/O] in plot',truth)
 
-        # previous was plotting them all at once; now it's one point at a time
-        # ax.scatter(truth_values[param],
-        #           fit_values[param],
-        #           facecolor=clr,edgecolor=clr, s=40, zorder=zord+1)
-        # ax.errorbar(truth_values[param],
-        #            fit_values[param],
-        #            yerr=fit_errors[param],
-        #            fmt='.', color=clr, lw=lwid, zorder=zord)
-
         ax.set_xlabel(param+' truth', fontsize=14)
         ax.set_ylabel(param+' fit', fontsize=14)
 
@@ -846,7 +841,9 @@ def plot_fitsVStruths(truth_values, fit_values, fit_errors, prior_ranges,
         # plot C/O=1 as a dotted vertical line
         if param=='[C/O]':
             solarCO = np.log10(0.55)
-            ax.plot([-solarCO,-solarCO],[-100,100],'k--', lw=1, zorder=1)
+            ax.plot([-solarCO,-solarCO],[-100,100],'k--', lw=1, zorder=3)
+            plt.text(-solarCO+0.03, -5, 'C/O=1', c='black',
+                     rotation='vertical',va='center',fontsize=12)
 
         # ax.set_xlim(overallmin,overallmax)
         # ax.set_ylim(overallmin,overallmax)
@@ -854,10 +851,11 @@ def plot_fitsVStruths(truth_values, fit_values, fit_errors, prior_ranges,
             ax.set_xlim(0,overallmax)
             ax.set_ylim(0,overallmax)
         elif param not in prior_ranges:
-            log.warning('--< Cerb.analysis plotting: Parameter missing from prior_range 2: %s >--',param)
             ax.set_xlim(xrange)
             if param=='[N/O]':
                 ax.set_ylim(-6,6)
+            else:
+                log.warning('--< Cerb.analysis: Parameter missing from prior_range 2: %s >--',param)
         else:
             # actually, don't use prior range for X/H and X/O on x-axis
             # ax.set_xlim(prior_ranges[param][0],prior_ranges[param][1])
@@ -867,18 +865,24 @@ def plot_fitsVStruths(truth_values, fit_values, fit_errors, prior_ranges,
         # UNCERTAINTY HISTOGRAMS IN SECOND PANEL
         ax = figure.add_subplot(1,2,2)
         if param=='T':
-            errors = np.log10(fit_errors[param]/np.array(fit_values[param]))
-            ax.set_xlabel('log('+param+' fractional uncertainty)', fontsize=14)
+            errors = np.array(fit_errors[param])/np.array(fit_values[param])
+            ax.set_xlabel(param+' fractional uncertainty', fontsize=14)
         else:
-            errors = np.log10(fit_errors[param])
-            ax.set_xlabel('log('+param+' uncertainty)', fontsize=14)
-        lower = errors.min()
-        upper = errors.max()
-        # print('uncertainty range (logged)',param,lower,upper)
-        plt.hist(errors, range=(lower, upper), bins=10,
-                 cumulative=True, density=True,
-                 color='olive', zorder=1, label='')
-        ax.set_ylabel(param+' # of planets', fontsize=14)
+            errors = np.array(fit_errors[param])
+            ax.set_xlabel(param+' uncertainty', fontsize=14)
+        if len(errors) > 0:
+            # the histogram range has to go past the data range or you get a vertical line on the right
+            lower = errors.min() / 1.5
+            upper = errors.max() * 1.5
+            # print('uncertainty range (logged)',param,lower,upper)
+            plt.hist(errors, range=(lower, upper), bins=1000,
+                     cumulative=True, density=True, histtype='step',
+                     color='black', zorder=1, label='')
+            plt.title('cumulative histogram of '+str(len(errors))+' planets')
+            ax.semilogx()
+            ax.set_xlim(lower,upper)
+        ax.set_ylim(0,1)
+        ax.set_ylabel('fraction of planets', fontsize=14)
 
         figure.tight_layout()
 
@@ -899,10 +903,19 @@ def plot_fitUncertainties(fit_values, fit_errors, prior_ranges,
     And show a histogram of the uncertainty values
     '''
 
-    plot_statevectors = []
+    paramlist = []
     for param in ['T', '[X/H]', '[C/O]', '[N/O]']:
+        if len(fit_values[param])==0 or len(np.where(fit_values[param]!=fit_values[param][0])[0])==0:
+            # print('drop a blank truth parameter',param)  # (N/O sometimes dropped)
+            pass
+        else:
+            paramlist.append(param)
 
-        figure = plt.figure(figsize=(10,5))
+    plot_statevectors = []
+    plot_statevectors = []
+    for param in paramlist:
+
+        figure = plt.figure(figsize=(11,5))
         ax = figure.add_subplot(1,2,1)
 
         for fitvalue,error in zip(fit_values[param],fit_errors[param]):
@@ -914,11 +927,12 @@ def plot_fitUncertainties(fit_values, fit_errors, prior_ranges,
             minInfo = 0.5 * 0.68 * 0.5
             newInfo = False
             if param not in prior_ranges:
-                log.warning('--< Cerb.analysis plotting: Parameter missing from prior_range 3: %s >--',param)
                 if param=='[N/O]':
                     priorRangeDiff = 12
                     if error < minInfo * priorRangeDiff:
                         newInfo = True
+                else:
+                    log.warning('--< Cerb.analysis: Parameter missing from prior_range 3: %s >--',param)
             elif param=='T':
                 priorRangeFactor = prior_ranges[param][1] / prior_ranges[param][0]
                 # prior is normally set to 0.75-1.5 times Teq
@@ -950,28 +964,31 @@ def plot_fitUncertainties(fit_values, fit_errors, prior_ranges,
         if param=='[C/O]':
             yrange = ax.get_ylim()
             solarCO = np.log10(0.55)
-            ax.plot([-solarCO,-solarCO],[-100,100],'k--', lw=1, zorder=1)
+            ax.plot([-solarCO,-solarCO],[-100,100],'k--', lw=1, zorder=3)
             ax.set_ylim(yrange)
-
-        # xrange = ax.get_xlim()
-        # ax.set_xlim(xrange)
-        # ax.set_ylim(prior_ranges[param][0],prior_ranges[param][1])
+            plt.text(-solarCO+0.03, ax.get_ylim()[1]-0.4, 'C/O=1', c='black',
+                     rotation='vertical',va='center',fontsize=12)
 
         # UNCERTAINTY HISTOGRAMS IN SECOND PANEL
         ax = figure.add_subplot(1,2,2)
         if param=='T':
-            errors = np.log10(fit_errors[param]/np.array(fit_values[param]))
-            ax.set_xlabel('log('+param+' fractional uncertainty)', fontsize=14)
+            errors = np.array(fit_errors[param])/np.array(fit_values[param])
+            ax.set_xlabel(param+' fractional uncertainty', fontsize=14)
         else:
-            errors = np.log10(fit_errors[param])
-            ax.set_xlabel('log('+param+' uncertainty)', fontsize=14)
-        lower = errors.min()
-        upper = errors.max()
+            errors = np.array(fit_errors[param])
+            ax.set_xlabel(param+' uncertainty', fontsize=14)
+        # the histogram range has to go past the data range or you get a vertical line on the right
+        lower = errors.min() / 2.
+        upper = errors.max() * 2.
         # print('uncertainty range (logged)',param,lower,upper)
-        plt.hist(errors, range=(lower, upper), bins=10,
-                 cumulative=True, density=True,
-                 color='olive', zorder=1, label='')
-        ax.set_ylabel(param+' # of planets', fontsize=14)
+        plt.hist(errors, range=(lower, upper), bins=1000,
+                 cumulative=True, density=True, histtype='step',
+                 color='black', zorder=1, label='')
+        plt.title('cumulative histogram of '+str(len(errors))+' planets')
+        ax.semilogx()
+        ax.set_xlim(lower,upper)
+        ax.set_ylim(0,1)
+        ax.set_ylabel('fraction of planets', fontsize=14)
 
         figure.tight_layout()
 
@@ -1038,19 +1055,13 @@ def plot_massVSmetals(masses, truth_values,
                        facecolor=clr,edgecolor=clr, s=ptsiz, zorder=zord+2)
         ax.errorbar(mass, metalfit, yerr=metalerror,
                     fmt='.', color=clr, lw=lwid, zorder=zord)
-    # ax.scatter(masses, metals_true,
-    #           facecolor='w',edgecolor='grey', s=40, zorder=3)
-    # ax.scatter(masses, metals_fit,
-    #           facecolor='k',edgecolor='k', s=40, zorder=4)
-    # ax.errorbar(masses, metals_fit, yerr=metals_fiterr,
-    #            fmt='.', color='k', zorder=2)
     ax.semilogx()
     ax.set_xlabel('$M_p (M_{\\rm Jup})$', fontsize=14)
     ax.set_ylabel('[X/H]$_p$', fontsize=14)
     xrange = ax.get_xlim()
     yrange = ax.get_ylim()
 
-    # plot the underlying distribution (only is this is a simulation)
+    # plot the underlying distribution (only if this is a simulation)
     if 'sim' in filt:
         masses = np.logspace(-5,3,100)
         metals = massMetalRelation(0, masses,thorngren=True)
