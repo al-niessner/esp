@@ -459,9 +459,6 @@ def atmos(fin, xsl, spc, runtime_params, out, ext,
     G. ROUDIER: Cerberus retrieval
     '''
 
-    # print('fit clouds, T, C/O, N/O',runtime_params.fitCloudParameters
-    #   runtime_params.fitT, runtime_params.fitCtoO, runtime_params.fitNtoO)
-
     okfit = False
     orbp = fin['priors'].copy()
 
@@ -490,6 +487,8 @@ def atmos(fin, xsl, spc, runtime_params, out, ext,
         #  OR
         # do fit the 4 cloud parameters, even if the model doesn't have cloud
         # fitCloudParameters = True
+        #
+        # print('fitCloudParameters for retrieved model:',runtime_params.fitCloudParameters)
 
         # option to fix N/O
         if not runtime_params.fitNtoO:
@@ -499,7 +498,6 @@ def atmos(fin, xsl, spc, runtime_params, out, ext,
             modparlbl = {'TEC':['XtoH']}
 
         # print('name of the forward model:',arielModel)
-        # print('fitCloudParameters for retrieved model:',runtime_params.fitCloudParameters)
         # print('available models',spc['data']['models'])
         if arielModel not in spc['data']['models']:
             log.warning('--< BIG PROB: ariel model doesnt exist!!! >--')
@@ -780,12 +778,12 @@ def atmos(fin, xsl, spc, runtime_params, out, ext,
                     modelpar = pm.Uniform(model, lower=dexRange[0], upper=dexRange[1],
                                           shape=numAbundanceParams)
                     nodes.append(modelpar)
-                    print('setting fixed params.  fitNtoO',bool(runtime_params.fitNtoO))
+                    # print('setting fixed params.  fitNtoO',bool(runtime_params.fitNtoO))
                     if not runtime_params.fitNtoO:
                         fixedParams['NtoO'] = 0.
                     if not runtime_params.fitCtoO:
                         fixedParams['CtoO'] = inputData['model_params']['C/O']
-                    print('fixedparams',fixedParams)
+                    # print('fixedparams',fixedParams)
 
                     # before calling MCMC, save the fixed-parameter info in the context
                     ctxtupdt(cleanup=cleanup, model=model, p=p, solidr=solidr, orbp=orbp,
@@ -1265,14 +1263,6 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                     hlocProfiled = np.median(hloctraceProfiled)
                     hthcProfiled = np.median(hthicktraceProfiled)
                 else:
-                    # ctp = 3.
-                    # hza = 10.
-                    # hloc = 0.
-                    # hthc = 0.
-                    # ctp = -1.52
-                    # hza = -2.1
-                    # hloc = -2.3
-                    # hthc = 9.76
                     ctp = atm[p]['TRUTH_MODELPARAMS']['CTP']
                     hza = atm[p]['TRUTH_MODELPARAMS']['HScale']
                     hloc = atm[p]['TRUTH_MODELPARAMS']['HLoc']
@@ -1374,8 +1364,6 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                 else:
                     log.warning('--< Expecting TEQ or PHOTOCHEM model! >--')
 
-                # print('CONFIRMING xsl keys',xsl[p].keys())  # (XSECS, QTGRID)
-
                 crbhzlib = {'PROFILE':[]}
                 hazedir = os.path.join(excalibur.context['data_dir'], 'CERBERUS/HAZE')
                 hazelib(crbhzlib, hazedir=hazedir, verbose=False)
@@ -1417,7 +1405,6 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                 # print('chi2 after profiling',chi2modelProfiled)
 
                 # make an array of 10 random walker results
-                nrandomwalkers = 10
                 nrandomwalkers = 100
                 nrandomwalkers = 1000
 
@@ -1428,7 +1415,6 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                 np.random.seed(intFromTarget)
 
                 chi2best = chi2model
-                # fmcbest = fmc
                 patmos_bestFit = patmos_model
                 paramValues_bestFit = paramValues_profiled
                 fmcarray = []
@@ -1516,13 +1502,11 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                     if chi2modelrand < chi2best:
                         # print('  using this as best',chi2modelrand)
                         chi2best = chi2modelrand
-                        # fmcbest = fmcrand
                         patmos_bestFit = patmos_modelrand
                         paramValues_bestFit = paramValues
 
                 # _______________MAKE SOME PLOTS________________
                 saveDir = os.path.join(excalibur.context['data_dir'], 'bryden/')
-                # print('saveDir',saveDir)
 
                 # _______________BEST-FIT SPECTRUM PLOT________________
                 transitdata = rebinData(transitdata)
@@ -1576,17 +1560,6 @@ def analysis(aspects, filt, out, verbose=False):
 
     aspecttargets = []
     for a in aspects: aspecttargets.append(a)
-    # print('aspects check','TrES-3' in aspecttargets)
-    # print('aspects check','WASP-33' in aspecttargets)
-
-    # print('aspects',aspects)
-    # print('aspect keys',aspects.keys())
-    # for a in aspects.keys(): print(a)
-    # for a in aspects: print(a)
-    # print('aspects check','TrES-3' in aspects)
-    # print('aspects check','WASP-33' in aspects)
-    # print('filt',filt)
-    # exit('core stop')
 
     svname = 'cerberus.atmos'
 
@@ -1637,8 +1610,6 @@ def analysis(aspects, filt, out, verbose=False):
         # nope! still not jenkins compatible. arg!
         for trgt in targetlist['targets']:
             # print('        cycling through targets',trgt)
-            # if trgt not in aspects.keys():
-            # if trgt not in aspects:
             if trgt not in aspecttargets:
                 log.warning('--< CERBERUS ANALYSIS: TARGET NOT IN ASPECT %s %s >--',filt,trgt)
             elif svname+'.'+filt not in aspects[trgt]:
@@ -1667,10 +1638,6 @@ def analysis(aspects, filt, out, verbose=False):
                                 masses.append(666)
 
                             # (prior range should be the same for all the targets)
-                            # print('priors',atmosFit['data'][planetLetter]['TEC']['prior_ranges'])
-                            # print('   key check',atmosFit['data'][planetLetter]['TEC'].keys())
-                            # if 'prior_ranges' not in atmosFit['data'][planetLetter]['TEC']:
-                            #    print('check',atmosFit['data'][planetLetter])
                             prior_ranges = atmosFit['data'][planetLetter]['TEC']['prior_ranges']
 
                             allTraces = []
@@ -1735,19 +1702,6 @@ def analysis(aspects, filt, out, verbose=False):
                                     truth_values[fitparam].append(0)
                                 else:
                                     truth_values[fitparam].append(666)
-                            # print('fits',dict(fit_values))
-                            # print('truths',dict(truth_values))
-                            # print('truth_params',truth_params)
-                            # print(' input keys',atmosFit['data'][planetLetter].keys())
-                            # print(' input keys',atmosFit['data'][planetLetter]['planet_params'])
-                            # exit('testtt')
-                            # print(' input truth',atmosFit['data'][planetLetter]['TRUTH_MODELPARAMS'])
-                            # print()
-
-                        # look out for oddballs
-                        # print('T,fit,err',truth_values['T'][-1],
-                        #      fit_values['T'][-1],fit_errors['T'][-1],
-                        #      (fit_values['T'][-1] - truth_values['T'][-1])/fit_errors['T'][-1],trgt)
 
         # plot analysis of the results.  save as png and as state vector for states/view
         saveDir = os.path.join(excalibur.context['data_dir'], 'bryden/')
