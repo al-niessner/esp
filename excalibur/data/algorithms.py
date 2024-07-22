@@ -70,8 +70,8 @@ class collect(dawgie.Algorithm):
 
             # pylint: disable=protected-access
             trgt = ds._tn()
-            if trgt in ['CoRoT-1','Kepler-11','Kepler-13','Tres-4']:
-                blankFilter = 'HST_WFC3_IR_G141_SCAN'
+            if trgt in ['CoRoT-1','Kepler-11','Kepler-13','TrES-4']:
+                blankFilter = 'HST-WFC3-IR-G141-SCAN'
                 if blankFilter not in self.__out['activefilters']:
                     log.warning('--< DATA COLLECT: adding a blank filter %s %s >--',trgt,blankFilter)
                     self.__out['activefilters'][blankFilter] = {'ROOTNAME':[], 'LOC':[], 'TOTAL':[]}

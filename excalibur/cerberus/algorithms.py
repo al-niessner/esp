@@ -14,8 +14,6 @@ import excalibur.ancillary.algorithms as ancillaryalg
 import excalibur.runtime as rtime
 import excalibur.runtime.algorithms as rtalg
 import excalibur.runtime.binding as rtbind
-import excalibur.taurex as tau
-import excalibur.taurex.algorithms as taualg
 import excalibur.transit as trn
 import excalibur.transit.algorithms as trnalg
 from excalibur import ariel
@@ -43,7 +41,6 @@ class xslib(dawgie.Algorithm):
         '''__init__ ds'''
         self._version_ = crbcore.myxsecsversion()
         self.__spc = trnalg.spectrum()
-        self.__tau = taualg.TransitSpectrumInjection()
         self.__arielsim = arielalg.sim_spectrum()
         self.__rt = rtalg.autofill()
         self.__out = [crbstates.xslibSV(fltr) for fltr in fltrs]
@@ -56,7 +53,6 @@ class xslib(dawgie.Algorithm):
     def previous(self):
         '''Input State Vectors: transit.spectrum'''
         return [dawgie.ALG_REF(trn.task, self.__spc),
-                dawgie.ALG_REF(tau.task, self.__tau),
                 dawgie.ALG_REF(ariel.task, self.__arielsim)] + \
                 self.__rt.refs_for_proceed()
 
@@ -74,24 +70,16 @@ class xslib(dawgie.Algorithm):
 
             update = False
 
-            if fltr in self.__tau.sv_as_dict():
-                sv = self.__tau.sv_as_dict()[fltr]
+            if fltr=='Ariel-sim':
+                sv = self.__arielsim.sv_as_dict()['parameters']
+                vspc, sspc = crbcore.checksv(sv)
+                sspc = 'Ariel-sim spectrum not found'
+            elif fltr in self.__spc.sv_as_dict().keys():
+                sv = self.__spc.sv_as_dict()[fltr]
                 vspc, sspc = crbcore.checksv(sv)
             else:
                 vspc = False
-
-            if not vspc:
-                if fltr=='Ariel-sim':
-                    sv = self.__arielsim.sv_as_dict()['parameters']
-                    vspc, sspc = crbcore.checksv(sv)
-                    sspc = 'Ariel-sim spectrum not found'
-                else:
-                    if fltr in self.__spc.sv_as_dict().keys():
-                        sv = self.__spc.sv_as_dict()[fltr]
-                        vspc, sspc = crbcore.checksv(sv)
-                    else:
-                        vspc = False
-                        sspc = 'This filter doesnt have a spectrum: ' + fltr
+                sspc = 'This filter doesnt have a spectrum: ' + fltr
 
             if vspc:
                 log.warning('--< CERBERUS XSLIB: %s >--', fltr)
@@ -128,7 +116,6 @@ class atmos(dawgie.Algorithm):
         self.__spc = trnalg.spectrum()
         self.__fin = sysalg.finalize()
         self.__xsl = xslib()
-        self.__tau = taualg.TransitSpectrumInjection()
         self.__arielsim = arielalg.sim_spectrum()
         self.__rt = rtalg.autofill()
         self.__out = [crbstates.atmosSV(fltr) for fltr in fltrs]
@@ -143,7 +130,6 @@ class atmos(dawgie.Algorithm):
         return [dawgie.ALG_REF(trn.task, self.__spc),
                 dawgie.ALG_REF(sys.task, self.__fin),
                 dawgie.ALG_REF(crb.task, self.__xsl),
-                dawgie.ALG_REF(tau.task, self.__tau),
                 dawgie.ALG_REF(ariel.task, self.__arielsim),
                 dawgie.V_REF(rtime.task, self.__rt, self.__rt.sv_as_dict()['status'],
                              'cerberus_steps'),
@@ -179,25 +165,16 @@ class atmos(dawgie.Algorithm):
             else:
                 vxsl, sxsl = (False, fltr + ' missing XSL')
 
-            if fltr in self.__tau.sv_as_dict():
-                sv = self.__tau.sv_as_dict()[fltr]
+            if fltr=='Ariel-sim':
+                sv = self.__arielsim.sv_as_dict()['parameters']
                 vspc, sspc = crbcore.checksv(sv)
-                if sspc: sspc = fltr + ' missing taurex'
+                sspc = 'Ariel-sim spectrum not found'
+            elif fltr in self.__spc.sv_as_dict().keys():
+                sv = self.__spc.sv_as_dict()[fltr]
+                vspc, sspc = crbcore.checksv(sv)
             else:
-                vspc, sspc = (False, fltr + ' missing taurex')
-
-            if not vspc:
-                if fltr=='Ariel-sim':
-                    sv = self.__arielsim.sv_as_dict()['parameters']
-                    vspc, sspc = crbcore.checksv(sv)
-                    sspc = 'Ariel-sim spectrum not found'
-                else:
-                    if fltr in self.__spc.sv_as_dict().keys():
-                        sv = self.__spc.sv_as_dict()[fltr]
-                        vspc, sspc = crbcore.checksv(sv)
-                    else:
-                        vspc = False
-                        sspc = 'This filter doesnt have a spectrum: ' + fltr
+                vspc = False
+                sspc = 'This filter doesnt have a spectrum: ' + fltr
 
             if vfin and vxsl and vspc:
                 log.warning('--< CERBERUS ATMOS: %s >--', fltr)
@@ -234,72 +211,13 @@ class atmos(dawgie.Algorithm):
         log.info(' calling atmos from cerb-alg-atmos  chain len=%d',MCMC_chain_length)
         am = crbcore.atmos(fin, xsl, spc, runtime_params, self.__out[index], fltr,
                            mclen=MCMC_chain_length,
-                           sphshell=True, verbose=False)  # singlemod='TEC' after mclen
+                           verbose=False)  # singlemod='TEC' after mclen
         return am
 
     @staticmethod
     def _failure(errstr):
         '''Failure log'''
         log.warning('--< CERBERUS ATMOS: %s >--', errstr)
-        return
-    pass
-
-class release(dawgie.Algorithm):
-    '''Format release products Roudier et al. 2021'''
-    def __init__(self):
-        '''__init__ ds'''
-        self._version_ = crbcore.rlsversion()
-        self.__fin = sysalg.finalize()
-        self.__atmos = atmos()
-        self.__out = [crbstates.rlsSV(fltr) for fltr in fltrs]
-        return
-
-    def name(self):
-        '''Database name for subtask extension'''
-        return 'release'
-
-    def previous(self):
-        '''Input State Vectors: cerberus.atmos'''
-        return [dawgie.ALG_REF(sys.task, self.__fin),
-                dawgie.ALG_REF(crb.task, self.__atmos)]
-
-    def state_vectors(self):
-        '''Output State Vectors: cerberus.release'''
-        return self.__out
-
-    def run(self, ds, ps):
-        '''Top level algorithm call'''
-        svupdate = []
-        vfin, sfin = crbcore.checksv(self.__fin.sv_as_dict()['parameters'])
-        fltr = 'HST-WFC3-IR-G141-SCAN'
-        update = False
-        if vfin:
-            log.warning('--< CERBERUS RELEASE: %s >--', fltr)
-            # pylint: disable=protected-access
-            update = self._release(ds._tn(),
-                                   self.__fin.sv_as_dict()['parameters'],
-                                   fltrs.index(fltr))
-            pass
-        else:
-            errstr = [m for m in [sfin] if m is not None]
-            self._failure(errstr[0])
-            pass
-        if update: svupdate.append(self.__out[fltrs.index(fltr)])
-        self.__out = svupdate
-        if self.__out.__len__() > 0: ds.update()
-        else: raise dawgie.NoValidOutputDataError(
-                f'No output created for CERBERUS.{self.name()}')
-        return
-
-    def _release(self, trgt, fin, index):
-        '''Core code call'''
-        rlsout = crbcore.release(trgt, fin, self.__out[index], verbose=False)
-        return rlsout
-
-    @staticmethod
-    def _failure(errstr):
-        '''Failure log'''
-        log.warning('--< CERBERUS RELEASE: %s >--', errstr)
         return
     pass
 # ---------------- ---------------------------------------------------

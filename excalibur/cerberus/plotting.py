@@ -436,12 +436,40 @@ def plot_bestfit(transitdata, patmos_model, patmos_modelProfiled, fmcarray,
     return save_to_state_vector, figgy
 # --------------------------------------------------------------------
 def plot_corner(allkeys, alltraces, profiletraces,
-                paramValues_bestFit, truth_params, prior_ranges,
+                modelParams_bestFit, truth_params, prior_ranges,
                 filt, modelName, trgt, p, saveDir, savetodisk=False):
     ''' corner plot showing posterior distributions '''
 
     truthcolor = 'darkgreen'
     fitcolor = 'firebrick'
+
+    tpr, ctp, hza, hloc, hthc, tceqdict, mixratio = modelParams_bestFit
+    # print('model param in corner plot',modelParams_bestFit)
+
+    paramValues_bestFit = []
+    for param in allkeys:
+        if param=='T':
+            paramValues_bestFit.append(tpr)
+        elif param=='CTP':
+            paramValues_bestFit.append(ctp)
+        elif param=='HScale':
+            paramValues_bestFit.append(hza)
+        elif param=='HLoc':
+            paramValues_bestFit.append(hloc)
+        elif param=='HThick':
+            paramValues_bestFit.append(hthc)
+        elif param=='[X/H]':
+            paramValues_bestFit.append(tceqdict['XtoH'])
+        elif param=='[C/O]':
+            paramValues_bestFit.append(tceqdict['CtoO'])
+        elif param=='[N/O]':
+            paramValues_bestFit.append(tceqdict['NtoO'])
+        elif param in mixratio:
+            paramValues_bestFit.append(mixratio[param])
+        else:
+            log.warning('--< ERROR: param not in list: %s >--',param)
+
+    # print('best fit values in corner plot',paramValues_bestFit)
 
     mcmcMedian = np.nanmedian(np.array(profiletraces), axis=1)
     # print(' params inside of corner plotting',allkeys)

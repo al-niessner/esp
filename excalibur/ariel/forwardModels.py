@@ -172,7 +172,7 @@ def makeCerberusAtmos(wavelength_um, model_params, xslib, planetLetter, mixratio
                                     hzlib=crbhzlib,  hzp='AVERAGE',
                                     hztop=float(hzloc), hzwscale=float(hzthick),
                                     cheq=tceqdict, pnet=planetLetter,
-                                    sphshell=True, verbose=False, debug=False,
+                                    verbose=False, debug=False,
                                     break_down_by_molecule=True)
 
     return fmc, fmc_by_molecule

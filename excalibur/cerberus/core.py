@@ -2,20 +2,19 @@
 # -- IMPORTS -- ------------------------------------------------------
 import dawgie
 import excalibur
-# pylint: disable=import-self
-# import excalibur.cerberus.core  # is this still needed?
 import excalibur.system.core as syscore
 from excalibur.target.targetlists import get_target_lists
 # from excalibur.cerberus.core import savesv
 from excalibur.cerberus.forwardModel import \
     ctxtupdt, absorb, \
-    crbmodel, fmcerberus, spshfmcerberus, clearfmcerberus, offcerberus, \
+    crbmodel, cloudyfmcerberus, clearfmcerberus, offcerberus, \
     offcerberus1, offcerberus2, offcerberus3, offcerberus4, \
     offcerberus5, offcerberus6, offcerberus7, offcerberus8
 from excalibur.cerberus.plotting import rebinData, plot_spectrumfit, \
     plot_corner, plot_vsPrior, plot_walkerEvolution, \
     plot_fitsVStruths, plot_fitUncertainties, plot_massVSmetals
-from excalibur.cerberus.bounds import setPriorBound, getProfileLimits_HSTG141, applyProfiling
+from excalibur.cerberus.bounds import setPriorBound, addPriors, \
+    getProfileLimits_HSTG141, applyProfiling
 
 import logging
 log = logging.getLogger(__name__)
@@ -23,10 +22,8 @@ pymc3log = logging.getLogger('pymc3')
 pymc3log.setLevel(logging.ERROR)
 
 import os
-# import sys
 import pymc3 as pm
 import numpy as np
-import matplotlib.image as img
 import matplotlib.pyplot as plt
 from collections import defaultdict
 from collections import namedtuple
@@ -36,10 +33,7 @@ from scipy.interpolate import interp1d as itp
 # does this really go here? CIcheck needs it back in algorithms
 CERB_PARAMS = namedtuple('cerberus_params_from_runtime',[
     'MCMC_chain_length',
-    'fitCloudParameters',
-    'fitT',
-    'fitCtoO',
-    'fitNtoO'])
+    'fitCloudParameters', 'fitT', 'fitCtoO', 'fitNtoO'])
 
 # ------------- ------------------------------------------------------
 # -- SV VALIDITY -- --------------------------------------------------
@@ -454,7 +448,7 @@ def atmosversion():
 
 def atmos(fin, xsl, spc, runtime_params, out, ext,
           hazedir=os.path.join(excalibur.context['data_dir'], 'CERBERUS/HAZE'),
-          singlemod=None, mclen=int(1e4), sphshell=False, verbose=False):
+          singlemod=None, mclen=int(1e4), verbose=False):
     '''
     G. ROUDIER: Cerberus retrieval
     '''
@@ -594,14 +588,6 @@ def atmos(fin, xsl, spc, runtime_params, out, ext,
                 tspecerr_G750[mask] = np.nan
                 tspectrum[cond_specG750] = tspec_G750
                 tspecerr[cond_specG750] = tspecerr_G750
-                pass
-            # CLEAN UP G750
-            #         cond_nan = np.isfinite(tspec_G750)
-            #         coefs_spec_G750 = poly.polyfit(twav_G750[cond_nan], tspec_G750[cond_nan], 1)
-            #         slp = twav_G750*coefs_spec_G750[1] + coefs_spec_G750[0]
-            #         mask = abs(slp - tspec_G750) >= 7 * np.nanmedian(tspecerr_G750)
-            #         tspec_G750[mask] = np.nan
-            #         tspectrum[cond_specG750] = tspec_G750
             Hs = inputData['Hs']
             #  Clean up
             spechs = (np.sqrt(tspectrum) - np.sqrt(np.nanmedian(tspectrum)))/Hs
@@ -609,8 +595,7 @@ def atmos(fin, xsl, spc, runtime_params, out, ext,
             tspectrum[cleanup2] = np.nan
             tspecerr[cleanup2] = np.nan
             twav[cleanup2] = np.nan
-            cleanup = np.isfinite(tspectrum) & (tspecerr < 1e0)
-            #
+            # cleanup = np.isfinite(tspectrum) & (tspecerr < 1e0)
             cleanup = np.isfinite(tspectrum)
             solidr = orbp[p]['rp']*ssc['Rjup']  # MK
 
@@ -621,33 +606,28 @@ def atmos(fin, xsl, spc, runtime_params, out, ext,
                 out['data'][p][model] = {}
 
                 # new method for setting priors (no change, but easier to view in bounds.py)
-                priorRangeTable = setPriorBound()
+                priorRangeTable = setPriorBound(eqtemp)
 
                 out['data'][p][model]['prior_ranges'] = {}
                 # keep track of the bounds put on each parameter
                 # this will be helpful for later plotting and analysis
-                prior_ranges = {}
                 nodes = []
-                # with pm.Model() as pmmodel:
                 with pm.Model():
+
+                    # set the fixed parameters (the ones that are not being fit this time)
                     fixedParams = {}
-
-                    if runtime_params.fitCloudParameters:
-                        # CLOUD TOP PRESSURE
-                        # prior_ranges['CTP'] = (-6,1)
-                        prior_ranges['CTP'] = priorRangeTable['CTP']
-                        ctp = pm.Uniform('CTP', prior_ranges['CTP'][0], prior_ranges['CTP'][1])
-                        nodes.append(ctp)
-
-                        # HAZE SCAT. CROSS SECTION SCALE FACTOR
-                        # prior_ranges['HScale'] = (-6,6)
-                        prior_ranges['HScale'] = priorRangeTable['HScale']
-                        hza = pm.Uniform('HScale', prior_ranges['HScale'][0], prior_ranges['HScale'][1])
-                        nodes.append(hza)
-                    else:
-                        # print('model_params',inputData['model_params'])
+                    if not runtime_params.fitCloudParameters:
                         fixedParams['CTP'] = inputData['model_params']['CTP']
                         fixedParams['HScale'] = inputData['model_params']['HScale']
+                        fixedParams['HLoc'] = inputData['model_params']['HLoc']
+                        fixedParams['HThick'] = inputData['model_params']['HThick']
+                    if not runtime_params.fitT:
+                        fixedParams['T'] = inputData['model_params']['T']
+                    if not runtime_params.fitNtoO:
+                        fixedParams['NtoO'] = 0.
+                    if not runtime_params.fitCtoO:
+                        fixedParams['CtoO'] = inputData['model_params']['C/O']
+                    # print('fixedparams',fixedParams)
 
                     # OFFSET BETWEEN STIS AND WFC3 filters
                     if 'STIS-WFC3' in ext:
@@ -662,128 +642,69 @@ def atmos(fin, xsl, spc, runtime_params, out, ext,
                         if 'STIS' in filters[0]:
                             if valid0:  # G430
                                 if valid1 and valid2 and valid3:  # G430-G750-G102-G141
-                                    off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off0]))
-                                    off1_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off1]))
-                                    off2_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off2]))
-                                    off0 = pm.Uniform('OFF0', -off0_value, off0_value)
-                                    nodes.append(off0)
-                                    off1 = pm.Uniform('OFF1', -off1_value, off1_value)
-                                    nodes.append(off1)
-                                    off2 = pm.Uniform('OFF2', -off2_value, off2_value)
-                                    nodes.append(off2)
-                                if valid1 and valid2 and not valid3:
-                                    off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off2])- np.nanmedian(1e2*tspectrum[cond_off0]))
-                                    off1_value = abs(np.nanmedian(1e2*tspectrum[cond_off2])- np.nanmedian(1e2*tspectrum[cond_off1]))
-                                    off0 = pm.Uniform('OFF0', -off0_value, off0_value)
-                                    nodes.append(off0)
-                                    off1 = pm.Uniform('OFF1', -off1_value, off1_value)
-                                    nodes.append(off1)
-                                if valid1 and valid3 and not valid2:
-                                    off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off0]))
-                                    off1_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off1]))
-                                    off0 = pm.Uniform('OFF0', -off0_value, off0_value)
-                                    nodes.append(off0)
-                                    off1 = pm.Uniform('OFF1', -off1_value, off1_value)
-                                    nodes.append(off1)
-                                if valid2 and valid3 and not valid1:
-                                    off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off0]))
-                                    off1_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off2]))
-                                    off0 = pm.Uniform('OFF0', -off0_value, off0_value)
-                                    nodes.append(off0)
-                                    off1 = pm.Uniform('OFF1', -off1_value, off1_value)
-                                    nodes.append(off1)
-                                if valid3 and not valid1 and not valid2:
-                                    off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off0]))
-                                    off0 = pm.Uniform('OFF0', -off0_value, off0_value)
-                                    nodes.append(off0)
-                            if not valid0:
+                                    off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3]) -
+                                                     np.nanmedian(1e2*tspectrum[cond_off0]))
+                                    off1_value = abs(np.nanmedian(1e2*tspectrum[cond_off3]) -
+                                                     np.nanmedian(1e2*tspectrum[cond_off1]))
+                                    off2_value = abs(np.nanmedian(1e2*tspectrum[cond_off3]) -
+                                                     np.nanmedian(1e2*tspectrum[cond_off2]))
+                                    nodes.append(pm.Uniform('OFF0', -off0_value, off0_value))
+                                    nodes.append(pm.Uniform('OFF1', -off1_value, off1_value))
+                                    nodes.append(pm.Uniform('OFF2', -off2_value, off2_value))
+                                elif valid1 and valid2 and not valid3:
+                                    off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off2]) -
+                                                     np.nanmedian(1e2*tspectrum[cond_off0]))
+                                    off1_value = abs(np.nanmedian(1e2*tspectrum[cond_off2]) -
+                                                     np.nanmedian(1e2*tspectrum[cond_off1]))
+                                    nodes.append(pm.Uniform('OFF0', -off0_value, off0_value))
+                                    nodes.append(pm.Uniform('OFF1', -off1_value, off1_value))
+                                elif valid1 and valid3 and not valid2:
+                                    off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3]) -
+                                                     np.nanmedian(1e2*tspectrum[cond_off0]))
+                                    off1_value = abs(np.nanmedian(1e2*tspectrum[cond_off3]) -
+                                                     np.nanmedian(1e2*tspectrum[cond_off1]))
+                                    nodes.append(pm.Uniform('OFF0', -off0_value, off0_value))
+                                    nodes.append(pm.Uniform('OFF1', -off1_value, off1_value))
+                                elif valid2 and valid3 and not valid1:
+                                    off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3]) -
+                                                     np.nanmedian(1e2*tspectrum[cond_off0]))
+                                    off1_value = abs(np.nanmedian(1e2*tspectrum[cond_off3]) -
+                                                     np.nanmedian(1e2*tspectrum[cond_off2]))
+                                    nodes.append(pm.Uniform('OFF0', -off0_value, off0_value))
+                                    nodes.append(pm.Uniform('OFF1', -off1_value, off1_value))
+                                elif valid3 and not valid1 and not valid2:
+                                    off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3]) -
+                                                     np.nanmedian(1e2*tspectrum[cond_off0]))
+                                    nodes.append(pm.Uniform('OFF0', -off0_value, off0_value))
+                            else:
                                 if valid1 and valid2 and valid3:
-                                    off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off1]))
-                                    off1_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off2]))
-                                    off0 = pm.Uniform('OFF0', -off0_value, off0_value)
-                                    nodes.append(off0)
-                                    off1 = pm.Uniform('OFF1', -off1_value, off1_value)
-                                    nodes.append(off1)
+                                    off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3]) -
+                                                     np.nanmedian(1e2*tspectrum[cond_off1]))
+                                    off1_value = abs(np.nanmedian(1e2*tspectrum[cond_off3]) -
+                                                     np.nanmedian(1e2*tspectrum[cond_off2]))
+                                    nodes.append(pm.Uniform('OFF0', -off0_value, off0_value))
+                                    nodes.append(pm.Uniform('OFF1', -off1_value, off1_value))
                                 if valid1 and valid3 and not valid2:
-                                    off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off1]))
-                                    off0 = pm.Uniform('OFF0', -off0_value, off0_value)
-                                    nodes.append(off0)
+                                    off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3]) -
+                                                     np.nanmedian(1e2*tspectrum[cond_off1]))
+                                    nodes.append(pm.Uniform('OFF0', -off0_value, off0_value))
                                 if valid1 and valid2 and not valid3:
-                                    off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off2])- np.nanmedian(1e2*tspectrum[cond_off1]))
-                                    off0 = pm.Uniform('OFF0', -off0_value, off0_value)
-                                    nodes.append(off0)
+                                    off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off2]) -
+                                                     np.nanmedian(1e2*tspectrum[cond_off1]))
+                                    nodes.append(pm.Uniform('OFF0', -off0_value, off0_value))
                                 if valid1 and valid2 and not valid3:
-                                    off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off2])- np.nanmedian(1e2*tspectrum[cond_off1]))
-                                    off0 = pm.Uniform('OFF0', -off0_value, off0_value)
-                                    nodes.append(off0)
-
+                                    off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off2]) -
+                                                     np.nanmedian(1e2*tspectrum[cond_off1]))
+                                    nodes.append(pm.Uniform('OFF0', -off0_value, off0_value))
                         if 'WFC3' in filters[0]:
                             if valid2 and valid3:
-                                off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off2]))
-                                off0 = pm.Uniform('OFF0', -off0_value, off0_value)
-                                nodes.append(off0)
-                    # KILL HAZE POWER INDEX FOR SPHERICAL SHELL
-                    if sphshell:
-                        if runtime_params.fitCloudParameters:
-                            # prior_ranges['HLoc'] = (-6,1)
-                            prior_ranges['HLoc'] = priorRangeTable['HLoc']
-                            hzloc = pm.Uniform('HLoc',
-                                               prior_ranges['HLoc'][0], prior_ranges['HLoc'][1])
-                            nodes.append(hzloc)
+                                off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3]) -
+                                                 np.nanmedian(1e2*tspectrum[cond_off2]))
+                                nodes.append(pm.Uniform('OFF0', -off0_value, off0_value))
 
-                            # prior_ranges['HThick'] = (1,20)
-                            prior_ranges['HThick'] = priorRangeTable['HThick']
-                            hzthick = pm.Uniform('HThick',
-                                                 prior_ranges['HThick'][0],prior_ranges['HThick'][1])
-                            nodes.append(hzthick)
-                        else:
-                            fixedParams['HLoc'] = inputData['model_params']['HLoc']
-                            fixedParams['HThick'] = inputData['model_params']['HThick']
-                    else:
-                        if runtime_params.fitCloudParameters:
-                            # prior_ranges['HIndex'] = (-4,0)
-                            prior_ranges['HIndex'] = priorRangeTable['HIndex']
-                            hzi = pm.Uniform('HIndex',
-                                             prior_ranges['HIndex'][0], prior_ranges['HIndex'][1])
-                            nodes.append(hzi)
-                        else:
-                            fixedParams['HIndex'] = -2
-
-                    # BOOST TEMPERATURE PRIOR TO [75%, 150%] Teq
-                    if runtime_params.fitT:
-                        # prior_ranges['T'] = (0.75e0*eqtemp, 1.5e0*eqtemp)
-                        prior_ranges['T'] = (priorRangeTable['Tfactor'][0] * eqtemp,
-                                             priorRangeTable['Tfactor'][1] * eqtemp)
-                        tpr = pm.Uniform('T', prior_ranges['T'][0], prior_ranges['T'][1])
-                        nodes.append(tpr)
-                    else:
-                        fixedParams['T'] = inputData['model_params']['T']
-
-                    # MODEL SPECIFIC ABSORBERS
-                    for param in modparlbl[model]:
-                        # dexRange = (-6,6)
-                        dexRange = priorRangeTable['dexRange']
-                        if param=='XtoH':
-                            prior_ranges['[X/H]'] = dexRange
-                        elif param=='CtoO':
-                            prior_ranges['[C/O]'] = dexRange
-                        elif param=='NtoO':
-                            prior_ranges['[N/O]'] = dexRange
-                        else:
-                            prior_ranges[param] = dexRange
-                    numAbundanceParams = len(modparlbl[model])
-                    # make sure that there's at least two parameters here, or the decorator crashes
-                    numAbundanceParams = max(numAbundanceParams, 2)
-                    # print('numAbundanceParams',numAbundanceParams)
-                    modelpar = pm.Uniform(model, lower=dexRange[0], upper=dexRange[1],
-                                          shape=numAbundanceParams)
-                    nodes.append(modelpar)
-                    # print('setting fixed params.  fitNtoO',bool(runtime_params.fitNtoO))
-                    if not runtime_params.fitNtoO:
-                        fixedParams['NtoO'] = 0.
-                    if not runtime_params.fitCtoO:
-                        fixedParams['CtoO'] = inputData['model_params']['C/O']
-                    # print('fixedparams',fixedParams)
+                    # new cleaned-up version of adding on the prior bounds as pymc nodes
+                    nodes, prior_ranges = addPriors(priorRangeTable, runtime_params,
+                                                    model, modparlbl[model])
 
                     # before calling MCMC, save the fixed-parameter info in the context
                     ctxtupdt(cleanup=cleanup, model=model, p=p, solidr=solidr, orbp=orbp,
@@ -798,7 +719,7 @@ def atmos(fin, xsl, spc, runtime_params, out, ext,
                                             observed=tspectrum[cleanup])
                         pass
 
-                    elif sphshell:
+                    else:
                         if 'STIS-WFC3' in ext:
                             if 'STIS' in filters[0]:
                                 if valid0:  # G430
@@ -841,27 +762,23 @@ def atmos(fin, xsl, spc, runtime_params, out, ext,
                                                         tau=1e0/tspecerr[cleanup]**2,
                                                         observed=tspectrum[cleanup])
                                 if not valid2:
-                                    _mcdata = pm.Normal('mcdata', mu=spshfmcerberus(*nodes),
+                                    _mcdata = pm.Normal('mcdata', mu=cloudyfmcerberus(*nodes),
                                                         tau=1e0/(np.nanmedian(tspecerr[cleanup])**2),
                                                         observed=tspectrum[cleanup])
                                 if not valid3:
-                                    _mcdata = pm.Normal('mcdata', mu=spshfmcerberus(*nodes),
+                                    _mcdata = pm.Normal('mcdata', mu=cloudyfmcerberus(*nodes),
                                                         tau=1e0/(np.nanmedian(tspecerr[cleanup])**2),
                                                         observed=tspectrum[cleanup])
                                     pass
                                 pass
                         if 'STIS-WFC3' not in ext:
                             log.warning('--< STANDARD MCMC (WITH CLOUDS) >--')
-                            _mcdata = pm.Normal('mcdata', mu=spshfmcerberus(*nodes),
+                            _mcdata = pm.Normal('mcdata', mu=cloudyfmcerberus(*nodes),
                                                 tau=1e0/(np.nanmedian(tspecerr[cleanup])**2),
                                                 observed=tspectrum[cleanup])
                             pass
                         pass
-                    else:
-                        _mcdata = pm.Normal('mcdata', mu=fmcerberus(*nodes),
-                                            tau=1e0/(np.nanmedian(tspecerr[cleanup])**2),
-                                            observed=tspectrum[cleanup])
-                        pass
+
                     log.warning('>-- MCMC nodes: %s', str([n.name for n in nodes]))
                     trace = pm.sample(mclen, cores=4, tune=int(mclen/4),
                                       compute_convergence_checks=False, step=pm.Metropolis(),
@@ -1047,58 +964,6 @@ def hazelib(sv,
     sv['PROFILE'].append(vdensity)
     return
 # ---------------------------------- ---------------------------------
-# -- ROUDIER ET AL. 2021 RELEASE -- ----------------------------------
-def rlsversion():
-    '''
-    GMR:110 Initial release to IPAC
-    GMR:111 Removed empty keys
-    '''
-    return dawgie.VERSION(1,1,1)
-
-def release(trgt, fin, out, verbose=False):
-    '''
-    GMR: Format Cerberus SV products to be released to IPAC
-    trgt [INPUT]: target name
-    fin [INPUT]: system.finalize.parameters
-    out [INPUT/OUTPUT]
-    ext [INPUT]: 'HST-WFC3-IR-G141-SCAN'
-    verbose [OPTIONAL]: verbosity
-    '''
-    rlsed = False
-    plist = fin['priors']['planets']
-    thispath = os.path.join(excalibur.context['data_dir'], 'CERBERUS')
-    for p in plist:
-        intxtf = os.path.join(thispath, 'P.CERBERUS.atmos', trgt+p+'.txt')
-        incorrpng = os.path.join(thispath, 'P.CERBERUS.atmos', trgt+p+'_atmos_corr.png')
-        intxtpng = os.path.join(thispath, 'P.CERBERUS.atmos', trgt+p+'_atmos.png')
-        out['data'][p] = {}
-        try:
-            atm = np.loadtxt(intxtf)
-            out['data'][p]['atmos'] = atm
-            out['STATUS'].append(True)
-            pass
-        except FileNotFoundError: pass
-        try:
-            corrplot = img.imread(incorrpng)
-            out['data'][p]['corrplot'] = corrplot
-            out['STATUS'].append(True)
-            pass
-        except FileNotFoundError: pass
-        try:
-            modelplot = img.imread(intxtpng)
-            out['data'][p]['modelplot'] = modelplot
-            out['STATUS'].append(True)
-            pass
-        except FileNotFoundError: pass
-        if not out['data'][p]:
-            if verbose: log.warning('--< No data found for %s', p)
-            out['data'].pop(p)
-            pass
-        pass
-    rlsed = out['STATUS'][-1]
-    if verbose: log.warning('--< %s', out['STATUS'])
-    return rlsed
-# --------------------------------- ----------------------------------
 # -- RESULTS ----------------------------------------------------------
 def resultsversion():
     '''
@@ -1283,19 +1148,6 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                 # print('fit results; T:',tpr)
                 # print('fit results; mdplist:',mdp)
 
-                paramValues_median = [666]*len(allKeys)
-                paramValues_profiled = [666]*len(allKeys)
-                paramValues_median[allKeys.index('T')] = tpr
-                paramValues_median[allKeys.index('CTP')] = ctp
-                paramValues_median[allKeys.index('HScale')] = hza
-                paramValues_median[allKeys.index('HLoc')] = hloc
-                paramValues_median[allKeys.index('HThick')] = hthc
-                paramValues_profiled[allKeys.index('T')] = tprProfiled
-                paramValues_profiled[allKeys.index('CTP')] = ctpProfiled
-                paramValues_profiled[allKeys.index('HScale')] = hzaProfiled
-                paramValues_profiled[allKeys.index('HLoc')] = hlocProfiled
-                paramValues_profiled[allKeys.index('HThick')] = hthcProfiled
-
                 solidr = fin['priors'][p]['rp'] * ssc['Rjup']
 
                 if modelName=='TEC':
@@ -1328,12 +1180,6 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                         else:
                             tceqdict['NtoO'] = 0.
                         tceqdictProfiled['NtoO'] = tceqdict['NtoO']
-                    paramValues_median[allKeys.index('[X/H]')] = tceqdict['XtoH']
-                    paramValues_median[allKeys.index('[C/O]')] = tceqdict['CtoO']
-                    paramValues_median[allKeys.index('[N/O]')] = tceqdict['NtoO']
-                    paramValues_profiled[allKeys.index('[X/H]')] = tceqdictProfiled['XtoH']
-                    paramValues_profiled[allKeys.index('[C/O]')] = tceqdictProfiled['CtoO']
-                    paramValues_profiled[allKeys.index('[N/O]')] = tceqdictProfiled['NtoO']
                 elif modelName=='PHOTOCHEM':
                     if len(mdp)!=5: log.warning('--< Expecting 5 molecules for PHOTOCHEM model! >--')
                     tceqdict = None
@@ -1351,16 +1197,6 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                     mixratioProfiled['CO2'] = float(mdpProfiled[3])
                     mixratioProfiled['H2CO'] = float(mdpProfiled[4])
 
-                    paramValues_median[allKeys.index('HCN')] = mixratio['HCN']
-                    paramValues_median[allKeys.index('CH4')] = mixratio['CH4']
-                    paramValues_median[allKeys.index('C2H2')] = mixratio['C2H2']
-                    paramValues_median[allKeys.index('CO2')] = mixratio['CO2']
-                    paramValues_median[allKeys.index('H2CO')] = mixratio['H2CO']
-                    paramValues_profiled[allKeys.index('HCN')] = mixratioProfiled['HCN']
-                    paramValues_profiled[allKeys.index('CH4')] = mixratioProfiled['CH4']
-                    paramValues_profiled[allKeys.index('C2H2')] = mixratioProfiled['C2H2']
-                    paramValues_profiled[allKeys.index('CO2')] = mixratioProfiled['CO2']
-                    paramValues_profiled[allKeys.index('H2CO')] = mixratioProfiled['H2CO']
                 else:
                     log.warning('--< Expecting TEQ or PHOTOCHEM model! >--')
 
@@ -1368,6 +1204,12 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                 hazedir = os.path.join(excalibur.context['data_dir'], 'CERBERUS/HAZE')
                 hazelib(crbhzlib, hazedir=hazedir, verbose=False)
 
+                paramValues_median = (tpr, ctp, hza, hloc, hthc, tceqdict, mixratio)
+                paramValues_profiled = (tprProfiled,
+                                        ctpProfiled, hzaProfiled, hlocProfiled, hthcProfiled,
+                                        tceqdictProfiled, mixratioProfiled)
+
+                # print('median fmc',np.nanmedian(fmc))
                 fmc = np.zeros(transitdata['depth'].size)
                 fmc = crbmodel(mixratio, float(hza), float(ctp),
                                solidr, fin['priors'],
@@ -1376,7 +1218,7 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                                transitdata['wavelength'],
                                hzlib=crbhzlib, hzp='AVERAGE', hztop=float(hloc),
                                hzwscale=float(hthc), cheq=tceqdict, pnet=p,
-                               sphshell=True, verbose=False, debug=False)
+                               verbose=False, debug=False)
                 # print('median fmc',np.nanmedian(fmc))
                 # print('mean model',np.nanmean(fmc))
                 # print('mean data',np.nanmean(transitdata['depth']))
@@ -1391,7 +1233,7 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                                        transitdata['wavelength'],
                                        hzlib=crbhzlib, hzp='AVERAGE', hztop=float(hlocProfiled),
                                        hzwscale=float(hthcProfiled), cheq=tceqdictProfiled, pnet=p,
-                                       sphshell=True, verbose=False, debug=False)
+                                       verbose=False, debug=False)
                 patmos_modelProfiled = fmcProfiled - np.nanmean(fmcProfiled) + np.nanmean(transitdata['depth'])
 
                 # calculate chi2 values to see which is the best fit
@@ -1438,13 +1280,6 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                     # print('fit results; T:',tpr)
                     # print('fit results; mdplist:',mdp)
 
-                    paramValues = [666]*len(allKeys)
-                    paramValues[allKeys.index('T')] = tpr
-                    paramValues[allKeys.index('CTP')] = ctp
-                    paramValues[allKeys.index('HScale')] = hza
-                    paramValues[allKeys.index('HLoc')] = hloc
-                    paramValues[allKeys.index('HThick')] = hthc
-
                     if modelName=='TEC':
                         mixratio = None
                         tceqdict = {}
@@ -1456,14 +1291,11 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                         if fitNtoO:
                             tceqdict['NtoO'] = float(mdp[2])
                         else:
-                            if 'NtoO' in atm[p]['TRUTH_MODELPARAMS'].keys():
+                            if ('TRUTH_MODELPARAMS' in atm[p]) and ('NtoO' in atm[p]['TRUTH_MODELPARAMS']):
                                 tceqdict['NtoO'] = atm[p]['TRUTH_MODELPARAMS']['NtoO']
                             else:
                                 # log.warning('--< NtoO is missing from TRUTH_MODELPARAMS >--')
                                 tceqdict['NtoO'] = 0.
-                        paramValues[allKeys.index('[X/H]')] = tceqdict['XtoH']
-                        paramValues[allKeys.index('[C/O]')] = tceqdict['CtoO']
-                        paramValues[allKeys.index('[N/O]')] = tceqdict['NtoO']
 
                     elif modelName=='PHOTOCHEM':
                         tceqdict = None
@@ -1473,11 +1305,6 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                         mixratio['C2H2'] = float(mdp[2])
                         mixratio['CO2'] = float(mdp[3])
                         mixratio['H2CO'] = float(mdp[4])
-                        paramValues[allKeys.index('HCN')] = mixratio['HCN']
-                        paramValues[allKeys.index('CH4')] = mixratio['CH4']
-                        paramValues[allKeys.index('C2H2')] = mixratio['C2H2']
-                        paramValues[allKeys.index('CO2')] = mixratio['CO2']
-                        paramValues[allKeys.index('H2CO')] = mixratio['H2CO']
 
                     fmcrand = np.zeros(transitdata['depth'].size)
                     fmcrand = crbmodel(mixratio, float(hza), float(ctp),
@@ -1487,7 +1314,7 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                                        transitdata['wavelength'],
                                        hzlib=crbhzlib, hzp='AVERAGE', hztop=float(hloc),
                                        hzwscale=float(hthc), cheq=tceqdict, pnet=p,
-                                       sphshell=True, verbose=False, debug=False)
+                                       verbose=False, debug=False)
                     # print('len',len(fmcrand))
                     # print('median fmc',np.nanmedian(fmcrand))
                     # print('mean model',np.nanmean(fmcrand))
@@ -1503,7 +1330,7 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                         # print('  using this as best',chi2modelrand)
                         chi2best = chi2modelrand
                         patmos_bestFit = patmos_modelrand
-                        paramValues_bestFit = paramValues
+                        paramValues_bestFit = (tpr, ctp, hza, hloc, hthc, tceqdict, mixratio)
 
                 # _______________MAKE SOME PLOTS________________
                 saveDir = os.path.join(excalibur.context['data_dir'], 'bryden/')
@@ -1512,8 +1339,7 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                 transitdata = rebinData(transitdata)
 
                 out['data'][p]['plot_spectrum_'+modelName],_ = plot_spectrumfit(
-                    transitdata, patmos_model, patmos_modelProfiled,
-                    patmos_bestFit, fmcarray,
+                    transitdata, patmos_model, patmos_modelProfiled, patmos_bestFit, fmcarray,
                     truth_spectrum,
                     anc['data'][p], atm[p],
                     filt, modelName, trgt, p, saveDir)

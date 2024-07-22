@@ -4,15 +4,16 @@
 # import excalibur
 import numpy as np
 import logging; log = logging.getLogger(__name__)
+import pymc3 as pm
 # -------------------------------------------------------------------
-def setPriorBound():
+def setPriorBound(eqtemp):
     '''
     Set prior constraints on the spectrum-fitting parameters
     '''
 
     prior_ranges = {}
 
-    prior_ranges['Tfactor'] = (0.75, 1.5)  # multiply this times T_eq
+    prior_ranges['T'] = (0.75*eqtemp, 1.5*eqtemp)
 
     prior_ranges['dexRange'] = (-6,6)      # use this for [X/H],[C/O],[N/O]
 
@@ -20,7 +21,6 @@ def setPriorBound():
     prior_ranges['HScale'] = (-6,6)
     prior_ranges['HLoc'] = (-6,1)
     prior_ranges['HThick'] = (1,20)
-    prior_ranges['HIndex'] = (-4,0)        # not used; older param for when sphshell is false
 
     return prior_ranges
 
@@ -115,3 +115,48 @@ def applyProfiling(target, limits, alltraces, allkeys):
                         log.warning('--< Profiling has no effect: %s %s >--',target,limit)
 
     return proftrace, appliedLimits
+
+def addPriors(priorRangeTable, runtime_params, model, modparlbls):
+    '''
+    careful - the order that you add parameters here has to match the order in fmcerberus
+    '''
+
+    prior_ranges = {}
+    nodes = []
+
+    if runtime_params.fitCloudParameters:
+        prior_ranges['CTP'] = priorRangeTable['CTP']
+        nodes.append(pm.Uniform('CTP', prior_ranges['CTP'][0], prior_ranges['CTP'][1]))
+
+        prior_ranges['HScale'] = priorRangeTable['HScale']
+        nodes.append(pm.Uniform('HScale', prior_ranges['HScale'][0], prior_ranges['HScale'][1]))
+
+        prior_ranges['HLoc'] = priorRangeTable['HLoc']
+        nodes.append(pm.Uniform('HLoc', prior_ranges['HLoc'][0], prior_ranges['HLoc'][1]))
+
+        prior_ranges['HThick'] = priorRangeTable['HThick']
+        nodes.append(pm.Uniform('HThick',prior_ranges['HThick'][0],prior_ranges['HThick'][1]))
+
+    if runtime_params.fitT:
+        prior_ranges['T'] = priorRangeTable['T']
+        nodes.append(pm.Uniform('T', prior_ranges['T'][0], prior_ranges['T'][1]))
+
+    for param in modparlbls:
+        if param=='XtoH':
+            prior_ranges['[X/H]'] = priorRangeTable['dexRange']
+        elif param=='CtoO':
+            prior_ranges['[C/O]'] = priorRangeTable['dexRange']
+        elif param=='NtoO':
+            prior_ranges['[N/O]'] = priorRangeTable['dexRange']
+        else:
+            prior_ranges[param] = priorRangeTable['dexRange']
+    numAbundanceParams = len(modparlbls)
+    # make sure that there's at least two parameters here, or the decorator crashes
+    numAbundanceParams = max(numAbundanceParams, 2)
+    # print('numAbundanceParams',numAbundanceParams)
+    nodes.append(pm.Uniform(model,
+                            lower=priorRangeTable['dexRange'][0],
+                            upper=priorRangeTable['dexRange'][1],
+                            shape=numAbundanceParams))
+
+    return nodes, prior_ranges
