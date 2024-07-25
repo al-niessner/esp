@@ -21,22 +21,10 @@ dawgie.db.reopen()
 
 if tn in ['', '__all__']: pass
 else:
-    # -- THIS IS EVIL PYTHON -- --------------------------------------
+    name = ['normalize', 'spectrum', 'whitelight', None][0]  # -1 to run them all
     subtasks = excalibur.eclipse.bot.Actor('eclipse', 4, rid, tn)
-    fulllist = getattr(subtasks, 'list')
-    def shortlist():
-        '''666'''
-        out = fulllist()
-        # -- Change indexes as needed and look away from those lines
-        # 0 eclalg.normalization(),
-        # 1 eclalg.whitelight(),
-        # 2 eclalg.spectrum()
-        out = out[0:]
-        # ------------------------- ----------------------------------
-        return out
-    setattr(subtasks, 'list', shortlist)
     pass
 
-subtasks.do()
+subtasks.do(name)
 dawgie.db.close()
 dawgie.security.finalize()

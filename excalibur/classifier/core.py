@@ -178,7 +178,6 @@ def lc_resid_classification(transit_whitelight, ext, out):
 
         img = get_img(sep, (wl_flat - model))
         img = np.transpose([img], (0, 3, 1, 2))
-        # pylint: disable=E1101
         train_img = torch.from_numpy(img)
         output = mdl(train_img.float())
         pred = torch.max(output.data, 1)[1].tolist()[0]

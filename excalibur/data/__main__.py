@@ -21,22 +21,10 @@ dawgie.db.reopen()
 
 if tn in ['', '__all__']: pass
 else:
-    # -- THIS IS EVIL PYTHON -- --------------------------------------
+    name = ['calibration', 'collect', 'timing', None][1]  # -1 to run them all
     subtasks = excalibur.data.bot.Actor('data', 4, rid, tn)
-    fulllist = getattr(subtasks, 'list')
-    def shortlist():
-        '''666'''
-        out = fulllist()
-        # -- Change indexes as needed and look away from those lines
-        # 0 datalg.collect(),
-        # 1 datalg.timing(),
-        # 2 datalg.calibration()
-        out = out[0:]
-        # ------------------------- ----------------------------------
-        return out
-    setattr(subtasks, 'list', shortlist)
     pass
 
-subtasks.do()
+subtasks.do(name)
 dawgie.db.close()
 dawgie.security.finalize()

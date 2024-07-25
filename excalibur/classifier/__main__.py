@@ -21,24 +21,13 @@ dawgie.security.initialize(os.path.expandvars(os.path.expanduser
 dawgie.db.reopen()
 
 if tn in ['', '__all__']:
+    name = 'summarize_flags'
     subtasks = excalibur.classifier.bot.Agent('classifier', 4, rid)
-    pass
 else:
-    # -- THIS IS EVIL PYTHON -- --------------------------------------
+    name = ['inference', 'flags', None][1]  # 0 is kicked off list, -1 to run them all
     subtasks = excalibur.classifier.bot.Actor('classifier', 4, rid, tn)
-    fulllist = getattr(subtasks, 'list')
-    def shortlist():
-        '''666'''
-        out = fulllist()
-        # -- Change indexes as needed and look away from those lines
-        # 0: clsalg.inference()
-        # 1: clsalg.flags()
-        out = out[0:]
-        # ------------------------- ----------------------------------
-        return out
-    setattr(subtasks, 'list', shortlist)
     pass
 
-subtasks.do()
+subtasks.do(name)
 dawgie.db.close()
 dawgie.security.finalize()

@@ -68,6 +68,7 @@ class collect(dawgie.Algorithm):
                 ok = self._collect(fltr, scrape, self.__out)
                 update = update or ok
 
+            # FIXMEE: this code needs repaired by moving out to config
             # pylint: disable=protected-access
             trgt = ds._tn()
             if trgt in ['CoRoT-1','Kepler-11','Kepler-13','TrES-4']:

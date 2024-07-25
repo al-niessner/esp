@@ -101,7 +101,7 @@ def scrapeids(ds:dawgie.Dataset, out, web, genIDs=True):
             out['starID'][parsedstr[0]]['aliases'].extend(aliaslist)
             pass
         if genIDs:
-            # pylint: disable=protected-access
+            # necessary retargeting, pylint: disable=protected-access
             dawgie.db.connect(trg.algorithms.create(), ds._bot(), parsedstr[0]).load()
             pass
         pass

@@ -201,10 +201,9 @@ class scrape(dawgie.Algorithm):
 
         var_autofill = self.__autofill.sv_as_dict()['parameters']
         valid, errstring = trgcore.checksv(var_autofill)
-        if valid:
-            log.warning('--< TARGET SCRAPE: %s >--',
-                        ds._tn())  # pylint: disable=protected-access
-            _ = self._scrape(var_autofill, self.__out)
+        if valid and self.__rt.is_valid():
+            log.warning('--< TARGET SCRAPE: %s >--', repr(self))
+            self._scrape(var_autofill, self.__out)
         else: self._failure(errstring)
         # GMR: always update.
         # Sims / proceed() do not require data nor full set of system parameters.

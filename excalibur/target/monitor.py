@@ -79,7 +79,7 @@ def alert (asp:{str:{str:{str:object}}}, known:[], table:[])->([],[],[]):
     changes.sort()
 
     if changes:
-        # pylint: disable=bare-except
+        # simplest for myriad of possibilities, pylint: disable=bare-except
         try:
             msg = email.message.EmailMessage()
             msg.set_content ('\n'.join (changes))

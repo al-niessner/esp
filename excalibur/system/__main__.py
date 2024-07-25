@@ -20,25 +20,14 @@ dawgie.security.initialize(os.path.expandvars(os.path.expanduser
 dawgie.db.reopen()
 
 if tn in ['', '__all__']:
+    name = 'population'
     subtasks = excalibur.system.bot.Agent('system', 4, rid)
     pass
 else:
-    # -- THIS IS EVIL PYTHON -- --------------------------------------
+    name = ['finalize', 'validate', None][1]  # -1 to run them all
     subtasks = excalibur.system.bot.Actor('system', 4, rid, tn)
-    fulllist = getattr(subtasks, 'list')
-    def shortlist():
-        '''666'''
-        out = fulllist()
-        # -- Change indexes as needed and look away from those lines
-        # 0 sysalg.validate(),
-        # 1 sysalg.finalize()
-        out = out[0:]
-        # ------------------------- ----------------------------------
-        return out
-    setattr(subtasks, 'list', shortlist)
     pass
 
-subtasks.do()
-
+subtasks.do(name)
 dawgie.db.close()
 dawgie.security.finalize()

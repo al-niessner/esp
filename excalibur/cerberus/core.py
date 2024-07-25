@@ -1434,6 +1434,7 @@ def analysis(aspects, filt, out, verbose=False):
         # svname_with_filter = svname+'.'+filt
         # for trgt in filter(lambda tgt: 'STATUS' in aspects[tgt][svname_with_filter], targetlist['targets']):
         # nope! still not jenkins compatible. arg!
+        # FIXMEE: move to config file and fix this code
         for trgt in targetlist['targets']:
             # print('        cycling through targets',trgt)
             if trgt not in aspecttargets:

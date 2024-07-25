@@ -2,12 +2,10 @@
 # -- IMPORTS -- ------------------------------------------------------
 import dawgie
 
-# pylint: disable=import-self
 import excalibur.data.core as datcore
 import excalibur.system.core as syscore
 import excalibur.util.cerberus as crbutil
 from excalibur.util import elca
-import excalibur.transit.core
 
 import io
 import copy
@@ -15,8 +13,7 @@ import logging
 import random
 import lmfit as lm
 import matplotlib.pyplot as plt
-
-# pylint: disable=import-error
+import sys
 from ultranest import ReactiveNestedSampler
 
 import pymc3 as pm
@@ -28,7 +25,6 @@ from scipy.optimize import least_squares, brentq
 import scipy.constants as cst
 from scipy.signal import savgol_filter
 from scipy.stats import gaussian_kde, skew, kurtosis
-# from scipy.fft import fft, fftfreq
 from numpy.fft import fft, fftfreq
 
 import theano.tensor as tt
@@ -63,14 +59,14 @@ def ctxtupdt(alt=None, ald=None, allz=None, orbp=None, commonoim=None, ecc=None,
     '''
 G. ROUDIER: Update global context for pymc3 deterministics
     '''
-    excalibur.transit.core.ctxt = CONTEXT(alt=alt, ald=ald, allz=allz, orbp=orbp,
-                                          commonoim=commonoim, ecc=ecc, g1=g1, g2=g2,
-                                          g3=g3, g4=g4, ootoindex=ootoindex,
-                                          ootorbits=ootorbits, orbits=orbits,
-                                          period=period, selectfit=selectfit,
-                                          smaors=smaors, time=time, tmjd=tmjd, ttv=ttv,
-                                          valid=valid, visits=visits, aos=aos, avi=avi,
-                                          ginc=ginc, gttv=gttv)
+    sys.modules[__name__].ctxt = CONTEXT(alt=alt, ald=ald, allz=allz, orbp=orbp,
+                                         commonoim=commonoim, ecc=ecc, g1=g1, g2=g2,
+                                         g3=g3, g4=g4, ootoindex=ootoindex,
+                                         ootorbits=ootorbits, orbits=orbits,
+                                         period=period, selectfit=selectfit,
+                                         smaors=smaors, time=time, tmjd=tmjd, ttv=ttv,
+                                         valid=valid, visits=visits, aos=aos, avi=avi,
+                                         ginc=ginc, gttv=gttv)
     return
 
 import ldtk
@@ -1070,9 +1066,7 @@ def hstwhitelight(allnrm, fin, out, allext, selftype, chainlen=int(1e4), verbose
             trace = pm.sample(chainlen, cores=4, tune=int(chainlen/2),
                               compute_convergence_checks=False, step=pm.Metropolis(),
                               progressbar=verbose)
-            # GMR: Should be able to find it... Joker
-            # pylint: disable=no-member
-            mcpost = pm.stats.summary(trace)
+            mcpost = pm.stats.summary(trace)  # dynamic attr so, pylint: disable=no-member
             pass
         mctrace = {}
         for key in mcpost['mean'].keys():
@@ -1385,9 +1379,7 @@ def whitelight(nrm, fin, out, ext, selftype, multiwl, chainlen=int(1e4),
             trace = pm.sample(chainlen, cores=4, tune=int(chainlen/2),
                               compute_convergence_checks=False, step=pm.Metropolis(),
                               progressbar=verbose)
-            # GMR: Should be able to find it... Joker
-            # pylint: disable=no-member
-            mcpost = pm.stats.summary(trace)
+            mcpost = pm.stats.summary(trace)  # dynamic attr so, pylint: disable=no-member
             pass
         mctrace = {}
         for key in mcpost['mean'].keys():
@@ -2044,9 +2036,7 @@ def spectrum(fin, nrm, wht, out, ext, selftype,
                 trace = pm.sample(chainlen, cores=4, tune=int(chainlen/2),
                                   compute_convergence_checks=False, step=pm.Metropolis(),
                                   progressbar=verbose)
-                # GMR: Should be able to find it... Joker
-                # pylint: disable=no-member
-                mcpost = pm.stats.summary(trace)
+                mcpost = pm.stats.summary(trace)  # dynamic attr so, pylint: disable=no-member
                 pass
             # Exclude first channel with Uniform prior
             if not startflag:
@@ -2070,15 +2060,10 @@ def spectrum(fin, nrm, wht, out, ext, selftype,
                 clspvl = np.nanmedian(trace['rprs'])
                 # now produce fitted estimates
 
-                # GMR: Huh I dont remember coding that one I m blind
-                # Pulling out a joker
-                def get_ests(n, v):
-                    '''for param get all visit param values as list'''
-                    # pylint: disable=cell-var-from-loop
-                    return [mcests[f'{n}__{i}'] for i in range(len(v))]
-
-                specparams = (mcests['rprs'], get_ests('vslope', visits),
-                              get_ests('oslope', visits), get_ests('oitcp', visits))
+                specparams = (mcests['rprs'],
+                              [mcests[f'vslope_{i}'] for i in range(len(visits))],
+                              [mcests[f'oslope_{i}'] for i in range(len(visits))],
+                              [mcests[f'oitcp_{i}'] for i in range(len(visits))])
                 _r, avs, aos, aoi = specparams
                 allimout = []
                 for iv in range(len(visits)):
@@ -2499,7 +2484,7 @@ def fastspec(fin, nrm, wht, ext, selftype,
 # nearest neighbor detrending
 class pc_fitter():
     '''pc_fitter'''
-    # pylint: disable=too-many-instance-attributes
+    # work requires these attributes so, pylint: disable=too-many-instance-attributes
     def __init__(self, time, data, dataerr, prior, bounds, syspars, neighbors=100, mode='ns', verbose=False):
         self.time = time
         self.data = data
@@ -2509,6 +2494,16 @@ class pc_fitter():
         self.syspars = syspars
         self.neighbors = neighbors
         self.verbose = verbose
+        # content is defined later but placeholder for pylint
+        self.phase = None
+        self.transit = None
+        self.wf = None
+        self.model = None
+        self.detrended = None
+        self.detrendederr = None
+        self.residuals = None
+        self.chi2 = None
+        self.bic = None
 
         if mode == 'ns':
             self.fit_nested()
@@ -2524,9 +2519,8 @@ class pc_fitter():
         self.gw, self.nearest = elca.gaussian_weights(self.syspars, neighbors=self.neighbors)
 
         def lc2min(pars):
-            # pylint: disable=invalid-unary-operand-type
-            for i, _ in enumerate(pars):
-                self.prior[freekeys[i]] = pars[i]
+            for i,p in enumerate(pars):
+                self.prior[freekeys[i]] = p
             lightcurve = elca.phasecurve(self.time, self.prior)
             detrended = self.data/lightcurve
             wf = elca.weightedflux(detrended, self.gw, self.nearest)
@@ -2558,9 +2552,8 @@ class pc_fitter():
 
         def lc2min_transit(pars):
             '''lc2min_transit ds'''
-            # pylint: disable=invalid-unary-operand-type
-            for i, _ in enumerate(pars):
-                self.prior[freekeys[i]] = pars[i]
+            for i,p in enumerate(pars):
+                self.prior[freekeys[i]] = p
             lightcurve = elca.transit(self.time, self.prior)
             detrended = self.data/lightcurve
             wf = elca.weightedflux(detrended, self.gw, self.nearest)
@@ -2569,9 +2562,8 @@ class pc_fitter():
 
         def lc2min_phasecurve(pars):
             '''lc2min_phasecurve ds'''
-            # pylint: disable=invalid-unary-operand-type
-            for i, _ in enumerate(pars):
-                self.prior[freekeys[i]] = pars[i]
+            for i,p in enumerate(pars):
+                self.prior[freekeys[i]] = p
             lightcurve = elca.phasecurve(self.time, self.prior)
             detrended = self.data/lightcurve
             wf = elca.weightedflux(detrended, self.gw, self.nearest)
@@ -2627,7 +2619,6 @@ class pc_fitter():
 
     def create_fit_variables(self):
         '''create_fit_variables ds'''
-        # pylint: disable=attribute-defined-outside-init
         self.phase = (self.time - self.parameters['tmid']) / self.parameters['per']
         self.transit = elca.phasecurve(self.time, self.parameters)
         detrended = self.data / self.transit

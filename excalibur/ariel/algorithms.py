@@ -65,10 +65,8 @@ class sim_spectrum(dawgie.Algorithm):
                 thorgrenMassMetals=True,
                 includeMetallicityDispersion=runtime[
                     'ariel_simulate_spectra_includeMetallicityDispersion'])
-
-            # FIXMEE: should not need target name and core needs to be changed
-            update = self._simSpectrum(ds._tn(),  # pylint: disable=protected-access
-                                       system_dict, runtime_params, self.__out)
+            update = self._simSpectrum(repr(self), system_dict, runtime_params,
+                                       self.__out)
         else:
             self._failure(errstring)
         if update:

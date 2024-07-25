@@ -21,21 +21,10 @@ dawgie.db.reopen()
 
 if tn in ['', '__all__']: pass
 else:
-    # -- THIS IS EVIL PYTHON -- --------------------------------------
+    name = ['normalization', 'whitelight', None][0]  # -1 to run them all
     subtasks = excalibur.phasecurve.bot.Actor('phasecurve', 4, rid, tn)
-    fulllist = getattr(subtasks, 'list')
-    def shortlist():
-        '''666'''
-        out = fulllist()
-        # -- Change indexes as needed and look away from those lines
-        # 0 phcalg.pcnormalization(),
-        # 1 phcalg.pcwhitelight()
-        out = out[0:]
-        # ------------------------- ----------------------------------
-        return out
-    setattr(subtasks, 'list', shortlist)
     pass
 
-subtasks.do()
+subtasks.do(name)
 dawgie.db.close()
 dawgie.security.finalize()

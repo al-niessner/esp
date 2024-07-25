@@ -19,25 +19,14 @@ dawgie.security.initialize(os.path.expandvars(os.path.expanduser
 dawgie.db.reopen()
 
 if tn in ['', '__all__']:
+    name = 'population'
     subtasks = excalibur.transit.bot.Agent('transit', 4, rid)
     pass
 else:
-    # -- THIS IS EVIL PYTHON -- --------------------------------------
+    name = ['normalization', 'spectrum', 'whitelight', None][0]  # -1 to run them all
     subtasks = excalibur.transit.bot.Actor('transit', 4, rid, tn)
-    fulllist = getattr(subtasks, 'list')
-    def shortlist():
-        '''666'''
-        out = fulllist()
-        # -- Change indexes as needed and look away from those lines
-        # 0 trnalg.normalization(),
-        # 1 trnalg.whitelight(),
-        # 2 trnalg.spectrum()
-        out = out[0:]
-        # ------------------------- ----------------------------------
-        return out
-    setattr(subtasks, 'list', shortlist)
     pass
 
-subtasks.do()
+subtasks.do(name)
 dawgie.db.close()
 dawgie.security.finalize()
