@@ -19,7 +19,6 @@ RUN set -ex && \
             python3-gdbm \
             python3-matplotlib \
             python3-pip \
-            python3-setuptools \
             tzdata && \
     apt-get clean && apt-get autoremove && \
     ln -fs /usr/share/zoneinfo/America/Los_Angeles /etc/localtime && \
@@ -44,6 +43,7 @@ RUN set -ex && \
                           scipy==1.7.3 \
                           scikit-learn==1.1.0 \
                           service_identity \
+			  setuptools==70.3.0 \
                           taurex_ace \
                           taurex \
 			  torchvision \
