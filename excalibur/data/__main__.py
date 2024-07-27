@@ -21,7 +21,7 @@ dawgie.db.reopen()
 
 if tn in ['', '__all__']: pass
 else:
-    name = ['calibration', 'collect', 'timing', None][1]  # -1 to run them all
+    name = ['calibration', 'collect', 'timing', None][-1]  # -1 to run them all
     subtasks = excalibur.data.bot.Actor('data', 4, rid, tn)
     pass
 

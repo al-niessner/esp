@@ -138,12 +138,12 @@ class autofill(dawgie.Algorithm):
 
         crt = self.__create.sv_as_dict()
         valid, errstring = trgcore.checksv(crt['starIDs'])
-        # converting a table that requires access to target name
-        # pylint: disable=protected-access
-        if valid and (ds._tn() in crt['starIDs']['starID']):
-            log.warning('--< TARGET AUTOFILL: %s >--', ds._tn())
-            update = self._autofill(crt, ds._tn())
-        # done with target name; pylint: enable=protected-access
+
+        # FIXMEE: this code needs repaired by moving out to config (Geoff added)
+        target = repr(self).split('.')[1]
+        if valid and (target in crt['starIDs']['starID']):
+            log.warning('--< TARGET AUTOFILL: %s >--', target)
+            update = self._autofill(crt, target)
         else: self._failure(errstring)
         if update: ds.update()
         else: raise dawgie.NoValidOutputDataError(
@@ -152,11 +152,7 @@ class autofill(dawgie.Algorithm):
 
     def _autofill(self, crt, thistarget):
         '''Core code call'''
-        # this call originally passed the self.__rt.proceed function (for use on each filter)
-        #  but it's better to supply the list of available filters
-        # solved = trgcore.autofill(crt, thistarget, self.__out,
-        #                          self.__rt.sv_as_dict()['status']['allowed_filter_names'])
-        # 7/2/24 now we are running target on all filters?  not sure if JWST is working..
+        # currently we are running this on all filters, not just the available ones
         solved = trgcore.autofill(crt, thistarget, self.__out, fltrs)
         return solved
 
@@ -202,7 +198,8 @@ class scrape(dawgie.Algorithm):
         var_autofill = self.__autofill.sv_as_dict()['parameters']
         valid, errstring = trgcore.checksv(var_autofill)
         if valid and self.__rt.is_valid():
-            log.warning('--< TARGET SCRAPE: %s >--', repr(self))
+            # FIXMEE: this code needs repaired by moving out to config (Geoff added)
+            log.warning('--< TARGET SCRAPE: %s >--', repr(self).split('.')[1])
             self._scrape(var_autofill, self.__out)
         else: self._failure(errstring)
         # GMR: always update.
@@ -215,12 +212,15 @@ class scrape(dawgie.Algorithm):
         '''Core code call'''
         dbs = os.path.join(dawgie.context.data_dbs, 'mast')
         if not os.path.exists(dbs): os.makedirs(dbs)
+
         # Download from MAST
         umast = trgcore.mastapi(tfl, out, dbs,
                                 download_url=durl, hst_url=hsturl, verbose=False)
+
         # Data on DISK
         # udisk gets prioritized over umast for duplicates
         udisk = trgcore.disk(tfl, out, diskloc, dbs)
+
         return udisk or umast
 
     @staticmethod

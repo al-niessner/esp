@@ -209,7 +209,7 @@ def autofill(ident, thistarget, out, allowed_filters, searchrad=0.2):
         targettable = []
         platformlist = []
         if 'data' not in outjson: outjson['data'] = []  # special case for TOI-1338
-        log.warning('--< TARGET AUTOFILL #-of-obs: %s %s >--', len(outjson['data']),thistarget)
+        log.warning('--< TARGET AUTOFILL: %s  #-of-obs %s >--', thistarget, len(outjson['data']))
         for obs in outjson['data']:
             for f in allowed_filters:
                 if obs['obs_collection'] is not None:
@@ -234,6 +234,7 @@ def autofill(ident, thistarget, out, allowed_filters, searchrad=0.2):
                     platformlist.append(obs['obs_collection'])
                 pass
             pass
+        log.warning('--< TARGET AUTOFILL: %s  in targettable %s >--',thistarget, len(targettable))
         if not targettable: solved = False
         # Note: If we use data that are not known by MAST but are on disk
         # this will also return False
@@ -695,9 +696,11 @@ def scrapeversion():
 # -- MAST -- ---------------------------------------------------------
 def mastapi(tfl, out, dbs, download_url=None, hst_url=None, verbose=False):
     '''Uses MAST API tools to download data'''
+
     target = list(tfl['starID'].keys())[0]
     obstable = tfl['starID'][target]['datatable']
     obsids = [o['obsid'] for o in obstable]
+    obsids = set(obsids)  # obsids are generally repeated many times. this will save lots of time
 
     allsci = []
     allurl = []
@@ -781,14 +784,12 @@ def mastapi(tfl, out, dbs, download_url=None, hst_url=None, verbose=False):
                                  fileout,
                                  ""])
             subprocess.run(shellcom, shell=True, check=False)
-            pass
         # JWST
         elif allmiss[irow] in ['JWST']:
             payload = {"uri":row['dataURI']}
             resp = requests.get(allurl[irow], params=payload)
             fileout = os.path.join(tempdir, os.path.basename(row['productFilename']))
             with open(fileout,'wb') as flt: flt.write(resp.content)
-            pass
         # SPITZER DO NOTHING FOR NOW DL IS TOO LONG
         else: pass
         if verbose: log.warning('>-- %s %s', os.path.getsize(fileout), fileout)
@@ -854,8 +855,6 @@ def dbscp(target, locations, dbs, out, verbose=False):
             # print('Failed file read:',fitsfile)
             okfiles.append(False)
             Nfails += 1
-    # print('len check',len(okfiles),len(imalist))
-    # Nfails = len(numpy.where(numpy.array(okfiles)==False)[0])
     log.warning('--< %s: %i out of %i MAST files are unreadable >--',target,Nfails,len(imalist))
 
     if Nfails==0:
@@ -931,7 +930,6 @@ def dbscp(target, locations, dbs, out, verbose=False):
             if not onmast:
                 shutil.copyfile(fitsfile, mastout)
                 os.chmod(mastout, int('0664', 8))
-                pass
             pass
         copied = True
     else:

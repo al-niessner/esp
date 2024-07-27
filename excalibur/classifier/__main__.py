@@ -24,7 +24,7 @@ if tn in ['', '__all__']:
     name = 'summarize_flags'
     subtasks = excalibur.classifier.bot.Agent('classifier', 4, rid)
 else:
-    name = ['inference', 'flags', None][1]  # 0 is kicked off list, -1 to run them all
+    name = ['inference', 'flags', None][-1]  # 0 is kicked off list, -1 to run them all
     subtasks = excalibur.classifier.bot.Actor('classifier', 4, rid, tn)
     pass
 

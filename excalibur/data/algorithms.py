@@ -68,17 +68,6 @@ class collect(dawgie.Algorithm):
                 ok = self._collect(fltr, scrape, self.__out)
                 update = update or ok
 
-            # FIXMEE: this code needs repaired by moving out to config
-            # pylint: disable=protected-access
-            trgt = ds._tn()
-            if trgt in ['CoRoT-1','Kepler-11','Kepler-13','TrES-4']:
-                blankFilter = 'HST-WFC3-IR-G141-SCAN'
-                if blankFilter not in self.__out['activefilters']:
-                    log.warning('--< DATA COLLECT: adding a blank filter %s %s >--',trgt,blankFilter)
-                    self.__out['activefilters'][blankFilter] = {'ROOTNAME':[], 'LOC':[], 'TOTAL':[]}
-                    self.__out['STATUS'].append(True)
-                    update = True
-
             if update: ds.update()
             else: self._raisenoout(self.name())
         else: self._failure(errstring)
@@ -223,9 +212,9 @@ class calibration(dawgie.Algorithm):
                 tim = self.__tim.sv_as_dict()[fltr]
                 vtim, etim = datcore.checksv(tim)
                 if vfin and vcll and vtim:
-                    # FIXMEE: access to protected target name will be going away
-                    # pylint: disable=protected-access
-                    update = self._calib(fin, cll['activefilters'][fltr], tim, ds._tn(),
+                    # FIXMEE: this code needs repaired by moving out to config
+                    update = self._calib(fin, cll['activefilters'][fltr], tim,
+                                         repr(self).split('.')[1],  # this is the target name
                                          fltr, self.__out[fltrs.index(fltr)], ps)
                     if update: svupdate.append(self.__out[fltrs.index(fltr)])
                 else:

@@ -21,7 +21,7 @@ dawgie.db.reopen()
 
 if tn in ['', '__all__']: pass
 else:
-    name = ['normalization', 'whitelight', None][0]  # -1 to run them all
+    name = ['normalization', 'whitelight', None][-1]  # -1 to run them all
     subtasks = excalibur.phasecurve.bot.Actor('phasecurve', 4, rid, tn)
     pass
 

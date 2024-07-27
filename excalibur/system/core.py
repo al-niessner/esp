@@ -17,6 +17,12 @@ from excalibur.system.autofill import \
     derive_inclination_from_impactParam, derive_impactParam_from_inclination, \
     derive_sma_from_ars
 
+from collections import namedtuple
+
+SYSTEM_PARAMS = namedtuple('system_params_from_runtime',[
+    'maximizeSelfConsistency',
+    'selectMostRecent'])
+
 # ------------- ------------------------------------------------------
 # -- SOLAR SYSTEM CONSTANTS -- ---------------------------------------
 def ssconstants(mks=False, cgs=False):

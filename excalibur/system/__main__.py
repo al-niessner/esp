@@ -24,7 +24,7 @@ if tn in ['', '__all__']:
     subtasks = excalibur.system.bot.Agent('system', 4, rid)
     pass
 else:
-    name = ['finalize', 'validate', None][1]  # -1 to run them all
+    name = ['finalize', 'validate', None][-1]  # -1 to run them all
     subtasks = excalibur.system.bot.Actor('system', 4, rid, tn)
     pass
 

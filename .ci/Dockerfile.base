@@ -38,6 +38,7 @@ RUN set -ex && \
                           "psycopg>=3.0.1" \
                           "psycopg-binary>=3.0.1" \
                           pymc3==3.11.5 \
+			  pymc \
                           pyvo==1.3 \
                           PyXB-CTC==1.3.2 \
                           scipy==1.7.3 \

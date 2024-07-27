@@ -20,11 +20,11 @@ dawgie.security.initialize(os.path.expandvars(os.path.expanduser
 dawgie.db.reopen()
 
 if tn in ['', '__all__']:
-    name = ['alert', 'create', None][1]  # -1 to run them all
+    name = ['alert', 'create', None][-1]  # -1 to run them all
     subtasks = excalibur.target.bot.Agent('target', 4, rid)
     pass
 else:
-    name = ['autofill', 'scrape', None][0]  # -1 to run them all
+    name = ['autofill', 'scrape', None][-1]  # -1 to run them all
     subtasks = excalibur.target.bot.Actor('target', 4, rid, tn)
     pass
 

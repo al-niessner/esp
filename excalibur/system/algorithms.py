@@ -1,7 +1,6 @@
 '''system algorithms ds'''
 # -- IMPORTS -- ------------------------------------------------------
 import logging; log = logging.getLogger(__name__)
-from collections import namedtuple
 
 import dawgie
 
@@ -56,10 +55,7 @@ class validate(dawgie.Algorithm):
         autofill = self.__autofill.sv_as_dict()['parameters']
         runtime = self.__rt.sv_as_dict()['status']
 
-        system_params = namedtuple('system_params_from_runtime',[
-            'maximizeSelfConsistency',
-            'selectMostRecent'])
-        runtime_params = system_params(
+        runtime_params = syscore.SYSTEM_PARAMS(
             maximizeSelfConsistency=True,
             selectMostRecent=runtime['target_autofill_selectMostRecent'])
 
@@ -122,12 +118,11 @@ class finalize(dawgie.Algorithm):
         if valid:
             overwrite = sysoverwriter.ppar()
             for key in val: self.__out[key] = val.copy()[key]
-            # FIXMEE: this use of protected-access will be going away
-            # pylint: disable=protected-access
-            target = ds._tn()
-            if ds._tn() in overwrite:
-                # print('UPDATE overwrite start',ds._tn())
-                update = self._priority(overwrite[ds._tn()], self.__out)
+
+            # FIXMEE: this code needs repaired by moving out to config
+            target = repr(self).split('.')[1]
+            if target in overwrite:
+                update = self._priority(overwrite[target], self.__out)
                 if not update:
                     log.warning('>-- STILL MISSING DICT INFO')
                     log.warning('>-- ADD MORE KEYS TO SYSTEM/OVERWRITER')

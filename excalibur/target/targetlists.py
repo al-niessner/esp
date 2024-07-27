@@ -1098,14 +1098,16 @@ def targetlist_JWST():
         'TOI-3714',
         'WASP-107',
         'WASP-117',
+        'WASP-127',
         'WASP-163',
         'WASP-166',
         'WASP-178',
         'WASP-25',
         'WASP-54',
+        'WASP-96',
         'WASP-98',
         'GJ 486',   # NIRSPEC data.timing
-        'GJ 1132',  # NIRSPEC data.timing
+        # 'GJ 1132',  # NIRSPEC data.timing
         'WASP-19',  # NIRISS data.timing
         'WASP-39',  # NIRISS data.timing
     ]

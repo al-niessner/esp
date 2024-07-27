@@ -11,13 +11,6 @@ import excalibur.runtime.algorithms as rtalg
 import excalibur.system as sys
 import excalibur.system.algorithms as sysalg
 
-from collections import namedtuple
-ARIEL_PARAMS = namedtuple('ariel_params_from_runtime',[
-    'randomSeed',
-    'randomCloudProperties',
-    'thorgrenMassMetals',
-    'includeMetallicityDispersion'])
-
 # ------------- ------------------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class sim_spectrum(dawgie.Algorithm):
@@ -59,13 +52,15 @@ class sim_spectrum(dawgie.Algorithm):
         valid, errstring = arielcore.checksv(system_dict)
         if valid:
             runtime = self.__rt.sv_as_dict()['status']
-            runtime_params = ARIEL_PARAMS(
+            runtime_params = arielcore.ARIEL_PARAMS(
                 randomSeed=123,
                 randomCloudProperties=True,
                 thorgrenMassMetals=True,
                 includeMetallicityDispersion=runtime[
                     'ariel_simulate_spectra_includeMetallicityDispersion'])
-            update = self._simSpectrum(repr(self), system_dict, runtime_params,
+            # FIXMEE: this code needs repaired by moving out to config (Geoff added)
+            update = self._simSpectrum(repr(self).split('.')[1],  # this is the target name
+                                       system_dict, runtime_params,
                                        self.__out)
         else:
             self._failure(errstring)

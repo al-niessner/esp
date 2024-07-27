@@ -22,15 +22,6 @@ import excalibur.cerberus as crb
 import excalibur.cerberus.core as crbcore
 import excalibur.cerberus.states as crbstates
 
-from collections import namedtuple
-
-CERB_PARAMS = namedtuple('cerberus_params_from_runtime',[
-    'MCMC_chain_length',
-    'fitCloudParameters',
-    'fitT',
-    'fitCtoO',
-    'fitNtoO'])
-
 fltrs = [str(fn) for fn in rtbind.filter_names.values()]
 
 # ----------------------- --------------------------------------------
@@ -180,7 +171,7 @@ class atmos(dawgie.Algorithm):
                 log.warning('--< CERBERUS ATMOS: %s >--', fltr)
                 runtime = self.__rt.sv_as_dict()['status']
 
-                runtime_params = CERB_PARAMS(
+                runtime_params = crbcore.CERB_PARAMS(
                     MCMC_chain_length=runtime['cerberus_steps'],
                     fitCloudParameters=runtime['cerberus_atmos_fitCloudParameters'],
                     fitT=runtime['cerberus_atmos_fitT'],
@@ -277,7 +268,8 @@ class results(dawgie.Algorithm):
                 vatm, satm = crbcore.checksv(self.__atm.sv_as_dict()[fltr])
                 if vxsl and vatm:
                     log.warning('--< CERBERUS RESULTS: %s >--', fltr)
-                    update = self._results(ds._tn(),  # pylint: disable=protected-access
+                    # FIXMEE: this code needs repaired by moving out to config (Geoff added)
+                    update = self._results(repr(self).split('.')[1],  # this is the target name
                                            fltr,
                                            self.__fin.sv_as_dict()['parameters'],
                                            self.__anc.sv_as_dict()['parameters'],

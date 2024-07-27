@@ -28,9 +28,10 @@ import matplotlib.pyplot as plt
 from collections import defaultdict
 from collections import namedtuple
 
+# import pymc
+
 from scipy.interpolate import interp1d as itp
 
-# does this really go here? CIcheck needs it back in algorithms
 CERB_PARAMS = namedtuple('cerberus_params_from_runtime',[
     'MCMC_chain_length',
     'fitCloudParameters', 'fitT', 'fitCtoO', 'fitNtoO'])
@@ -511,10 +512,6 @@ def atmos(fin, xsl, spc, runtime_params, out, ext,
     for p in spc['data'].keys():
         # make sure that it really is a planet letter, not another dict key
         #  (ariel has other keys, e.g. 'target', 'planets', 'models')
-        # if len(p) > 1:
-        #    log.warning('--< OK: skipping a planet letter that is actually a system keyword: %s >--',p)
-        #    pass
-        # elif len(p)==1:
         # make sure it has a spectrum (Kepler-37e bug)
         if len(p)==1 and 'WB' not in spc['data'][p].keys():
             log.warning('--< CERBERUS.ATMOS: wavelength grid is missing for %s %s >--',spc['data']['target'],p)
@@ -727,32 +724,32 @@ def atmos(fin, xsl, spc, runtime_params, out, ext,
                                         _mcdata = pm.Normal('mcdata', mu=offcerberus(*nodes),
                                                             tau=1e0/tspecerr[cleanup]**2,
                                                             observed=tspectrum[cleanup])
-                                    if valid1 and valid2 and not valid3:
+                                    elif valid1 and valid2 and not valid3:
                                         _mcdata = pm.Normal('mcdata', mu=offcerberus1(*nodes),
                                                             tau=1e0/tspecerr[cleanup]**2,
                                                             observed=tspectrum[cleanup])
-                                    if valid1 and valid3 and not valid2:
+                                    elif valid1 and valid3 and not valid2:
                                         _mcdata = pm.Normal('mcdata', mu=offcerberus2(*nodes),
                                                             tau=1e0/tspecerr[cleanup]**2,
                                                             observed=tspectrum[cleanup])
-                                    if valid2 and valid3 and not valid1:
+                                    elif valid2 and valid3 and not valid1:
                                         _mcdata = pm.Normal('mcdata', mu=offcerberus3(*nodes),
                                                             tau=1e0/tspecerr[cleanup]**2,
                                                             observed=tspectrum[cleanup])
-                                    if valid3 and not valid1 and not valid2:
+                                    elif valid3 and not valid1 and not valid2:
                                         _mcdata = pm.Normal('mcdata', mu=offcerberus4(*nodes),
                                                             tau=1e0/tspecerr[cleanup]**2,
                                                             observed=tspectrum[cleanup])
-                                if not valid0:
+                                else:
                                     if valid1 and valid2 and valid3:
                                         _mcdata = pm.Normal('mcdata', mu=offcerberus5(*nodes),
                                                             tau=1e0/tspecerr[cleanup]**2,
                                                             observed=tspectrum[cleanup])
-                                    if valid1 and valid3 and not valid2:
+                                    elif valid1 and valid3 and not valid2:
                                         _mcdata = pm.Normal('mcdata', mu=offcerberus6(*nodes),
                                                             tau=1e0/tspecerr[cleanup]**2,
                                                             observed=tspectrum[cleanup])
-                                    if valid1 and valid2 and not valid3:
+                                    elif valid1 and valid2 and not valid3:
                                         _mcdata = pm.Normal('mcdata', mu=offcerberus7(*nodes),
                                                             tau=1e0/tspecerr[cleanup]**2,
                                                             observed=tspectrum[cleanup])
@@ -761,11 +758,11 @@ def atmos(fin, xsl, spc, runtime_params, out, ext,
                                     _mcdata = pm.Normal('mcdata', mu=offcerberus8(*nodes),
                                                         tau=1e0/tspecerr[cleanup]**2,
                                                         observed=tspectrum[cleanup])
-                                if not valid2:
+                                elif not valid2:
                                     _mcdata = pm.Normal('mcdata', mu=cloudyfmcerberus(*nodes),
                                                         tau=1e0/(np.nanmedian(tspecerr[cleanup])**2),
                                                         observed=tspectrum[cleanup])
-                                if not valid3:
+                                elif not valid3:
                                     _mcdata = pm.Normal('mcdata', mu=cloudyfmcerberus(*nodes),
                                                         tau=1e0/(np.nanmedian(tspecerr[cleanup])**2),
                                                         observed=tspectrum[cleanup])

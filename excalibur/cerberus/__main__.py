@@ -23,7 +23,7 @@ if tn in ['', '__all__']:
     name = 'analysis'
     subtasks = excalibur.cerberus.bot.Agent('cerberus', 4, rid)
 else:
-    name = ['atmos', 'results', 'xslib', None][1]  # -1 to run them all
+    name = ['atmos', 'results', 'xslib', None][-1]  # -1 to run them all
     subtasks = excalibur.cerberus.bot.Actor('cerberus', 4, rid, tn)
     pass
 

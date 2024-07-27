@@ -21,7 +21,7 @@ dawgie.db.reopen()
 
 if tn in ['', '__all__']: pass
 else:
-    name = ['normalize', 'spectrum', 'whitelight', None][0]  # -1 to run them all
+    name = ['normalize', 'spectrum', 'whitelight', None][-1]  # -1 to run them all
     subtasks = excalibur.eclipse.bot.Actor('eclipse', 4, rid, tn)
     pass
 
