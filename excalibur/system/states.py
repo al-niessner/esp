@@ -35,7 +35,7 @@ class PriorsSV(dawgie.StateVector):
         '''name ds'''
         return self.__name
 
-    def view(self, visitor:dawgie.Visitor)->None:
+    def view(self, caller:excalibur.identity, visitor:dawgie.Visitor)->None:
         '''view ds'''
         if self['STATUS'][-1]:
             vlabels = ['FORCE PARAMETER',
@@ -113,7 +113,7 @@ class PopulationSV(dawgie.StateVector):
         '''name ds'''
         return self.__name
 
-    def view(self, visitor:dawgie.Visitor)->None:
+    def view(self, caller:excalibur.identity, visitor:dawgie.Visitor)->None:
         '''view ds'''
         to_process = [('----------------------Stellar Population Distributions----------------------',
                        self['data']['st_attrs'], self['data']['st_attrs_roudier62'], False),

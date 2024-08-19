@@ -14,6 +14,7 @@ The algorithm engine has N goals:
 '''
 # -- IMPORTS -- ------------------------------------------------------
 import builtins
+import collections
 import dawgie
 import numpy
 import scipy.stats
@@ -28,6 +29,8 @@ context = {'data_cal':os.environ.get ('DATA_CALIBR', '/proj/data/cal'),
                                         '/proj/data/WFC3_target_list.xlsx')}
 os.environ['LDTK_ROOT'] = context['ldtk_root']
 __version__ = '${UNDEFINED}'
+
+identity = collections.namedtuple('identity', ['serial'])
 
 class ValuesList(dawgie.Value, list):
     '''ValuesList ds'''
