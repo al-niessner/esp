@@ -1,4 +1,5 @@
 FROM ubuntu:22.04
+ENV DAWGIE_GUEST_PUBLIC_KEYS /proj/data/certs
 ENV EXCALIBUR_LEVER_AND_KNOB_SETTINGS /proj/data/runtime/ops.xml
 ENV MPLCONFIGDIR /tmp
 RUN set -ex && \

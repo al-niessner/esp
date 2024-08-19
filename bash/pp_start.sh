@@ -19,7 +19,7 @@ docker run --detach \
        -v ${HOME}/.theano:/proj/data/.theano \
        -v /proj/sdp/data/logs:/proj/logs \
        -v /proj/sdp/data/${USER}/db:/proj/data/db \
-       -v ${HOME}/.gnupg:/proj/data/gnupg \
+       -v ${HOME}/.gnupg:/proj/data/certs \
        -v $(realpath $(dirname $0)/..):/proj/src/ae \
        esp_devel:${TAG:-${latest_tag}} \
        python3 -m dawgie.pl -p ${1:-${DAWGIE_FE_PORT:-9990}} -l ${USER}.log -L 20
