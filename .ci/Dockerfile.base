@@ -1,4 +1,5 @@
 FROM ubuntu:22.04
+ENV DAWGIE_GUEST_PUBLIC_KEYS /proj/data/certs
 ENV EXCALIBUR_LEVER_AND_KNOB_SETTINGS /proj/data/runtime/ops.xml
 ENV MPLCONFIGDIR /tmp
 RUN set -ex && \
@@ -27,7 +28,7 @@ RUN set -ex && \
     /usr/bin/pip3 install arviz==0.12.0 \
                           astropy==5.2.2 \
 			  astroquery==0.4.6 \
-                          dawgie==1.4.3-rc07 \
+                          dawgie==1.4.3 \
                           dynesty==1.2.2 \
                           importlib_metadata==4.11.3 \
                           joblib==1.1.0 \
@@ -40,7 +41,7 @@ RUN set -ex && \
                           pymc3==3.11.5 \
 			  pymc \
                           pyvo==1.3 \
-                          PyXB-CTC==1.3.2 \
+                          PyXB-CTC==1.3.3 \
                           scipy==1.7.3 \
                           scikit-learn==1.1.0 \
                           service_identity \

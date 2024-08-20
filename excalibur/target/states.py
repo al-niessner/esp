@@ -29,7 +29,7 @@ class TargetSV(dawgie.StateVector):
         '''name ds'''
         return self.__name
 
-    def view(self, visitor:dawgie.Visitor)->None:
+    def view(self, caller:excalibur.identity, visitor:dawgie.Visitor)->None:
         '''view ds'''
         if self['STATUS'][-1]:
             targetlist = list(self['starID'].keys())
@@ -125,7 +125,7 @@ class FilterSV(dawgie.StateVector):
         '''name ds'''
         return self.__name
 
-    def view(self, visitor:dawgie.Visitor)->None:
+    def view(self, caller:excalibur.identity, visitor:dawgie.Visitor)->None:
         '''view ds'''
         if self['STATUS'][-1]:
             if len(self['STATUS']) < 3:
@@ -170,7 +170,7 @@ class DatabaseSV(dawgie.StateVector):
         '''__init__ ds'''
         return self.__name
 
-    def view(self, visitor:dawgie.Visitor)->None:
+    def view(self, caller:excalibur.identity, visitor:dawgie.Visitor)->None:
         '''view ds'''
         if self['STATUS'][-1]:
             ordlab = ['observatory', 'instrument', 'detector', 'filter', 'mode']
@@ -212,7 +212,7 @@ class MonitorSV(dawgie.StateVector):
         '''name ds'''
         return 'parameters'
 
-    def view(self, visitor:dawgie.Visitor)->None:
+    def view(self, caller:excalibur.identity, visitor:dawgie.Visitor)->None:
         '''view ds'''
         for k in sorted(self['last']):
             outlier = self['outlier']
@@ -257,7 +257,7 @@ class AlertSV(dawgie.StateVector):
         '''name ds'''
         return 'parameters'
 
-    def view(self, visitor:dawgie.Visitor)->None:
+    def view(self, caller:excalibur.identity, visitor:dawgie.Visitor)->None:
         '''view ds'''
         visitor.add_declaration ('Last deltas', tag='h4')
 
