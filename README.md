@@ -55,3 +55,12 @@ CERBERUS
 ### --< Source Code >--
 
 [Github](https://github-fn.jpl.nasa.gov/EXCALIBUR/esp)
+
+## --< become a member >--
+
+1. log into https://github-fn.jpl.nasa.gov (may require a lot of steps to get there)
+1. ask to become a member of the esp worker team
+1. clone this repository
+1. on a mentor machine, run `bash/make_cert.sh ${HOME}/.ssh/my_excalibur_identity.pem`
+
+You can repeat the make_cert.sh on your personal laptop or copy `my_excalibur_identity.pem` to your laptop. Once there, import it into your browser. Hint: may require changing it from PEM format to something else. Google Chrome requires pcks12. On the mentor machine you can do `openssl pkcs12 -export -in my_excalibur_identity.pem -out my_excalibur_identity.p12` then import the p12 file.
