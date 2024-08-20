@@ -7,7 +7,7 @@ ENTRYPOINT ["python3", "-m", "dawgie.pl", "-l", "ops.log", \
             "--context=excalibur.context", \
             "--context-ae-dir=/proj/src/ae/excalibur", \
             "--context-ae-pkg=excalibur", \
-            "--context-db-host=mentor0.jpl.nasa.gov", \
+            "--context-db-host=excalibur.jpl.nasa.gov", \
             "--context-db-impl=post", \
             "--context-db-name=ops", \
             "--context-db-port=5263", \

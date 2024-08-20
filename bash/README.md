@@ -10,7 +10,7 @@ Second, they can be run on the mentor cluster or remotely on a laptop. It is not
    1. Install sshfs if not on your laptop (once in the life of your laptop)
    1. `sudo mkdir -p /proj/sdp/data` (maybe once in the life of your laptop)
    1. `sudo chown ${USER}:${USER}` (maybe once in the life of your laptop)
-   1. run sshfs: `sshfs -o allow_other -o default_permissions -o idmap=user ${USER}@mentor.jpl.nasa.gov:/proj/sdp/data /proj/sdp/data`
+   1. run sshfs: `sshfs -o allow_other -o default_permissions -o idmap=user ${USER}@excalibur.jpl.nasa.gov:/proj/sdp/data /proj/sdp/data`
    
 When done, be sure to un-mount `/proj/sdp/data` with `fusermount3 -u /proj/sdp/data`.
 
@@ -32,7 +32,7 @@ Execute a development task in the private pipeline context started with `pp_star
 
 This script has two required values:
 1. `<task name>` is the python package name after excalibur. For instance, if we wanted to run the python packaage `excalibur.cerberus` we would supply `cerberus` as the first argument to the tool.
-1. `<target name>` is exactly that. Each star is a target so we would supply the star name as [known by the pipeline](https://mentor.jpl.nasa.gov:8080/pages/database/targets) like 'GJ 1214'.
+1. `<target name>` is exactly that. Each star is a target so we would supply the star name as [known by the pipeline](https://excalibur.jpl.nasa.gov:8080/pages/database/targets) like 'GJ 1214'.
 
 and one optional via an environment variable:
 1. `RUNID` is an environment variable that can define the run id for the job you going to execute. If not supplied, the value 17 is used.

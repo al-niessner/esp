@@ -84,7 +84,7 @@ def alert (asp:{str:{str:{str:object}}}, known:[], table:[])->([],[],[]):
             msg = email.message.EmailMessage()
             msg.set_content ('\n'.join (changes))
             msg['Subject'] = 'Alert: target parameter changes detected'
-            msg['From'] = 'do-not-reply@mentor.jpl.nasa.gov'
+            msg['From'] = 'do-not-reply@excalibur.jpl.nasa.gov'
             msg['To'] = 'sdp@jpl.nasa.gov'
             s = smtplib.SMTP ('localhost')
             s.send_message (msg)

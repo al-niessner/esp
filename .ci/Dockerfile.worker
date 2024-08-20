@@ -20,5 +20,5 @@ ENTRYPOINT ["python3", "-m", "dawgie.pl.worker", \
             "-c", "cluster", \
             "-g", "/proj/gnupg"]
 CMD ["-i", "0", \
-     "-n", "mentor0.jpl.nasa.gov", \
+     "-n", "excalibur.jpl.nasa.gov", \
      "-p", "8081"]
