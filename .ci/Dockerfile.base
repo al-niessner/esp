@@ -28,16 +28,16 @@ RUN set -ex && \
     /usr/bin/pip3 install arviz==0.12.0 \
                           astropy==5.2.2 \
 			  astroquery==0.4.6 \
-                          dawgie==1.4.3 \
+                          dawgie==1.4.4-rc01 \
                           dynesty==1.2.2 \
                           importlib_metadata==4.11.3 \
                           joblib==1.1.0 \
                           ldtk==1.7.0 \
                           lmfit==1.0.3 \
                           photutils==1.4.0 \
-                          "pillow>=7.0.0" \
-                          "psycopg>=3.0.1" \
-                          "psycopg-binary>=3.0.1" \
+                          'pillow>=7.0.0' \
+                          'psycopg>=3.0.1' \
+                          'psycopg-binary>=3.0.1' \
                           pymc3==3.11.5 \
 			  pymc \
                           pyvo==1.3 \
