@@ -29,6 +29,7 @@ openssl x509 -req -in device.csr -signkey device.key -out device.crt \
         -sha256 -extfile v3.ext -days 36500 
 # build the complete pem and just public bit for being a guest
 cat device.key device.crt > $1
+chmod 600 $1
 mv device.crt $1.public
 rm device.csr device.key v3.ext
 
