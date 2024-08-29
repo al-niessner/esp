@@ -16,6 +16,7 @@ from excalibur.system.autofill import \
     derive_Lstar_from_R_and_T, derive_Teqplanet_from_Lstar_and_sma, \
     derive_inclination_from_impactParam, derive_impactParam_from_inclination, \
     derive_sma_from_ars
+from excalibur.system.overwriter import fix_default_reference
 
 from collections import namedtuple
 
@@ -299,11 +300,18 @@ def buildsp(autofill, runtime_params, out, verbose=False):
         autofill['starID'][target][p]['omega_ref'] = omega_ref_filled
         autofill['starID'][target][p]['omega_units'] = ['[degree]']*len(omega_filled)
 
+    # special adjustments based on Raissa/Edypo identification of RUNIDs with lower residuals
+    setRefByHand = fix_default_reference(target)
+    if setRefByHand: log.warning('--< SYSTEM setting default publication: %s %s >--',target,setRefByHand)
+
     # determine the best reference to use, based on self-consistent use of that publication
-    _,bestref,bestpubIndices = calculate_selfConsistency_metric(autofill['starID'][target])
     if verbose:
-        bestscore,bestref,bestpubIndices = calculate_selfConsistency_metric(autofill['starID'][target])
+        bestscore,bestref,bestpubIndices = calculate_selfConsistency_metric(autofill['starID'][target],
+                                                                            setRefByHand)
         print('score/ref',bestscore,bestref)
+    else:
+        _,bestref,bestpubIndices = calculate_selfConsistency_metric(autofill['starID'][target],
+                                                                    setRefByHand)
 
     # loop over both the mandatory and non-mandatory parameters
     # for lbl in out['starmdt']+out['starnonmdt']:
@@ -490,7 +498,10 @@ def buildsp(autofill, runtime_params, out, verbose=False):
         # careful here - logg also has to be filled in
         # TOI-1136 is a major troublemaker.  planets have radius in one ref and mass in another
         #  otherwise this if statement would belong inside of the previous if statement
-        if p+':logg' in out['needed']:
+        # new conditional is needed though, to handle Kepler-37 e and Kepler-1513 c
+        #  (these do not have a planet radius!)(they are in the 'planets ignored' category)
+        if p+':logg' in out['needed'] and out['priors'][p]['rp']:
+            print('planet radius',p,out['priors'][p]['rp'])
             g = ssc['G'] * out['priors'][p]['mass']*ssc['Mjup'] \
                 / (float(out['priors'][p]['rp'])*ssc['Rjup'])**2
             logg = np.log10(g)
@@ -581,33 +592,6 @@ def buildsp(autofill, runtime_params, out, verbose=False):
                 pass
             pass
         pass
-
-    # when adding new targets, output star/planet info needed as input for ArielRad
-    newtarget = 0
-    if newtarget:
-        # print(out['priors'].keys())
-        # print(out['priors']['b'].keys())
-        for planetLetter in out['priors']['planets']:
-            print('ArielRad input:   ,',target+','+
-                  out['priors']['M*']+','+
-                  out['priors']['T*']+','+
-                  out['priors']['R*']+','+
-                  out['priors']['dist']+','+
-                  out['priors']['Kmag']+','+
-                  ' '+','+
-                  target,planetLetter+','+
-                  out['priors'][planetLetter]['period']+','+
-                  out['priors'][planetLetter]['teq']+','+
-                  out['priors'][planetLetter]['sma'] *ssc['AU']/100+','+
-                  out['priors'][planetLetter]['rp'] *ssc['Rjup']/ssc['Rearth']+','+
-                  0.3+','+
-                  out['priors'][planetLetter]['mass'] *ssc['Mjup']/ssc['Mearth']+','+
-                  2.3+','+
-                  out['priors'][planetLetter]['trandur']*3600+','+
-                  out['priors'][planetLetter]['impact']+','+
-                  1)
-        # units for planet params:
-        # [day] [K] [m]	[Rearth] [] [Mearth] [g/mol] [s] []
 
     for p in out['ignore']:
         dropIndices = []
@@ -755,6 +739,9 @@ def savesv(aspects, targetlists):
     '''
     svname = 'system.finalize.parameters'
 
+    aspecttargets = []
+    for a in aspects: aspecttargets.append(a)
+
     # RID = int(os.environ.get('RUNID', None))
     RID = os.environ.get('RUNID', None)
     # print('RID',RID)
@@ -785,13 +772,10 @@ def savesv(aspects, targetlists):
         # also include non-mandatory params?
         #  no actually they've already been added in. (see 'awkward' above)
         # st_keys.extend(system_data['starnonmdt'])
-        # print('st_keys',st_keys)
         pl_keys = system_data['planetmdt']
-        # print('pl_keys',pl_keys)
 
         # this extension info is not needed for value histograms, but is required for full data dump
         exts = system_data['exts']
-        # print('extensions:',exts)
 
         # write the header row
         outfile.write('star,planet,')
@@ -806,7 +790,8 @@ def savesv(aspects, targetlists):
         outfile.write('\n')
 
         # loop through each target, with one row per planet
-        for trgt in targetlists['active']:
+        # for trgt in targetlists['active']:
+        for trgt in filter(lambda tgt: tgt in aspecttargets, targetlists['active']):
             system_data = aspects[trgt][svname]
 
             for planet_letter in system_data['priors']['planets']:
@@ -824,8 +809,8 @@ def savesv(aspects, targetlists):
                         outfile.write(str(system_data['priors'][planet_letter][key+ext]).replace(',',';') + ',')
 
                 outfile.write('\n')
-    # jenkins requires with-open, so close isn't needed anymore
-    # instead there's a bunch of dumbass indentation. thanks so much jenkins!
+    # CI validation requires with-open, so close isn't needed anymore
+    # instead there's a bunch of dumb indentation
     # outfile.close()
 
     return

@@ -198,7 +198,8 @@ def bestValue(values,uperrs,lowerrs,refs,lbl,bestref,bestpubIndex,
     return bestvalue,bestuperr,bestlowerr,bestref
 
 # -------------------------------------------------------------------
-def calculate_selfConsistency_metric(data, verbose=False):
+def calculate_selfConsistency_metric(data, setRefByHand=False,
+                                     verbose=False):
     '''
     Determine how many key parameters (currently 12) are provided by each publication
     '''
@@ -218,6 +219,7 @@ def calculate_selfConsistency_metric(data, verbose=False):
         starRef = data['R*_ref'][ipub]
         counts[ipub]['starref'] = starRef
         counts[ipub]['starrefcount'] = 0
+        if starRef==setRefByHand: counts[ipub]['starrefcount'] = 100
         for starParam in starParams:
             if starParam+'_ref' not in data.keys():
                 print('PROBLEM: missing ref param',starParam+'_ref')
@@ -256,6 +258,7 @@ def calculate_selfConsistency_metric(data, verbose=False):
         planetRef = data[planet]['rp_ref'][ipubplanet]
         counts[ipub]['planetref'] = planetRef
         counts[ipub]['planetrefcount'] = 0
+        if planetRef==setRefByHand: counts[ipub]['planetrefcount'] = 100
         if verbose:
             if starRef==planetRef:
                 print('starRef vs planetRef SAME',planet,ipub,ipubplanet,starRef,planetRef)
@@ -724,7 +727,11 @@ def derive_Lstar_from_R_and_T(starInfo):
             newLstar = float(R)**2 * (float(T)/sscmks['Tsun'])**4
             # print('Lstar derived',newLstar)
 
-            Lstar_derived.append(f'{newLstar:6.4f}')
+            if newLstar > 1.e-3:
+                Lstar_derived.append(f'{newLstar:6.4f}')
+            else:
+                # WD 1856 has a very low luminosity (it's a white dwarf); needs more sig-figs
+                Lstar_derived.append(f'{newLstar:10.8f}')
             Lstar_ref_derived.append('derived from R*,T*')
 
             # also fill in the uncertainty on Lstar, based on R,M uncertainties
@@ -1190,6 +1197,22 @@ def fixPublishedLimits(systemInfo, starLimitReplacements, planetLimitReplacement
             # print('values after',p,param,systemInfo[p][param])
             # print('lim after',p,param,systemInfo[p][param+'_lim'])
             # print('refs after',p,param,systemInfo[p][param+'_ref'])
+
+    # check for eccentricity values that are really upper limits
+    #  use less than 2-sigma or 3-sigma as criteria?
+    for p in systemInfo['planets']:
+        # print('eccentricity check',systemInfo[p]['ecc'],
+        #       systemInfo[p]['ecc_uperr'],systemInfo[p]['ecc_lowerr'])
+        for ipl in range(len(systemInfo[p][param])):
+            if systemInfo[p]['ecc'][ipl]!='' and float(systemInfo[p]['ecc'][ipl])>0:
+                # print('eccentricity check',systemInfo[p]['ecc'][ipl],
+                #      systemInfo[p]['ecc_uperr'][ipl],systemInfo[p]['ecc_lowerr'][ipl])
+                ecc_SNR = -float(systemInfo[p]['ecc'][ipl]) / float(systemInfo[p]['ecc_lowerr'][ipl])
+                if ecc_SNR < 2:
+                    log.warning('SYSTEM: should be an ecc upper limit!? SNR=%s',ecc_SNR)
+                    systemInfo[p]['ecc'][ipl] = '0'
+                    systemInfo[p]['ecc_ref'][ipl] = 'derived from eccentricity upper limit'
+
     # print()
     return systemInfo
 

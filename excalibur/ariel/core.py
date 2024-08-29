@@ -218,6 +218,11 @@ def simulate_spectra(target, system_dict, runtime_params, out):
                     visits = '1'
                     tier = '1'
                 # print('# of visits:',visits,'  tier',tier,'  ',target+' '+planetLetter)
+                # use #-of-visits our ArielRad calculation, not from Edwards table
+                log.warning('--< ARIELSIM #-of-visits old-vs-new %s %s %s >--',
+                            visits,ariel_instrument['nVisits'],target+' '+planetLetter)
+                visits = ariel_instrument['nVisits']
+
                 uncertainties /= np.sqrt(float(visits))
 
                 # ________LOOP OVER ALL SELECTED MODELS_______
@@ -438,7 +443,7 @@ def simulate_spectra(target, system_dict, runtime_params, out):
 
                     # PLOT THE SPECTRA
                     myfig, ax = plt.subplots(figsize=(8,4))
-                    plt.title('Ariel simulation : '+target+' '+planetLetter+' : Tier-'+tier+' '+visits+' visits',
+                    plt.title('Ariel simulation : '+target+' '+planetLetter+' : Tier-'+str(tier)+' '+str(visits)+' visits',
                               fontsize=16)
                     plt.xlabel(str('Wavelength [$\\mu m$]'), fontsize=14)
                     plt.ylabel(str('$(R_p/R_*)^2$ [%]'), fontsize=14)

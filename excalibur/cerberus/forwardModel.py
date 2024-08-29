@@ -435,7 +435,6 @@ def cloudyfmcerberus(*crbinputs):
     G. ROUDIER: Wrapper around Cerberus forward model, spherical shell symmetry
     '''
     ctp, hza, hzloc, hzthick, tpr, mdp = crbinputs
-    # ctp, hza, hzloc, hzthick, tpr, mdp = crbinputs
     # print(' not-fixed cloud parameters (cloudy):',ctp,hza,hzloc,hzthick)
     fmc = np.zeros(ctxt.tspectrum.size)
     if ctxt.model == 'TEC':
@@ -561,8 +560,6 @@ def clearfmcerberus(*crbinputs):
 @tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
                    tt.dscalar, tt.dscalar, tt.dscalar, tt.dvector],
            otypes=[tt.dvector])
-# @tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar],
-#             otypes=[tt.dvector])
 def offcerberus(*crbinputs):
     '''
 R.ESTRELA: ADD offsets between STIS filters and STIS and WFC3 filters

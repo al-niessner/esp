@@ -1,5 +1,8 @@
 #! /usr/bin/env bash
 
+DAWGIE_SSL_PEM_MYNAME=excalibur.jpl.nasa.gov
+DAWGIE_SSL_PEM_MYSELF=/proj/myself/excalibur_identity.pem
+
 latest_tag=$(docker images | grep esp_devel | head -n 1 | awk '{print $2}')
 echo "Starting excalibur:"
 echo "   tag:  ${TAG:-${latest_tag}}"
@@ -14,6 +17,7 @@ docker run --detach \
        --network host \
        --rm \
        -u ${UID}:1512 \
+       -v ${HOME}/.ssh:/proj/myself:ro \
        -v /etc/ssl:/etc/ssl:ro \
        -v /proj/sdp/data:/proj/data \
        -v ${HOME}/.theano:/proj/data/.theano \

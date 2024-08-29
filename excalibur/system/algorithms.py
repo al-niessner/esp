@@ -65,6 +65,7 @@ class validate(dawgie.Algorithm):
             update = self._validate(autofill, runtime_params, self.__out)
         else:
             self._failure(errstring)
+
         if update: ds.update()
         elif valid: raise dawgie.NoValidOutputDataError(
                 f'No output created for SYSTEM.{self.name()}')
@@ -114,6 +115,7 @@ class finalize(dawgie.Algorithm):
 
         update = False
         val = self.__val.sv_as_dict()['parameters']
+
         valid, errstring = syscore.checksv(val)
         if valid:
             overwrite = sysoverwriter.ppar()
@@ -130,9 +132,8 @@ class finalize(dawgie.Algorithm):
             elif not self.__out['PP'][-1]:
                 update = True
             else:
-                log.warning('>-- MISSING DICT INFO')
-                log.warning('>-- ADD KEY TO SYSTEM/OVERWRITER')
-                pass
+                log.warning('>-- MISSING DICT INFO: %s --<',target)
+                log.warning('>-- ADD KEY TO SYSTEM/OVERWRITER --<')
 
             # consistency checks
             inconsistencies = consistency_checks(self.__out['priors'])
@@ -205,22 +206,17 @@ class population(dawgie.Analyzer):
 
         targetlists = get_target_lists()
 
+        aspecttargets = []
+        for a in aspects: aspecttargets.append(a)
+
         # cross-check the 'active' list against __all__
-        checkAll = False
-        if checkAll:
-            for target in targetlists['active']:
-                if target not in aspects:
-                    print('missing from aspect:',target)
-            for target in aspects:
-                if target in targetlists['active']:
-                    # print('ok')
-                    pass
-                elif 'taurex sim' in target:
-                    # print('ok')
-                    pass
-                else:
-                    print('missing from active',target)
-            # exit()
+        for target in targetlists['active']:
+            if target not in aspecttargets:
+                log.warning('--< SYSTEM.POPULATION: target missing: %s >--', target)
+        # this prints out all the excluded targets.  don't bother
+        # for target in aspecttargets:
+        #    if target not in targetlists['active']:
+        #        log.warning('--< SYSTEM.POPULATION: add to active list: %s >--', target)
 
         # group together values by attribute
         svname = 'system.finalize.parameters'
@@ -232,7 +228,8 @@ class population(dawgie.Analyzer):
 
         # for trgt in aspects:
         # for trgt in targetlists['active']:
-        for trgt in filter(lambda tgt: 'STATUS' in aspects[tgt][svname], targetlists['active']):
+        # for trgt in filter(lambda tgt: 'STATUS' in aspects[tgt][svname], targetlists['active']):
+        for trgt in filter(lambda tgt: tgt in aspecttargets, targetlists['active']):
 
             system_data = aspects[trgt][svname]
 
@@ -240,9 +237,7 @@ class population(dawgie.Analyzer):
             if system_data['STATUS'][-1]:
                 # get stellar attributes
                 st_keys = system_data['starmdt']           # mandatory params
-                st_keys.extend(system_data['starnonmdt'])  # non-mandatory params
                 pl_keys = system_data['planetmdt']
-                pl_keys.extend(system_data['planetnonmdt'])
 
                 for key in st_keys:
                     st_attrs[key].append(system_data['priors'][key])
@@ -256,16 +251,17 @@ class population(dawgie.Analyzer):
         nplanet = 0
         #  *** second loop for second (overlapping) histogram ***
         # for trgt in targetlists['roudier62']:
-        for trgt in filter(lambda tgt: 'STATUS' in aspects[tgt][svname], targetlists['roudier62']):
+        # for trgt in filter(lambda tgt: 'STATUS' in aspects[tgt][svname], targetlists['roudier62']):
+        for trgt in filter(lambda tgt: tgt in aspecttargets, targetlists['roudier62']):
             system_data = aspects[trgt][svname]
             ntarg += 1
 
             # verify SV succeeded for target
             if system_data['STATUS'][-1]:
                 st_keys = system_data['starmdt']           # mandatory params
-                st_keys.extend(system_data['starnonmdt'])  # non-mandatory params
+                # st_keys.extend(system_data['starnonmdt'])  # non-mandatory params
                 pl_keys = system_data['planetmdt']
-                pl_keys.extend(system_data['planetnonmdt'])
+                # pl_keys.extend(system_data['planetnonmdt'])
 
                 # get stellar attributes
                 for key in st_keys:

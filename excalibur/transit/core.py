@@ -2061,9 +2061,9 @@ def spectrum(fin, nrm, wht, out, ext, selftype,
                 # now produce fitted estimates
 
                 specparams = (mcests['rprs'],
-                              [mcests[f'vslope_{i}'] for i in range(len(visits))],
-                              [mcests[f'oslope_{i}'] for i in range(len(visits))],
-                              [mcests[f'oitcp_{i}'] for i in range(len(visits))])
+                              [mcests[f'vslope__{i}'] for i in range(len(visits))],
+                              [mcests[f'oslope__{i}'] for i in range(len(visits))],
+                              [mcests[f'oitcp__{i}'] for i in range(len(visits))])
                 _r, avs, aos, aoi = specparams
                 allimout = []
                 for iv in range(len(visits)):

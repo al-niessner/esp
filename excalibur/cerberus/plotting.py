@@ -22,17 +22,17 @@ def rebinData(transitdata, binsize=4):
     nspec = int(transitdata['wavelength'].size / binsize)
     minspec = np.nanmin(transitdata['wavelength'])
     maxspec = np.nanmax(transitdata['wavelength'])
-    scale = (maxspec - minspec) / float(nspec)
-    wavebin = scale*np.arange(nspec) + minspec
-    deltabin = np.diff(wavebin)[0]
-    cbin = wavebin + deltabin/2
+    # add a small bit (1.e-10) to max edge, such that "< wavehi" includes last point
+    wavebinedges = np.linspace(minspec, maxspec+1.e-10, nspec)
+
     specbin = []
     errbin = []
-    wavebin = []   # recalculate the binned wavelength from actual wave grid
-    for eachbin in cbin:
-        select = transitdata['wavelength'] < (eachbin + deltabin/2)
-        select = select & (transitdata['wavelength'] >= (eachbin - deltabin/2))
+    wavebin = []
+    for wavelo,wavehi in zip(wavebinedges[:-1],wavebinedges[1:]):
+        select = transitdata['wavelength'] < wavehi
+        select = select & (transitdata['wavelength'] >= wavelo)
         select = select & np.isfinite(transitdata['depth'])
+
         if np.sum(np.isfinite(transitdata['depth'][select])) > 0:
             specbin.append(np.nansum(transitdata['depth'][select]/
                                      (transitdata['error'][select]**2))/
@@ -42,11 +42,6 @@ def rebinData(transitdata, binsize=4):
             wavebin.append(np.nansum(transitdata['wavelength'][select]/
                                      transitdata['error'][select]**2)/
                            np.nansum(1./transitdata['error'][select]**2))
-        # else:
-        #    specbin.append(np.nan)
-        #    errbin.append(np.nan)
-        #    wavebin.append(np.nan)
-    # transitdata['binned_wavelength'] = np.array(cbin)
     transitdata['binned_wavelength'] = np.array(wavebin)
     transitdata['binned_depth'] = np.array(specbin)
     transitdata['binned_error'] = np.array(errbin)
@@ -154,9 +149,9 @@ def plot_spectrumfit(transitdata,
                  '$\\chi^2_{red}$-truth='+f"{chi2truth_red:5.2f}",fontsize=12)
     if 'tier' in atmos_data:
         plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*1.00,
-                 'Tier='+atmos_data['tier'],fontsize=12)
+                 'Tier='+str(atmos_data['tier']),fontsize=12)
         plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.93,
-                 '# of Visits='+atmos_data['visits'],fontsize=12)
+                 '# of Visits='+str(atmos_data['visits']),fontsize=12)
     plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.8,
              'ZFOM='+f"{ancillary_data['ZFOM']:4.1f}"+'-'+
              f"{ancillary_data['ZFOM_max']:4.1f}",fontsize=12)
@@ -343,9 +338,9 @@ def plot_bestfit(transitdata, patmos_model, patmos_modelProfiled, fmcarray,
                  '$\\chi^2_{red}$-truth='+f"{chi2truth_red:5.2f}",fontsize=12)
     if 'tier' in atmos_data:
         plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*1.00,
-                 'Tier='+atmos_data['tier'],fontsize=12)
+                 'Tier='+str(atmos_data['tier']),fontsize=12)
         plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.93,
-                 '# of Visits='+atmos_data['visits'],fontsize=12)
+                 '# of Visits='+str(atmos_data['visits']),fontsize=12)
     plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.8,
              'ZFOM='+f"{ancillary_data['ZFOM']:4.1f}"+'-'+
              f"{ancillary_data['ZFOM_max']:4.1f}",fontsize=12)
@@ -813,7 +808,9 @@ def plot_fitsVStruths(truth_values, fit_values, fit_errors, prior_ranges,
             # let's say you have to improve uncertainty by a factor of 2
             # but note that the original 1-sigma uncertainty is ~2/3 of prior range
             # oh wait also note that errorbar is one-sided, so another factor of 2
-            minInfo = 0.5 * 0.68 * 0.5
+            # 8/1/24 make the criteria more liberal; it's excluding more than just prior-only guys
+            #  let's say 80% of prior range, rather than 20%
+            minInfo = 0.8 * 0.68 * 0.5
             newInfo = False
             if param not in prior_ranges:
                 if param=='[N/O]':
@@ -952,7 +949,9 @@ def plot_fitUncertainties(fit_values, fit_errors, prior_ranges,
             # let's say you have to improve uncertainty by a factor of 2
             # but note that the original 1-sigma uncertainty is ~2/3 of prior range
             # oh wait also note that errorbar is one-sided, so another factor of 2
-            minInfo = 0.5 * 0.68 * 0.5
+            # 8/1/24 make the criteria more liberal; it's excluding more than just prior-only guys
+            #  let's say 80% of prior range, rather than 20%
+            minInfo = 0.8 * 0.68 * 0.5
             newInfo = False
             if param not in prior_ranges:
                 if param=='[N/O]':
@@ -1035,8 +1034,8 @@ def plot_massVSmetals(masses, truth_values,
                       filt, saveDir, savetodisk=False):
     ''' how well do we retrieve the input mass-metallicity relation? '''
 
-    figure = plt.figure(figsize=(5,5))
-    ax = figure.add_subplot(1,1,1)
+    figure = plt.figure(figsize=(11,5))
+    ax = figure.add_subplot(1,2,1)
 
     # Note: masses_true is not actually used, just masses. (they should be the same thing)
     masses_true = truth_values['Mp']
@@ -1052,7 +1051,9 @@ def plot_massVSmetals(masses, truth_values,
         # let's say you have to improve uncertainty by a factor of 2
         # but note that the original 1-sigma uncertainty is ~2/3 of prior range
         # oh wait also note that errorbar is one-sided, so another factor of 2
-        minInfo = 0.5 * 0.68 * 0.5
+        # 8/1/24 make the criteria more liberal; it's excluding more than just prior-only guys
+        #  let's say 80% of prior range, rather than 20%
+        minInfo = 0.8 * 0.68 * 0.5
         priorRangeDiff = prior_ranges['[X/H]'][1] - prior_ranges['[X/H]'][0]
         if metalerror < minInfo * priorRangeDiff:
             clr = 'k'
@@ -1081,6 +1082,7 @@ def plot_massVSmetals(masses, truth_values,
         else:
             ax.scatter(mass, metalfit,
                        facecolor=clr,edgecolor=clr, s=ptsiz, zorder=zord+2)
+        # allow for asymmetric error bars!!!
         ax.errorbar(mass, metalfit, yerr=metalerror,
                     fmt='.', color=clr, lw=lwid, zorder=zord)
     ax.semilogx()
@@ -1090,18 +1092,74 @@ def plot_massVSmetals(masses, truth_values,
     yrange = ax.get_ylim()
 
     # plot the underlying distribution (only if this is a simulation)
+    # actually, also plot Thorngren relationship for real HST data
+    massesThorngren = np.logspace(-5,3,100)
+    metalsThorngren = massMetalRelation(0, masses,thorngren=True)
     if 'sim' in filt:
-        masses = np.logspace(-5,3,100)
-        metals = massMetalRelation(0, masses,thorngren=True)
-        ax.plot(masses,metals, 'k--', lw=1, zorder=1, label='true relationship')
+        ax.plot(massesThorngren,metalsThorngren, 'k--', lw=1, zorder=1, label='true relationship')
+    else:
+        ax.plot(massesThorngren,metalsThorngren, 'k--', lw=1, zorder=1, label='Thorngren+ 2016')
+
+    plt.legend()
+
+    ax.set_xlim(xrange)
+    ax.set_ylim(yrange)
+
+    # SECOND PANEL - same thing but subtract off the stellar metallicity
+    ax = figure.add_subplot(1,2,2)
+
+    ilab1 = False
+    ilab2 = False
+    for mass,masstrue,metaltrue,metalfit,metalerror in zip(
+            masses,masses_true,metals_true,metals_fit,metals_fiterr):
+        if metalerror < minInfo * priorRangeDiff:
+            clr = 'k'
+            lwid = 1
+            ptsiz = 40
+            zord = 5
+        else:
+            clr = 'grey'
+            lwid = 0.5
+            ptsiz = 20
+            zord = 2
+        if metaltrue not in (666, 666666):
+            if not ilab1:
+                ilab1 = True
+                ax.scatter(masstrue, metaltrue,
+                           label='true value',
+                           facecolor='w',edgecolor=clr, s=ptsiz, zorder=zord+1)
+            else:
+                ax.scatter(masstrue, metaltrue,
+                           facecolor='w',edgecolor=clr, s=ptsiz, zorder=zord+1)
+        if not ilab2 and clr=='k':
+            ilab2 = True
+            ax.scatter(mass, metalfit,
+                       label='fit value',
+                       facecolor=clr,edgecolor=clr, s=ptsiz, zorder=zord+2)
+        else:
+            ax.scatter(mass, metalfit,
+                       facecolor=clr,edgecolor=clr, s=ptsiz, zorder=zord+2)
+        # allow for asymmetric error bars!!!
+        ax.errorbar(mass, metalfit, yerr=metalerror,
+                    fmt='.', color=clr, lw=lwid, zorder=zord)
+    ax.semilogx()
+    ax.set_xlabel('$M_p (M_{\\rm Jup})$', fontsize=14)
+    ax.set_ylabel('[X/H]$_p$ - [X/H]$_*$', fontsize=14)
+    xrange = ax.get_xlim()
+    yrange = ax.get_ylim()
+
+    # plot the underlying distribution (only if this is a simulation)
+    # actually, also plot Thorngren relationship for real HST data
+    if 'sim' in filt:
+        ax.plot(massesThorngren,metalsThorngren, 'k--', lw=1, zorder=1, label='true relationship')
+    else:
+        ax.plot(massesThorngren,metalsThorngren, 'k--', lw=1, zorder=1, label='Thorngren+ 2016')
 
     plt.legend()
 
     ax.set_xlim(xrange)
     ax.set_ylim(yrange)
     figure.tight_layout()
-
-    # *** TROUBLE - need to subtract off the stellar metallicity? ***
 
     # ('display' doesn't work for pdf files)
     if savetodisk: plt.savefig(saveDir + 'massVSmetals_'+filt+'.png')

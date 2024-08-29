@@ -5,6 +5,25 @@
 # import excalibur.system.core as syscore
 # from excalibur.system.autofill import derive_LOGGplanet_from_R_and_M, derive_Teqplanet_from_Lstar_and_sma
 
+def fix_default_reference(target):
+    '''
+    Set the default reference by hand
+    (as opposed to the below code, which sets individual parameters by hand)
+    '''
+
+    setRefsByHand = {
+        # 'GJ 9827':'Bonomo et al. 2023',    # not Rice et al. 2019   # problem is actually scrape/collect
+        'GJ 3053':'Lillo-Box et al. 2020',
+        'HD 191939':'Orell-Miquel et al. 2022',
+        'K2-3':'Diamond-Lowe et al. 2022',
+        'LTT 1445 A':'Oddo et al. 2023'}
+
+    # default_reference = False
+    # if target in setRefsByHand: default_reference = setRefsByHand[target]
+    default_reference = setRefsByHand.get(target, False)
+
+    return default_reference
+
 # -- PRIORITY PARAMETERS -- ------------------------------------------
 def ppar():
     '''
@@ -1209,27 +1228,31 @@ overwrite[starID] =
     # mass is normally filled in via an assumed MRrelation; needs to be done here instead
     # logg is normally calculated from M+R; needs to be done here instead
     # Weiss 2024 has this as radius=blank and flagA=candidate planet that might be noise
-    overwrite['Kepler-37'] = {
-        'e':{'rp':0.033,
-             'rp_uperr':0.016, 'rp_lowerr':-0.016,
-             'rp_units':'[Jupiter radius]',
-             'rp_ref':'Q1-Q8 KOI Table',
-             # there's a real mass measurement now from Weiss 2024 (0.0255)
-             #   hold on this is 100x larger!
-             # 'mass':0.0002,
-             # 'mass_uperr':0.0002, 'mass_lowerr':-0.0001,
-             # 'mass_units':'[Jupiter mass]',
-             # 'mass_ref':'Assumed mass/radius relation',
-             # 'logg':2.7,
-             # 'logg_uperr':0.3, 'logg_lowerr':-0.2,
-             # 'logg_units':'log10[cm.s-2]',
-             # 'logg_ref':'Assumed mass/radius relation'
-             # we still need to set logg, because there is originally no radius, so it's blank
-             'logg':4.76,  # gees it's 100x larger gravity now.  this is junk
-             'logg_uperr':0.3, 'logg_lowerr':-0.2,
-             'logg_units':'log10[cm.s-2]',
-             'logg_ref':'from Mp and Rp'
-             }}
+    # 8/28/24 drop this overwrite info
+    #   1) the radius is only from an older KOI table and is only SNR=2
+    #   2) the mass is a recent measurement (but probably it's just the TTV measure?)
+    #   3) 0.4 REarth and 8 MEarth is pretty crazy
+    # overwrite['Kepler-37'] = {
+    #    'e':{'rp':0.033,
+    #         'rp_uperr':0.016, 'rp_lowerr':-0.016,
+    #         'rp_units':'[Jupiter radius]',
+    #         'rp_ref':'Q1-Q8 KOI Table',
+    #         # there's a real mass measurement now from Weiss 2024 (0.0255)
+    #         #   hold on this is 100x larger!
+    #         # 'mass':0.0002,
+    #         # 'mass_uperr':0.0002, 'mass_lowerr':-0.0001,
+    #         # 'mass_units':'[Jupiter mass]',
+    #         # 'mass_ref':'Assumed mass/radius relation',
+    #         # 'logg':2.7,
+    #         # 'logg_uperr':0.3, 'logg_lowerr':-0.2,
+    #         # 'logg_units':'log10[cm.s-2]',
+    #         # 'logg_ref':'Assumed mass/radius relation'
+    #         # we still need to set logg, because there is originally no radius, so it's blank
+    #         'logg':4.76,  # gees it's 100x larger gravity now.  this is junk
+    #         'logg_uperr':0.3, 'logg_lowerr':-0.2,
+    #         'logg_units':'log10[cm.s-2]',
+    #         'logg_ref':'from Mp and Rp'
+    #         }}
 
     # for the newly added comfirmed-planet Ariel targets, some metallicities are missing
     #  oh that's funny. the Chen 2021 compilation has zero for these (with no error bar)
@@ -1582,6 +1605,18 @@ overwrite[starID] =
     #    'FEH*':0.0, 'FEH*_uperr':0.25, 'FEH*_lowerr':-0.25,
     #    'FEH*_units':'[dex]', 'FEH*_ref':'Default to solar metallicity'}
     # (not sure what the second one was; modified output to include target name)
+
+    # Crossfield 2016 has zero for the transit duration
+    #  (van Eylen 2016 is the default publication, but it has blank transit duration)
+    # TICv8 has 8.184+-0.2.  (made up error bar below)
+    overwrite['K2-39'] = {
+        'b':{'trandur':8.79, 'trandur_uperr':1., 'trandur_lowerr':-1.,
+             'trandur_units':'[hour]', 'trandur_ref':'Vandenburg et al. 2016'}}
+
+    # Galazutdinov 2023 has stellar FEH* = 7.79+-0.12; results in mmw = 4 million for planet
+    overwrite['TOI-1408'] = {
+        'FEH*':0.25, 'FEH*_uperr':0.06, 'FEH*_lowerr':-0.06,
+        'FEH*_units':'[dex]', 'FEH*_ref':'Korth et al. 2024'}
 
     return overwrite
 # -------------------------------------------------------------------

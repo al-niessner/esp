@@ -3,9 +3,34 @@
 Exoplanet Calibration Bayesian Unified Retrieval Pipeline.
 
 EXCALIBUR reduces extrasolar system data into an exoplanet spectrum.
-It includes CERBERUS, a line by line, plane parallel radiative transfer code modeling exoplanet atmospheres and a Bayesian parameter retrievial / model selection package. 
+It includes CERBERUS, a line-by-line, spherical-geometry radiative transfer code modeling exoplanet atmospheres and a Bayesian parameter retrievial / model selection package. 
 
 EXCALIBUR is an event driven pipeline where the events are defined as changes in data or algorithms; when events are detected, dependencies affected by the changes are re-processed. Calibration steps are transparent and quantified using a combination of accessible intermediate products and auto-generation of visual diagnostics.
+
+### --< become a member >--
+
+1. log into https://github-fn.jpl.nasa.gov (may require a lot of steps to get there)
+2. ask to become a member of the esp worker team
+3. clone this repository
+
+#### --< security certificate >--
+
+If you're going to run a personal pipeline, you'll probably need a certificate.
+You definitely need it if you're going to command the main pipeline to run tasks.
+
+1. Create certificate using a script in the github repository
+  In esp directory, run `bash/make_cert.sh ${HOME}/.ssh/my_excalibur_identity.pem`
+  This creates a file in your .ssh folder, and also in /proj/sdp/data/certs/
+2. Convert your .pem to .p12 file (might not always be necessary, but can't hurt)
+  Run 'openssl pkcs12 -export -in my_excalibur_identity.pem -out my_excalibur_identity.p12'
+  It will ask for a password that you use later when loading the certificate.
+3. Copy the .p12 file to your home machine, using scp.
+4. Import the .p12 file into your browser
+ For Firefox, go to Settings / Security. Certificates are down near the bottom.
+ For Safari, you import it via Keychain Access (in /Applications/Utilities)
+ For Chrome, requires .p12 file.
+
+Note that for commanding the main pipeline, you need to use port 8085 instead of port 8080 (in the excalibur URL).
 
 ### --< Organization >--
 
@@ -22,6 +47,10 @@ Some of the items we do not maintain (external) are static. Static executables a
 
 #### --< TASKS / algorithms >--
 
+RUNTIME
+- create (loads/sets up the overall parameter file for excalibur, e.g. which filters to run)
+- autofill (applies the overall parameter file to each target)
+
 TARGET
 - create (IDs and filters)
 - autofill (prior system information from NEXSCI)
@@ -30,6 +59,12 @@ TARGET
 SYSTEM
 - validate (checks for system parameters completeness)
 - finalize (delivers a comprehensive set of system parameters uniformly formatted, allows parameters over-ride)
+
+ANCILLARY
+- estimate (calculates a set of derived parameters, e.g. the scale height)
+
+ARIEL
+- sim_spectrum (simulates Ariel observations)
 
 DATA
 - collect (sort data according to filters)
@@ -47,20 +82,18 @@ ECLIPSE
 - spectrum (exoplanet emission spectrum recovery)
 
 PHASECURVE
+- normalization (scaling of stellar spectrum to Out Of Transit relative quantities)
+- whitelight (orbital solution and instrumental behavior recovery)
+
+CLASSIFIER
+-flags (calculate various performance metrics, to help weed out bad data/results)
 
 CERBERUS
 - xslib (cross section library from EXOMOL and HITEMP/HITRAN)
 - atmos (model selection and atmospheric content recovery)
+- results (plots the results of the atmos retrieval)
+- analysis (plots mass-metallicity and other summary plots for the whole population)
 
 ### --< Source Code >--
 
 [Github](https://github-fn.jpl.nasa.gov/EXCALIBUR/esp)
-
-## --< become a member >--
-
-1. log into https://github-fn.jpl.nasa.gov (may require a lot of steps to get there)
-1. ask to become a member of the esp worker team
-1. clone this repository
-1. on a mentor machine, run `bash/make_cert.sh ${HOME}/.ssh/my_excalibur_identity.pem`
-
-You can repeat the make_cert.sh on your personal laptop or copy `my_excalibur_identity.pem` to your laptop. Once there, import it into your browser. Hint: may require changing it from PEM format to something else. Google Chrome requires pcks12. On the mentor machine you can do `openssl pkcs12 -export -in my_excalibur_identity.pem -out my_excalibur_identity.p12` then import the p12 file.

@@ -9,6 +9,8 @@ import math
 from astropy.modeling.models import BlackBody
 from astropy import units as u
 
+from excalibur.ariel.metallicity import massMetalRelation
+
 # ------------- ------------------------------------------------------
 # -- ESTIMATOR PROTOTYPES -- -----------------------------------------
 class Estimator:
@@ -98,7 +100,7 @@ class HEstimator(PlEstimator):
     def __init__(self):
         '''__init__ ds'''
         PlEstimator.__init__(self, name='H', descr='Atmospheric scale height (CBE)',
-                             units='km',ref='Fortney metallicity')
+                             units='km',ref='Thorngren metallicity')
 
     def run(self, priors, ests, pl):
         '''run ds'''
@@ -166,10 +168,20 @@ def pl_metals(priors, _ests, pl):
         # print('no mass for this planet')
         return None
 
+    # logmetStar = 0
+    logmetStar = priors['FEH*']
+
     # 318 Earth masses per Jupiter mass
     # pivot point (where metallicity is max value) is at 10 Earth masses
-    metallicity = 3 - np.log10(318.*priors[pl]['mass'])
-    metallicity = min(metallicity, 2)
+    # metallicity = 3 - np.log10(318.*priors[pl]['mass'])
+    # metallicity = min(metallicity, 2)
+    # above is more or less the same as massMetalRelation(thorngren=False)
+    # metallicity = massMetalRelation(logmetStar, priors[pl]['mass'], thorngren=False)
+    # print('Mp,metallicity old',priors[pl]['mass'],metallicity)
+
+    metallicity = massMetalRelation(logmetStar, priors[pl]['mass'], thorngren=True)
+    # print('Mp,metallicity new',priors[pl]['mass'],metallicity)
+
     return metallicity
 
 def pl_mmw(priors, _ests, pl):

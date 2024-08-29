@@ -98,6 +98,9 @@ class population(dawgie.Analyzer):
 
         targetlists = get_target_lists()
 
+        aspecttargets = []
+        for a in aspects: aspecttargets.append(a)
+
         # group together values by attribute
         svname = 'ancillary.estimate.parameters'
 
@@ -107,12 +110,14 @@ class population(dawgie.Analyzer):
         st_attrs_roudier62 = defaultdict(list)
         pl_attrs_roudier62 = defaultdict(list)
 
-        # for trgt in aspects:
-        #    target_sample = '__all__'
+        for trgt in targetlists['active']:
+            if trgt not in aspecttargets:
+                log.warning('--< ANCILLARY.POPULATION: target missing: %s >--', trgt)
+
         # Only consider the 'active' stars, not aliases/misspellings/dropped/etc
         # for trgt in targetlists['active']:
-        for trgt in filter(lambda tgt: 'STATUS' in aspects[tgt][svname], targetlists['active']):
-
+        # for trgt in filter(lambda tgt: 'STATUS' in aspects[tgt][svname], targetlists['active']):
+        for trgt in filter(lambda tgt: tgt in aspecttargets, targetlists['active']):
             anc_data = aspects[trgt][svname]
 
             # verify SV succeeded for target
@@ -132,8 +137,8 @@ class population(dawgie.Analyzer):
                         pl_attrs[key].append(anc_data['data'][pl][key])
 
         # Loop through a second group of targets.  (this subset will be overplotted in the histos)
-        for trgt in filter(lambda tgt: 'STATUS' in aspects[tgt][svname], targetlists['roudier62']):
-
+        # for trgt in filter(lambda tgt: 'STATUS' in aspects[tgt][svname], targetlists['roudier62']):
+        for trgt in filter(lambda tgt: tgt in aspecttargets, targetlists['roudier62']):
             anc_data = aspects[trgt][svname]
 
             # verify SV succeeded for target

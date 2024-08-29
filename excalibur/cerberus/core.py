@@ -28,8 +28,6 @@ import matplotlib.pyplot as plt
 from collections import defaultdict
 from collections import namedtuple
 
-# import pymc
-
 from scipy.interpolate import interp1d as itp
 
 CERB_PARAMS = namedtuple('cerberus_params_from_runtime',[
@@ -783,7 +781,6 @@ def atmos(fin, xsl, spc, runtime_params, out, ext,
                     # GMR: Should be able to find it... Joker
                     # pylint: disable=no-member
                     mcpost = pm.stats.summary(trace)
-                    pass
                 mctrace = {}
                 for key in mcpost['mean'].keys():
                     tracekeys = key.split('[')
@@ -1398,15 +1395,18 @@ def analysis(aspects, filt, out, verbose=False):
         # analysistargetlists.append({
         #    'targetlistname':'MCS Nov.2023 Transit-list',
         #    'targets':alltargetlists['arielMCS_Nov2023_transit']})
-        analysistargetlists.append({
-            'targetlistname':'MCS Nov.2023 max-visits=25',
-            'targets':alltargetlists['arielMCS_Nov2023_maxVisits25']})
+        # analysistargetlists.append({
+        #    'targetlistname':'MCS Nov.2023 max-visits=25',
+        #    'targets':alltargetlists['arielMCS_Nov2023_maxVisits25']})
         # analysistargetlists.append({
         #    'targetlistname':'MCS Feb.2024 Transit-list',
         #    'targets':alltargetlists['arielMCS_Feb2024_transit']})
         # analysistargetlists.append({
         #    'targetlistname':'MCS Feb.2024 max-visits=25',
         #    'targets':alltargetlists['arielMCS_Feb2024_maxVisits25']})
+        analysistargetlists.append({
+            'targetlistname':'2-year science time; Thorngren mmw (Aug.2024)',
+            'targets':alltargetlists['ariel_Aug2024_2years']})
     else:
         analysistargetlists.append({
             'targetlistname':'All Excalibur targets',
@@ -1425,12 +1425,8 @@ def analysis(aspects, filt, out, verbose=False):
         truth_values = defaultdict(list)
         fit_values = defaultdict(list)
         fit_errors = defaultdict(list)
+        fit_errors2sided = defaultdict(list)
 
-        # for trgt in filter(lambda tgt: 'STATUS' in aspects[tgt][svname+'.'+filt], targetlist['targets']):
-        # JenkinsPEP8 needs this param outside loop
-        # svname_with_filter = svname+'.'+filt
-        # for trgt in filter(lambda tgt: 'STATUS' in aspects[tgt][svname_with_filter], targetlist['targets']):
-        # nope! still not jenkins compatible. arg!
         # FIXMEE: move to config file and fix this code
         for trgt in targetlist['targets']:
             # print('        cycling through targets',trgt)
@@ -1451,6 +1447,9 @@ def analysis(aspects, filt, out, verbose=False):
                     log.warning('--< CERBERUS ANALYSIS: STATUS IS FALSE FOR CERB.ATMOS %s %s >--',filt,trgt)
                 else:
                     for planetLetter in atmosFit['data'].keys():
+                        # print(trgt,atmosFit['data'][planetLetter]['MODELPARNAMES'])
+                        # print(trgt,atmosFit['data'][planetLetter]['planet_params'])
+
                         if 'TEC' not in atmosFit['data'][planetLetter]['MODELPARNAMES']:
                             log.warning('--< CERBERUS ANALYSIS: BIG PROBLEM theres no TEC model! %s %s >--',filt,trgt)
                         elif 'prior_ranges' not in atmosFit['data'][planetLetter]['TEC']:
@@ -1480,6 +1479,7 @@ def analysis(aspects, filt, out, verbose=False):
                                 lo = np.percentile(np.array(trace), 16)
                                 hi = np.percentile(np.array(trace), 84)
                                 fit_errors[key].append((hi-lo)/2)
+                                fit_errors2sided[key].append((lo,hi))
                                 if verbose:
                                     if key=='[N/O]' and (hi-lo)/2 < 2:
                                         print('N/O',trgt,np.median(trace),(hi-lo)/2)
@@ -1554,7 +1554,8 @@ def analysis(aspects, filt, out, verbose=False):
 
         masses = truth_values['Mp']
         massMetalsplot,_ = plot_massVSmetals(
-            masses, truth_values, fit_values, fit_errors, prior_ranges, filt, saveDir)
+            masses, truth_values, fit_values, fit_errors2sided, prior_ranges,
+            filt, saveDir)
 
         # save the analysis as .csv file? (in /proj/data/spreadsheets/)
         # savesv(aspects, targetlist)

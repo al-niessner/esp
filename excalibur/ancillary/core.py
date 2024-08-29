@@ -45,7 +45,7 @@ def getestimators():
         ancestor.TeqEstimator(),
         PlEstimator(name='metallicity', units='logarithmic',
                     descr='metallicity', method=ancestor.pl_metals,
-                    ref='Fortney et al 2013'),
+                    ref='Thorngren et al 2016'),
         PlEstimator(name='mmw', units='AMU',
                     descr='mean molecular weight (CBE)', method=ancestor.pl_mmw,
                     ref='CEA (T=1000K;C/O=solar)'),
@@ -170,6 +170,9 @@ def savesv(aspects, targetlists):
     save the results as a csv file in /proj/data/spreadsheets
     '''
 
+    aspecttargets = []
+    for a in aspects: aspecttargets.append(a)
+
     svname = 'ancillary.estimate.parameters'
 
     # RID = int(os.environ.get('RUNID', None))
@@ -234,7 +237,9 @@ def savesv(aspects, targetlists):
         outfile.write('\n')
 
         # loop through each target, with one row per planet
-        for trgt in targetlists['active']:
+        # for trgt in targetlists['active']:
+        for trgt in filter(lambda tgt: tgt in aspecttargets, targetlists['active']):
+
             ancillary_data = aspects[trgt][svname]
 
             for planet_letter in ancillary_data['data']['planets']:
