@@ -133,21 +133,25 @@ class autofill(dawgie.Algorithm):
         '''Top level algorithm call'''
         update = False
 
-        # stop here if it is not a runtime target
-        self.__rt.is_valid()
-
-        crt = self.__create.sv_as_dict()
-        valid, errstring = trgcore.checksv(crt['starIDs'])
-
         # FIXMEE: this code needs repaired by moving out to config (Geoff added)
         target = repr(self).split('.')[1]
-        if valid and (target in crt['starIDs']['starID']):
-            log.warning('--< TARGET AUTOFILL: %s >--', target)
-            update = self._autofill(crt, target)
-        else: self._failure(errstring)
-        if update: ds.update()
-        else: raise dawgie.NoValidOutputDataError(
-                f'No output created for TARGET.{self.name()}')
+
+        # stop here if it is not a runtime target
+        if not self.__rt.is_valid():
+            log.warning('--< TARGET.%s: %s not a valid target >--', target, self.name().upper())
+
+        else:
+            crt = self.__create.sv_as_dict()
+            valid, errstring = trgcore.checksv(crt['starIDs'])
+            if valid and (target in crt['starIDs']['starID']):
+                log.warning('--< TARGET AUTOFILL: %s >--', target)
+                update = self._autofill(crt, target)
+            else: self._failure(errstring)
+
+            if update: ds.update()
+            else: raise dawgie.NoValidOutputDataError(
+                    f'No output created for TARGET.{self.name()}')
+
         return
 
     def _autofill(self, crt, thistarget):
@@ -193,18 +197,20 @@ class scrape(dawgie.Algorithm):
         '''Top level algorithm call'''
 
         # stop here if it is not a runtime target
-        self.__rt.is_valid()
-
-        var_autofill = self.__autofill.sv_as_dict()['parameters']
-        valid, errstring = trgcore.checksv(var_autofill)
-        if valid and self.__rt.is_valid():
-            # FIXMEE: this code needs repaired by moving out to config (Geoff added)
-            log.warning('--< TARGET SCRAPE: %s >--', repr(self).split('.')[1])
-            self._scrape(var_autofill, self.__out)
-        else: self._failure(errstring)
-        # GMR: always update.
-        # Sims / proceed() do not require data nor full set of system parameters.
-        ds.update()
+        if not self.__rt.is_valid():
+            log.warning('--< TARGET.%s: not a valid target >--', self.name().upper())
+        else:
+            var_autofill = self.__autofill.sv_as_dict()['parameters']
+            valid, errstring = trgcore.checksv(var_autofill)
+            if valid:
+                # FIXMEE: this code needs repaired by moving out to config (Geoff added)
+                log.warning('--< TARGET SCRAPE: %s >--', repr(self).split('.')[1])
+                self._scrape(var_autofill, self.__out)
+            else:
+                self._failure(errstring)
+            # GMR: always update.
+            # Sims / proceed() do not require data nor full set of system parameters.
+            ds.update()
         return
 
     @staticmethod

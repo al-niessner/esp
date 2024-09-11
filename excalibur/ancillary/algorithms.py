@@ -50,17 +50,19 @@ class estimate(dawgie.Algorithm):
         '''run ds'''
 
         # stop here if it is not a runtime target
-        self.__rt.is_valid()
+        if not self.__rt.is_valid():
+            log.warning('--< ANCILLARY.%s: not a valid target >--', self.name().upper())
 
-        update = False
-        vfin, _ = anccore.checksv(self.__fin.sv_as_dict()['parameters'])
-        if vfin:
-            update = anccore.estimate(self.__fin.sv_as_dict()['parameters'],
-                                      self.__out[0])
-            pass
-        if update: ds.update()
-        else: raise dawgie.NoValidOutputDataError(
-                f'No output created for ANCILLARY.{self.name()}')
+        else:
+            update = False
+            vfin, _ = anccore.checksv(self.__fin.sv_as_dict()['parameters'])
+            if vfin:
+                update = anccore.estimate(self.__fin.sv_as_dict()['parameters'],
+                                          self.__out[0])
+            if update: ds.update()
+            else: raise dawgie.NoValidOutputDataError(
+                    f'No output created for ANCILLARY.{self.name()}')
+
         return
 
 class population(dawgie.Analyzer):

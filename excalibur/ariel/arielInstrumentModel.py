@@ -117,10 +117,14 @@ def load_ariel_instrument(target):
                 elif len(thisplanetIndex)>1:
                     log.warning('--< ArielRad has multiple target matches?!: %s >--',target)
                     nVisits = 666
-                else:
+                elif np.isfinite(nTransitsCH0[thisplanetIndex]) and \
+                     np.isfinite(nTransitsCH1[thisplanetIndex]):
                     nVisits = np.min([nTransitsCH0[thisplanetIndex],
                                       nTransitsCH1[thisplanetIndex]])
                     nVisits = int(np.ceil(nVisits))
+                else:
+                    log.warning('--< ArielRad has non-finite # of visits: %s >--',target)
+                    nVisits = 666
                 log.warning('--< ArielRad sets the # of visits (Tier2): %s %s >--',
                             str(nVisits),target)
 

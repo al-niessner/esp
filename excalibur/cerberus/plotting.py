@@ -23,7 +23,7 @@ def rebinData(transitdata, binsize=4):
     minspec = np.nanmin(transitdata['wavelength'])
     maxspec = np.nanmax(transitdata['wavelength'])
     # add a small bit (1.e-10) to max edge, such that "< wavehi" includes last point
-    wavebinedges = np.linspace(minspec, maxspec+1.e-10, nspec)
+    wavebinedges = np.linspace(minspec, maxspec+1.e-10, nspec+1)
 
     specbin = []
     errbin = []
@@ -837,7 +837,7 @@ def plot_fitsVStruths(truth_values, fit_values, fit_errors, prior_ranges,
                 clr = 'grey'
                 lwid = 0.5
                 zord = 2
-                ptsiz = 20
+                ptsiz = 10
             ax.scatter(truth, fit,
                        facecolor=clr,edgecolor=clr, s=ptsiz, zorder=zord+1)
             ax.errorbar(truth, fit, yerr=error,
@@ -980,7 +980,7 @@ def plot_fitUncertainties(fit_values, fit_errors, prior_ranges,
                 clr = 'grey'
                 # lwid = 0.5
                 zord = 2
-                ptsiz = 20
+                ptsiz = 10
             ax.scatter(fitvalue, error,
                        facecolor=clr,edgecolor=clr, s=ptsiz, zorder=zord+1)
 
@@ -1029,7 +1029,7 @@ def plot_fitUncertainties(fit_values, fit_errors, prior_ranges,
         plt.close(figure)
     return plot_statevectors
 # --------------------------------------------------------------------
-def plot_massVSmetals(masses, truth_values,
+def plot_massVSmetals(masses, stellarFEHs, truth_values,
                       fit_values, fit_errors, prior_ranges,
                       filt, saveDir, savetodisk=False):
     ''' how well do we retrieve the input mass-metallicity relation? '''
@@ -1042,11 +1042,16 @@ def plot_massVSmetals(masses, truth_values,
     metals_true = truth_values['[X/H]']
     metals_fit = fit_values['[X/H]']
     metals_fiterr = fit_errors['[X/H]']
+    # switch to 2-sided (asymmetric) error bars
+    metals_fiterr = [(f[1] + f[0]) / 2 for f in fit_errors['[X/H]']]
+    metals_fiterrhi = [f[1] for f in fit_errors['[X/H]']]
+    metals_fiterrlo = [f[0] for f in fit_errors['[X/H]']]
 
     ilab1 = False
     ilab2 = False
-    for mass,masstrue,metaltrue,metalfit,metalerror in zip(
-            masses,masses_true,metals_true,metals_fit,metals_fiterr):
+    for mass,masstrue,metaltrue,metalfit,metalerror,metalerrorlo,metalerrorhi in zip(
+            masses,masses_true,metals_true,metals_fit,
+            metals_fiterr,metals_fiterrlo,metals_fiterrhi):
         # check whether there is any real information beyond the prior
         # let's say you have to improve uncertainty by a factor of 2
         # but note that the original 1-sigma uncertainty is ~2/3 of prior range
@@ -1063,67 +1068,10 @@ def plot_massVSmetals(masses, truth_values,
         else:
             clr = 'grey'
             lwid = 0.5
-            ptsiz = 20
+            ptsiz = 10
             zord = 2
         if metaltrue not in (666, 666666):
-            if not ilab1:
-                ilab1 = True
-                ax.scatter(masstrue, metaltrue,
-                           label='true value',
-                           facecolor='w',edgecolor=clr, s=ptsiz, zorder=zord+1)
-            else:
-                ax.scatter(masstrue, metaltrue,
-                           facecolor='w',edgecolor=clr, s=ptsiz, zorder=zord+1)
-        if not ilab2:
-            ilab2 = True
-            ax.scatter(mass, metalfit,
-                       label='fit value',
-                       facecolor=clr,edgecolor=clr, s=ptsiz, zorder=zord+2)
-        else:
-            ax.scatter(mass, metalfit,
-                       facecolor=clr,edgecolor=clr, s=ptsiz, zorder=zord+2)
-        # allow for asymmetric error bars!!!
-        ax.errorbar(mass, metalfit, yerr=metalerror,
-                    fmt='.', color=clr, lw=lwid, zorder=zord)
-    ax.semilogx()
-    ax.set_xlabel('$M_p (M_{\\rm Jup})$', fontsize=14)
-    ax.set_ylabel('[X/H]$_p$', fontsize=14)
-    xrange = ax.get_xlim()
-    yrange = ax.get_ylim()
-
-    # plot the underlying distribution (only if this is a simulation)
-    # actually, also plot Thorngren relationship for real HST data
-    massesThorngren = np.logspace(-5,3,100)
-    metalsThorngren = massMetalRelation(0, masses,thorngren=True)
-    if 'sim' in filt:
-        ax.plot(massesThorngren,metalsThorngren, 'k--', lw=1, zorder=1, label='true relationship')
-    else:
-        ax.plot(massesThorngren,metalsThorngren, 'k--', lw=1, zorder=1, label='Thorngren+ 2016')
-
-    plt.legend()
-
-    ax.set_xlim(xrange)
-    ax.set_ylim(yrange)
-
-    # SECOND PANEL - same thing but subtract off the stellar metallicity
-    ax = figure.add_subplot(1,2,2)
-
-    ilab1 = False
-    ilab2 = False
-    for mass,masstrue,metaltrue,metalfit,metalerror in zip(
-            masses,masses_true,metals_true,metals_fit,metals_fiterr):
-        if metalerror < minInfo * priorRangeDiff:
-            clr = 'k'
-            lwid = 1
-            ptsiz = 40
-            zord = 5
-        else:
-            clr = 'grey'
-            lwid = 0.5
-            ptsiz = 20
-            zord = 2
-        if metaltrue not in (666, 666666):
-            if not ilab1:
+            if not ilab1 and clr=='k':
                 ilab1 = True
                 ax.scatter(masstrue, metaltrue,
                            label='true value',
@@ -1140,20 +1088,108 @@ def plot_massVSmetals(masses, truth_values,
             ax.scatter(mass, metalfit,
                        facecolor=clr,edgecolor=clr, s=ptsiz, zorder=zord+2)
         # allow for asymmetric error bars!!!
-        ax.errorbar(mass, metalfit, yerr=metalerror,
+        # ax.errorbar(mass, metalfit, yerr=metalerror,
+        #             fmt='.', color=clr, lw=lwid, zorder=zord)
+        # if clr=='k':
+        #    print('x y',mass,metalfit)
+        #    print('  old:',metalerror)
+        #    print('  new:',metalerrorlo,metalerrorhi)
+        ax.errorbar(mass, metalfit, yerr=np.array([[metalerrorlo],[metalerrorhi]]),
                     fmt='.', color=clr, lw=lwid, zorder=zord)
     ax.semilogx()
     ax.set_xlabel('$M_p (M_{\\rm Jup})$', fontsize=14)
-    ax.set_ylabel('[X/H]$_p$ - [X/H]$_*$', fontsize=14)
+    ax.set_ylabel('[X/H]$_p$', fontsize=14)
+    xrange = ax.get_xlim()
+    yrange = ax.get_ylim()
+
+    # plot the underlying distribution (only if this is a simulation)
+    # actually, also plot Thorngren relationship for real HST data
+    massesThorngren = np.logspace(-5,3,100)
+    metalsThorngren = massMetalRelation(0, massesThorngren,thorngren=True)
+    if 'sim' in filt:
+        ax.plot(massesThorngren,metalsThorngren, 'k:', lw=1, zorder=1, label='true relationship')
+    else:
+        ax.plot(massesThorngren,metalsThorngren, 'k:', lw=1, zorder=1, label='Thorngren+ 2016')
+
+    # plot a linear fit to the data
+    polynomialCoeffs = np.polyfit(np.log10(masses), metals_fit, 1, w=1./np.array(metals_fiterr))
+    # print('polynomialCoeffs',polynomialCoeffs)
+    lineFunction = np.poly1d(polynomialCoeffs)
+    massrange = np.linspace(xrange[0],xrange[1],10)
+    plt.plot(massrange, lineFunction(np.log10(massrange)),
+             'k--', lw=1.5, zorder=3, label='Linear fit')
+
+    plt.legend()
+
+    # use the prior range for the y-axis
+    yrange = (prior_ranges['[X/H]'][0], prior_ranges['[X/H]'][1])
+
+    ax.set_xlim(xrange)
+    ax.set_ylim(yrange)
+
+    # SECOND PANEL - same thing but subtract off the stellar metallicity
+    ax = figure.add_subplot(1,2,2)
+
+    ilab1 = False
+    ilab2 = False
+    for stellarFEH,mass,masstrue,metaltrue,metalfit,metalerror,metalerrorlo,metalerrorhi in zip(
+            stellarFEHs,
+            masses,masses_true,metals_true,metals_fit,
+            metals_fiterr,metals_fiterrlo,metals_fiterrhi):
+        if metalerror < minInfo * priorRangeDiff:
+            clr = 'k'
+            lwid = 1
+            ptsiz = 40
+            zord = 5
+        else:
+            clr = 'grey'
+            lwid = 0.5
+            ptsiz = 10
+            zord = 2
+        if metaltrue not in (666, 666666):
+            if not ilab1:
+                ilab1 = True
+                ax.scatter(masstrue, metaltrue,
+                           label='true value',
+                           facecolor='w',edgecolor=clr, s=ptsiz, zorder=zord+1)
+            else:
+                ax.scatter(masstrue, metaltrue,
+                           facecolor='w',edgecolor=clr, s=ptsiz, zorder=zord+1)
+        if not ilab2 and clr=='k':
+            ilab2 = True
+            ax.scatter(mass, metalfit - stellarFEH,
+                       label='fit value',
+                       facecolor=clr,edgecolor=clr, s=ptsiz, zorder=zord+2)
+        else:
+            ax.scatter(mass, metalfit - stellarFEH,
+                       facecolor=clr,edgecolor=clr, s=ptsiz, zorder=zord+2)
+        # ax.errorbar(mass, metalfit - stellarFEH, yerr=metalerror,
+        #            fmt='.', color=clr, lw=lwid, zorder=zord)
+        # allow for asymmetric error bars!!!
+        ax.errorbar(mass, metalfit - stellarFEH, yerr=np.array([[metalerrorlo],[metalerrorhi]]),
+                    fmt='.', color=clr, lw=lwid, zorder=zord)
+    ax.semilogx()
+    ax.set_xlabel('$M_p (M_{\\rm Jup})$', fontsize=14)
+    ax.set_ylabel('[X/H]$_p$ - [X/H]$_\\star$', fontsize=14)
     xrange = ax.get_xlim()
     yrange = ax.get_ylim()
 
     # plot the underlying distribution (only if this is a simulation)
     # actually, also plot Thorngren relationship for real HST data
     if 'sim' in filt:
-        ax.plot(massesThorngren,metalsThorngren, 'k--', lw=1, zorder=1, label='true relationship')
+        ax.plot(massesThorngren,metalsThorngren, 'k:', lw=1, zorder=1, label='true relationship')
     else:
-        ax.plot(massesThorngren,metalsThorngren, 'k--', lw=1, zorder=1, label='Thorngren+ 2016')
+        ax.plot(massesThorngren,metalsThorngren, 'k:', lw=1, zorder=1, label='Thorngren+ 2016')
+
+    # plot a linear fit to the data
+    polynomialCoeffs = np.polyfit(np.log10(masses),
+                                  np.array(metals_fit) - np.array(stellarFEHs), 1,
+                                  w=1./np.array(metals_fiterr))
+    # print('polynomialCoeffs',polynomialCoeffs)
+    lineFunction = np.poly1d(polynomialCoeffs)
+    massrange = np.linspace(xrange[0],xrange[1],10)
+    plt.plot(massrange, lineFunction(np.log10(massrange)),
+             'k--', lw=1.5, zorder=3, label='Linear fit')
 
     plt.legend()
 

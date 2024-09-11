@@ -42,32 +42,34 @@ class sim_spectrum(dawgie.Algorithm):
 
     def run(self, ds, ps):
         '''Top level algorithm call'''
-        update = False
-        arielcore.init()
 
         # stop here if it is not a runtime target
-        self.__rt.is_valid()
+        if not self.__rt.is_valid():
+            log.warning('--< ARIEL.%s: not a valid target >--', self.name().upper())
 
-        system_dict = self.__system_finalize.sv_as_dict()['parameters']
-        valid, errstring = arielcore.checksv(system_dict)
-        if valid:
-            runtime = self.__rt.sv_as_dict()['status']
-            runtime_params = arielcore.ARIEL_PARAMS(
-                randomSeed=123,
-                randomCloudProperties=True,
-                thorgrenMassMetals=True,
-                includeMetallicityDispersion=runtime[
-                    'ariel_simulate_spectra_includeMetallicityDispersion'])
-            # FIXMEE: this code needs repaired by moving out to config (Geoff added)
-            update = self._simSpectrum(repr(self).split('.')[1],  # this is the target name
-                                       system_dict, runtime_params,
-                                       self.__out)
         else:
-            self._failure(errstring)
-        if update:
-            ds.update()
-        elif valid: raise dawgie.NoValidOutputDataError(
-                f'No output created for ARIEL.{self.name()}')
+            update = False
+            arielcore.init()
+
+            system_dict = self.__system_finalize.sv_as_dict()['parameters']
+            valid, errstring = arielcore.checksv(system_dict)
+            if valid:
+                runtime = self.__rt.sv_as_dict()['status']
+                runtime_params = arielcore.ARIEL_PARAMS(
+                    randomSeed=123,
+                    randomCloudProperties=True,
+                    thorgrenMassMetals=True,
+                    includeMetallicityDispersion=runtime[
+                        'ariel_simulate_spectra_includeMetallicityDispersion'])
+                # FIXMEE: this code needs repaired by moving out to config (Geoff added)
+                update = self._simSpectrum(repr(self).split('.')[1],  # this is the target name
+                                           system_dict, runtime_params,
+                                           self.__out)
+            else:
+                self._failure(errstring)
+            if update: ds.update()
+            elif valid: raise dawgie.NoValidOutputDataError(
+                    f'No output created for ARIEL.{self.name()}')
         return
 
     @staticmethod

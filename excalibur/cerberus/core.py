@@ -506,6 +506,13 @@ def atmos(fin, xsl, spc, runtime_params, out, ext,
     if (singlemod is not None) and (singlemod in modfam):
         modfam = [modfam[modfam.index(singlemod)]]
 
+    # save the stellar params, so that analysis knows the stellar metallicity
+    starParams = ['R*', 'M*', 'LOGG*', 'T*', 'L*', 'RHO*', 'FEH*',
+                  'Jmag', 'Hmag', 'Kmag', 'spTyp', 'AGE*', 'dist']
+    out['data']['stellar_params'] = {}
+    for starParam in starParams:
+        out['data']['stellar_params'][starParam] = orbp[starParam]
+
     # PLANET LOOP
     for p in spc['data'].keys():
         # make sure that it really is a planet letter, not another dict key
@@ -806,6 +813,7 @@ def atmos(fin, xsl, spc, runtime_params, out, ext,
                     # print('true modelparams in atmos:',inputData['model_params'])
             out['data'][p]['VALID'] = cleanup
             out['STATUS'].append(True)
+
             okfit = True
             pass
     return okfit
@@ -1422,6 +1430,7 @@ def analysis(aspects, filt, out, verbose=False):
         # print('  running targetlist=',targetlist['targetlistname'])
         param_names = []
         masses = []
+        stellarFEHs = []
         truth_values = defaultdict(list)
         fit_values = defaultdict(list)
         fit_errors = defaultdict(list)
@@ -1442,6 +1451,13 @@ def analysis(aspects, filt, out, verbose=False):
                 # print('target with valid data format for this filter:',filt,trgt)
                 atmosFit = aspects[trgt][svname+'.'+filt]
 
+                # if 'stellar_params' in atmosFit['data']:  # strange. this doesn't work
+                if 'stellar_params' in atmosFit['data'].keys():
+                    stellarFEH = atmosFit['data']['stellar_params']['FEH*']
+                else:
+                    stellarFEH = 0
+                    log.warning('--< CERBERUS ANALYSIS: no FEH* for %s >--',trgt)
+
                 # verify SV succeeded for target
                 if not atmosFit['STATUS'][-1]:
                     log.warning('--< CERBERUS ANALYSIS: STATUS IS FALSE FOR CERB.ATMOS %s %s >--',filt,trgt)
@@ -1450,7 +1466,11 @@ def analysis(aspects, filt, out, verbose=False):
                         # print(trgt,atmosFit['data'][planetLetter]['MODELPARNAMES'])
                         # print(trgt,atmosFit['data'][planetLetter]['planet_params'])
 
-                        if 'TEC' not in atmosFit['data'][planetLetter]['MODELPARNAMES']:
+                        # print('   keys:',atmosFit['data'][planetLetter].keys())
+                        if planetLetter=='stellar_params':  # this is not a planet letter
+                            pass
+
+                        elif 'TEC' not in atmosFit['data'][planetLetter]['MODELPARNAMES']:
                             log.warning('--< CERBERUS ANALYSIS: BIG PROBLEM theres no TEC model! %s %s >--',filt,trgt)
                         elif 'prior_ranges' not in atmosFit['data'][planetLetter]['TEC']:
                             log.warning('--< CERBERUS ANALYSIS: SKIP (no prior info) - %s %s >--',filt,trgt)
@@ -1459,6 +1479,8 @@ def analysis(aspects, filt, out, verbose=False):
                                 masses.append(atmosFit['data'][planetLetter]['planet_params']['mass'])
                             else:
                                 masses.append(666)
+
+                            stellarFEHs.append(stellarFEH)
 
                             # (prior range should be the same for all the targets)
                             prior_ranges = atmosFit['data'][planetLetter]['TEC']['prior_ranges']
@@ -1475,11 +1497,12 @@ def analysis(aspects, filt, out, verbose=False):
 
                             for key,trace in zip(allKeys,allTraces):
                                 if key not in param_names: param_names.append(key)
-                                fit_values[key].append(np.median(trace))
+                                med = np.median(trace)
+                                fit_values[key].append(med)
                                 lo = np.percentile(np.array(trace), 16)
                                 hi = np.percentile(np.array(trace), 84)
                                 fit_errors[key].append((hi-lo)/2)
-                                fit_errors2sided[key].append((lo,hi))
+                                fit_errors2sided[key].append([med-lo,hi-med])
                                 if verbose:
                                     if key=='[N/O]' and (hi-lo)/2 < 2:
                                         print('N/O',trgt,np.median(trace),(hi-lo)/2)
@@ -1552,10 +1575,9 @@ def analysis(aspects, filt, out, verbose=False):
             if len(plotarray) > 2: fitCOplot = plotarray[2]
             if len(plotarray) > 3: fitNOplot = plotarray[3]
 
-        masses = truth_values['Mp']
-        massMetalsplot,_ = plot_massVSmetals(
-            masses, truth_values, fit_values, fit_errors2sided, prior_ranges,
-            filt, saveDir)
+        massMetalsplot,_ = plot_massVSmetals(truth_values['Mp'], stellarFEHs, truth_values,
+                                             fit_values, fit_errors2sided, prior_ranges,
+                                             filt, saveDir)
 
         # save the analysis as .csv file? (in /proj/data/spreadsheets/)
         # savesv(aspects, targetlist)

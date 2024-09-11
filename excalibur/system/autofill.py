@@ -1201,12 +1201,16 @@ def fixPublishedLimits(systemInfo, starLimitReplacements, planetLimitReplacement
     # check for eccentricity values that are really upper limits
     #  use less than 2-sigma or 3-sigma as criteria?
     for p in systemInfo['planets']:
-        # print('eccentricity check',systemInfo[p]['ecc'],
-        #       systemInfo[p]['ecc_uperr'],systemInfo[p]['ecc_lowerr'])
+        # print('eccentricity check',p,systemInfo[p]['ecc'][ipl],
+        #      'uperr',systemInfo[p]['ecc_uperr'][ipl],
+        #      'loerr',systemInfo[p]['ecc_lowerr'][ipl])
         for ipl in range(len(systemInfo[p][param])):
-            if systemInfo[p]['ecc'][ipl]!='' and float(systemInfo[p]['ecc'][ipl])>0:
-                # print('eccentricity check',systemInfo[p]['ecc'][ipl],
-                #      systemInfo[p]['ecc_uperr'][ipl],systemInfo[p]['ecc_lowerr'][ipl])
+            # note that this fix-limits call comes before the fill-uncertainty call
+            #  so a blank ecc might be set to zero, but the lowerr is still blank
+            if systemInfo[p]['ecc'][ipl]!='' and float(systemInfo[p]['ecc'][ipl])>0 \
+               and systemInfo[p]['ecc_lowerr'][ipl]!='':
+                # print('eccentricity check',p,systemInfo[p]['ecc'],
+                #       systemInfo[p]['ecc_uperr'],systemInfo[p]['ecc_lowerr'])
                 ecc_SNR = -float(systemInfo[p]['ecc'][ipl]) / float(systemInfo[p]['ecc_lowerr'][ipl])
                 if ecc_SNR < 2:
                     log.warning('SYSTEM: should be an ecc upper limit!? SNR=%s',ecc_SNR)

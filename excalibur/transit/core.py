@@ -2,16 +2,19 @@
 # -- IMPORTS -- ------------------------------------------------------
 import dawgie
 
+import excalibur
 import excalibur.data.core as datcore
 import excalibur.system.core as syscore
 import excalibur.util.cerberus as crbutil
 from excalibur.util import elca
 
+import os
 import io
 import copy
 import logging
 import random
 import lmfit as lm
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import sys
 from ultranest import ReactiveNestedSampler
@@ -242,6 +245,24 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
         visits = tme['data'][p]['visits']
         phase = tme['data'][p]['phase']
         z = tme['data'][p]['z']
+
+        # calculate z and phase over an orbit
+        #  interpolate in this grid to get the phase defining the transit start/stop
+        # print('keys',tme['data'][p].keys())  # no 'time'!
+        smaors = priors[p]['sma']/priors['R*']/ssc['Rsun/AU']
+        tmjd = priors[p]['t0']
+        if tmjd > 2400000.5: tmjd -= 2400000.5
+        timeredo = np.linspace(0,priors[p]['period'],1000)
+        zredo, phaseredo = datcore.time2z(timeredo, priors[p]['inc'], tmjd, smaors,
+                                          priors[p]['period'], priors[p]['ecc'])
+        select = (phaseredo < 0.25) & (phaseredo > -0.25)
+        ordered = np.argsort(phaseredo[select])
+        # figure out the phase corresponding to z = 1+rp,1-rp OOT limits
+        intransit_phase_min = np.interp(-1 - rpors, zredo[select][ordered],
+                                        phaseredo[select][ordered])
+        intransit_phase_max = np.interp(1 + rpors, zredo[select][ordered],
+                                        phaseredo[select][ordered])
+
         zoot = z.copy()
         out['data'][p]['vrange'] = vrange
         out['data'][p]['visits'] = []
@@ -259,6 +280,7 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
         out['data'][p]['vignore'] = []
         out['data'][p]['stdns'] = []
         out['data'][p]['hstbreath'] = []
+
         singlevisit = False
         svnkey = 'svn'+selftype
         if tme['data'][p][svnkey].__len__() == 1:
@@ -283,6 +305,11 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
             if True in selv: firstorb = int(np.min(orbits[selv]))
             else: firstorb = int(1)
             # ORBIT SELECTION FOR HST BREATHING MODEL ------------------------------------
+            #  ootminus is the orbits before transit
+            #  inorb is the orbits during transit
+            #  ootplus is the orbits after transit
+            # Note that these categories can overlap -
+            #   ootplus/ootminus are based on the median, but inorb is for any points
             ootplus = []
             ootpv = []
             ootminus = []
@@ -301,6 +328,12 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
                     pass
                 if np.any(abs(zorb) < (1e0 + rpors)): inorb.append(int(o))
                 pass
+            if verbose:
+                print(' orbits before transit:',ootminus,ootmv)
+                print(' orbits after transit: ',ootplus,ootpv)
+                print(' orbits in transit:',inorb)
+
+            # this reorders the orders
             ootplus = np.array(ootplus)
             ootpv = np.array(ootpv)
             selord = np.argsort(abs(ootplus - np.mean(inorb)))
@@ -317,6 +350,7 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
             for thisorb in ootplus:
                 ckeep = keep is not None
                 badcond = np.sum(orbits[selv] == thisorb) < 7
+                # print(thisorb,'ootplus badcond',badcond)
                 if ckeep or badcond: trash.append(int(thisorb))
                 else:
                     keep = thisorb
@@ -328,6 +362,7 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
                 ckeep = keep is not None
                 zorb = zoot[selv][orbits[selv] == thisorb]
                 badcond = np.sum(zorb < -(1e0 + rpors)) < 7
+                # print(thisorb,'ootminus badcond',badcond)
                 if thisorb not in inorb:
                     if ckeep or badcond or (thisorb in [firstorb]):
                         trash.append(int(thisorb))
@@ -376,6 +411,8 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
             visw = list(np.array(wave)[selv])
             cwave, _t = tplbuild(viss, visw, vrange, disp[selv]*1e-4, medest=True)
             # OUT OF TRANSIT ORBITS SELECTION --------------------------------------------
+            # print('pureoot:',pureoot)
+            # print(' selv sumcheck',np.sum(selv),'out of',len(selv))
             selvoot = selv & np.array([(test in pureoot) for test in orbits])
             selvoot = selvoot & (abs(zoot) > (1e0 + rpors))
             voots = list(np.array(spectra)[selvoot])
@@ -670,18 +707,7 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
                     out['data'][p]['photnoise'].append(nphotn)
                     out['data'][p]['stdns'].append(np.nanstd(np.nanmedian(viss, axis=1)))
                     out['data'][p]['hstbreath'].append(hstbreath)
-                    if verbose:
-                        plt.figure()
-                        for w,s in zip(visw[check], vnspec):
-                            select = (w > np.min(vrange)) & (w < np.max(vrange))
-                            plt.plot(w[select], s[select], 'o')
-                            pass
-                        plt.ylabel('Normalized Spectra')
-                        plt.xlabel('Wavelength [$\\mu$m]')
-                        plt.xlim(np.min(vrange), np.max(vrange))
-                        plt.show()
-                        pass
-                    pass
+
                 else:
                     if wellcondin:
                         out['data'][p]['trial'].append('Spectral Variance Excess')
@@ -701,6 +727,7 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
                     pass
                 pass
             pass
+
         # VARIANCE EXCESS FROM LOST GUIDANCE ---------------------------------------------
         kickout = []
         if out['data'][p]['stdns'].__len__() > 2:
@@ -734,6 +761,106 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
         for v, m in zip(out['data'][p]['vignore'], out['data'][p]['trial']):
             log.warning('--< Visit %s: %s', str(int(v)), str(m))
             pass
+
+        # SAVE A PLOT FOR EACH VISIT ----------------------------------------------------
+        #  - flux as a function of wavelength on the left
+        #  - flux as a function of orbital phase on the right (whitelight)
+
+        # set the point color based on the orbit number
+        orbitColors = mpl.cm.viridis
+
+        vrange = out['data'][p]['vrange']
+        out['data'][p]['plot_normalized_byvisit'] = []
+        for index, v in enumerate(out['data'][p]['visits']):
+            # lastorbit = np.max(out['data'][p]['orbits'][index])
+            phasemin = np.min(out['data'][p]['phase'][index])
+            phasemax = np.max(out['data'][p]['phase'][index])
+
+            myfig = plt.figure(figsize=(20,5))
+            myfig.subplots_adjust(wspace=0.25)  # add some space between the two panels
+            myfig.subplots_adjust(left=0.05)
+            myfig.subplots_adjust(right=0.99)
+            plt.subplot(1,3,1)
+            plt.title('Visit: '+str(v))
+            for waves,normed_flux,phase,orbit in zip(out['data'][p]['wave'][index],
+                                                     out['data'][p]['nspec'][index],
+                                                     out['data'][p]['phase'][index],
+                                                     out['data'][p]['orbits'][index]):
+                select = (waves > np.min(vrange)) & (waves < np.max(vrange))
+                # option to set color as function of orbit
+                # clr = orbitColors((orbit - 1) / (lastorbit - 1))
+                # option to set color as function of phase/time
+                clr = orbitColors((phase - phasemin) / (phasemax - phasemin))
+                plt.plot(waves[select], normed_flux[select], 'o', c=clr)
+            plt.ylabel('Normalized Flux')
+            plt.xlabel('Wavelength [$\\mu$m]')
+            plt.xlim(np.min(vrange), np.max(vrange))
+            yrange = plt.ylim()
+
+            plt.subplot(1,3,2)
+            plt.title('Visit: '+str(v))
+            for waves,normed_flux,phase,orbit in zip(out['data'][p]['wave'][index],
+                                                     out['data'][p]['nspec'][index],
+                                                     out['data'][p]['phase'][index],
+                                                     out['data'][p]['orbits'][index]):
+                select = (waves > np.min(vrange)) & (waves < np.max(vrange))
+                whitelightpoint = np.median(normed_flux[select])
+                # option to set color as function of orbit
+                # clr = orbitColors((orbit - 1) / (lastorbit - 1))
+                # option to set color as function of phase/time
+                clr = orbitColors((phase - phasemin) / (phasemax - phasemin))
+                plt.plot(phase, whitelightpoint, 'o', c=clr, label='orbit: '+str(int(orbit)))
+
+                # alternate: show all the wavelength points, not just the whitelight median
+                plt.plot([phase]*len(normed_flux[select]),
+                         normed_flux[select], 'o', c=clr, label='orbit: '+str(int(orbit)))
+
+            # vertical dashed lines showing the in-transit times
+            # print(' Dashed lines for in-transit phases:',
+            #      intransit_phase_min,intransit_phase_max)
+            plt.plot([intransit_phase_min,intransit_phase_min],[0,10],'k--')
+            plt.plot([intransit_phase_max,intransit_phase_max],[0,10],'k--')
+            plt.ylim(yrange)
+            # plt.legend()
+            plt.ylabel('Normalized Flux')
+            plt.xlabel('Orbital Phase')
+
+            plt.subplot(1,3,3)
+            plt.title('Visit: '+str(v))
+            for waves,normed_flux,phase,orbit in zip(out['data'][p]['wave'][index],
+                                                     out['data'][p]['nspec'][index],
+                                                     out['data'][p]['phase'][index],
+                                                     out['data'][p]['orbits'][index]):
+                select = (waves > np.min(vrange)) & (waves < np.max(vrange))
+                whitelightpoint = np.median(normed_flux[select])
+                # option to set color as function of orbit
+                # clr = orbitColors((orbit - 1) / (lastorbit - 1))
+                # option to set color as function of phase/time
+                clr = orbitColors((phase - phasemin) / (phasemax - phasemin))
+                plt.plot(phase, whitelightpoint, 'o', c=clr, label='orbit: '+str(int(orbit)))
+
+                # alternate: show all the wavelength points, not just the whitelight median
+                # plt.plot([phase]*len(normed_flux[select]),
+                #         normed_flux[select], 'o', c=clr, label='orbit: '+str(int(orbit)))
+
+            # vertical dashed lines showing the in-transit times
+            # print(' Dashed lines for in-transit phases:',
+            #      intransit_phase_min,intransit_phase_max)
+            plt.plot([intransit_phase_min,intransit_phase_min],[0,10],'k--')
+            plt.plot([intransit_phase_max,intransit_phase_max],[0,10],'k--')
+            plt.ylim(yrange)
+            # plt.legend()
+            plt.ylabel('Normalized Flux')
+            plt.xlabel('Orbital Phase')
+
+            saveDir = os.path.join(excalibur.context['data_dir'], 'bryden/')
+            plt.savefig(saveDir + 'norm_'+ext+' visit'+str(v)+'.png')
+            # REDUNDANT SAVE - above saves to disk; below saves as state vector
+            buf = io.BytesIO()
+            myfig.savefig(buf, format='png')
+            out['data'][p]['plot_normalized_byvisit'].append(buf.getvalue())
+            plt.close(myfig)
+
         if out['data'][p]['visits']:
             normed = True
             out['STATUS'].append(True)

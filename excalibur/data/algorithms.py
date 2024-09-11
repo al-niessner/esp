@@ -54,23 +54,25 @@ class collect(dawgie.Algorithm):
         '''Top level algorithm call'''
 
         # stop here if it is not a runtime target
-        self.__rt.is_valid()
+        if not self.__rt.is_valid():
+            log.warning('--< DATA.%s: not a valid target >--', self.name().upper())
 
-        update = False
-        create = self.__create.sv_as_dict()
-        scrape = self.__scrape.sv_as_dict()['databases']
-        valid, errstring = datcore.checksv(scrape)
-        if valid:
-            for key in create['filters'].keys(): self.__out[key] = create['filters'][key]
-            # 7/2/24 we want to always collect all filters, so don't use proceed(fltr) here
-            # for fltr in self.__rt.sv_as_dict()['status']['allowed_filter_names']:
-            for fltr in fltrs:
-                ok = self._collect(fltr, scrape, self.__out)
-                update = update or ok
+        else:
+            update = False
+            create = self.__create.sv_as_dict()
+            scrape = self.__scrape.sv_as_dict()['databases']
+            valid, errstring = datcore.checksv(scrape)
+            if valid:
+                for key in create['filters'].keys(): self.__out[key] = create['filters'][key]
+                # 7/2/24 we want to always collect all filters, so don't use proceed(fltr) here
+                # for fltr in self.__rt.sv_as_dict()['status']['allowed_filter_names']:
+                for fltr in fltrs:
+                    ok = self._collect(fltr, scrape, self.__out)
+                    update = update or ok
 
-            if update: ds.update()
-            else: self._raisenoout(self.name())
-        else: self._failure(errstring)
+                if update: ds.update()
+                else: self._raisenoout(self.name())
+            else: self._failure(errstring)
         return
 
     @staticmethod
@@ -132,7 +134,6 @@ class timing(dawgie.Algorithm):
                 if fltr in col['activefilters'].keys():
                     # stop here if it is not a runtime target
                     self.__rt.proceed(fltr)
-
                     update = self._timing(fin, fltr, col['activefilters'][fltr],
                                           self.__out[fltrs.index(fltr)])
                     if update: svupdate.append(self.__out[fltrs.index(fltr)])

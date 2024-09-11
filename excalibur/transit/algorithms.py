@@ -196,18 +196,17 @@ class whitelight(dawgie.Algorithm):
         # FILTER LOOP
         for fltr in self.__rt.sv_as_dict()['status']['allowed_filter_names']:
             update = False
-            index = fltrs.index(fltr)
             nrm = self._nrm.sv_as_dict()[fltr]
             vnrm, snrm = trncore.checksv(nrm)
             if vnrm and vfin:
                 log.warning('--< %s WHITE LIGHT: %s >--', self._type.upper(), fltr)
                 update = self._whitelight(nrm, fin,
                                           self.__rt.sv_as_dict()['status']['spectrum_steps'].value(),
-                                          self.__out[index], fltr)
+                                          self.__out[fltrs.index(fltr)], fltr)
             else:
                 errstr = [m for m in [snrm, sfin] if m is not None]
                 self._failure(errstr[0])
-            if update: svupdate.append(self.__out[index])
+            if update: svupdate.append(self.__out[fltrs.index(fltr)])
         self.__out = svupdate
         if self.__out: ds.update()
         else: raise dawgie.NoValidOutputDataError(
@@ -288,7 +287,8 @@ class spectrum(dawgie.Algorithm):
 
         svupdate = []
         vfin, sfin = trncore.checksv(self.__fin.sv_as_dict()['parameters'])
-        for index, fltr in enumerate(self.__rt.sv_as_dict()['status']['allowed_filter_names']):
+
+        for fltr in self.__rt.sv_as_dict()['status']['allowed_filter_names']:
             # stop here if it is not a runtime target
             self.__rt.proceed(fltr)
 
@@ -301,17 +301,16 @@ class spectrum(dawgie.Algorithm):
                                         self._nrm.sv_as_dict()[fltr],
                                         self._wht.sv_as_dict()[fltr],
                                         self.__rt.sv_as_dict()['status']['spectrum_steps'].value(),
-                                        self.__out[index], fltr)
+                                        self.__out[fltrs.index(fltr)], fltr)
             else:
                 errstr = [m for m in [sfin, snrm, swht] if m is not None]
                 self._failure(errstr[0])
-            if update: svupdate.append(self.__out[index])
-            pass
+            if update: svupdate.append(self.__out[fltrs.index(fltr)])
 
-        log.warning('--< %s MERGED SPECTRUM: %s >--')
         merg = trncore.hstspectrum(self.__out, fltrs)
-        # check if merg is True so you can put self.__out[-1] append to svupdate
+        log.warning('--< %s SPECTRUM MERGED: %s >--', self._type.upper(),merg)
         if merg: svupdate.append(self.__out[-1])
+
         self.__out = svupdate  # it will take all the elements that are not empty
         if self.__out: ds.update()
         else:
@@ -373,7 +372,7 @@ class population(dawgie.Analyzer):
         banned_params = ['rprs']
         sv_prefix = 'transit.spectrum.'
         wl_prefix = 'transit.whitelight.'
-        for idx, fltr in enumerate(fltrs):
+        for fltr in fltrs:
             im_bins = defaultdict(lambda: defaultdict(list))
             wl_im_bins = defaultdict(lambda: defaultdict(list))
             for trgt in aspects:
@@ -429,6 +428,8 @@ class population(dawgie.Analyzer):
                                     continue
                                 param_val = np.nanmedian(trace[key])
                                 wl_im_bins[param_name]['values'].append(param_val)
+
+            idx = fltrs.index(fltr)
             self.__out[idx]['data']['IMPARAMS'] = dict(im_bins)
             self.__out[idx]['data']['wl'] = {}
             self.__out[idx]['data']['wl']['imparams'] = dict(wl_im_bins)
