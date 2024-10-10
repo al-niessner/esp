@@ -339,6 +339,82 @@ class spectrum(dawgie.Algorithm):
         return
     pass
 
+class starspots(dawgie.Algorithm):
+    '''
+    include Viktor's starspot model
+    '''
+    def __init__(self, wht=whitelight(), spc=spectrum()):
+        '''__init__ ds'''
+        self._version_ = trncore.spectrumversion()
+        self._type = 'transit'
+        self.__fin = sysalg.finalize()
+        self._wht = wht
+        self._spc = spc
+        self.__rt = rtalg.autofill()
+        self.__out = [trnstates.StarspotSV(fltr) for fltr in fltrs]
+        return
+
+    def name(self):
+        '''Database name for subtask extension'''
+        return 'starspots'
+
+    def previous(self):
+        '''Input State Vectors: system.finalize, transit.normalization,
+        transit.whitelight'''
+        return [dawgie.ALG_REF(sys.task, self.__fin),
+                dawgie.ALG_REF(trn.task, self._wht),
+                dawgie.ALG_REF(trn.task, self._spc)] + \
+                self.__rt.refs_for_proceed()
+
+    def state_vectors(self):
+        '''Output State Vectors: transit.starspots'''
+        return self.__out
+
+    def run(self, ds, ps):
+        '''Top level algorithm call'''
+
+        svupdate = []
+        vfin, sfin = trncore.checksv(self.__fin.sv_as_dict()['parameters'])
+
+        # for fltr in ['HST-WFC3-IR-G141-SCAN']:  # for debugging, just run G141
+        for fltr in self.__rt.sv_as_dict()['status']['allowed_filter_names']:
+            # stop here if it is not a runtime target
+            self.__rt.proceed(fltr)
+
+            update = False
+            vwht, swht = trncore.checksv(self._wht.sv_as_dict()[fltr])
+            vspc, sspc = trncore.checksv(self._spc.sv_as_dict()[fltr])
+            if vfin and vwht and vspc:
+                log.warning('--< %s STARSPOTS: %s >--', self._type.upper(), fltr)
+                update = self._starspots(self.__fin.sv_as_dict()['parameters'],
+                                         self._wht.sv_as_dict()[fltr],
+                                         self._spc.sv_as_dict()[fltr],
+                                         self.__out[fltrs.index(fltr)])
+            else:
+                errstr = [m for m in [sfin, swht, sspc] if m is not None]
+                self._failure(errstr[0])
+            if update: svupdate.append(self.__out[fltrs.index(fltr)])
+
+        self.__out = svupdate
+        if self.__out:
+            ds.update()
+        else:
+            raise dawgie.NoValidOutputDataError(
+                f'No output created for {self._type.upper()}.{self.name()}')
+        return
+
+    @staticmethod
+    def _starspots(fin, wht, spc, out):
+        '''Core code call'''
+        spotmodel = trncore.starspots(fin, wht, spc, out)
+        return spotmodel
+
+    def _failure(self, errstr):
+        '''Failure log'''
+        log.warning('--< %s STARSPOTS: %s >--', self._type.upper(), errstr)
+        return
+    pass
+
 class population(dawgie.Analyzer):
     '''population ds'''
     def __init__(self):

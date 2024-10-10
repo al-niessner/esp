@@ -7,6 +7,7 @@ import excalibur.data.core as datcore
 import excalibur.system.core as syscore
 import excalibur.util.cerberus as crbutil
 from excalibur.util import elca
+from excalibur.cerberus.plotting import rebinData
 
 import os
 import io
@@ -4105,4 +4106,108 @@ def hstspectrum(out, fltrs):
                 out[-1]['data'][planet] = {'WB': np.sort(np.array(allwav)), 'WBlow': [x for _,x in sorted(zip(allwav,allwav_lw))], 'WBup': [x for _,x in sorted(zip(allwav,allwav_up))], 'ES': [x for _,x in sorted(zip(allwav,allspec))], 'ESerr': [x for _,x in sorted(zip(allwav,allspec_err))], 'Fltrs': [x for _,x in sorted(zip(allwav,allfltrs))], 'Hs': out[ids]['data'][planet]['Hs']}
             exospec = True  # return if all inputs were empty
             out[-1]['STATUS'].append(True)
+    return exospec
+
+def starspots(fin, wht, spc, out):
+    '''
+    Viktor Sumida's starspot model
+    '''
+
+    # print('whitelight info',wht['data']['b'].keys())
+    # print('spectrum info',spc['data']['b'].keys())
+
+    # 1) make sure we have all the input parameters
+
+    # print('fin keys',fin['priors'].keys())
+
+    Rstar = fin['priors']['R*']
+    Tstar = fin['priors']['T*']
+    Lstar = fin['priors']['L*']
+    print('star R,T,L:  ',Rstar,Tstar,Lstar)
+
+    exospec = False
+
+    planetletters = fin['priors']['planets']
+    for planetletter in planetletters:
+        Rplanet = fin['priors'][planetletter]['rp']
+        inc = fin['priors'][planetletter]['inc']
+        period = fin['priors'][planetletter]['period']
+        sma = fin['priors'][planetletter]['sma']
+        print('planet'+planetletter,'R,inc,P,a:',Rplanet,inc,period,sma)
+
+        # limb dark
+        limbCoeffs = wht['data'][planetletter]['whiteld']
+        print('limb darkening parameters from whitelight       ',limbCoeffs)
+        print('limb darkening parameters from spectrum (median)',
+              np.median(spc['data'][planetletter]['LD'],axis=0))
+        print('limb darkening parameters from spectrum (mean)  ',
+              np.mean(spc['data'][planetletter]['LD'],axis=0))
+
+        # this is the spectrum without any starspot correction
+        transitdata = {}
+        transitdata['wavelength'] = spc['data'][planetletter]['WB']
+        transitdata['depth'] = spc['data'][planetletter]['ES']**2
+        transitdata['error'] = 2 * spc['data'][planetletter]['ES'] * \
+            spc['data'][planetletter]['ESerr']
+
+        # bins the data (for plotting only, not for science analysis)
+        transitdata = rebinData(transitdata)
+
+        # 2) save whatever inputs might be helpful later
+        out['data'][planetletter] = {}
+        out['data'][planetletter]['WB'] = transitdata['wavelength']
+        out['data'][planetletter]['ES'] = transitdata['depth']
+        out['data'][planetletter]['ESerr'] = transitdata['error']
+        out['data'][planetletter]['RSTAR'] = Rstar
+        out['data'][planetletter]['TSTAR'] = Tstar
+        out['data'][planetletter]['LD'] = limbCoeffs
+
+        # 3) for each planet, calculate starspot model based on the input parameters
+
+        #  ************************************************************
+        #               Viktor - insert your code here
+        #  ************************************************************
+
+        # I think that your result will be an array of spectra on a 2-D grid
+        #  one axis is filling factor and
+        #  one axis is the spot temperature
+        # ?????
+        spotmodel = np.zeros((100,100,100))
+
+        # 4) save the results
+        out['data'][planetletter]['spotmodel'] = spotmodel
+
+        # 5) for each planet, make a plot of the spectrum
+
+        myfig, ax = plt.subplots(figsize=(8,6))
+
+        ax.errorbar(transitdata['wavelength'], 1e2*transitdata['depth'],
+                    fmt='.', yerr=1e2*transitdata['error'], color='lightgray')
+        ax.errorbar(transitdata['binned_wavelength'], 1e2*transitdata['binned_depth'],
+                    fmt='o', yerr=1e2*transitdata['binned_error'], color='k')
+
+        plt.title('planet '+planetletter)
+        plt.xlabel(str('Wavelength [$\\mu$m]'))
+        plt.ylabel(str('$(R_p/R_*)^2$ [%]'))
+        if 'Hs' in spc['data'][planetletter]:
+            rp0hs = np.sqrt(np.nanmedian(transitdata['depth']))
+            Hs = spc['data'][planetletter]['Hs'][0]
+            ax2 = ax.twinx()
+            ax2.set_ylabel('$\\Delta$ [Hs]')
+            axmin, axmax = ax.get_ylim()
+            ax2.set_ylim((np.sqrt(1e-2*axmin) - rp0hs)/Hs,
+                         (np.sqrt(1e-2*axmax) - rp0hs)/Hs)
+        myfig.tight_layout()
+
+        # print('saving plot as testsave.png')
+        # plt.savefig('/proj/data/bryden/testsave.png')
+
+        buf = io.BytesIO()
+        myfig.savefig(buf, format='png')
+        out['data'][planetletter]['plot_starspot_spectrum'] = buf.getvalue()
+        plt.close(myfig)
+
+        exospec = True
+        out['STATUS'].append(True)
+
     return exospec

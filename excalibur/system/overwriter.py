@@ -13,10 +13,12 @@ def fix_default_reference(target):
 
     setRefsByHand = {
         # 'GJ 9827':'Bonomo et al. 2023',    # not Rice et al. 2019   # problem is actually scrape/collect
-        'GJ 3053':'Lillo-Box et al. 2020',
-        'HD 191939':'Orell-Miquel et al. 2022',
-        'K2-3':'Diamond-Lowe et al. 2022',
-        'LTT 1445 A':'Oddo et al. 2023'}
+        # not really much improvement on these:
+        # 'GJ 3053':'Lillo-Box et al. 2020',   # residuals are better, mainly from 1 point itk
+        # 'HD 191939':'Orell-Miquel et al. 2022',  # no change in residuals (887 was a bit better)
+        # 'K2-3':'Diamond-Lowe et al. 2022',  # why are residuals a bit better? should be same
+        # 'LTT 1445 A':'Oddo et al. 2023',  # 887 is a lot lower residual, very diff looking. why?
+    }
 
     # default_reference = False
     # if target in setRefsByHand: default_reference = setRefsByHand[target]

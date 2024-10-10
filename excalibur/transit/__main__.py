@@ -24,7 +24,7 @@ if tn in ['', '__all__']:
     subtasks = excalibur.transit.bot.Agent('transit', 4, rid)
     pass
 else:
-    name = ['normalization', 'spectrum', 'whitelight', None][-1]  # -1 to run them all
+    name = ['normalization', 'spectrum', 'whitelight', 'starspots', None][-1]  # -1 to run them all
     subtasks = excalibur.transit.bot.Actor('transit', 4, rid, tn)
     pass
 

@@ -57,6 +57,8 @@ def plot_spectrumfit(transitdata,
                      filt, modelName, trgt, p, saveDir, savetodisk=False):
     ''' plot the best fit to the data '''
 
+    include_fit_range_as_grey_lines = False
+
     # figure, ax = plt.subplots(figsize=(8,4))
     figgy = plt.figure(figsize=(20,4))
     # figgy = plt.figure(figsize=(8,4))
@@ -80,21 +82,22 @@ def plot_spectrumfit(transitdata,
                  fmt='o', markeredgecolor='k', color='None', ecolor='k', zorder=5,
                  label='rebinned data')
     # 3a) plot the best-fit model - old posterior-median method
-    plt.plot(transitdata['wavelength'],
-             patmos_modelProfiled * 100,
-             # c='k', lw=2, zorder=4,
-             c='orange', lw=2, ls='--', zorder=4,
-             label='best fit (old method)')
+    # plt.plot(transitdata['wavelength'],
+    #         patmos_modelProfiled * 100,
+    #         # c='k', lw=2, zorder=4,
+    #         c='orange', lw=2, ls='--', zorder=4,
+    #         label='best fit (old method)')
     # 3b) plot the best-fit model - new random selection parameter-set checking
     plt.plot(transitdata['wavelength'],
              patmos_bestfit * 100,
              # c='k', lw=2, zorder=4,
              c='orange', lw=2, zorder=4,
-             label='best fit (new method)')
+             label='best fit')
     # 4) plot a selection of walkers, to see spread
     xlims = plt.xlim()
     ylims = plt.ylim()
     # print('median pmodel',np.nanmedian(patmos_model))
+    if not include_fit_range_as_grey_lines: fmcarray = []
     for fmcexample in fmcarray:
         patmos_modeli = fmcexample - np.nanmean(fmcexample) + \
             np.nanmean(transitdata['depth'])
@@ -205,15 +208,15 @@ def plot_spectrumfit(transitdata,
                      fmt='o', markeredgecolor='k', color='None', ecolor='k', zorder=5,
                      label='rebinned data')
         # 3a) plot the best-fit model - old posterior-median method
-        plt.plot(transitdata['wavelength'],
-                 patmos_model * 100,
-                 c='orange', lw=2, ls='--', zorder=4,
-                 label='best fit (old method)')
+        # plt.plot(transitdata['wavelength'],
+        #         patmos_model * 100,
+        #         c='orange', lw=2, ls='--', zorder=4,
+        #         label='best fit (old method)')
         # 3b) plot the best-fit model - new random selection parameter-set checking
         plt.plot(transitdata['wavelength'],
                  patmos_bestfit * 100,
                  c='orange', lw=2, zorder=4,
-                 label='best fit (new method)')
+                 label='best fit')
         xlims = plt.xlim()
         ylims = plt.ylim()
         plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.53,
@@ -252,6 +255,8 @@ def plot_bestfit(transitdata, patmos_model, patmos_modelProfiled, fmcarray,
                  filt, modelName, trgt, p, saveDir, savetodisk=False):
     ''' plot the best fit to the data '''
 
+    include_fit_range_as_grey_lines = False
+
     # figure, ax = plt.subplots(figsize=(8,4))
     figgy = plt.figure(figsize=(20,4))
     # figgy = plt.figure(figsize=(8,4))
@@ -284,6 +289,7 @@ def plot_bestfit(transitdata, patmos_model, patmos_modelProfiled, fmcarray,
     xlims = plt.xlim()
     ylims = plt.ylim()
     # print('median pmodel',np.nanmedian(patmos_model))
+    if not include_fit_range_as_grey_lines: fmcarray = []
     for fmcexample in fmcarray:
         patmos_modeli = fmcexample - np.nanmean(fmcexample) + \
             np.nanmean(transitdata['depth'])
@@ -787,6 +793,9 @@ def plot_fitsVStruths(truth_values, fit_values, fit_errors, prior_ranges,
     Also (optionally) show a histogram of the uncertainty values
     '''
 
+    # for ppt, stack the two panels on top of each other
+    switch_to_vert_stack = True
+
     paramlist = []
     for param in ['T', '[X/H]', '[C/O]', '[N/O]']:
         if len(fit_values[param])==0 or len(np.where(fit_values[param]!=fit_values[param][0])[0])==0:
@@ -798,8 +807,12 @@ def plot_fitsVStruths(truth_values, fit_values, fit_errors, prior_ranges,
     plot_statevectors = []
     for param in paramlist:
 
-        figure = plt.figure(figsize=(11,5))
-        ax = figure.add_subplot(1,2,1)
+        if switch_to_vert_stack:
+            figure = plt.figure(figsize=(5,9))
+            ax = figure.add_subplot(2,1,1)
+        else:
+            figure = plt.figure(figsize=(11,5))
+            ax = figure.add_subplot(1,2,1)
 
         for truth,fit,error in zip(truth_values[param],
                                    fit_values[param],
@@ -832,12 +845,13 @@ def plot_fitsVStruths(truth_values, fit_values, fit_errors, prior_ranges,
                 clr = 'k'
                 lwid = 1
                 zord = 4
-                ptsiz = 40
+                ptsiz = 40 / 2
             else:
                 clr = 'grey'
                 lwid = 0.5
                 zord = 2
-                ptsiz = 10
+                ptsiz = 10 / 2
+
             ax.scatter(truth, fit,
                        facecolor=clr,edgecolor=clr, s=ptsiz, zorder=zord+1)
             ax.errorbar(truth, fit, yerr=error,
@@ -887,14 +901,26 @@ def plot_fitsVStruths(truth_values, fit_values, fit_errors, prior_ranges,
             ax.set_xlim(xrange)
             ax.set_ylim(prior_ranges[param][0],prior_ranges[param][1])
 
+        if param=='T':
+            plt.title('temperature retrieval for '+str(len(fit_errors[param]))+' planets')
+        elif param=='[X/H]':
+            plt.title('metallicity retrieval for '+str(len(fit_errors[param]))+' planets')
+        elif param=='[C/O]':
+            plt.title('C/O retrieval for '+str(len(fit_errors[param]))+' planets')
+        else:
+            plt.title(param+' retrieval for '+str(len(fit_errors[param]))+' planets')
+
         # UNCERTAINTY HISTOGRAMS IN SECOND PANEL
-        ax = figure.add_subplot(1,2,2)
+        if switch_to_vert_stack:
+            ax2 = figure.add_subplot(2,1,2)
+        else:
+            ax2 = figure.add_subplot(1,2,2)
         if param=='T':
             errors = np.array(fit_errors[param])/np.array(fit_values[param])
-            ax.set_xlabel(param+' fractional uncertainty', fontsize=14)
+            ax2.set_xlabel(param+' fractional uncertainty', fontsize=14)
         else:
             errors = np.array(fit_errors[param])
-            ax.set_xlabel(param+' uncertainty', fontsize=14)
+            ax2.set_xlabel(param+' uncertainty', fontsize=14)
         if len(errors) > 0:
             # the histogram range has to go past the data range or you get a vertical line on the right
             lower = errors.min() / 1.5
@@ -904,10 +930,10 @@ def plot_fitsVStruths(truth_values, fit_values, fit_errors, prior_ranges,
                      cumulative=True, density=True, histtype='step',
                      color='black', zorder=1, label='')
             plt.title('cumulative histogram of '+str(len(errors))+' planets')
-            ax.semilogx()
-            ax.set_xlim(lower,upper)
-        ax.set_ylim(0,1)
-        ax.set_ylabel('fraction of planets', fontsize=14)
+            ax2.semilogx()
+            ax2.set_xlim(lower,upper)
+        ax2.set_ylim(0,1)
+        ax2.set_ylabel('fraction of planets', fontsize=14)
 
         figure.tight_layout()
 
@@ -987,6 +1013,15 @@ def plot_fitUncertainties(fit_values, fit_errors, prior_ranges,
         ax.set_xlabel(param+' fit value', fontsize=14)
         ax.set_ylabel(param+' fit uncertainty', fontsize=14)
 
+        if param=='T':
+            plt.title('temperature retrieval for '+str(len(fit_errors[param]))+' planets')
+        elif param=='[X/H]':
+            plt.title('metallicity retrieval for '+str(len(fit_errors[param]))+' planets')
+        elif param=='[C/O]':
+            plt.title('C/O retrieval for '+str(len(fit_errors[param]))+' planets')
+        else:
+            plt.title(param+' retrieval for '+str(len(fit_errors[param]))+' planets')
+
         # plot C/O=1 as a dotted vertical line
         if param=='[C/O]':
             yrange = ax.get_ylim()
@@ -997,13 +1032,13 @@ def plot_fitUncertainties(fit_values, fit_errors, prior_ranges,
                      rotation='vertical',va='center',fontsize=12)
 
         # UNCERTAINTY HISTOGRAMS IN SECOND PANEL
-        ax = figure.add_subplot(1,2,2)
+        ax2 = figure.add_subplot(1,2,2)
         if param=='T':
             errors = np.array(fit_errors[param])/np.array(fit_values[param])
-            ax.set_xlabel(param+' fractional uncertainty', fontsize=14)
+            ax2.set_xlabel(param+' fractional uncertainty', fontsize=14)
         else:
             errors = np.array(fit_errors[param])
-            ax.set_xlabel(param+' uncertainty', fontsize=14)
+            ax2.set_xlabel(param+' uncertainty', fontsize=14)
         # the histogram range has to go past the data range or you get a vertical line on the right
         lower = errors.min() / 2.
         upper = errors.max() * 2.
@@ -1012,10 +1047,10 @@ def plot_fitUncertainties(fit_values, fit_errors, prior_ranges,
                  cumulative=True, density=True, histtype='step',
                  color='black', zorder=1, label='')
         plt.title('cumulative histogram of '+str(len(errors))+' planets')
-        ax.semilogx()
-        ax.set_xlim(lower,upper)
-        ax.set_ylim(0,1)
-        ax.set_ylabel('fraction of planets', fontsize=14)
+        ax2.semilogx()
+        ax2.set_xlim(lower,upper)
+        ax2.set_ylim(0,1)
+        ax2.set_ylabel('fraction of planets', fontsize=14)
 
         figure.tight_layout()
 
@@ -1031,10 +1066,14 @@ def plot_fitUncertainties(fit_values, fit_errors, prior_ranges,
 # --------------------------------------------------------------------
 def plot_massVSmetals(masses, stellarFEHs, truth_values,
                       fit_values, fit_errors, prior_ranges,
-                      filt, saveDir, savetodisk=False):
+                      filt, saveDir,
+                      plot_truths=False,  # for Ariel-sims, include truth as open circles?
+                      savetodisk=False):
     ''' how well do we retrieve the input mass-metallicity relation? '''
 
     figure = plt.figure(figsize=(11,5))
+    # with text labels hanging off the right side, need to stretch the figure size
+    # figure = plt.figure(figsize=(17,5))
     ax = figure.add_subplot(1,2,1)
 
     # Note: masses_true is not actually used, just masses. (they should be the same thing)
@@ -1070,7 +1109,8 @@ def plot_massVSmetals(masses, stellarFEHs, truth_values,
             lwid = 0.5
             ptsiz = 10
             zord = 2
-        if metaltrue not in (666, 666666):
+        if 'sim' in filt: ptsiz /= 2  # make smaller points for the large Ariel sample
+        if plot_truths and metaltrue not in (666, 666666):
             if not ilab1 and clr=='k':
                 ilab1 = True
                 ax.scatter(masstrue, metaltrue,
@@ -1082,7 +1122,7 @@ def plot_massVSmetals(masses, stellarFEHs, truth_values,
         if not ilab2 and clr=='k':
             ilab2 = True
             ax.scatter(mass, metalfit,
-                       label='fit value',
+                       label='retrieved metallicity',
                        facecolor=clr,edgecolor=clr, s=ptsiz, zorder=zord+2)
         else:
             ax.scatter(mass, metalfit,
@@ -1107,35 +1147,66 @@ def plot_massVSmetals(masses, stellarFEHs, truth_values,
     massesThorngren = np.logspace(-5,3,100)
     metalsThorngren = massMetalRelation(0, massesThorngren,thorngren=True)
     if 'sim' in filt:
-        ax.plot(massesThorngren,metalsThorngren, 'k:', lw=1, zorder=1, label='true relationship')
+        # ax.plot(massesThorngren,metalsThorngren, 'k:', lw=1, zorder=1, label='true relationship')
+        ax.plot(massesThorngren,metalsThorngren, 'k:', lw=1, zorder=1, label='Thorngren+ 2016')
     else:
         ax.plot(massesThorngren,metalsThorngren, 'k:', lw=1, zorder=1, label='Thorngren+ 2016')
 
     # plot a linear fit to the data
-    polynomialCoeffs = np.polyfit(np.log10(masses), metals_fit, 1, w=1./np.array(metals_fiterr))
+    polynomialCoeffs,covariance = np.polyfit(np.log10(masses), metals_fit, 1,
+                                             w=1./np.array(metals_fiterr),
+                                             cov='unscaled')
     # print('polynomialCoeffs',polynomialCoeffs)
     lineFunction = np.poly1d(polynomialCoeffs)
     massrange = np.linspace(xrange[0],xrange[1],10)
     plt.plot(massrange, lineFunction(np.log10(massrange)),
-             'k--', lw=1.5, zorder=3, label='Linear fit')
+             'k--', lw=1.5, zorder=3, label='linear fit')
 
     plt.legend()
 
     # use the prior range for the y-axis
     yrange = (prior_ranges['[X/H]'][0], prior_ranges['[X/H]'][1])
 
+    # limit the plot to just ~10 MEarth up to 3 MJup    ???
+    xrange = (0.03, 3.)
+
+    # display the fit parameters (and Thorgran too)
+    fit_mass_exp = polynomialCoeffs[0]
+    fit_mass_exp_err = np.sqrt(covariance[0,0])
+    fit_metal_dex = polynomialCoeffs[1]
+    fit_metal_dex_err = np.sqrt(covariance[1,1])
+    fit_metal_linear = 10.**fit_metal_dex
+    fit_metal_linear_err = fit_metal_linear * (10.**fit_metal_dex_err - 1)
+    # print('fit result  mass-exp',fit_mass_exp,fit_mass_exp_err)
+    # print('fit result  metal(dex)',fit_metal_dex,fit_metal_dex_err)
+    # print('fit result  metal(lin)',fit_metal_linear,fit_metal_linear_err)
+    # resultsstring = '[X/H]$_p$ = (' + f'{fit_metal_dex:3.2f}' + \
+    #    '$\\pm$' + f'{fit_metal_dex_err]):3.2f}' + \
+    resultsstring = 'Z$_p$ = (' + f'{fit_metal_linear:3.2f}' + \
+        '$\\pm$' + f'{fit_metal_linear_err:3.2f}' + \
+        ') $M_p^{'+f'{fit_mass_exp:3.2f}' + \
+        '\\pm' + f'{fit_mass_exp_err:3.2f}' + '}$ (fit)'
+    # print('resultsstring',resultsstring)
+    plt.text(xrange[0]*1.2, yrange[0]+0.8,
+             resultsstring,
+             c='black',ha='left',fontsize=10)
+    plt.text(xrange[0]*1.2, yrange[0]+0.2,
+             'Z$_p$ = (9.7$\\pm$1.3) $M_p^{-0.45\\pm0.09}$ (Thorngren)',
+             # '[X/H]$_p$ = (0.97$\\pm$0.05) $M_p^{-0.45\\pm0.09}$ (Thorngren)',
+             # '[X/H]$_p$ = (9.7$\\pm$1.3) $M_p^{-0.45\\pm0.09}$ (Thorngren)',
+             c='black',ha='left',fontsize=10)
+
     ax.set_xlim(xrange)
     ax.set_ylim(yrange)
 
     # SECOND PANEL - same thing but subtract off the stellar metallicity
-    ax = figure.add_subplot(1,2,2)
+    ax2 = figure.add_subplot(1,2,2)
 
     ilab1 = False
     ilab2 = False
     for stellarFEH,mass,masstrue,metaltrue,metalfit,metalerror,metalerrorlo,metalerrorhi in zip(
-            stellarFEHs,
-            masses,masses_true,metals_true,metals_fit,
-            metals_fiterr,metals_fiterrlo,metals_fiterrhi):
+            stellarFEHs,masses,masses_true,
+            metals_true,metals_fit,metals_fiterr,metals_fiterrlo,metals_fiterrhi):
         if metalerror < minInfo * priorRangeDiff:
             clr = 'k'
             lwid = 1
@@ -1146,56 +1217,85 @@ def plot_massVSmetals(masses, stellarFEHs, truth_values,
             lwid = 0.5
             ptsiz = 10
             zord = 2
-        if metaltrue not in (666, 666666):
+        if 'sim' in filt: ptsiz /= 2  # make smaller points for the large Ariel sample
+        if plot_truths and metaltrue not in (666, 666666):
             if not ilab1:
                 ilab1 = True
-                ax.scatter(masstrue, metaltrue,
-                           label='true value',
-                           facecolor='w',edgecolor=clr, s=ptsiz, zorder=zord+1)
+                ax2.scatter(masstrue, metaltrue,
+                            label='true value',
+                            facecolor='w',edgecolor=clr, s=ptsiz, zorder=zord+1)
             else:
-                ax.scatter(masstrue, metaltrue,
-                           facecolor='w',edgecolor=clr, s=ptsiz, zorder=zord+1)
+                ax2.scatter(masstrue, metaltrue,
+                            facecolor='w',edgecolor=clr, s=ptsiz, zorder=zord+1)
         if not ilab2 and clr=='k':
             ilab2 = True
-            ax.scatter(mass, metalfit - stellarFEH,
-                       label='fit value',
-                       facecolor=clr,edgecolor=clr, s=ptsiz, zorder=zord+2)
+            ax2.scatter(mass, metalfit - stellarFEH,
+                        label='retrieved metallicity',
+                        facecolor=clr,edgecolor=clr, s=ptsiz, zorder=zord+2)
         else:
-            ax.scatter(mass, metalfit - stellarFEH,
-                       facecolor=clr,edgecolor=clr, s=ptsiz, zorder=zord+2)
-        # ax.errorbar(mass, metalfit - stellarFEH, yerr=metalerror,
-        #            fmt='.', color=clr, lw=lwid, zorder=zord)
+            ax2.scatter(mass, metalfit - stellarFEH,
+                        facecolor=clr,edgecolor=clr, s=ptsiz, zorder=zord+2)
+        # ax2.errorbar(mass, metalfit - stellarFEH, yerr=metalerror,
+        #             fmt='.', color=clr, lw=lwid, zorder=zord)
         # allow for asymmetric error bars!!!
-        ax.errorbar(mass, metalfit - stellarFEH, yerr=np.array([[metalerrorlo],[metalerrorhi]]),
-                    fmt='.', color=clr, lw=lwid, zorder=zord)
-    ax.semilogx()
-    ax.set_xlabel('$M_p (M_{\\rm Jup})$', fontsize=14)
-    ax.set_ylabel('[X/H]$_p$ - [X/H]$_\\star$', fontsize=14)
-    xrange = ax.get_xlim()
-    yrange = ax.get_ylim()
+        ax2.errorbar(mass, metalfit - stellarFEH, yerr=np.array([[metalerrorlo],[metalerrorhi]]),
+                     fmt='.', color=clr, lw=lwid, zorder=zord)
+    ax2.semilogx()
+    ax2.set_xlabel('$M_p (M_{\\rm Jup})$', fontsize=14)
+    ax2.set_ylabel('[X/H]$_p$ - [X/H]$_\\star$', fontsize=14)
+    xrange = ax2.get_xlim()
+    yrange = ax2.get_ylim()
 
     # plot the underlying distribution (only if this is a simulation)
     # actually, also plot Thorngren relationship for real HST data
     if 'sim' in filt:
-        ax.plot(massesThorngren,metalsThorngren, 'k:', lw=1, zorder=1, label='true relationship')
+        # ax2.plot(massesThorngren,metalsThorngren, 'k:', lw=1, zorder=1, label='true relationship')
+        #  careful here. 'true relation' might imply that all planets fall on that dotted line
+        ax2.plot(massesThorngren,metalsThorngren, 'k:', lw=1, zorder=1, label='Thorngren+ 2016')
     else:
-        ax.plot(massesThorngren,metalsThorngren, 'k:', lw=1, zorder=1, label='Thorngren+ 2016')
+        ax2.plot(massesThorngren,metalsThorngren, 'k:', lw=1, zorder=1, label='Thorngren+ 2016')
 
     # plot a linear fit to the data
-    polynomialCoeffs = np.polyfit(np.log10(masses),
-                                  np.array(metals_fit) - np.array(stellarFEHs), 1,
-                                  w=1./np.array(metals_fiterr))
+    polynomialCoeffs,covariance = np.polyfit(np.log10(masses),
+                                             np.array(metals_fit) - np.array(stellarFEHs), 1,
+                                             w=1./np.array(metals_fiterr),
+                                             cov='unscaled')
     # print('polynomialCoeffs',polynomialCoeffs)
+    # print(' covariance',covariance)
     lineFunction = np.poly1d(polynomialCoeffs)
     massrange = np.linspace(xrange[0],xrange[1],10)
     plt.plot(massrange, lineFunction(np.log10(massrange)),
-             'k--', lw=1.5, zorder=3, label='Linear fit')
+             'k--', lw=1.5, zorder=3, label='linear fit')
+
+    # display the fit parameters (and Thorgran too)
+    fit_mass_exp = polynomialCoeffs[0]
+    fit_mass_exp_err = np.sqrt(covariance[0,0])
+    fit_metal_dex = polynomialCoeffs[1]
+    fit_metal_dex_err = np.sqrt(covariance[1,1])
+    fit_metal_linear = 10.**fit_metal_dex
+    fit_metal_linear_err = fit_metal_linear * (10.**fit_metal_dex_err - 1)
+    # print('fit result  mass-exp',fit_mass_exp,fit_mass_exp_err)
+    # print('fit result  metal(dex)',fit_metal_dex,fit_metal_dex_err)
+    # print('fit result  metal(lin)',fit_metal_linear,fit_metal_linear_err)
+    # resultsstring = '[X/H]$_p$ = (' + f'{fit_metal_dex:3.2f}' + \
+    #    '$\\pm$' + f'{fit_metal_dex_err]):3.2f}' + \
+    resultsstring = 'Z$_p$ = (' + f'{fit_metal_linear:3.2f}' + \
+        '$\\pm$' + f'{fit_metal_linear_err:3.2f}' + \
+        ') $M_p^{'+f'{fit_mass_exp:3.2f}' + \
+        '\\pm' + f'{fit_mass_exp_err:3.2f}' + '}$ (fit)'
+    # print('resultsstring',resultsstring)
+    plt.text(xrange[0]*1.2, yrange[0]+0.8,
+             resultsstring,
+             c='black',ha='left',fontsize=10)
+    plt.text(xrange[0]*1.2, yrange[0]+0.2,
+             'Z$_p$ = (9.7$\\pm$1.3) $M_p^{-0.45\\pm0.09}$ (Thorngren)',
+             c='black',ha='left',fontsize=10)
 
     plt.legend()
 
-    ax.set_xlim(xrange)
-    ax.set_ylim(yrange)
-    figure.tight_layout()
+    ax2.set_xlim(xrange)
+    ax2.set_ylim(yrange)
+    figure.tight_layout()   # some trouble with this, with bigger figure maybe?
 
     # ('display' doesn't work for pdf files)
     if savetodisk: plt.savefig(saveDir + 'massVSmetals_'+filt+'.png')
