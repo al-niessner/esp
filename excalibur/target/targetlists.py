@@ -33,6 +33,7 @@ def get_target_lists():
         'arielMCS_Feb2024_maxVisits25': targetlist_ArielMCSknown('Feb2024',maxVisits=25),
         'ariel_Aug2024_2years': targetlist_ariel2year(),
         'ariel_Aug2024_2years_withPlanetletters': planetlist_ariel2year(),
+        'ariel_massesNeeded': planetlist_arielROSESmasses(),
     }
 
     # for targetlist in targetlists:
@@ -1524,7 +1525,6 @@ def targetlist_ariel2year():
         'WASP-2',
         'WASP-20',
         'WASP-21',
-        'WASP-22',
         'WASP-25',
         'WASP-26',
         'WASP-29',
@@ -1581,7 +1581,7 @@ def targetlist_ariel2year():
 def planetlist_ariel2year():
     '''
     planets that can be observed within 2 years, even with Thorngren metals.
-    currently 253 planets
+    currently 254 planets
     '''
 
     targets = [
@@ -1837,8 +1837,7 @@ def planetlist_ariel2year():
         'HAT-P-25 b',
         'WASP-97 b',
         'MASCARA-4 b',
-        'TrES-4 b',
-        'WASP-22 b',
+        'TrES-2 b',
     ]
 
     return targets
@@ -1945,3 +1944,127 @@ def arielAliases():
 
     return aliases
 # --------------------------------------------------------------------
+
+def planetlist_arielROSESmasses():
+    '''
+    targets identified as needing better masses for Ariel (eligible for ROSES funding)
+    114 planets
+    '''
+
+    targets = [
+        'K2-129 b',
+        'K2-138 g',
+        'K2-138 f',
+        'K2-121 b',
+        'TOI-5398 c',
+        'K2-155 c',
+        'K2-87 b',
+        'TOI-6086 b',
+        'TOI-5126 b',
+        'TOI-2076 b',
+        'TOI-2076 c',
+        'TOI-2076 d',
+        'Kepler-450 b',
+        'HD 28109 d',
+        'HD 28109 c',
+        'TOI-470 b',
+        'K2-33 b',
+        'K2-417 b',
+        'Gliese 12 b',
+        'TOI-139 b',
+        'KELT-20 b',
+        'LHS 1678 c',
+        'LHS 1678 b',
+        'LHS 1678 d',
+        'TOI-1064 c',
+        'K2-26 b',
+        'WASP-167 b',
+        'K2-353 b',
+        'Kepler-109 c',
+        'TOI-4479 b',
+        'XO-6 b',
+        'TOI-1136 g',
+        'TOI-2427 b',
+        'TOI-942 c',
+        'TOI-942 b',
+        'TOI-5704 b',
+        'K2-405 b',
+        'TOI-712 b',
+        'TOI-700 c',
+        'TOI-672 b',
+        'TOI-1135 b',
+        'Kepler-1517 b',
+        'Kepler-105 b',
+        'TOI-4336 A b',
+        'HIP 67522 b',
+        'KOI-12 b',
+        'TOI-444 b',
+        'LP 791-18 d',
+        'LP 791-18 b',
+        'TOI-2459 b',
+        'HAT-P-67 b',
+        'TOI-540 b',
+        'KELT-21 b',
+        'TOI-251 b',
+        'TOI-1859 b',
+        'TOI-1246 d',
+        'SPECULOOS-3 b',
+        'TOI-122 b',
+        'TOI-4600 b',
+        'TOI-1442 b',
+        'K2-174 b',
+        'EPIC 211945201 b',
+        'TOI-178 e',
+        'TOI-451 c',
+        'TOI-451 d',
+        'HD 108236 e',
+        'HD 108236 d',
+        'TOI-904 b',
+        'TOI-4559 b',
+        'TOI-771 b',
+        'TOI-1470 c',
+        'TOI-6008 b',
+        'K2-406 b',
+        'TOI-620 b',
+        'Kepler-63 b',
+        'TOI-776 c',
+        'HAT-P-57 b',
+        'K2-415 b',
+        'TOI-5799 b',
+        'K2-333 b',
+        'TOI-2136 b',
+        'HD 110067 d',
+        'HD 110067 f',
+        'HD 110067 c',
+        'HD 110067 b',
+        'TOI-1693 b',
+        'TOI-1260 d',
+        'HD 109833 b',
+        'TOI-833 b',
+        'K2-403 b',
+        'LHS 475 b',
+        'K2-266 d',
+        'HD 110082 b',
+        'TOI-2120 b',
+        'Kepler-444 e',
+        'K2-52 b',
+        'HAT-P-70 b',
+        'CoRoT-36 b',
+        'TOI-913 b',
+        'LHS 3844 b',
+        'DS Tuc A b',
+        'K2-289 b',
+        'KELT-19 A b',
+        'HD 23472 f',
+        'TOI-1518 b',
+        'TOI-3082 b',
+        'TOI-782 b',
+        'TOI-4641 b',
+        'K2-32 d',
+        'TOI-277 b',
+        'TOI-2445 b',
+        'K2-370 b',
+        'HIP 94235 b',
+        'TOI-5803 b',
+    ]
+    return targets

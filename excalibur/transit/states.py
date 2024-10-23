@@ -445,8 +445,12 @@ class StarspotSV(dawgie.StateVector):
         if self['STATUS'][-1]:
             for p in self['data'].keys():
                 visitor.add_declaration('PLANET: ' + p)
-                visitor.add_image('...', '------ starspot spectrum for planet '+p+' ------',
+                visitor.add_image('...',
+                                  '------ starspot spectrum for planet '+p+' ------',
                                   self['data'][p]['plot_starspot_spectrum'])
+                visitor.add_image('...',
+                                  '------ limb darkening for planet '+p+' ------',
+                                  self['data'][p]['plot_limbCoeffs'])
 
 class PopulationSV(dawgie.StateVector):
     '''transit.population view'''

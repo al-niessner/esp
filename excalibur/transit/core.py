@@ -4113,6 +4113,8 @@ def starspots(fin, wht, spc, out):
     Viktor Sumida's starspot model
     '''
 
+    # print('whitelight planetletters',wht['data'].keys())
+    # print('spectrum planetletters',spc['data'].keys())
     # print('whitelight info',wht['data']['b'].keys())
     # print('spectrum info',spc['data']['b'].keys())
 
@@ -4127,7 +4129,10 @@ def starspots(fin, wht, spc, out):
 
     exospec = False
 
-    planetletters = fin['priors']['planets']
+    # planetletters = fin['priors']['planets']
+    # some of the planets available in fin (system parameters) don't have transits
+    # use either transit.whitelight or transit.spectrum for the list of planets
+    planetletters = spc['data'].keys()
     for planetletter in planetletters:
         Rplanet = fin['priors'][planetletter]['rp']
         inc = fin['priors'][planetletter]['inc']
@@ -4149,6 +4154,11 @@ def starspots(fin, wht, spc, out):
         transitdata['depth'] = spc['data'][planetletter]['ES']**2
         transitdata['error'] = 2 * spc['data'][planetletter]['ES'] * \
             spc['data'][planetletter]['ESerr']
+
+        # for key in spc['data'][planetletter].keys():
+        #    if key!='Teq':
+        #        print('len check on spc',key)
+        #        print('len check on spc',key,len(spc['data'][planetletter][key]))
 
         # bins the data (for plotting only, not for science analysis)
         transitdata = rebinData(transitdata)
@@ -4205,6 +4215,51 @@ def starspots(fin, wht, spc, out):
         buf = io.BytesIO()
         myfig.savefig(buf, format='png')
         out['data'][planetletter]['plot_starspot_spectrum'] = buf.getvalue()
+        plt.close(myfig)
+
+        # 6) make a plot of the limb darkening as a function of wavelength
+
+        # myfig, ax = plt.subplots(figsize=(8,6))
+        myfig = plt.figure(figsize=(8,6))
+
+        LD = np.array(spc['data'][planetletter]['LD'])
+        # print('len check',len(spc['data'][planetletter]['LD']))
+        # print('len check',LD.shape)
+        print('do these match now?!?',len(transitdata['wavelength']), len(LD[:-1,0]))
+        ax = myfig.add_subplot(2,2,1)
+        ax.plot(transitdata['wavelength'], LD[:-1,0],
+                color='k')
+        plt.xlabel(str('Wavelength [$\\mu$m]'))
+        plt.ylabel(str('Limb darkening coeff #1'))
+        # plt.title('planet '+planetletter)
+
+        ax = myfig.add_subplot(2,2,2)
+        ax.plot(transitdata['wavelength'], LD[:-1,1],
+                color='k')
+        plt.xlabel(str('Wavelength [$\\mu$m]'))
+        plt.ylabel(str('Limb darkening coeff #2'))
+        ax = myfig.add_subplot(2,2,3)
+
+        ax.plot(transitdata['wavelength'], LD[:-1,2],
+                color='k')
+        plt.xlabel(str('Wavelength [$\\mu$m]'))
+        plt.ylabel(str('Limb darkening coeff #3'))
+
+        ax = myfig.add_subplot(2,2,4)
+        ax.plot(transitdata['wavelength'], LD[:-1,3],
+                color='k')
+        plt.xlabel(str('Wavelength [$\\mu$m]'))
+        plt.ylabel(str('Limb darkening coeff #4'))
+        # plt.title('planet '+planetletter)
+
+        myfig.tight_layout()
+
+        # print('saving plot as testsave.png')
+        # plt.savefig('/proj/data/bryden/testsave.png')
+
+        buf = io.BytesIO()
+        myfig.savefig(buf, format='png')
+        out['data'][planetletter]['plot_limbCoeffs'] = buf.getvalue()
         plt.close(myfig)
 
         exospec = True
