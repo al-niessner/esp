@@ -286,10 +286,14 @@ class SpectrumSV(dawgie.StateVector):
                         # Retro compatibility for Hs in [m]
                         if Hs > 1: Hs = Hs/(self['data'][p]['RSTAR'][0])
                         ax2 = ax.twinx()
-                        ax2.set_ylabel('$\\Delta$ [Hs]')
+                        ax2.set_ylabel('$\\Delta$ [H$_s$]')
                         axmin, axmax = ax.get_ylim()
-                        ax2.set_ylim((np.sqrt(1e-2*axmin) - rp0hs)/Hs,
-                                     (np.sqrt(1e-2*axmax) - rp0hs)/Hs)
+                        if axmin >= 0:
+                            ax2.set_ylim((np.sqrt(1e-2*axmin) - rp0hs)/Hs,
+                                         (np.sqrt(1e-2*axmax) - rp0hs)/Hs)
+                        else:
+                            ax2.set_ylim((-np.sqrt(-1e-2*axmin) - rp0hs)/Hs,
+                                         (np.sqrt(1e-2*axmax) - rp0hs)/Hs)
                         myfig.tight_layout()
                         pass
                     buf = io.BytesIO()
@@ -330,10 +334,14 @@ class SpectrumSV(dawgie.StateVector):
                             # Retro compatibility for Hs in [m]
                             if Hs > 1: Hs = Hs/(self['data'][p]['RSTAR'][0])
                             ax2 = ax.twinx()
-                            ax2.set_ylabel('$\\Delta$ [Hs]')
+                            ax2.set_ylabel('$\\Delta$ [H$_s$]')
                             axmin, axmax = ax.get_ylim()
-                            ax2.set_ylim((np.sqrt(1e-2*axmin) - rp0hs)/Hs,
-                                         (np.sqrt(1e-2*axmax) - rp0hs)/Hs)
+                            if axmin >= 0:
+                                ax2.set_ylim((np.sqrt(1e-2*axmin) - rp0hs)/Hs,
+                                             (np.sqrt(1e-2*axmax) - rp0hs)/Hs)
+                            else:
+                                ax2.set_ylim((-np.sqrt(-1e-2*axmin) - rp0hs)/Hs,
+                                             (np.sqrt(1e-2*axmax) - rp0hs)/Hs)
                             myfig.tight_layout()
                             pass
                         buf = io.BytesIO()
@@ -364,7 +372,7 @@ class SpectrumSV(dawgie.StateVector):
                         plt.title(f'Cumulative Spectrum Distribution in Hs ({perc_rejected:.1f}% rejected)')
                         ax.plot(sorted_Hs, percent)
                         ax.axvline(4,0,c='black')
-                        plt.xlabel(str('Absolute Modulation [Hs]'))
+                        plt.xlabel(str('Absolute Modulation [H$_s$]'))
                         plt.ylabel(str('Percent [%]'))
                         plt.ylim((0, 100))
                         buf = io.BytesIO()
@@ -445,12 +453,21 @@ class StarspotSV(dawgie.StateVector):
         if self['STATUS'][-1]:
             for p in self['data'].keys():
                 visitor.add_declaration('PLANET: ' + p)
-                visitor.add_image('...',
-                                  '------ starspot spectrum for planet '+p+' ------',
-                                  self['data'][p]['plot_starspot_spectrum'])
-                visitor.add_image('...',
-                                  '------ limb darkening for planet '+p+' ------',
-                                  self['data'][p]['plot_limbCoeffs'])
+                for savedresult in self['data'][p].keys():
+                    # anything with 'plot' in it is a saved .png figure
+                    if 'plot' in savedresult:
+                        if savedresult=='plot_starspot_spectrum':
+                            plotlabel = 'starspot spectrum'
+                        elif savedresult=='plot_starspot_limbCoeffs':
+                            plotlabel = 'limb darkening coefficients'
+                        elif savedresult=='plot_starspot_limbdarkening':
+                            plotlabel = 'limb darkening'
+                        else:
+                            plotlabel = 'more starspot info'
+                        visitor.add_image(
+                            '...',
+                            '------ '+plotlabel+' for planet '+p+' ------',
+                            self['data'][p][savedresult])
 
 class PopulationSV(dawgie.StateVector):
     '''transit.population view'''

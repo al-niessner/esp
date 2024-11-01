@@ -501,7 +501,7 @@ def buildsp(autofill, runtime_params, out, verbose=False):
         # new conditional is needed though, to handle Kepler-37 e and Kepler-1513 c
         #  (these do not have a planet radius!)(they are in the 'planets ignored' category)
         if p+':logg' in out['needed'] and out['priors'][p]['rp']:
-            print('planet radius',p,out['priors'][p]['rp'])
+            # print('planet radius',p,out['priors'][p]['rp'])
             g = ssc['G'] * out['priors'][p]['mass']*ssc['Mjup'] \
                 / (float(out['priors'][p]['rp'])*ssc['Rjup'])**2
             logg = np.log10(g)

@@ -2292,7 +2292,7 @@ def spectrum(fin, nrm, wht, out, ext, selftype,
                 # Retro compatibility for Hs in [m]
                 if Hs > 1: Hs = Hs/(out['data'][p]['RSTAR'][0])
                 ax2 = ax0.twinx()
-                ax2.set_ylabel('$\\Delta$ [Hs]')
+                ax2.set_ylabel('$\\Delta$ [H$_s$]')
                 axmin, axmax = ax0.get_ylim()
                 ax2.set_ylim((np.sqrt(1e-2*axmin) - rp0hs)/Hs,
                              (np.sqrt(1e-2*axmax) - rp0hs)/Hs)
@@ -2595,7 +2595,7 @@ def fastspec(fin, nrm, wht, ext, selftype,
         yaxmin, yaxmax = ax0.get_ylim()
         ax2min = (np.sqrt(1e-2*yaxmin)*Rstar - rp0hs)/Hs
         ax2max = (np.sqrt(1e-2*yaxmax)*Rstar - rp0hs)/Hs
-        ax1.set_ylabel('Transit Depth Modulation [Hs]')
+        ax1.set_ylabel('Transit Depth Modulation [H$_s$]')
         ax1.set_ylim(ax2min, ax2max)
         plt.show()
         pass
@@ -4054,7 +4054,7 @@ def composite_spectrum(SV, target, p='b'):
                 # Retro compatibility for Hs in [m]
                 if Hs > 1: Hs = Hs/(SV1['data'][p]['RSTAR'][0])
                 ax2 = ax.twinx()
-                ax2.set_ylabel('$\\Delta$ [Hs]', fontsize=14)
+                ax2.set_ylabel('$\\Delta$ [H$_s$]', fontsize=14)
                 axmin, axmax = ax.get_ylim()
                 ax2.set_ylim((np.sqrt(1e-2*axmin) - rp0hs)/Hs,(np.sqrt(1e-2*axmax) - rp0hs)/Hs)
                 f.tight_layout()
@@ -4145,8 +4145,8 @@ def starspots(fin, wht, spc, out):
         print('limb darkening parameters from whitelight       ',limbCoeffs)
         print('limb darkening parameters from spectrum (median)',
               np.median(spc['data'][planetletter]['LD'],axis=0))
-        print('limb darkening parameters from spectrum (mean)  ',
-              np.mean(spc['data'][planetletter]['LD'],axis=0))
+        # print('limb darkening parameters from spectrum (mean)  ',
+        #      np.mean(spc['data'][planetletter]['LD'],axis=0))
 
         # this is the spectrum without any starspot correction
         transitdata = {}
@@ -4203,10 +4203,14 @@ def starspots(fin, wht, spc, out):
             rp0hs = np.sqrt(np.nanmedian(transitdata['depth']))
             Hs = spc['data'][planetletter]['Hs'][0]
             ax2 = ax.twinx()
-            ax2.set_ylabel('$\\Delta$ [Hs]')
+            ax2.set_ylabel('$\\Delta$ [H$_s$]')
             axmin, axmax = ax.get_ylim()
-            ax2.set_ylim((np.sqrt(1e-2*axmin) - rp0hs)/Hs,
-                         (np.sqrt(1e-2*axmax) - rp0hs)/Hs)
+            if axmin >= 0:
+                ax2.set_ylim((np.sqrt(1e-2*axmin) - rp0hs)/Hs,
+                             (np.sqrt(1e-2*axmax) - rp0hs)/Hs)
+            else:
+                ax2.set_ylim((-np.sqrt(-1e-2*axmin) - rp0hs)/Hs,
+                             (np.sqrt(1e-2*axmax) - rp0hs)/Hs)
         myfig.tight_layout()
 
         # print('saving plot as testsave.png')
@@ -4219,13 +4223,45 @@ def starspots(fin, wht, spc, out):
 
         # 6) make a plot of the limb darkening as a function of wavelength
 
-        # myfig, ax = plt.subplots(figsize=(8,6))
+        myfig, ax = plt.subplots(figsize=(6,4))
+
+        LD = np.array(spc['data'][planetletter]['LD'])
+        radii = np.linspace(0,1,111)
+        for iwave in range(len(transitdata['wavelength'])):
+            # vecistar is normalized such that an integral over the star is 1
+            # multiply by pi.R^2 to get the star-averaged limb-darkening
+            limbdarkening = vecistar(
+                radii,LD[iwave,0],LD[iwave,1],LD[iwave,2],LD[iwave,3]) * np.pi
+            waveColor = mpl.cm.rainbow(float(iwave)/(len(transitdata['wavelength'])-1))
+            ax.plot(radii, limbdarkening, color=waveColor)
+
+        plt.xlabel('Radius [$R_{\\star}$]',fontsize=14)
+        # plt.ylabel(str('$I(R)/I(0)$'),fontsize=14)
+        plt.ylabel('limb darkening (normalized)',fontsize=14)
+        plt.title('planet '+planetletter,fontsize=14)
+        plt.xlim([0,1])
+        ylims = ax.get_ylim()
+        # plt.ylim([0,ylims[1]])
+        plt.ylim([0.5,ylims[1]])
+
+        myfig.tight_layout()
+
+#        print('saving plot as testsave.png')
+#        plt.savefig('/proj/data/bryden/testsave.png')
+
+        buf = io.BytesIO()
+        myfig.savefig(buf, format='png')
+        out['data'][planetletter]['plot_starspot_limbdarkening'] = buf.getvalue()
+        plt.close(myfig)
+
+        # 7) also plot the limb darkening coefficients
+
         myfig = plt.figure(figsize=(8,6))
 
         LD = np.array(spc['data'][planetletter]['LD'])
         # print('len check',len(spc['data'][planetletter]['LD']))
         # print('len check',LD.shape)
-        print('do these match now?!?',len(transitdata['wavelength']), len(LD[:-1,0]))
+        # print('do these match now?!?',len(transitdata['wavelength']), len(LD[:-1,0]))
         ax = myfig.add_subplot(2,2,1)
         ax.plot(transitdata['wavelength'], LD[:-1,0],
                 color='k')

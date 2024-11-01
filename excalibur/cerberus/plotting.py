@@ -10,6 +10,8 @@ import matplotlib.pyplot as plt
 
 # import excalibur
 from excalibur.ariel.metallicity import massMetalRelation
+from excalibur.system.core import ssconstants
+ssc = ssconstants(mks=True)
 
 # --------------------------------------------------------------------
 def rebinData(transitdata, binsize=4):
@@ -53,7 +55,7 @@ def plot_spectrumfit(transitdata,
                      patmos_model, patmos_modelProfiled,
                      patmos_bestfit, fmcarray,
                      truth_spectrum,
-                     ancillary_data, atmos_data,
+                     system_data, ancillary_data, atmos_data,
                      filt, modelName, trgt, p, saveDir, savetodisk=False):
     ''' plot the best fit to the data '''
 
@@ -63,8 +65,7 @@ def plot_spectrumfit(transitdata,
     figgy = plt.figure(figsize=(20,4))
     # figgy = plt.figure(figsize=(8,4))
     figgy.subplots_adjust(left=0.05,right=0.7,bottom=0.15,top=0.93,wspace=0.8)
-    # ax1 = plt.subplot(1,2,1)
-    plt.subplot(1,2,1)
+    ax = plt.subplot(1,2,1)
 
     # 1) plot the data
     plt.errorbar(transitdata['wavelength'],
@@ -141,7 +142,7 @@ def plot_spectrumfit(transitdata,
     chi2flat_red = chi2flat / (numPoints - numParam_flat)
 
     # add some labels off to the right side
-    xoffset = 0.03
+    xoffset = 0.10
     if truth_spectrum is not None:
         offsets_truth = (truth_spectrum['depth'] - transitdata['depth']) / transitdata['error']
         chi2truth = np.nansum(offsets_truth**2)
@@ -179,16 +180,26 @@ def plot_spectrumfit(transitdata,
     plt.xlabel(str('Wavelength [$\\mu m$]'), fontsize=14)
     plt.ylabel(str('$(R_p/R_*)^2$ [%]'), fontsize=14)
     plt.legend()
-    # *** add the H scaling back in? ***
-    # if ('Hs' in spectrum_dict['data'][p]) and ('RSTAR' in spectrum_dict['data'][p]):
-    #    rp0hs = np.sqrt(np.nanmedian(transitdata['depth']))
-    #    Hs = atm[p]['Hs'][0]
-    #    # Retro compatibility for Hs in [m]
-    #    if Hs > 1: Hs = Hs/(fin[p]['RSTAR'][0])
-    #    ax2 = ax.twinx()
-    #    ax2.set_ylabel('$\\Delta$ [Hs]')
-    #    axmin, axmax = ax.get_ylim()
-    #    ax2.set_ylim((np.sqrt(1e-2*axmin) - rp0hs)/Hs, (np.sqrt(1e-2*axmax) - rp0hs)/Hs)
+    # add the scale-height comparison back in (on the righthand y-axis)
+    if 'H_max' in ancillary_data.keys():
+        axtwin = ax.twinx()
+        axtwin.set_ylabel('$\\Delta$ [H$_{\\rm s}$]')
+        axmin, axmax = ax.get_ylim()
+        rp0rs = np.sqrt(np.nanmedian(transitdata['depth']))
+        # awkward. H is in km but R* is converted to meters
+        # Hs0rs = (ancillary_data['H'] *1.e3) / (system_data['R*'] * ssc['Rsun'])
+        Hs0rs = (ancillary_data['H_max'] *1.e3) / (system_data['R*'] * ssc['Rsun'])
+        # print('rp0rs',rp0rs)
+        # print('hsors',Hs0rs)
+        # print('mmw,mmwmin', ancillary_data['mmw'] ,ancillary_data['mmw_min'])
+        # print('H,Hmax', ancillary_data['H'] ,ancillary_data['H_max'])
+        # print('H R*', ancillary_data['H'] , system_data['R*'])
+        if axmin >= 0:
+            axtwin.set_ylim((np.sqrt(1e-2*axmin) - rp0rs)/Hs0rs,
+                            (np.sqrt(1e-2*axmax) - rp0rs)/Hs0rs)
+        else:
+            axtwin.set_ylim((-np.sqrt(-1e-2*axmin) - rp0rs)/Hs0rs,
+                            (np.sqrt(1e-2*axmax) - rp0rs)/Hs0rs)
 
     #  Plot the pre-profiled result off to the right, if there's been profiling
     if np.any(patmos_model!=patmos_modelProfiled):
@@ -219,6 +230,7 @@ def plot_spectrumfit(transitdata,
                  label='best fit')
         xlims = plt.xlim()
         ylims = plt.ylim()
+        xoffset = 0.03  # only a small offset is needed if Hscale twin axis not used
         plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.53,
                  '$\\chi^2$-model='+f"{chi2model:5.2f}",fontsize=12)
         plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.46,
@@ -249,193 +261,7 @@ def plot_spectrumfit(transitdata,
     # plt.close(figgy)
     return save_to_state_vector, figgy
 # --------------------------------------------------------------------
-def plot_bestfit(transitdata, patmos_model, patmos_modelProfiled, fmcarray,
-                 truth_spectrum,
-                 ancillary_data, atmos_data,
-                 filt, modelName, trgt, p, saveDir, savetodisk=False):
-    ''' plot the best fit to the data '''
 
-    include_fit_range_as_grey_lines = False
-
-    # figure, ax = plt.subplots(figsize=(8,4))
-    figgy = plt.figure(figsize=(20,4))
-    # figgy = plt.figure(figsize=(8,4))
-    figgy.subplots_adjust(left=0.05,right=0.7,bottom=0.15,top=0.93,wspace=0.8)
-    # ax1 = plt.subplot(1,2,1)
-    plt.subplot(1,2,1)
-
-    # 1) plot the data
-    plt.errorbar(transitdata['wavelength'],
-                 transitdata['depth'] * 100,
-                 yerr=transitdata['error'] * 100,
-                 fmt='.', color='lightgray', zorder=1,
-                 label='raw data')
-    # 2) also plot the rebinned data points
-    plt.errorbar(transitdata['binned_wavelength'],
-                 transitdata['binned_depth'] * 100,
-                 yerr=transitdata['binned_error'] * 100,
-                 # fmt='o', color='k', markeredgecolor='k', markerfacecolor='w', zorder=5,
-                 # fmt='^', color='blue', zorder=5,
-                 # fmt='o', color='royalblue', zorder=5,
-                 fmt='o', markeredgecolor='k', color='None', ecolor='k', zorder=5,
-                 label='rebinned data')
-    # 3) plot the best-fit model
-    plt.plot(transitdata['wavelength'],
-             patmos_modelProfiled * 100,
-             # c='k', lw=2, zorder=4,
-             c='orange', lw=2, zorder=4,
-             label='best fit')
-    # 4) plot a selection of walkers, to see spread
-    xlims = plt.xlim()
-    ylims = plt.ylim()
-    # print('median pmodel',np.nanmedian(patmos_model))
-    if not include_fit_range_as_grey_lines: fmcarray = []
-    for fmcexample in fmcarray:
-        patmos_modeli = fmcexample - np.nanmean(fmcexample) + \
-            np.nanmean(transitdata['depth'])
-        # print('median pmodel',np.nanmedian(patmos_model))
-        if np.sum(patmos_modeli)==666:
-            plt.plot(transitdata['wavelength'],
-                     patmos_modeli * 100,
-                     c='grey', lw=0.2, zorder=2)
-    plt.ylim(ylims)  # revert to the original y-bounds, in case messed up
-    # 5) plot the true spectrum, if it is a simulation
-    if truth_spectrum is not None:
-        plt.plot(truth_spectrum['wavelength'], truth_spectrum['depth']*100,
-                 c='k', lw=1.5, zorder=3,
-                 # c='orange', lw=2, zorder=3,
-                 label='truth')
-
-    offsets_model = (patmos_model - transitdata['depth']) / transitdata['error']
-    offsets_modelProfiled = (patmos_modelProfiled - transitdata['depth']) / transitdata['error']
-
-    # the 'average' function (which allows for weights) doesn't have a NaN version,
-    #  so mask out any NaN regions by hand
-    okPart = np.where(np.isfinite(transitdata['depth']))
-    flatlineFit = np.average(transitdata['depth'][okPart],
-                             weights=1/transitdata['error'][okPart]**2)
-    # print('flatline average',flatlineFit)
-    offsets_flat = (flatlineFit - transitdata['depth']) / transitdata['error']
-    # print('median chi2, flat',np.nanmedian(offsets_flat**2))
-
-    chi2model = np.nansum(offsets_model**2)
-    chi2modelProfiled = np.nansum(offsets_modelProfiled**2)
-    chi2flat = np.nansum(offsets_flat**2)
-
-    numParam_model = 8
-    numParam_truth = 0
-    numParam_flat = 1
-
-    numPoints = len(patmos_model)
-    # print('numpoints',numPoints)
-    chi2model_red = chi2model / (numPoints - numParam_model)
-    chi2modelProfiled_red = chi2modelProfiled / (numPoints - numParam_model)
-    chi2flat_red = chi2flat / (numPoints - numParam_flat)
-
-    # add some labels off to the right side
-    xoffset = 0.03
-    if truth_spectrum is not None:
-        offsets_truth = (truth_spectrum['depth'] - transitdata['depth']) / transitdata['error']
-        chi2truth = np.nansum(offsets_truth**2)
-        chi2truth_red = chi2truth / (numPoints - numParam_truth)
-        plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.6,
-                 '$\\chi^2$-truth='+f"{chi2truth:5.2f}",fontsize=12)
-        plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.36,
-                 '$\\chi^2_{red}$-truth='+f"{chi2truth_red:5.2f}",fontsize=12)
-    if 'tier' in atmos_data:
-        plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*1.00,
-                 'Tier='+str(atmos_data['tier']),fontsize=12)
-        plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.93,
-                 '# of Visits='+str(atmos_data['visits']),fontsize=12)
-    plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.8,
-             'ZFOM='+f"{ancillary_data['ZFOM']:4.1f}"+'-'+
-             f"{ancillary_data['ZFOM_max']:4.1f}",fontsize=12)
-    plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.73,
-             'TSM='+f"{ancillary_data['TSM']:5.2f}",fontsize=12)
-    plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.53,
-             '$\\chi^2$-model='+f"{chi2modelProfiled:5.2f}",fontsize=12)
-    plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.46,
-             '$\\chi^2$-flat='+f"{chi2flat:5.2f}",fontsize=12)
-    plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.29,
-             '$\\chi^2_{red}$-model='+f"{chi2modelProfiled_red:5.2f}",fontsize=12)
-    plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.22,
-             '$\\chi^2_{red}$-flat='+f"{chi2flat_red:5.2f}",fontsize=12)
-    plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.12,
-             '$\\chi^2_{red}$(model/flat)='+f"{(chi2modelProfiled_red/chi2flat_red):5.2f}",fontsize=12)
-    plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.05,
-             '$\\Delta\\chi^2$(flat-model)='+f"{(chi2flat-chi2modelProfiled):5.1f}",fontsize=12)
-
-    if filt=='Ariel-sim':
-        plt.xlim(0,8)
-    plt.title(trgt+' '+p, fontsize=16)
-    plt.xlabel(str('Wavelength [$\\mu m$]'), fontsize=14)
-    plt.ylabel(str('$(R_p/R_*)^2$ [%]'), fontsize=14)
-    plt.legend()
-    # *** add the H scaling back in? ***
-    # if ('Hs' in spectrum_dict['data'][p]) and ('RSTAR' in spectrum_dict['data'][p]):
-    #    rp0hs = np.sqrt(np.nanmedian(transitdata['depth']))
-    #    Hs = atm[p]['Hs'][0]
-    #    # Retro compatibility for Hs in [m]
-    #    if Hs > 1: Hs = Hs/(fin[p]['RSTAR'][0])
-    #    ax2 = ax.twinx()
-    #    ax2.set_ylabel('$\\Delta$ [Hs]')
-    #    axmin, axmax = ax.get_ylim()
-    #    ax2.set_ylim((np.sqrt(1e-2*axmin) - rp0hs)/Hs, (np.sqrt(1e-2*axmax) - rp0hs)/Hs)
-
-    #  Plot the pre-profiled result off to the right, if there's been profiling
-    if np.any(patmos_model!=patmos_modelProfiled):
-        # ax2 = plt.subplot(1,2,2)
-        plt.subplot(1,2,2)
-
-        # 1) plot the data
-        plt.errorbar(transitdata['wavelength'],
-                     transitdata['depth'] * 100,
-                     yerr=transitdata['error'] * 100,
-                     fmt='.', color='lightgray', zorder=1,
-                     label='raw data')
-        # 2) also plot the rebinned data points
-        plt.errorbar(transitdata['binned_wavelength'],
-                     transitdata['binned_depth'] * 100,
-                     yerr=transitdata['binned_error'] * 100,
-                     fmt='o', markeredgecolor='k', color='None', ecolor='k', zorder=5,
-                     label='rebinned data')
-        # 3) plot the best-fit model
-        plt.plot(transitdata['wavelength'],
-                 patmos_model * 100,
-                 c='orange', lw=2, zorder=4,
-                 label='best fit')
-        xlims = plt.xlim()
-        ylims = plt.ylim()
-        plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.53,
-                 '$\\chi^2$-model='+f"{chi2model:5.2f}",fontsize=12)
-        plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.46,
-                 '$\\chi^2$-flat='+f"{chi2flat:5.2f}",fontsize=12)
-        plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.29,
-                 '$\\chi^2_{red}$-model='+f"{chi2model_red:5.2f}",fontsize=12)
-        plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.22,
-                 '$\\chi^2_{red}$-flat='+f"{chi2flat_red:5.2f}",fontsize=12)
-        plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.12,
-                 '$\\chi^2_{red}$(model/flat)='+f"{(chi2model_red/chi2flat_red):5.2f}",fontsize=12)
-        plt.text(xlims[1]+xoffset,ylims[0]+(ylims[1]-ylims[0])*0.05,
-                 '$\\Delta\\chi^2$(flat-model)='+f"{(chi2flat-chi2model):5.1f}",fontsize=12)
-        if filt=='Ariel-sim': plt.xlim(0,8)
-        plt.title(trgt+' '+p+' (no profiling)', fontsize=16)
-        plt.xlabel(str('Wavelength [$\\mu m$]'), fontsize=14)
-        plt.ylabel(str('$(R_p/R_*)^2$ [%]'), fontsize=14)
-        plt.legend()
-
-    # figgy.tight_layout()
-    # plt.show()
-    if savetodisk: plt.savefig(saveDir + 'bestFit_'+filt+'_'+modelName+'_'+trgt+' '+p+'.png')
-    # pdf is so much better, but xv gives error (stick with png for debugging)
-
-    # REDUNDANT SAVE - above saves to disk; below saves as state vector
-    buf = io.BytesIO()
-    figgy.savefig(buf, format='png')
-    save_to_state_vector = buf.getvalue()
-    # plt.close(figgy)
-    return save_to_state_vector, figgy
-# --------------------------------------------------------------------
 def plot_corner(allkeys, alltraces, profiletraces,
                 modelParams_bestFit, truth_params, prior_ranges,
                 filt, modelName, trgt, p, saveDir, savetodisk=False):
@@ -1071,6 +897,11 @@ def plot_massVSmetals(masses, stellarFEHs, truth_values,
                       savetodisk=False):
     ''' how well do we retrieve the input mass-metallicity relation? '''
 
+    onlyFitAbove10MEarth = True
+    onlyPlotAbove10MEarth = True
+
+    MEarth = 5.972e27 / 1.898e30
+
     figure = plt.figure(figsize=(11,5))
     # with text labels hanging off the right side, need to stretch the figure size
     # figure = plt.figure(figsize=(17,5))
@@ -1110,37 +941,42 @@ def plot_massVSmetals(masses, stellarFEHs, truth_values,
             ptsiz = 10
             zord = 2
         if 'sim' in filt: ptsiz /= 2  # make smaller points for the large Ariel sample
-        if plot_truths and metaltrue not in (666, 666666):
-            if not ilab1 and clr=='k':
-                ilab1 = True
-                ax.scatter(masstrue, metaltrue,
-                           label='true value',
-                           facecolor='w',edgecolor=clr, s=ptsiz, zorder=zord+1)
-            else:
-                ax.scatter(masstrue, metaltrue,
-                           facecolor='w',edgecolor=clr, s=ptsiz, zorder=zord+1)
-        if not ilab2 and clr=='k':
-            ilab2 = True
-            ax.scatter(mass, metalfit,
-                       label='retrieved metallicity',
-                       facecolor=clr,edgecolor=clr, s=ptsiz, zorder=zord+2)
+
+        if onlyFitAbove10MEarth and onlyPlotAbove10MEarth and (mass < 10*MEarth):
+            pass
         else:
-            ax.scatter(mass, metalfit,
-                       facecolor=clr,edgecolor=clr, s=ptsiz, zorder=zord+2)
-        # allow for asymmetric error bars!!!
-        # ax.errorbar(mass, metalfit, yerr=metalerror,
-        #             fmt='.', color=clr, lw=lwid, zorder=zord)
-        # if clr=='k':
-        #    print('x y',mass,metalfit)
-        #    print('  old:',metalerror)
-        #    print('  new:',metalerrorlo,metalerrorhi)
-        ax.errorbar(mass, metalfit, yerr=np.array([[metalerrorlo],[metalerrorhi]]),
-                    fmt='.', color=clr, lw=lwid, zorder=zord)
+            if plot_truths and metaltrue not in (666, 666666):
+                if not ilab1 and clr=='k':
+                    ilab1 = True
+                    ax.scatter(masstrue, metaltrue,
+                               label='true value',
+                               facecolor='w',edgecolor=clr, s=ptsiz, zorder=zord+1)
+                else:
+                    ax.scatter(masstrue, metaltrue,
+                               facecolor='w',edgecolor=clr, s=ptsiz, zorder=zord+1)
+            if not ilab2 and clr=='k':
+                ilab2 = True
+                ax.scatter(mass, metalfit,
+                           label='retrieved metallicity',
+                           facecolor=clr,edgecolor=clr, s=ptsiz, zorder=zord+2)
+            else:
+                ax.scatter(mass, metalfit,
+                           facecolor=clr,edgecolor=clr, s=ptsiz, zorder=zord+2)
+            # allow for asymmetric error bars!!!
+            # ax.errorbar(mass, metalfit, yerr=metalerror,
+            #             fmt='.', color=clr, lw=lwid, zorder=zord)
+            # if clr=='k':
+            #    print('x y',mass,metalfit)
+            #    print('  old:',metalerror)
+            #    print('  new:',metalerrorlo,metalerrorhi)
+            ax.errorbar(mass, metalfit, yerr=np.array([[metalerrorlo],[metalerrorhi]]),
+                        fmt='.', color=clr, lw=lwid, zorder=zord)
     ax.semilogx()
-    ax.set_xlabel('$M_p (M_{\\rm Jup})$', fontsize=14)
+    ax.set_xlabel('$M_p \\, (M_{\\rm Jup})$', fontsize=14)
     ax.set_ylabel('[X/H]$_p$', fontsize=14)
     xrange = ax.get_xlim()
     yrange = ax.get_ylim()
+    if onlyFitAbove10MEarth and onlyPlotAbove10MEarth: xrange = (0.01, 10.)
 
     # plot the underlying distribution (only if this is a simulation)
     # actually, also plot Thorngren relationship for real HST data
@@ -1153,9 +989,21 @@ def plot_massVSmetals(masses, stellarFEHs, truth_values,
         ax.plot(massesThorngren,metalsThorngren, 'k:', lw=1, zorder=1, label='Thorngren+ 2016')
 
     # plot a linear fit to the data
-    polynomialCoeffs,covariance = np.polyfit(np.log10(masses), metals_fit, 1,
-                                             w=1./np.array(metals_fiterr),
-                                             cov='unscaled')
+    if onlyFitAbove10MEarth:
+        limitedMasses = np.where(np.array(masses) > 10.*MEarth)
+        masses_noSmallOnes = np.array(masses)[limitedMasses]
+        metals_noSmallOnes = np.array(metals_fit)[limitedMasses]
+        metalserr_noSmallOnes = np.array(metals_fiterr)[limitedMasses]
+        # print('# of planet masses',len(masses))
+        # print('# of planet masses >10MEarth',len(masses_noSmallOnes))
+        polynomialCoeffs,covariance = np.polyfit(np.log10(masses_noSmallOnes),
+                                                 metals_noSmallOnes, 1,
+                                                 w=1./np.array(metalserr_noSmallOnes),
+                                                 cov='unscaled')
+    else:
+        polynomialCoeffs,covariance = np.polyfit(np.log10(masses), metals_fit, 1,
+                                                 w=1./np.array(metals_fiterr),
+                                                 cov='unscaled')
     # print('polynomialCoeffs',polynomialCoeffs)
     lineFunction = np.poly1d(polynomialCoeffs)
     massrange = np.linspace(xrange[0],xrange[1],10)
@@ -1166,9 +1014,6 @@ def plot_massVSmetals(masses, stellarFEHs, truth_values,
 
     # use the prior range for the y-axis
     yrange = (prior_ranges['[X/H]'][0], prior_ranges['[X/H]'][1])
-
-    # limit the plot to just ~10 MEarth up to 3 MJup    ???
-    xrange = (0.03, 3.)
 
     # display the fit parameters (and Thorgran too)
     fit_mass_exp = polynomialCoeffs[0]
@@ -1218,33 +1063,37 @@ def plot_massVSmetals(masses, stellarFEHs, truth_values,
             ptsiz = 10
             zord = 2
         if 'sim' in filt: ptsiz /= 2  # make smaller points for the large Ariel sample
-        if plot_truths and metaltrue not in (666, 666666):
-            if not ilab1:
-                ilab1 = True
-                ax2.scatter(masstrue, metaltrue,
-                            label='true value',
-                            facecolor='w',edgecolor=clr, s=ptsiz, zorder=zord+1)
-            else:
-                ax2.scatter(masstrue, metaltrue,
-                            facecolor='w',edgecolor=clr, s=ptsiz, zorder=zord+1)
-        if not ilab2 and clr=='k':
-            ilab2 = True
-            ax2.scatter(mass, metalfit - stellarFEH,
-                        label='retrieved metallicity',
-                        facecolor=clr,edgecolor=clr, s=ptsiz, zorder=zord+2)
+        if onlyFitAbove10MEarth and onlyPlotAbove10MEarth and (mass < 10*MEarth):
+            pass
         else:
-            ax2.scatter(mass, metalfit - stellarFEH,
-                        facecolor=clr,edgecolor=clr, s=ptsiz, zorder=zord+2)
-        # ax2.errorbar(mass, metalfit - stellarFEH, yerr=metalerror,
-        #             fmt='.', color=clr, lw=lwid, zorder=zord)
-        # allow for asymmetric error bars!!!
-        ax2.errorbar(mass, metalfit - stellarFEH, yerr=np.array([[metalerrorlo],[metalerrorhi]]),
-                     fmt='.', color=clr, lw=lwid, zorder=zord)
+            if plot_truths and metaltrue not in (666, 666666):
+                if not ilab1:
+                    ilab1 = True
+                    ax2.scatter(masstrue, metaltrue,
+                                label='true value',
+                                facecolor='w',edgecolor=clr, s=ptsiz, zorder=zord+1)
+                else:
+                    ax2.scatter(masstrue, metaltrue,
+                                facecolor='w',edgecolor=clr, s=ptsiz, zorder=zord+1)
+            if not ilab2 and clr=='k':
+                ilab2 = True
+                ax2.scatter(mass, metalfit - stellarFEH,
+                            label='retrieved metallicity',
+                            facecolor=clr,edgecolor=clr, s=ptsiz, zorder=zord+2)
+            else:
+                ax2.scatter(mass, metalfit - stellarFEH,
+                            facecolor=clr,edgecolor=clr, s=ptsiz, zorder=zord+2)
+            # ax2.errorbar(mass, metalfit - stellarFEH, yerr=metalerror,
+            #             fmt='.', color=clr, lw=lwid, zorder=zord)
+            # allow for asymmetric error bars!!!
+            ax2.errorbar(mass, metalfit - stellarFEH, yerr=np.array([[metalerrorlo],[metalerrorhi]]),
+                         fmt='.', color=clr, lw=lwid, zorder=zord)
     ax2.semilogx()
     ax2.set_xlabel('$M_p (M_{\\rm Jup})$', fontsize=14)
     ax2.set_ylabel('[X/H]$_p$ - [X/H]$_\\star$', fontsize=14)
     xrange = ax2.get_xlim()
     yrange = ax2.get_ylim()
+    if onlyFitAbove10MEarth and onlyPlotAbove10MEarth: xrange = (0.01, 10.)
 
     # plot the underlying distribution (only if this is a simulation)
     # actually, also plot Thorngren relationship for real HST data
@@ -1256,10 +1105,26 @@ def plot_massVSmetals(masses, stellarFEHs, truth_values,
         ax2.plot(massesThorngren,metalsThorngren, 'k:', lw=1, zorder=1, label='Thorngren+ 2016')
 
     # plot a linear fit to the data
-    polynomialCoeffs,covariance = np.polyfit(np.log10(masses),
-                                             np.array(metals_fit) - np.array(stellarFEHs), 1,
-                                             w=1./np.array(metals_fiterr),
-                                             cov='unscaled')
+    if onlyFitAbove10MEarth:
+        MEarth = 5.972e27 / 1.898e30
+        limitedMasses = np.where(np.array(masses) > 10.*MEarth)
+        masses_noSmallOnes = np.array(masses)[limitedMasses]
+        metals_noSmallOnes = np.array(metals_fit)[limitedMasses]
+        metalserr_noSmallOnes = np.array(metals_fiterr)[limitedMasses]
+        stellarFEHs_noSmallOnes = np.array(stellarFEHs)[limitedMasses]
+        # print('# of planet masses',len(masses))
+        # print('# of planet masses >10MEarth',len(masses_noSmallOnes))
+        polynomialCoeffs,covariance = np.polyfit(np.log10(masses_noSmallOnes),
+                                                 metals_noSmallOnes -
+                                                 stellarFEHs_noSmallOnes, 1,
+                                                 w=1./np.array(metalserr_noSmallOnes),
+                                                 cov='unscaled')
+    else:
+        polynomialCoeffs,covariance = np.polyfit(np.log10(masses),
+                                                 np.array(metals_fit) -
+                                                 np.array(stellarFEHs), 1,
+                                                 w=1./np.array(metals_fiterr),
+                                                 cov='unscaled')
     # print('polynomialCoeffs',polynomialCoeffs)
     # print(' covariance',covariance)
     lineFunction = np.poly1d(polynomialCoeffs)

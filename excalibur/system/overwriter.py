@@ -1620,5 +1620,31 @@ overwrite[starID] =
         'FEH*':0.25, 'FEH*_uperr':0.06, 'FEH*_lowerr':-0.06,
         'FEH*_units':'[dex]', 'FEH*_ref':'Korth et al. 2024'}
 
+    # the new batch of targets (mainly from Burt et al.) has some missing parallaxi
+    overwrite['K2-65'] = {
+        'dist':(1000./15.8468), 'dist_uperr':0.1, 'dist_lowerr':-0.1,
+        'dist_units':'[pc]', 'dist_ref':'Gaia EDR3'}
+    overwrite['KOI-1257'] = {
+        'dist':(1000./0.4387), 'dist_uperr':1000., 'dist_lowerr':1000.,
+        'dist_units':'[pc]', 'dist_ref':'Gaia DR3'}
+    overwrite['Kepler-565'] = {
+        'dist':(1000./0.7233), 'dist_uperr':100., 'dist_lowerr':100.,
+        'dist_units':'[pc]', 'dist_ref':'Gaia DR3'}
+    overwrite['Kepler-621'] = {
+        'dist':(1000./1.2779), 'dist_uperr':100., 'dist_lowerr':-100.,
+        'dist_units':'[pc]', 'dist_ref':'Gaia DR3'}
+    overwrite['Kepler-799'] = {
+        'dist':(1000./0.6499), 'dist_uperr':50., 'dist_lowerr':-50.,
+        'dist_units':'[pc]', 'dist_ref':'Gaia DR3'}
+    overwrite['Kepler-808'] = {
+        'dist':(1000./2.8936), 'dist_uperr':10., 'dist_lowerr':-10.,
+        'dist_units':'[pc]', 'dist_ref':'Gaia DR3'}
+    overwrite['WTS-2'] = {
+        'dist':(1000./1.4183), 'dist_uperr':40., 'dist_lowerr':-40.,
+        'dist_units':'[pc]', 'dist_ref':'Gaia DR3'}
+    overwrite['SPECULOOS-3'] = {
+        'dist':(1000./59.7005), 'dist_uperr':0.01, 'dist_lowerr':-0.01,
+        'dist_units':'[pc]', 'dist_ref':'Gaia EDR3'}
+
     return overwrite
 # -------------------------------------------------------------------

@@ -1343,7 +1343,7 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                 out['data'][p]['plot_spectrum_'+modelName],_ = plot_spectrumfit(
                     transitdata, patmos_model, patmos_modelProfiled, patmos_bestFit, fmcarray,
                     truth_spectrum,
-                    anc['data'][p], atm[p],
+                    fin['priors'],anc['data'][p], atm[p],
                     filt, modelName, trgt, p, saveDir)
 
                 if verbose:
