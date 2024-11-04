@@ -2,8 +2,9 @@
 # -- IMPORTS -- ------------------------------------------------------
 import os
 import re
-import shutil
 import json
+import time
+import shutil
 
 import requests
 import tempfile
@@ -19,6 +20,7 @@ import excalibur.target as trg
 import excalibur.target.edit as trgedit
 import excalibur.target.mast_api_utils as masttool
 
+import numpy as np
 import astropy.io.fits as pyfits
 import urllib.request as urlrequest
 # ------------- ------------------------------------------------------
@@ -169,10 +171,11 @@ def autofillversion():
     1.2.0: new Exoplanet Archive tables and TAP protocol
     1.2.1: non-default parameters included; only two Exoplanet Archive queries; RHO* filled in by R*,M*
     2.0.1: requests are now using MAST api
+    2.0.2: multiple attempts for the mast query with delay
     '''
-    return dawgie.VERSION(2,0,1)
+    return dawgie.VERSION(2,0,2)
 
-def autofill(ident, thistarget, out, allowed_filters, searchrad=0.2):
+def autofill(ident, thistarget, out, allowed_filters, searchrad=0.2, ntrymax=4):
     '''Queries MAST for available data and parses NEXSCI data into tables'''
 
     out['starID'][thistarget] = ident['starIDs']['starID'][thistarget]
@@ -185,13 +188,42 @@ def autofill(ident, thistarget, out, allowed_filters, searchrad=0.2):
     # Cannot rely on target_name since proposers gets too inventive
     request = {'service':'Mast.Name.Lookup',
                'params':{'input':thistarget, 'format':'json'}}
-    _h, outstr = masttool.mast_query(request)
-    outjson = json.loads(outstr)
-    if outjson['resolvedCoordinate']:
-        ra = outjson['resolvedCoordinate'][0]['ra']
-        dec = outjson['resolvedCoordinate'][0]['decl']
-        solved = True
+
+    # Attempting with delay if server gives us the middle finger until ntrymax attempts
+    def waitabit(myseconds, maxtry=ntrymax):
+        def mydecorator(whatever):
+            def wrapper(*args, **kwargs):
+                ntry = 0
+                while ntry < maxtry:
+                    answer = whatever(*args, **kwargs)
+                    if answer: return answer
+                    log.warning('--< Trying again, %s/%s with %s s delay >--',
+                                ntry+1, maxtry, myseconds*(10**ntry))
+                    time.sleep(myseconds*(10**ntry))
+                    ntry += 1
+                    pass
+                return ''
+            return wrapper
+        return mydecorator
+
+    @waitabit(np.random.randint(low=1, high=10))
+    def mastpoke(request):
+        hr, outstr = masttool.mast_query(request)
+        if not outstr:
+            log.warning('--< TARGET AUTOFILL: Empty MAST answer: %s >--', hr)
+            pass
+        return outstr
+
+    outstr = mastpoke(request)
+    if outstr:
+        outjson = json.loads(outstr)
+        if outjson['resolvedCoordinate']:
+            ra = outjson['resolvedCoordinate'][0]['ra']
+            dec = outjson['resolvedCoordinate'][0]['decl']
+            solved = True
+            pass
         pass
+
     # 2 - searches for observations
     # Cant say I dont comment my code anymore
     if solved:

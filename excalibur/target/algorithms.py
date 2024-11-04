@@ -123,7 +123,7 @@ class autofill(dawgie.Algorithm):
     def previous(self):
         '''Input State Vectors: target.create'''
         return [dawgie.ALG_REF(trg.analysis, self.__create),
-                dawgie.V_REF(rtime.task, self.__rt, self.__rt.sv_as_dict()['status'],'isValidTarget')]
+                dawgie.V_REF(rtime.task, self.__rt, self.__rt.sv_as_dict()['status'], 'isValidTarget')]
 
     def state_vectors(self):
         '''Output State Vectors: target.autofill'''
@@ -138,8 +138,9 @@ class autofill(dawgie.Algorithm):
 
         # stop here if it is not a runtime target
         if not self.__rt.is_valid():
-            log.warning('--< TARGET.%s: %s not a valid target >--', target, self.name().upper())
-
+            log.warning('--< TARGET.%s: %s not a valid target >--',
+                        target, self.name().upper())
+            pass
         else:
             crt = self.__create.sv_as_dict()
             valid, errstring = trgcore.checksv(crt['starIDs'])
@@ -151,7 +152,7 @@ class autofill(dawgie.Algorithm):
             if update: ds.update()
             else: raise dawgie.NoValidOutputDataError(
                     f'No output created for TARGET.{self.name()}')
-
+            pass
         return
 
     def _autofill(self, crt, thistarget):
