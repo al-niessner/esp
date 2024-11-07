@@ -17,6 +17,52 @@ def createversion():
     1.8.0: JWST filters
     '''
     return dawgie.VERSION(1,8,0)
+
+# (NOTES FROM ADDITIONAL OF 500-some NEW TARGETS. Oct 2024)
+
+# EPIC 205950854 is K2-168
+# removed it from here and from run scripts
+# ah wait this is a really weird one.  b is K2-168 but c is EPIC
+#  (the Archive and POMA both use this odd mixmatch)
+# If we just use K2-168, do we get 'c'?  yes, we're good!
+#  (download table names do not match the main table names)
+#  (that also explains how TOI-784 is in main table, but HD 307842 in download table)
+#
+# LHS 475 is GJ 4102
+# LHS 475 : LHS475
+# removed it from here and from run scripts
+#
+# HD 3167 : HD3167   is K2-96
+# removed it from here and from run scripts
+#
+# Kepler-460 is KIC 5437945
+#  this is another weird one (like K2-168 above) with two star names
+#  Kepler-460 c but KIC 5437945 b  yikes
+
+# WD 1856+534 is WD 1856   that's a bad name. let's switch it
+#  removed these older ones:
+# WD 1856 : WD 1856+534
+# WD 1856 : WD1856
+
+# TIC 172900988 is TIC 172900988 Aa
+#  that's not a great name.  let's just use that as an Exoplanet Archive alias
+#
+# GJ 12 is Gliese 12
+#  SIMBAD doesn't even list that name. just use it as an Exoplanet Archive alias
+#
+# TOI-784 is HD 307842 in the Archive
+#  keep the TOI name  (arg! the aliases are only updated by target.create)
+
+# oof there's a batch that work for target() but crash on system()
+# they are all listed as false positives on the Exoplanet Archive
+#  (let Jenn Burt know about these)
+# all removed from scripts
+# Kepler-488
+# Kepler-494
+# Kepler-628
+# Kepler-706
+# Kepler-807
+
 # ------------ -------------------------------------------------------
 # -- TARGET LIST -- --------------------------------------------------
 # FIRST COL HAS TO BE SOLVABLE BY
@@ -661,7 +707,7 @@ Qatar-3 :
 WASP-129 :
 WASP-144 :
 Kepler-51 :
-WD 1856 : WD 1856+534
+WD 1856+534 :
 GJ 4102 : LHS 475
 HD 80606 :
 GJ 4332 : L 168-9
@@ -857,6 +903,561 @@ WASP-193 :
 WASP-60 :
 HD 110067 :
 TOI-3261 :
+CoRoT-10 :
+CoRoT-12 :
+CoRoT-13 :
+CoRoT-14 :
+CoRoT-16 :
+CoRoT-18 :
+CoRoT-22 :
+CoRoT-24 :
+CoRoT-25 :
+CoRoT-26 :
+CoRoT-28 :
+CoRoT-29 :
+CoRoT-31 :
+CoRoT-4 :
+CoRoT-6 :
+CoRoT-8 :
+CoRoT-9 :
+CoRoTID 223977153 :
+EPIC 212297394 :
+EPIC 220674823 :
+EPIC 229004835 :
+EPIC 249893012 :
+HATS-14 :
+HATS-15 :
+HATS-16 :
+HATS-17 :
+HATS-32 :
+HATS-36 :
+HATS-44 :
+HATS-49 :
+HATS-54 :
+HATS-59 :
+HATS-63 :
+HATS-69 :
+HATS-71 :
+HATS-74 A :
+HATS-75 :
+HATS-76 :
+HATS-77 :
+HATS-8 :
+HD 110067 :
+HD 137496 :
+HD 18599 :
+HD 20329 :
+HD 80653 :
+HD 88986 :
+K2-10 :
+K2-100 :
+K2-108 :
+K2-110 :
+K2-111 :
+K2-113 :
+K2-114 :
+K2-115 :
+K2-117 :
+K2-12 :
+K2-122 :
+K2-126 :
+K2-127 :
+K2-128 :
+K2-130 :
+K2-131 :
+K2-133 :
+K2-14 :
+K2-146 :
+K2-148 :
+K2-151 :
+K2-152 :
+K2-153 :
+K2-154 :
+K2-158 :
+K2-159 :
+K2-160 :
+K2-161 :
+K2-162 :
+K2-163 :
+K2-164 :
+K2-165 :
+K2-168 :
+K2-17 :
+K2-170 :
+K2-171 :
+K2-172 :
+K2-173 :
+K2-175 :
+K2-176 :
+K2-177 :
+K2-178 :
+K2-179 :
+K2-180 :
+K2-181 :
+K2-182 :
+K2-184 :
+K2-186 :
+K2-188 :
+K2-189 :
+K2-190 :
+K2-193 :
+K2-194 :
+K2-195 :
+K2-196 :
+K2-197 :
+K2-199 :
+K2-200 :
+K2-201 :
+K2-203 :
+K2-204 :
+K2-206 :
+K2-208 :
+K2-216 :
+K2-216 :
+K2-217 :
+K2-219 :
+K2-220 :
+K2-221 :
+K2-224 :
+K2-225 :
+K2-226 :
+K2-227 :
+K2-228 :
+K2-229 :
+K2-230 :
+K2-241 :
+K2-242 :
+K2-245 :
+K2-246 :
+K2-247 :
+K2-248 :
+K2-250 :
+K2-253 :
+K2-254 :
+K2-255 :
+K2-265 :
+K2-268 :
+K2-27 :
+K2-270 :
+K2-271 :
+K2-272 :
+K2-273 :
+K2-274 :
+K2-275 :
+K2-276 :
+K2-277 :
+K2-281 :
+K2-283 :
+K2-286 :
+K2-291 :
+K2-292 :
+K2-294 :
+K2-308 :
+K2-331 :
+K2-341 :
+K2-342 :
+K2-346 :
+K2-35 :
+K2-352 :
+K2-354 :
+K2-357 :
+K2-365 :
+K2-366 :
+K2-367 :
+K2-368 :
+K2-369 :
+K2-37 :
+K2-371 :
+K2-372 :
+K2-374 :
+K2-376 :
+K2-378 :
+K2-379 :
+K2-38 :
+K2-380 :
+K2-381 :
+K2-383 :
+K2-387 :
+K2-388 :
+K2-389 :
+K2-390 :
+K2-391 :
+K2-393 :
+K2-394 :
+K2-395 :
+K2-396 :
+K2-397 :
+K2-398 :
+K2-401 :
+K2-404 :
+K2-407 :
+K2-408 :
+K2-409 :
+K2-416 :
+K2-43 :
+K2-44 :
+K2-45 :
+K2-5 :
+K2-62 :
+K2-65 :
+K2-68 :
+K2-70 :
+K2-73 :
+K2-75 :
+K2-77 :
+K2-8 :
+K2-80 :
+K2-81 :
+K2-84 :
+K2-86 :
+K2-98 :
+KIC 9663113 :
+KOI-1257 :
+KOI-217 :
+KOI-351 :
+KOI-3680 :
+KOI-7368 :
+KOI-984 :
+Kepler-1002 :
+Kepler-1003 :
+Kepler-1004 :
+Kepler-101 :
+Kepler-1011 :
+Kepler-1012 :
+Kepler-1016 :
+Kepler-1019 :
+Kepler-1028 :
+Kepler-103 :
+Kepler-1035 :
+Kepler-1037 :
+Kepler-1039 :
+Kepler-1055 :
+Kepler-1061 :
+Kepler-1065 :
+Kepler-1066 :
+Kepler-107 :
+Kepler-1072 :
+Kepler-1073 :
+Kepler-1075 :
+Kepler-1082 :
+Kepler-109 :
+Kepler-1091 :
+Kepler-1099 :
+Kepler-1106 :
+Kepler-1107 :
+Kepler-1139 :
+Kepler-1148 :
+Kepler-1167 :
+Kepler-117 :
+Kepler-1179 :
+Kepler-1181 :
+Kepler-1189 :
+Kepler-1193 :
+Kepler-1205 :
+Kepler-1206 :
+Kepler-1217 :
+Kepler-1228 :
+Kepler-1256 :
+Kepler-1259 :
+Kepler-1270 :
+Kepler-1271 :
+Kepler-1310 :
+Kepler-1311 :
+Kepler-1312 :
+Kepler-1313 :
+Kepler-1315 :
+Kepler-1317 :
+Kepler-1320 :
+Kepler-1323 :
+Kepler-1344 :
+Kepler-1346 :
+Kepler-1356 :
+Kepler-148 :
+Kepler-15 :
+Kepler-1514 :
+Kepler-1519 :
+Kepler-1520 :
+Kepler-1522 :
+Kepler-1523 :
+Kepler-1524 :
+Kepler-1528 :
+Kepler-1530 :
+Kepler-154 :
+Kepler-157 :
+Kepler-1604 :
+Kepler-1613 :
+Kepler-1624 :
+Kepler-1627 :
+Kepler-1642 :
+Kepler-1654 :
+Kepler-1655 :
+Kepler-166 :
+Kepler-1704 :
+Kepler-198 :
+Kepler-289 :
+Kepler-30 :
+Kepler-323 :
+Kepler-4 :
+Kepler-41 :
+Kepler-412 :
+Kepler-418 :
+Kepler-421 :
+Kepler-422 :
+Kepler-423 :
+Kepler-424 :
+Kepler-425 :
+Kepler-426 :
+Kepler-427 :
+Kepler-428 :
+Kepler-43 :
+Kepler-44 :
+Kepler-46 :
+Kepler-460 : KIC 5437945
+Kepler-463 :
+Kepler-464 :
+Kepler-466 :
+Kepler-472 :
+Kepler-473 :
+Kepler-474 :
+Kepler-475 :
+Kepler-476 :
+Kepler-485 :
+Kepler-487 :
+Kepler-488 :
+Kepler-490 :
+Kepler-491 :
+Kepler-494 :
+Kepler-495 :
+Kepler-497 :
+Kepler-498 :
+Kepler-501 :
+Kepler-502 :
+Kepler-507 :
+Kepler-511 :
+Kepler-514 :
+Kepler-518 :
+Kepler-523 :
+Kepler-529 :
+Kepler-530 :
+Kepler-531 :
+Kepler-532 :
+Kepler-533 :
+Kepler-535 :
+Kepler-536 :
+Kepler-537 :
+Kepler-539 :
+Kepler-541 :
+Kepler-543 :
+Kepler-546 :
+Kepler-547 :
+Kepler-548 :
+Kepler-550 :
+Kepler-552 :
+Kepler-553 :
+Kepler-554 :
+Kepler-557 :
+Kepler-56 :
+Kepler-561 :
+Kepler-562 :
+Kepler-564 :
+Kepler-565 :
+Kepler-568 :
+Kepler-578 :
+Kepler-585 :
+Kepler-586 :
+Kepler-590 :
+Kepler-592 :
+Kepler-605 :
+Kepler-608 :
+Kepler-609 :
+Kepler-611 :
+Kepler-612 :
+Kepler-618 :
+Kepler-619 :
+Kepler-620 :
+Kepler-621 :
+Kepler-628 :
+Kepler-629 :
+Kepler-634 :
+Kepler-636 :
+Kepler-645 :
+Kepler-648 :
+Kepler-650 :
+Kepler-656 :
+Kepler-664 :
+Kepler-666 :
+Kepler-667 :
+Kepler-669 :
+Kepler-670 :
+Kepler-673 :
+Kepler-674 :
+Kepler-677 :
+Kepler-678 :
+Kepler-680 :
+Kepler-682 :
+Kepler-683 :
+Kepler-684 :
+Kepler-685 :
+Kepler-686 :
+Kepler-688 :
+Kepler-690 :
+Kepler-693 :
+Kepler-694 :
+Kepler-695 :
+Kepler-696 :
+Kepler-697 :
+Kepler-700 :
+Kepler-702 :
+Kepler-703 :
+Kepler-706 :
+Kepler-707 :
+Kepler-708 :
+Kepler-714 :
+Kepler-715 :
+Kepler-718 :
+Kepler-719 :
+Kepler-720 :
+Kepler-722 :
+Kepler-723 :
+Kepler-724 :
+Kepler-725 :
+Kepler-728 :
+Kepler-729 :
+Kepler-731 :
+Kepler-734 :
+Kepler-736 :
+Kepler-74 :
+Kepler-740 :
+Kepler-743 :
+Kepler-75 :
+Kepler-750 :
+Kepler-755 :
+Kepler-762 :
+Kepler-767 :
+Kepler-77 :
+Kepler-773 :
+Kepler-775 :
+Kepler-78 :
+Kepler-782 :
+Kepler-785 :
+Kepler-796 :
+Kepler-799 :
+Kepler-80 :
+Kepler-805 :
+Kepler-807 :
+Kepler-808 :
+Kepler-814 :
+Kepler-815 :
+Kepler-816 :
+Kepler-817 :
+Kepler-818 :
+Kepler-822 :
+Kepler-825 :
+Kepler-827 :
+Kepler-828 :
+Kepler-831 :
+Kepler-842 :
+Kepler-843 :
+Kepler-845 :
+Kepler-849 :
+Kepler-855 :
+Kepler-856 :
+Kepler-857 :
+Kepler-858 :
+Kepler-860 :
+Kepler-867 :
+Kepler-872 :
+Kepler-890 :
+Kepler-891 :
+Kepler-893 :
+Kepler-904 :
+Kepler-905 :
+Kepler-908 :
+Kepler-912 :
+Kepler-914 :
+Kepler-915 :
+Kepler-922 :
+Kepler-932 :
+Kepler-943 :
+Kepler-950 :
+Kepler-951 :
+Kepler-952 :
+Kepler-953 :
+Kepler-954 :
+Kepler-956 :
+Kepler-957 :
+Kepler-960 :
+Kepler-972 :
+Kepler-975 :
+Kepler-990 :
+Kepler-994 :
+Kepler-996 :
+Kepler-997 :
+LHS 1815 :
+NGTS-1 :
+NGTS-15 :
+NGTS-16 :
+NGTS-17 :
+NGTS-18 :
+NGTS-20 :
+NGTS-21 :
+NGTS-23 :
+NGTS-25 :
+NGTS-3 A :
+NGTS-4 :
+OGLE-TR-182 :
+POTS-1 :
+TIC 172900988 : TIC 172900988 Aa
+TIC 279401253 :
+TOI-1052 :
+TOI-1062 :
+TOI-1221 :
+TOI-1235 :
+TOI-1444 :
+TOI-1696 :
+TOI-1736 :
+TOI-2084 :
+TOI-2095 :
+TOI-2096 :
+TOI-2141 :
+TOI-2180 :
+TOI-2184 :
+TOI-2196 :
+TOI-2257 :
+TOI-2285 :
+TOI-244 :
+TOI-2525 :
+TOI-2589 :
+TOI-3757 :
+TOI-3984 A :
+TOI-4127 :
+TOI-4184 :
+TOI-4201 :
+TOI-4562 :
+TOI-4582 :
+TOI-4860 :
+TOI-5205 :
+TOI-5293 A :
+TOI-5542 :
+TOI-733 :
+TOI-763 :
+TOI-784 : HD 307842
+WASP-59 :
+WTS-2 :
+Wendelstein-1 :
+Wendelstein-2 :
+TOI-6086 :
+GJ 12 : Gliese 12
+TOI-1135 :
+TOI-4336 A :
+SPECULOOS-3 :
+TOI-904 :
+TOI-4559 :
+TOI-771 :
+TOI-6008 :
+TOI-5799 :
+TOI-2120 :
+TOI-782 :
     '''
 # these two JWST targets are not yet listed in the Exoplanet Archive composite table:
 # GJ 341 : HIP 45908
@@ -922,7 +1523,6 @@ HD 213885 : HD213885
 HD 219134 : HD219134
 HD 219666 : HD219666
 HD 23472 : HD23472
-HD 3167 : HD3167
 HD 97658 : HD97658
 HR 858 : HR858
 K2-124 : K2124
@@ -1502,7 +2102,7 @@ Qatar-3 : QATAR3
 WASP-129 : WASP129
 WASP-144 : WASP144
 Kepler-51 : KEPLER51
-WD 1856 : WD1856
+WD 1856+534 : WD1856534
 GJ 341 : GJ341
 GJ 4102 : GJ4102
 HD 80606 : HD80606
@@ -1700,6 +2300,561 @@ WASP-193 : WASP193
 WASP-60 : WASP60
 HD 110067 : HD110067
 TOI-3261 : TOI3261
+CoRoT-10 : CoRoT10
+CoRoT-12 : CoRoT12
+CoRoT-13 : CoRoT13
+CoRoT-14 : CoRoT14
+CoRoT-16 : CoRoT16
+CoRoT-18 : CoRoT18
+CoRoT-22 : CoRoT22
+CoRoT-24 : CoRoT24
+CoRoT-25 : CoRoT25
+CoRoT-26 : CoRoT26
+CoRoT-28 : CoRoT28
+CoRoT-29 : CoRoT29
+CoRoT-31 : CoRoT31
+CoRoT-4 : CoRoT4
+CoRoT-6 : CoRoT6
+CoRoT-8 : CoRoT8
+CoRoT-9 : CoRoT9
+CoRoTID 223977153 : CoRoTID223977153
+EPIC 212297394 : EPIC212297394
+EPIC 220674823 : EPIC220674823
+EPIC 229004835 : EPIC229004835
+EPIC 249893012 : EPIC249893012
+HATS-14 : HATS14
+HATS-15 : HATS15
+HATS-16 : HATS16
+HATS-17 : HATS17
+HATS-32 : HATS32
+HATS-36 : HATS36
+HATS-44 : HATS44
+HATS-49 : HATS49
+HATS-54 : HATS54
+HATS-59 : HATS59
+HATS-63 : HATS63
+HATS-69 : HATS69
+HATS-71 : HATS71
+HATS-74 A : HATS74A
+HATS-75 : HATS75
+HATS-76 : HATS76
+HATS-77 : HATS77
+HATS-8 : HATS8
+HD 110067 : HD110067
+HD 137496 : HD137496
+HD 18599 : HD18599
+HD 20329 : HD20329
+HD 80653 : HD80653
+HD 88986 : HD88986
+K2-10 : K210
+K2-100 : K2100
+K2-108 : K2108
+K2-110 : K2110
+K2-111 : K2111
+K2-113 : K2113
+K2-114 : K2114
+K2-115 : K2115
+K2-117 : K2117
+K2-12 : K212
+K2-122 : K2122
+K2-126 : K2126
+K2-127 : K2127
+K2-128 : K2128
+K2-130 : K2130
+K2-131 : K2131
+K2-133 : K2133
+K2-14 : K214
+K2-146 : K2146
+K2-148 : K2148
+K2-151 : K2151
+K2-152 : K2152
+K2-153 : K2153
+K2-154 : K2154
+K2-158 : K2158
+K2-159 : K2159
+K2-160 : K2160
+K2-161 : K2161
+K2-162 : K2162
+K2-163 : K2163
+K2-164 : K2164
+K2-165 : K2165
+K2-168 : K2168
+K2-17 : K217
+K2-170 : K2170
+K2-171 : K2171
+K2-172 : K2172
+K2-173 : K2173
+K2-175 : K2175
+K2-176 : K2176
+K2-177 : K2177
+K2-178 : K2178
+K2-179 : K2179
+K2-180 : K2180
+K2-181 : K2181
+K2-182 : K2182
+K2-184 : K2184
+K2-186 : K2186
+K2-188 : K2188
+K2-189 : K2189
+K2-190 : K2190
+K2-193 : K2193
+K2-194 : K2194
+K2-195 : K2195
+K2-196 : K2196
+K2-197 : K2197
+K2-199 : K2199
+K2-200 : K2200
+K2-201 : K2201
+K2-203 : K2203
+K2-204 : K2204
+K2-206 : K2206
+K2-208 : K2208
+K2-216 : K2216
+K2-216 : K2216
+K2-217 : K2217
+K2-219 : K2219
+K2-220 : K2220
+K2-221 : K2221
+K2-224 : K2224
+K2-225 : K2225
+K2-226 : K2226
+K2-227 : K2227
+K2-228 : K2228
+K2-229 : K2229
+K2-230 : K2230
+K2-241 : K2241
+K2-242 : K2242
+K2-245 : K2245
+K2-246 : K2246
+K2-247 : K2247
+K2-248 : K2248
+K2-250 : K2250
+K2-253 : K2253
+K2-254 : K2254
+K2-255 : K2255
+K2-265 : K2265
+K2-268 : K2268
+K2-27 : K227
+K2-270 : K2270
+K2-271 : K2271
+K2-272 : K2272
+K2-273 : K2273
+K2-274 : K2274
+K2-275 : K2275
+K2-276 : K2276
+K2-277 : K2277
+K2-281 : K2281
+K2-283 : K2283
+K2-286 : K2286
+K2-291 : K2291
+K2-292 : K2292
+K2-294 : K2294
+K2-308 : K2308
+K2-331 : K2331
+K2-341 : K2341
+K2-342 : K2342
+K2-346 : K2346
+K2-35 : K235
+K2-352 : K2352
+K2-354 : K2354
+K2-357 : K2357
+K2-365 : K2365
+K2-366 : K2366
+K2-367 : K2367
+K2-368 : K2368
+K2-369 : K2369
+K2-37 : K237
+K2-371 : K2371
+K2-372 : K2372
+K2-374 : K2374
+K2-376 : K2376
+K2-378 : K2378
+K2-379 : K2379
+K2-38 : K238
+K2-380 : K2380
+K2-381 : K2381
+K2-383 : K2383
+K2-387 : K2387
+K2-388 : K2388
+K2-389 : K2389
+K2-390 : K2390
+K2-391 : K2391
+K2-393 : K2393
+K2-394 : K2394
+K2-395 : K2395
+K2-396 : K2396
+K2-397 : K2397
+K2-398 : K2398
+K2-401 : K2401
+K2-404 : K2404
+K2-407 : K2407
+K2-408 : K2408
+K2-409 : K2409
+K2-416 : K2416
+K2-43 : K243
+K2-44 : K244
+K2-45 : K245
+K2-5 : K25
+K2-62 : K262
+K2-65 : K265
+K2-68 : K268
+K2-70 : K270
+K2-73 : K273
+K2-75 : K275
+K2-77 : K277
+K2-8 : K28
+K2-80 : K280
+K2-81 : K281
+K2-84 : K284
+K2-86 : K286
+K2-98 : K298
+KIC 9663113 : KIC9663113
+KOI-1257 : KOI1257
+KOI-217 : KOI217
+KOI-351 : KOI351
+KOI-3680 : KOI3680
+KOI-7368 : KOI7368
+KOI-984 : KOI984
+Kepler-1002 : Kepler1002
+Kepler-1003 : Kepler1003
+Kepler-1004 : Kepler1004
+Kepler-101 : Kepler101
+Kepler-1011 : Kepler1011
+Kepler-1012 : Kepler1012
+Kepler-1016 : Kepler1016
+Kepler-1019 : Kepler1019
+Kepler-1028 : Kepler1028
+Kepler-103 : Kepler103
+Kepler-1035 : Kepler1035
+Kepler-1037 : Kepler1037
+Kepler-1039 : Kepler1039
+Kepler-1055 : Kepler1055
+Kepler-1061 : Kepler1061
+Kepler-1065 : Kepler1065
+Kepler-1066 : Kepler1066
+Kepler-107 : Kepler107
+Kepler-1072 : Kepler1072
+Kepler-1073 : Kepler1073
+Kepler-1075 : Kepler1075
+Kepler-1082 : Kepler1082
+Kepler-109 : Kepler109
+Kepler-1091 : Kepler1091
+Kepler-1099 : Kepler1099
+Kepler-1106 : Kepler1106
+Kepler-1107 : Kepler1107
+Kepler-1139 : Kepler1139
+Kepler-1148 : Kepler1148
+Kepler-1167 : Kepler1167
+Kepler-117 : Kepler117
+Kepler-1179 : Kepler1179
+Kepler-1181 : Kepler1181
+Kepler-1189 : Kepler1189
+Kepler-1193 : Kepler1193
+Kepler-1205 : Kepler1205
+Kepler-1206 : Kepler1206
+Kepler-1217 : Kepler1217
+Kepler-1228 : Kepler1228
+Kepler-1256 : Kepler1256
+Kepler-1259 : Kepler1259
+Kepler-1270 : Kepler1270
+Kepler-1271 : Kepler1271
+Kepler-1310 : Kepler1310
+Kepler-1311 : Kepler1311
+Kepler-1312 : Kepler1312
+Kepler-1313 : Kepler1313
+Kepler-1315 : Kepler1315
+Kepler-1317 : Kepler1317
+Kepler-1320 : Kepler1320
+Kepler-1323 : Kepler1323
+Kepler-1344 : Kepler1344
+Kepler-1346 : Kepler1346
+Kepler-1356 : Kepler1356
+Kepler-148 : Kepler148
+Kepler-15 : Kepler15
+Kepler-1514 : Kepler1514
+Kepler-1519 : Kepler1519
+Kepler-1520 : Kepler1520
+Kepler-1522 : Kepler1522
+Kepler-1523 : Kepler1523
+Kepler-1524 : Kepler1524
+Kepler-1528 : Kepler1528
+Kepler-1530 : Kepler1530
+Kepler-154 : Kepler154
+Kepler-157 : Kepler157
+Kepler-1604 : Kepler1604
+Kepler-1613 : Kepler1613
+Kepler-1624 : Kepler1624
+Kepler-1627 : Kepler1627
+Kepler-1642 : Kepler1642
+Kepler-1654 : Kepler1654
+Kepler-1655 : Kepler1655
+Kepler-166 : Kepler166
+Kepler-1704 : Kepler1704
+Kepler-198 : Kepler198
+Kepler-289 : Kepler289
+Kepler-30 : Kepler30
+Kepler-323 : Kepler323
+Kepler-4 : Kepler4
+Kepler-41 : Kepler41
+Kepler-412 : Kepler412
+Kepler-418 : Kepler418
+Kepler-421 : Kepler421
+Kepler-422 : Kepler422
+Kepler-423 : Kepler423
+Kepler-424 : Kepler424
+Kepler-425 : Kepler425
+Kepler-426 : Kepler426
+Kepler-427 : Kepler427
+Kepler-428 : Kepler428
+Kepler-43 : Kepler43
+Kepler-44 : Kepler44
+Kepler-46 : Kepler46
+Kepler-460 : Kepler460
+Kepler-463 : Kepler463
+Kepler-464 : Kepler464
+Kepler-466 : Kepler466
+Kepler-472 : Kepler472
+Kepler-473 : Kepler473
+Kepler-474 : Kepler474
+Kepler-475 : Kepler475
+Kepler-476 : Kepler476
+Kepler-485 : Kepler485
+Kepler-487 : Kepler487
+Kepler-488 : Kepler488
+Kepler-490 : Kepler490
+Kepler-491 : Kepler491
+Kepler-494 : Kepler494
+Kepler-495 : Kepler495
+Kepler-497 : Kepler497
+Kepler-498 : Kepler498
+Kepler-501 : Kepler501
+Kepler-502 : Kepler502
+Kepler-507 : Kepler507
+Kepler-511 : Kepler511
+Kepler-514 : Kepler514
+Kepler-518 : Kepler518
+Kepler-523 : Kepler523
+Kepler-529 : Kepler529
+Kepler-530 : Kepler530
+Kepler-531 : Kepler531
+Kepler-532 : Kepler532
+Kepler-533 : Kepler533
+Kepler-535 : Kepler535
+Kepler-536 : Kepler536
+Kepler-537 : Kepler537
+Kepler-539 : Kepler539
+Kepler-541 : Kepler541
+Kepler-543 : Kepler543
+Kepler-546 : Kepler546
+Kepler-547 : Kepler547
+Kepler-548 : Kepler548
+Kepler-550 : Kepler550
+Kepler-552 : Kepler552
+Kepler-553 : Kepler553
+Kepler-554 : Kepler554
+Kepler-557 : Kepler557
+Kepler-56 : Kepler56
+Kepler-561 : Kepler561
+Kepler-562 : Kepler562
+Kepler-564 : Kepler564
+Kepler-565 : Kepler565
+Kepler-568 : Kepler568
+Kepler-578 : Kepler578
+Kepler-585 : Kepler585
+Kepler-586 : Kepler586
+Kepler-590 : Kepler590
+Kepler-592 : Kepler592
+Kepler-605 : Kepler605
+Kepler-608 : Kepler608
+Kepler-609 : Kepler609
+Kepler-611 : Kepler611
+Kepler-612 : Kepler612
+Kepler-618 : Kepler618
+Kepler-619 : Kepler619
+Kepler-620 : Kepler620
+Kepler-621 : Kepler621
+Kepler-628 : Kepler628
+Kepler-629 : Kepler629
+Kepler-634 : Kepler634
+Kepler-636 : Kepler636
+Kepler-645 : Kepler645
+Kepler-648 : Kepler648
+Kepler-650 : Kepler650
+Kepler-656 : Kepler656
+Kepler-664 : Kepler664
+Kepler-666 : Kepler666
+Kepler-667 : Kepler667
+Kepler-669 : Kepler669
+Kepler-670 : Kepler670
+Kepler-673 : Kepler673
+Kepler-674 : Kepler674
+Kepler-677 : Kepler677
+Kepler-678 : Kepler678
+Kepler-680 : Kepler680
+Kepler-682 : Kepler682
+Kepler-683 : Kepler683
+Kepler-684 : Kepler684
+Kepler-685 : Kepler685
+Kepler-686 : Kepler686
+Kepler-688 : Kepler688
+Kepler-690 : Kepler690
+Kepler-693 : Kepler693
+Kepler-694 : Kepler694
+Kepler-695 : Kepler695
+Kepler-696 : Kepler696
+Kepler-697 : Kepler697
+Kepler-700 : Kepler700
+Kepler-702 : Kepler702
+Kepler-703 : Kepler703
+Kepler-706 : Kepler706
+Kepler-707 : Kepler707
+Kepler-708 : Kepler708
+Kepler-714 : Kepler714
+Kepler-715 : Kepler715
+Kepler-718 : Kepler718
+Kepler-719 : Kepler719
+Kepler-720 : Kepler720
+Kepler-722 : Kepler722
+Kepler-723 : Kepler723
+Kepler-724 : Kepler724
+Kepler-725 : Kepler725
+Kepler-728 : Kepler728
+Kepler-729 : Kepler729
+Kepler-731 : Kepler731
+Kepler-734 : Kepler734
+Kepler-736 : Kepler736
+Kepler-74 : Kepler74
+Kepler-740 : Kepler740
+Kepler-743 : Kepler743
+Kepler-75 : Kepler75
+Kepler-750 : Kepler750
+Kepler-755 : Kepler755
+Kepler-762 : Kepler762
+Kepler-767 : Kepler767
+Kepler-77 : Kepler77
+Kepler-773 : Kepler773
+Kepler-775 : Kepler775
+Kepler-78 : Kepler78
+Kepler-782 : Kepler782
+Kepler-785 : Kepler785
+Kepler-796 : Kepler796
+Kepler-799 : Kepler799
+Kepler-80 : Kepler80
+Kepler-805 : Kepler805
+Kepler-807 : Kepler807
+Kepler-808 : Kepler808
+Kepler-814 : Kepler814
+Kepler-815 : Kepler815
+Kepler-816 : Kepler816
+Kepler-817 : Kepler817
+Kepler-818 : Kepler818
+Kepler-822 : Kepler822
+Kepler-825 : Kepler825
+Kepler-827 : Kepler827
+Kepler-828 : Kepler828
+Kepler-831 : Kepler831
+Kepler-842 : Kepler842
+Kepler-843 : Kepler843
+Kepler-845 : Kepler845
+Kepler-849 : Kepler849
+Kepler-855 : Kepler855
+Kepler-856 : Kepler856
+Kepler-857 : Kepler857
+Kepler-858 : Kepler858
+Kepler-860 : Kepler860
+Kepler-867 : Kepler867
+Kepler-872 : Kepler872
+Kepler-890 : Kepler890
+Kepler-891 : Kepler891
+Kepler-893 : Kepler893
+Kepler-904 : Kepler904
+Kepler-905 : Kepler905
+Kepler-908 : Kepler908
+Kepler-912 : Kepler912
+Kepler-914 : Kepler914
+Kepler-915 : Kepler915
+Kepler-922 : Kepler922
+Kepler-932 : Kepler932
+Kepler-943 : Kepler943
+Kepler-950 : Kepler950
+Kepler-951 : Kepler951
+Kepler-952 : Kepler952
+Kepler-953 : Kepler953
+Kepler-954 : Kepler954
+Kepler-956 : Kepler956
+Kepler-957 : Kepler957
+Kepler-960 : Kepler960
+Kepler-972 : Kepler972
+Kepler-975 : Kepler975
+Kepler-990 : Kepler990
+Kepler-994 : Kepler994
+Kepler-996 : Kepler996
+Kepler-997 : Kepler997
+LHS 1815 : LHS1815
+NGTS-1 : NGTS1
+NGTS-15 : NGTS15
+NGTS-16 : NGTS16
+NGTS-17 : NGTS17
+NGTS-18 : NGTS18
+NGTS-20 : NGTS20
+NGTS-21 : NGTS21
+NGTS-23 : NGTS23
+NGTS-25 : NGTS25
+NGTS-3 A : NGTS3A
+NGTS-4 : NGTS4
+OGLE-TR-182 : OGLETR182
+POTS-1 : POTS1
+TIC 172900988 : TIC172900988
+TIC 279401253 : TIC279401253
+TOI-1052 : TOI1052
+TOI-1062 : TOI1062
+TOI-1221 : TOI1221
+TOI-1235 : TOI1235
+TOI-1444 : TOI1444
+TOI-1696 : TOI1696
+TOI-1736 : TOI1736
+TOI-2084 : TOI2084
+TOI-2095 : TOI2095
+TOI-2096 : TOI2096
+TOI-2141 : TOI2141
+TOI-2180 : TOI2180
+TOI-2184 : TOI2184
+TOI-2196 : TOI2196
+TOI-2257 : TOI2257
+TOI-2285 : TOI2285
+TOI-244 : TOI244
+TOI-2525 : TOI2525
+TOI-2589 : TOI2589
+TOI-3757 : TOI3757
+TOI-3984 A : TOI3984A
+TOI-4127 : TOI4127
+TOI-4184 : TOI4184
+TOI-4201 : TOI4201
+TOI-4562 : TOI4562
+TOI-4582 : TOI4582
+TOI-4860 : TOI4860
+TOI-5205 : TOI5205
+TOI-5293 A : TOI5293A
+TOI-5542 : TOI5542
+TOI-733 : TOI733
+TOI-763 : TOI763
+TOI-784 : TOI784
+WASP-59 : WASP59
+WTS-2 : WTS2
+Wendelstein-1 : Wendelstein1
+Wendelstein-2 : Wendelstein2
+TOI-6086 : TOI6086
+GJ 12 : GJ12
+TOI-1135 : TOI1135
+TOI-4336 A : TOI336A
+SPECULOOS-3 : SPECULOOS3
+TOI-904 : TOI904
+TOI-4559 : TOI4559
+TOI-771 : TOI771
+TOI-6008 : TOI6008
+TOI-5799 : TOI5799
+TOI-2120 : TOI2120
+TOI-782 : TOI782
     '''
     return
 # -------------------- -----------------------------------------------

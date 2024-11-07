@@ -620,7 +620,7 @@ def plot_fitsVStruths(truth_values, fit_values, fit_errors, prior_ranges,
     '''
 
     # for ppt, stack the two panels on top of each other
-    switch_to_vert_stack = True
+    switch_to_vert_stack = False
 
     paramlist = []
     for param in ['T', '[X/H]', '[C/O]', '[N/O]']:

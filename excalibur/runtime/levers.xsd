@@ -167,6 +167,7 @@
       <xs:enumeration value="JWST-NIRISS-NIS-CLEAR-GR700XD"/>
       <xs:enumeration value="JWST-NIRSPEC-NRS-CLEAR-PRISM"/>
       <xs:enumeration value="JWST-NIRSPEC-NRS-F290LP-G395H"/>
+      <xs:enumeration value="JWST-NIRSPEC-NRS-F290LP-G395M"/>
       <xs:enumeration value="Spitzer-IRAC-IR-36-SUB"/>
       <xs:enumeration value="Spitzer-IRAC-IR-45-SUB"/>
     </xs:restriction>

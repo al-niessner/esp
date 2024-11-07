@@ -1412,9 +1412,12 @@ def analysis(aspects, filt, out, verbose=False):
         # analysistargetlists.append({
         #    'targetlistname':'MCS Feb.2024 max-visits=25',
         #    'targets':alltargetlists['arielMCS_Feb2024_maxVisits25']})
+        # analysistargetlists.append({
+        #    'targetlistname':'2-year science time; Thorngren mmw (Aug.2024)',
+        #    'targets':alltargetlists['ariel_Aug2024_2years']})
         analysistargetlists.append({
-            'targetlistname':'2-year science time; Thorngren mmw (Aug.2024)',
-            'targets':alltargetlists['ariel_Aug2024_2years']})
+            'targetlistname':'2-year science time; Thorngren mmw (Nov.2024)',
+            'targets':alltargetlists['ariel_Nov2024_2years']})
     else:
         analysistargetlists.append({
             'targetlistname':'All Excalibur targets',
