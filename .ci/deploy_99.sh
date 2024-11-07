@@ -28,7 +28,7 @@ EOF
     do
         sleep 600
     done
-    ${PWD}/.ci/update_runids.py -L /proj/sdp/data/logs -l ops.log -m /proj/sdp/ops/front-end/markdown/about.md
+    .ci/update_runids.py -L /proj/sdp/data/logs -l ops.log -m /proj/sdp/ops/front-end/markdown/about.md
     sendmail -f no-reply@esp.jpl.nasa.gov sdp@jpl.nasa.gov<<EOF
 Subject: esp released
 
