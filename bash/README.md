@@ -49,6 +49,21 @@ Putting it all together:
 
 In bash, one can define an environment variable for the life of a command by preceeding the command with the variable definition. In most other shells, `RUNID` would have to be defined separately from executing the command.
 
+### pp_reset.sh
+
+The tool will empty the schedule of jobs, optionally archive the database, and then restart the pipeline. It works with both the operational pipeline and private pipelines..
+
+To reset private pipeline with archive: `pp_reset.sh`
+
+To reset private pipeline without archive: `DAWGIE_ARCHIVE=false pp_reset.sh 8080`
+
+To reset operational pipline: `DAWGIE_PIPELINE_HOST=excalibur.jpl.nasa.gov pp_reset.sh 8080`
+
+The script triggers off these environment variables:
+- `DAWGIE_FE_PORT` - probably already defined in your bash profile and can be overriden by using the script argument. Default if not defined 8080.
+- `DAWGIE_PIPELINE_HOST` - for private pipelines, use computer name running the pipeline like mentor3. Default if not defined excalibur.jpl.nasa.gov.
+- `DAWGIE_SSL_PEM_MYSELF` - should default to your certificate and will use the one you have defined in your bash profile. Default if not defined ${HOME}/.ssh/myself.pem.
+
 ### pp_start.sh
 
 The tool will start a private pipeline. If you are on the mentor machines, you must supply an argument because TCP/IP ports cannot be shared amoung private pipelines. Nothing will force you to do this except an error saying port already in use. On your laptop, can just use the default port.
