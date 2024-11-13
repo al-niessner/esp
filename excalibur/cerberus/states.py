@@ -27,7 +27,7 @@ class xslibSV(dawgie.StateVector):
         '''name ds'''
         return self.__name
 
-    def view(self, visitor:dawgie.Visitor)->None:
+    def view(self, caller:excalibur.identity, visitor:dawgie.Visitor)->None:
         '''view ds'''
         if self['STATUS'][-1]:
             myfig = plt.figure()
@@ -44,7 +44,7 @@ class xslibSV(dawgie.StateVector):
     pass
 
 class rlsSV(dawgie.StateVector):
-    '''
+    """
     State Vector (SV) as python dict {}
 
     > SV.keys()
@@ -77,7 +77,7 @@ class rlsSV(dawgie.StateVector):
     KEY - modelplot
     CONTENT - numpy array
     Model + Data plot
-    '''
+    """
     def __init__(self, name):
         '''1.1.1: GMR - Fixed view for low model selection preference'''
         self._version_ = dawgie.VERSION(1,1,1)
@@ -91,7 +91,7 @@ class rlsSV(dawgie.StateVector):
         '''dataset name'''
         return self.__name
 
-    def view(self, visitor:dawgie.Visitor)->None:
+    def view(self, caller:excalibur.identity, visitor:dawgie.Visitor)->None:
         '''view ds'''
         if self['STATUS'][-1]:
             for p in self['data']:
@@ -147,7 +147,7 @@ class atmosSV(dawgie.StateVector):
         '''name ds'''
         return self.__name
 
-    def view(self, visitor:dawgie.Visitor)->None:
+    def view(self, caller:excalibur.identity, visitor:dawgie.Visitor)->None:
         '''view ds'''
         if self['STATUS'][-1]:
             myfig = plt.figure()
@@ -180,22 +180,26 @@ class resSV(dawgie.StateVector):
         '''name ds'''
         return self.__name
 
-    def view(self, visitor:dawgie.Visitor)->None:
+    def view(self, caller:excalibur.identity, visitor:dawgie.Visitor)->None:
         '''view ds'''
         if self['STATUS'][-1]:
             for target,planetLetter in zip(self['target'],self['planets']):
                 for savedresult in self['data'][planetLetter].keys():
                     if 'plot' in savedresult:
-                        if savedresult=='plot_spectrum':
+                        if savedresult.startswith('plot_spectrum'):
                             plotlabel = 'best-fit spectrum'
-                        elif savedresult=='plot_corner':
+                        elif savedresult.startswith('plot_corner'):
                             plotlabel = 'corner plot'
-                        elif savedresult=='plot_vsprior':
+                        elif savedresult.startswith('plot_vsprior'):
                             plotlabel = 'improvement past prior'
-                        elif savedresult=='plot_walkerevol':
+                        elif savedresult.startswith('plot_walkerevol'):
                             plotlabel = 'walker evolution'
                         else:
                             plotlabel = 'unknown plottype plot'
+                        if savedresult.endswith('PHOTOCHEM'):
+                            plotlabel = plotlabel + ' : DISEQ MODEL'
+                        else:
+                            plotlabel = plotlabel + ' : TEQ MODEL'
                         textlabel = '--------- ' + plotlabel + \
                             ' for '+target+' '+planetLetter + ' ---------'
                         visitor.add_image('...', textlabel,
@@ -217,21 +221,31 @@ class analysisSV(dawgie.StateVector):
         '''name ds'''
         return self.__name
 
-    def view(self, visitor:dawgie.Visitor)->None:
+    def view(self, caller:excalibur.identity, visitor:dawgie.Visitor)->None:
         '''view ds'''
         if self['STATUS'][-1]:
             for savedresult in self['data'].keys():
                 if 'plot' in savedresult:
-                    if savedresult=='plot_fitT':
-                        plotlabel = 'T_eff : retrieved vs input values'
-                    elif savedresult=='plot_fitMetal':
-                        plotlabel = 'Metallicity : retrieved vs input values'
-                    elif savedresult=='plot_fitCO':
-                        plotlabel = 'C/O : retrieved vs input values'
-                    elif savedresult=='plot_massVmetals':
+                    if savedresult=='plot_massVmetals':
                         plotlabel = 'Planet Mass vs Metallicity'
+                    elif savedresult=='plot_fitT':
+                        plotlabel = 'T_eff'
+                    elif savedresult=='plot_fitMetal':
+                        plotlabel = 'Metallicity'
+                    elif savedresult=='plot_fitCO':
+                        plotlabel = 'C/O'
+                    elif savedresult=='plot_fitNO':
+                        plotlabel = 'N/O'
                     else:
                         plotlabel = 'unknown plottype plot'
+                    # the plot titles are different for real data vs simulated
+                    # use __name to decide it it's a comparison against truth
+                    if savedresult in ['plot_fitT','plot_fitMetal','plot_fitCO','plot_fitNO']:
+                        if 'sim' in self.__name:
+                            plotlabel = plotlabel + ' : retrieved vs input values'
+                        else:
+                            plotlabel = plotlabel + ' : retrieved values and uncertainties'
+
                     textlabel = '--------- ' + plotlabel + ' ---------'
                     visitor.add_image('...', textlabel, self['data'][savedresult])
         return

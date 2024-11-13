@@ -16,12 +16,19 @@ tn = os.environ.get('TARGET_NAME', None)
 
 if fep: dawgie.util.set_ports(int(fep))
 
-dawgie.security.initialize(os.path.expandvars(os.path.expanduser
-                                              (dawgie.context.gpg_home)))
+dawgie.security.initialize(os.path.expandvars
+                           (os.path.expanduser
+                            (dawgie.context.guest_public_keys)))
 dawgie.db.reopen()
-if tn == '':
-    excalibur.classifier.bot.Agent('classifier', 4, rid).do()
+
+if tn in ['', '__all__']:
+    name = 'summarize_flags'
+    subtasks = excalibur.classifier.bot.Agent('classifier', 4, rid)
 else:
-    excalibur.classifier.bot.Actor('classifier', 4, rid, tn).do()
+    name = ['inference', 'flags', None][-1]  # 0 is kicked off list, -1 to run them all
+    subtasks = excalibur.classifier.bot.Actor('classifier', 4, rid, tn)
+    pass
+
+subtasks.do(name)
 dawgie.db.close()
 dawgie.security.finalize()

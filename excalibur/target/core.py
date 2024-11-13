@@ -1,9 +1,12 @@
 '''target core ds'''
 # -- IMPORTS -- ------------------------------------------------------
 import os
-import numpy
-import shutil
 import re
+import json
+import time
+import shutil
+
+import requests
 import tempfile
 import subprocess
 import logging; log = logging.getLogger(__name__)
@@ -11,12 +14,14 @@ import logging; log = logging.getLogger(__name__)
 import dawgie
 import dawgie.db
 
+import excalibur.runtime.binding as rtbind
+
 import excalibur.target as trg
 import excalibur.target.edit as trgedit
-import excalibur.system.core as syscore
+import excalibur.target.mast_api_utils as masttool
 
+import numpy as np
 import astropy.io.fits as pyfits
-import urllib.error
 import urllib.request as urlrequest
 # ------------- ------------------------------------------------------
 # -- URLTRICK -- -----------------------------------------------------
@@ -75,7 +80,7 @@ def scrapeids(ds:dawgie.Dataset, out, web, genIDs=True):
     targets = targets.split('\n')
     targets = [t.strip() for t in targets if t.replace(' ', '').__len__() > 0]
     tn = os.environ.get('TARGET_NAME', None)
-    if tn is not None:
+    if tn is not None and tn != '':
         found_target_list = None
         for target in targets:
             if tn == target.split(':')[0].strip(): found_target_list = target
@@ -90,17 +95,20 @@ def scrapeids(ds:dawgie.Dataset, out, web, genIDs=True):
     for target in targets:
         parsedstr = target.split(':')
         parsedstr = [t.strip() for t in parsedstr]
-        out['starID'][parsedstr[0]] = {'planets':[], 'PID':[], 'aliases':[]}
+        out['starID'][parsedstr[0]] = {'planets':[], 'PID':[], 'aliases':[],
+                                       'observatory':[], 'datatable':[]}
         if parsedstr[1]:
             aliaslist = parsedstr[1].split(',')
             aliaslist = [a.strip() for a in aliaslist if a.strip()]
             out['starID'][parsedstr[0]]['aliases'].extend(aliaslist)
             pass
         if genIDs:
-            # pylint: disable=protected-access
+            # necessary retargeting, pylint: disable=protected-access
             dawgie.db.connect(trg.algorithms.create(), ds._bot(), parsedstr[0]).load()
             pass
         pass
+    # new additions 6/5/24:
+    #   lower/upper limit flags (particularly for eccentricity)
     # new additions 4/14/23:
     #   pl_orblper (omega is used as prior in the transit fitting)
     #   pl_trandep (transit depth    is not used, but load it in, in case we want it later)
@@ -112,7 +120,7 @@ def scrapeids(ds:dawgie.Dataset, out, web, genIDs=True):
     #  actually these additional references are only in the PSCompPars table, not the PS table
     # NO  sy_hmag_reflink (H magnitude reference can differ from the star param reference)
     # NO  sy_age_reflink  (age reference can differ from the star param reference)
-    cols = "hostname,pl_letter,rowupdate,st_refname,pl_refname,sy_pnum,pl_orbper,pl_orbpererr1,pl_orbpererr2,pl_orbsmax,pl_orbsmaxerr1,pl_orbsmaxerr2,pl_orbeccen,pl_orbeccenerr1,pl_orbeccenerr2,pl_orbincl,pl_orbinclerr1,pl_orbinclerr2,pl_bmassj,pl_bmassjerr1,pl_bmassjerr2,pl_radj,pl_radjerr1,pl_radjerr2,pl_dens,pl_denserr1,pl_denserr2,pl_eqt,pl_eqterr1,pl_eqterr2,pl_tranmid,pl_tranmiderr1,pl_tranmiderr2,pl_imppar,pl_impparerr1,pl_impparerr2,st_teff,st_tefferr1,st_tefferr2,st_mass,st_masserr1,st_masserr2,st_rad,st_raderr1,st_raderr2,st_lum,st_lumerr1,st_lumerr2,st_logg,st_loggerr1,st_loggerr2,st_dens,st_denserr1,st_denserr2,st_met,st_meterr1,st_meterr2,sy_hmag,sy_hmagerr1,sy_hmagerr2,st_age,st_ageerr1,st_ageerr2,pl_orblper,pl_orblpererr1,pl_orblpererr2,pl_trandep,pl_trandeperr1,pl_trandeperr2,pl_insol,pl_insolerr1,pl_insolerr2,pl_trandur,pl_trandurerr1,pl_trandurerr2,pl_ratdor,pl_ratdorerr1,pl_ratdorerr2,pl_ratror,pl_ratrorerr1,pl_ratrorerr2,sy_dist,sy_disterr1,sy_disterr2,st_spectype"
+    cols = "hostname,pl_letter,rowupdate,st_refname,pl_refname,sy_pnum,pl_orbper,pl_orbpererr1,pl_orbpererr2,pl_orbperlim,pl_orbsmax,pl_orbsmaxerr1,pl_orbsmaxerr2,pl_orbsmaxlim,pl_orbeccen,pl_orbeccenerr1,pl_orbeccenerr2,pl_orbeccenlim,pl_orbincl,pl_orbinclerr1,pl_orbinclerr2,pl_orbincllim,pl_bmassj,pl_bmassjerr1,pl_bmassjerr2,pl_bmassjlim,pl_radj,pl_radjerr1,pl_radjerr2,pl_radjlim,pl_dens,pl_denserr1,pl_denserr2,pl_denslim,pl_eqt,pl_eqterr1,pl_eqterr2,pl_eqtlim,pl_tranmid,pl_tranmiderr1,pl_tranmiderr2,pl_tranmidlim,pl_imppar,pl_impparerr1,pl_impparerr2,pl_impparlim,st_teff,st_tefferr1,st_tefferr2,st_tefflim,st_mass,st_masserr1,st_masserr2,st_masslim,st_rad,st_raderr1,st_raderr2,st_radlim,st_lum,st_lumerr1,st_lumerr2,st_lumlim,st_logg,st_loggerr1,st_loggerr2,st_logglim,st_dens,st_denserr1,st_denserr2,st_denslim,st_met,st_meterr1,st_meterr2,st_metlim,sy_jmag,sy_jmagerr1,sy_jmagerr2,sy_hmag,sy_hmagerr1,sy_hmagerr2,sy_kmag,sy_kmagerr1,sy_kmagerr2,st_age,st_ageerr1,st_ageerr2,st_agelim,pl_orblper,pl_orblpererr1,pl_orblpererr2,pl_orblperlim,pl_trandep,pl_trandeperr1,pl_trandeperr2,pl_trandeplim,pl_insol,pl_insolerr1,pl_insolerr2,pl_insollim,pl_trandur,pl_trandurerr1,pl_trandurerr2,pl_trandurlim,pl_ratdor,pl_ratdorerr1,pl_ratdorerr2,pl_ratdorlim,pl_ratror,pl_ratrorerr1,pl_ratrorerr2,pl_ratrorlim,sy_dist,sy_disterr1,sy_disterr2,st_spectype"
     uri_ipac_query = {
         "select": cols,
         "from": 'ps',
@@ -140,9 +148,7 @@ def createfltrs(out):
     Create filter name
     '''
     created = False
-    filters = trgedit.activefilters.__doc__
-    filters = filters.split('\n')
-    filters = [t.strip() for t in filters if t.replace(' ', '')]
+    filters = [str(fn) for fn in rtbind.filter_names.values()]
     out['activefilters']['TOTAL'] = len(filters)
     out['activefilters']['NAMES'] = filters
     if filters:
@@ -164,51 +170,128 @@ def autofillversion():
     1.1.5: added Hmag, L*; fixed FEH* problems
     1.2.0: new Exoplanet Archive tables and TAP protocol
     1.2.1: non-default parameters included; only two Exoplanet Archive queries; RHO* filled in by R*,M*
+    2.0.1: requests are now using MAST api
+    2.0.2: multiple attempts for the mast query with delay
     '''
-    return dawgie.VERSION(1,2,1)
+    return dawgie.VERSION(2,0,2)
 
-def autofill(ident, thistarget, out,
-             queryurl="https://archive.stsci.edu/hst/search.php?target=",
-             action="&action=Search&resolver=SIMBAD&radius=3.0",
-             outfmt="&outputformat=CSV&max_records=100000",
-             opt="&sci_aec=S"):
-    '''autofill ds'''
+def autofill(ident, thistarget, out, allowed_filters, searchrad=0.2, ntrymax=4):
+    '''Queries MAST for available data and parses NEXSCI data into tables'''
 
-    out['starID'][thistarget] = ident['starID'][thistarget]
+    out['starID'][thistarget] = ident['starIDs']['starID'][thistarget]
     targetID = [thistarget]
 
     # AUTOFILL WITH MAST QUERY ---------------------------------------
-    solved = True
-    querytarget = thistarget.replace(' ', '+')
-    queryform = queryurl+querytarget+action+outfmt+opt
-    failure = ['target not resolved, continue\n\n', 'no rows found\n\n',
-               'target not resolved, continue', 'no rows found']
-    with urltrick(queryform) as temp: framelist = temp.decode('utf-8')
-    if framelist not in failure:
-        framelist = framelist.split('\n')
-        header = framelist[0].split(',')
-        pidindex = header.index('Proposal ID')
-        aliasindex = header.index('Target Name')
+    solved = False
+    # Using new MAST API instead of handmade urlrequest
+    # 1 - solves for ra, dec
+    # Cannot rely on target_name since proposers gets too inventive
+    request = {'service':'Mast.Name.Lookup',
+               'params':{'input':thistarget, 'format':'json'}}
+
+    # Attempting with delay if server gives us the middle finger until ntrymax attempts
+    def waitabit(myseconds, maxtry=ntrymax):
+        def mydecorator(whatever):
+            def wrapper(*args, **kwargs):
+                ntry = 0
+                while ntry < maxtry:
+                    answer = whatever(*args, **kwargs)
+                    if answer: return answer
+                    log.warning('--< Trying again, %s/%s with %s s delay >--',
+                                ntry+1, maxtry, myseconds*(10**ntry))
+                    time.sleep(myseconds*(10**ntry))
+                    ntry += 1
+                    pass
+                return ''
+            return wrapper
+        return mydecorator
+
+    @waitabit(np.random.randint(low=1, high=10))
+    def mastpoke(request):
+        hr, outstr = masttool.mast_query(request)
+        if not outstr:
+            log.warning('--< TARGET AUTOFILL: Empty MAST answer: %s >--', hr)
+            pass
+        return outstr
+
+    outstr = mastpoke(request)
+    if outstr:
+        outjson = json.loads(outstr)
+        if outjson['resolvedCoordinate']:
+            ra = outjson['resolvedCoordinate'][0]['ra']
+            dec = outjson['resolvedCoordinate'][0]['decl']
+            solved = True
+            pass
+        pass
+
+    # 2 - searches for observations
+    # Cant say I dont comment my code anymore
+    if solved:
+        request = {'service':'Mast.Caom.Cone',
+                   'params':{'ra':ra,
+                             'dec':dec,
+                             'radius':searchrad},
+                   'format':'json',
+                   'pagesize':250000,  # this seems to help HD 209458 (~221K obs)
+                   'removenullcolumns':True,
+                   'removecache':True}
+        _h, outstr = masttool.mast_query(request)
+        outjson = json.loads(outstr)
+        # 3 - activefilters filtering on TELESCOPE INSTRUMENT FILTER
+        targettable = []
+        platformlist = []
+        if 'data' not in outjson: outjson['data'] = []  # special case for TOI-1338
+        log.warning('--< TARGET AUTOFILL: %s  #-of-obs %s >--', thistarget, len(outjson['data']))
+        for obs in outjson['data']:
+            for f in allowed_filters:
+                if obs['obs_collection'] is not None:
+                    pfcond = f.split('-')[0].upper() in obs['obs_collection']
+                else: pfcond = False
+                if obs['instrument_name'] is not None:
+                    nscond = f.split('-')[1] in obs['instrument_name']
+                else:
+                    nscond = False
+                if f.split('-')[1]=='sim':  # skip any simulated instruments
+                    flcond = False
+                elif (f.split('-')[0] not in ['Spitzer']) and (obs['filters'] is not None):
+                    flcond = f.split('-')[3] in obs['filters']
+                else:
+                    sptzfl = None
+                    if f.split('-')[3] in ['36']: sptzfl = 'IRAC1'
+                    if f.split('-')[3] in ['45']: sptzfl = 'IRAC2'
+                    if obs['filters'] is not None: flcond = sptzfl in obs['filters']
+                    else: flcond = False
+                if pfcond and nscond and flcond:
+                    targettable.append(obs)
+                    platformlist.append(obs['obs_collection'])
+                pass
+            pass
+        log.warning('--< TARGET AUTOFILL: %s  in targettable %s >--',thistarget, len(targettable))
+        if not targettable: solved = False
+        # Note: If we use data that are not known by MAST but are on disk
+        # this will also return False
+        # 4 - pid filtering
         pidlist = []
         aliaslist = []
-        for frame in framelist[2:-1]:
-            row = frame.split(',')
-            pidlist.append(row[pidindex])
-            aliaslist.append(row[aliasindex])
+        obslist = []
+        for item, pf in zip(targettable, platformlist):
+            if item['proposal_id'] not in pidlist:
+                pidlist.append(item['proposal_id'])
+                aliaslist.append(item['target_name'])
+                obslist.append(pf)
+                pass
             pass
-        pidlist = list(set(pidlist))
-        aliaslist = list(set(aliaslist))
         out['starID'][thistarget]['aliases'].extend(aliaslist)
         out['starID'][thistarget]['PID'].extend(pidlist)
-        solved = True
-        out['STATUS'].append(True)
+        out['starID'][thistarget]['observatory'].extend(obslist)
+        out['starID'][thistarget]['datatable'].extend(targettable)
         pass
-    solved = True  # target list autofill KP
+    out['STATUS'].append(solved)
 
     # AUTOFILL WITH NEXSCI EXOPLANET TABLE, DEFAULTS ONLY ---------------------------
     merged = False
-    targetID.extend(ident['starID'][thistarget]['aliases'])
-    response = ident['nexsciDefaults']
+    targetID.extend(ident['starIDs']['starID'][thistarget]['aliases'])
+    response = ident['starIDs']['nexsciDefaults']
     header = response[0].split(',')
     # list all keys contained in csv
     # using tuples of form (a, b) where a is the key name
@@ -217,22 +300,22 @@ def autofill(ident, thistarget, out,
     # GMR: They are continuously changing the format: creating translatekeys()
     matchlist = translatekeys(header)
     banlist = ['star', 'planet', 'update', 'ref', 'ref_st', 'ref_pl', 'np']
-    plist = ['period', 'period_uperr', 'period_lowerr', 'period_ref',
-             'sma', 'sma_uperr', 'sma_lowerr', 'sma_ref',
-             'ecc', 'ecc_uperr', 'ecc_lowerr', 'ecc_ref',
-             'inc', 'inc_uperr', 'inc_lowerr', 'inc_ref',
-             'mass', 'mass_uperr', 'mass_lowerr', 'mass_ref',
-             'rp', 'rp_uperr', 'rp_lowerr', 'rp_ref',
-             'rho', 'rho_uperr', 'rho_lowerr', 'rho_ref',
-             'teq', 'teq_uperr', 'teq_lowerr', 'teq_ref',
-             't0', 't0_uperr', 't0_lowerr', 't0_ref',
-             'impact', 'impact_uperr', 'impact_lowerr', 'impact_ref',
-             'omega','omega_uperr','omega_lowerr','omega_ref',
-             'trandepth','trandepth_uperr','trandepth_lowerr','trandepth_ref',
-             'trandur','trandur_uperr','trandur_lowerr','trandur_ref',
-             'insol','insol_uperr','insol_lowerr','insol_ref',
-             'ars','ars_uperr','ars_lowerr','ars_ref',
-             'rprs','rprs_uperr','rprs_lowerr','rprs_ref']
+    plist = ['period', 'period_uperr', 'period_lowerr', 'period_ref', 'period_lim',
+             'sma', 'sma_uperr', 'sma_lowerr', 'sma_ref', 'sma_lim',
+             'ecc', 'ecc_uperr', 'ecc_lowerr', 'ecc_ref', 'ecc_lim',
+             'inc', 'inc_uperr', 'inc_lowerr', 'inc_ref', 'inc_lim',
+             'mass', 'mass_uperr', 'mass_lowerr', 'mass_ref', 'mass_lim',
+             'rp', 'rp_uperr', 'rp_lowerr', 'rp_ref', 'rp_lim',
+             'rho', 'rho_uperr', 'rho_lowerr', 'rho_ref', 'rho_lim',
+             'teq', 'teq_uperr', 'teq_lowerr', 'teq_ref', 'teq_lim',
+             't0', 't0_uperr', 't0_lowerr', 't0_ref', 't0_lim',
+             'impact', 'impact_uperr', 'impact_lowerr', 'impact_ref', 'impact_lim',
+             'omega','omega_uperr','omega_lowerr','omega_ref', 'omega_lim',
+             'trandepth','trandepth_uperr','trandepth_lowerr','trandepth_ref', 'trandepth_lim',
+             'trandur','trandur_uperr','trandur_lowerr','trandur_ref', 'trandur_lim',
+             'insol','insol_uperr','insol_lowerr','insol_ref', 'insol_lim',
+             'ars','ars_uperr','ars_lowerr','ars_ref', 'ars_lim',
+             'rprs','rprs_uperr','rprs_lowerr','rprs_ref', 'rprs_lim']
     for line in response:
         elem = line.split(',')
         elem = clean_elems(elem)  # remove things such as bounding quotation marks
@@ -251,22 +334,22 @@ def autofill(ident, thistarget, out,
                         out['starID'][thistarget][thisplanet][key] = ['']
                         pass
                     # GMR: Inits with empty lists
-                    blank_keys = ['period_units', 'period_ref',
-                                  'sma_units', 'sma_ref',
-                                  'ecc_units', 'ecc_ref',
-                                  'inc_units', 'inc_ref',
-                                  'mass_units', 'mass_ref',
-                                  'rp_units', 'rp_ref',
-                                  'rho_units', 'rho_ref',
-                                  'teq_units', 'teq_ref',
-                                  't0_units', 't0_ref',
-                                  'impact_units', 'impact_ref',
-                                  'omega_units', 'omega_ref',
-                                  'trandepth_units', 'trandepth_ref',
-                                  'trandur_units', 'trandur_ref',
-                                  'insol_units', 'insol_ref',
-                                  'ars_units', 'ars_ref',
-                                  'rprs_units', 'rprs_ref']
+                    blank_keys = ['period_units', 'period_ref', 'period_lim',
+                                  'sma_units', 'sma_ref', 'sma_lim',
+                                  'ecc_units', 'ecc_ref', 'ecc_lim',
+                                  'inc_units', 'inc_ref', 'inc_lim',
+                                  'mass_units', 'mass_ref', 'mass_lim',
+                                  'rp_units', 'rp_ref', 'rp_lim',
+                                  'rho_units', 'rho_ref', 'rho_lim',
+                                  'teq_units', 'teq_ref', 'teq_lim',
+                                  't0_units', 't0_ref', 't0_lim',
+                                  'impact_units', 'impact_ref', 'impact_lim',
+                                  'omega_units', 'omega_ref', 'omega_lim',
+                                  'trandepth_units', 'trandepth_ref', 'trandepth_lim',
+                                  'trandur_units', 'trandur_ref', 'trandur_lim',
+                                  'insol_units', 'insol_ref', 'insol_lim',
+                                  'ars_units', 'ars_ref', 'ars_lim',
+                                  'rprs_units', 'rprs_ref', 'rprs_lim']
                     for key in blank_keys:
                         out['starID'][thistarget][thisplanet][key] = []
                         pass
@@ -295,8 +378,12 @@ def autofill(ident, thistarget, out,
                     out['starID'][thistarget]['AGE*_lowerr'] = []
                     out['starID'][thistarget]['AGE*_units'] = []
                     out['starID'][thistarget]['AGE*_ref'] = []
+                    out['starID'][thistarget]['Jmag_units'] = []
+                    out['starID'][thistarget]['Jmag_ref'] = []
                     out['starID'][thistarget]['Hmag_units'] = []
                     out['starID'][thistarget]['Hmag_ref'] = []
+                    out['starID'][thistarget]['Kmag_units'] = []
+                    out['starID'][thistarget]['Kmag_ref'] = []
                     out['starID'][thistarget]['dist_units'] = []
                     out['starID'][thistarget]['dist_ref'] = []
                     out['starID'][thistarget]['spTyp'] = []
@@ -304,7 +391,6 @@ def autofill(ident, thistarget, out,
                     out['starID'][thistarget]['spTyp_lowerr'] = []
                     out['starID'][thistarget]['spTyp_units'] = []
                     out['starID'][thistarget]['spTyp_ref'] = []
-                    pass
                 ref_pl = elem[header.index('pl_refname')]
                 ref_pl = ref_pl.split('</a>')[0]
                 ref_pl = ref_pl.split('target=ref>')[-1]
@@ -355,10 +441,8 @@ def autofill(ident, thistarget, out,
             for sk in skeys:
                 if out['starID'][thistarget][sk]: addme = ref_st
                 else: addme = ''
-                if not out['starID'][thistarget][sk+'_ref']:
-                    out['starID'][thistarget][sk+'_ref'].append(addme)
-                    pass
-                pass
+                # if not out['starID'][thistarget][sk+'_ref']:
+                out['starID'][thistarget][sk+'_ref'].append(addme)
             # GMR: Adding units to the stellar dict
             out['starID'][thistarget]['R*_units'].append('[Rsun]')
             out['starID'][thistarget]['M*_units'].append('[Msun]')
@@ -367,20 +451,25 @@ def autofill(ident, thistarget, out,
             out['starID'][thistarget]['LOGG*_units'].append('log10[cm.s-2]')
             out['starID'][thistarget]['RHO*_units'].append('[g.cm-3]')
             out['starID'][thistarget]['AGE*_units'].append('[Gyr]')
+            out['starID'][thistarget]['Jmag_units'].append('[mag]')
             out['starID'][thistarget]['Hmag_units'].append('[mag]')
+            out['starID'][thistarget]['Kmag_units'].append('[mag]')
             out['starID'][thistarget]['dist_units'].append('[pc]')
             out['starID'][thistarget]['spTyp_units'].append('')
             # spectral type doesn't have uncertainties. fill in here by hand
             out['starID'][thistarget]['spTyp_uperr'].append('')
             out['starID'][thistarget]['spTyp_lowerr'].append('')
+            # out['starID'][thistarget]['spTyp_lim'].append('')
             merged = True
             pass
         pass
 
     # AUTOFILL WITH NEXSCI FULL TABLE, INCLUDING NON-DEFAULTS ----------------------------
-    response = ident['nexsciFulltable']
+    response = ident['starIDs']['nexsciFulltable']
     header = response[0].split(',')
+    # print('header',header)
     matchkey = translatekeys(header)
+    # print('matchkey',matchkey)
     for line in response:
         elem = line.split(',')
         elem = clean_elems(elem)
@@ -423,13 +512,16 @@ def autofill(ident, thistarget, out,
                         if key=='spTyp':
                             out['starID'][thistarget][key+'_uperr'].append('')
                             out['starID'][thistarget][key+'_lowerr'].append('')
-                            pass
+                            # out['starID'][thistarget][key+'_lim'].append('')
                         pass
                     pass
                 pass
             merged = True
             pass
         pass
+
+    # print('final out',out['starID'][thistarget])
+    # print('final out',out['starID'][thistarget].keys())
 
     # FINALIZE OUTPUT ------------------------------------------------
     if merged:
@@ -449,7 +541,9 @@ def autofill(ident, thistarget, out,
         out['exts'].extend(['_uperr', '_lowerr', '_units', '_ref'])
         out['STATUS'].append(True)
         pass
-    status = solved and merged
+    # GMR: Some targets cannot be solved but we still need them for sims.
+    # Changing this condition to OR
+    status = solved or merged
     return status
 
 def clean_elem(elem):
@@ -479,103 +573,142 @@ def translatekeys(header):
         elif 'pl_orbper' == thiskey: xclbrkey = 'period'
         elif 'pl_orbpererr1' == thiskey: xclbrkey = 'period_uperr'
         elif 'pl_orbpererr2' == thiskey: xclbrkey = 'period_lowerr'
+        elif 'pl_orbperlim' == thiskey: xclbrkey = 'period_lim'
         elif 'pl_orbperreflink' == thiskey: xclbrkey = 'period_ref'
         elif 'pl_orbsmax' == thiskey: xclbrkey = 'sma'
         elif 'pl_smax' == thiskey: xclbrkey = 'sma'
         elif 'pl_orbsmaxerr1' == thiskey: xclbrkey = 'sma_uperr'
         elif 'pl_smaxerr1' == thiskey: xclbrkey = 'sma_uperr'
         elif 'pl_orbsmaxerr2' == thiskey: xclbrkey = 'sma_lowerr'
+        elif 'pl_orbsmaxlim' == thiskey: xclbrkey = 'sma_lim'
         elif 'pl_smaxerr2' == thiskey: xclbrkey = 'sma_lowerr'
+        elif 'pl_smaxlim' == thiskey: xclbrkey = 'sma_lim'
         elif 'pl_smaxreflink' == thiskey: xclbrkey = 'sma_ref'
         elif 'pl_orbeccen' == thiskey: xclbrkey = 'ecc'
         elif 'pl_eccen' == thiskey: xclbrkey = 'ecc'
         elif 'pl_orbeccenerr1' == thiskey: xclbrkey = 'ecc_uperr'
         elif 'pl_eccenerr1' == thiskey: xclbrkey = 'ecc_uperr'
         elif 'pl_orbeccenerr2' == thiskey: xclbrkey = 'ecc_lowerr'
+        elif 'pl_orbeccenlim' == thiskey: xclbrkey = 'ecc_lim'
         elif 'pl_eccenerr2' == thiskey: xclbrkey = 'ecc_lowerr'
+        elif 'pl_eccenlim' == thiskey: xclbrkey = 'ecc_lim'
         elif 'pl_eccenreflink' == thiskey: xclbrkey = 'ecc_ref'
         elif 'pl_orbincl' == thiskey: xclbrkey = 'inc'
         elif 'pl_orbinclerr1' == thiskey: xclbrkey = 'inc_uperr'
         elif 'pl_orbinclerr2' == thiskey: xclbrkey = 'inc_lowerr'
+        elif 'pl_orbincllim' == thiskey: xclbrkey = 'inc_lim'
         elif 'pl_bmassj' == thiskey: xclbrkey = 'mass'
         elif 'pl_bmassjerr1' == thiskey: xclbrkey = 'mass_uperr'
         elif 'pl_bmassjerr2' == thiskey: xclbrkey = 'mass_lowerr'
+        elif 'pl_bmassjlim' == thiskey: xclbrkey = 'mass_lim'
         elif 'pl_radj' == thiskey: xclbrkey = 'rp'
         elif 'pl_radjerr1' == thiskey: xclbrkey = 'rp_uperr'
         elif 'pl_radjerr2' == thiskey: xclbrkey = 'rp_lowerr'
+        elif 'pl_radjlim' == thiskey: xclbrkey = 'rp_lim'
         elif 'pl_radreflink' == thiskey: xclbrkey = 'rp_ref'
         elif 'pl_dens' == thiskey: xclbrkey = 'rho'
         elif 'pl_denserr1' == thiskey: xclbrkey = 'rho_uperr'
         elif 'pl_denserr2' == thiskey: xclbrkey = 'rho_lowerr'
+        elif 'pl_denslim' == thiskey: xclbrkey = 'rho_lim'
         elif 'pl_eqt' == thiskey: xclbrkey = 'teq'
         elif 'pl_eqterr1' == thiskey: xclbrkey = 'teq_uperr'
         elif 'pl_eqterr2' == thiskey: xclbrkey = 'teq_lowerr'
+        elif 'pl_eqtlim' == thiskey: xclbrkey = 'teq_lim'
         elif 'pl_eqtreflink' == thiskey: xclbrkey = 'teq_ref'
         elif 'pl_tranmid' == thiskey: xclbrkey = 't0'
         elif 'pl_tranmiderr1' == thiskey: xclbrkey = 't0_uperr'
         elif 'pl_tranmiderr2' == thiskey: xclbrkey = 't0_lowerr'
+        elif 'pl_tranmidlim' == thiskey: xclbrkey = 't0_lim'
         elif 'pl_imppar' == thiskey: xclbrkey = 'impact'
         elif 'pl_impparerr1' == thiskey: xclbrkey = 'impact_uperr'
         elif 'pl_impparerr2' == thiskey: xclbrkey = 'impact_lowerr'
+        elif 'pl_impparlim' == thiskey: xclbrkey = 'impact_lim'
         elif 'pl_orblper' == thiskey: xclbrkey = 'omega'
         elif 'pl_orblpererr1' == thiskey: xclbrkey = 'omega_uperr'
         elif 'pl_orblpererr2' == thiskey: xclbrkey = 'omega_lowerr'
+        elif 'pl_orblperlim' == thiskey: xclbrkey = 'omega_lim'
         elif 'pl_trandep' == thiskey: xclbrkey = 'trandepth'
         elif 'pl_trandeperr1' == thiskey: xclbrkey = 'trandepth_uperr'
         elif 'pl_trandeperr2' == thiskey: xclbrkey = 'trandepth_lowerr'
+        elif 'pl_trandeplim' == thiskey: xclbrkey = 'trandepth_lim'
         elif 'pl_trandur' == thiskey: xclbrkey = 'trandur'
         elif 'pl_trandurerr1' == thiskey: xclbrkey = 'trandur_uperr'
         elif 'pl_trandurerr2' == thiskey: xclbrkey = 'trandur_lowerr'
+        elif 'pl_trandurlim' == thiskey: xclbrkey = 'trandur_lim'
         elif 'pl_insol' == thiskey: xclbrkey = 'insol'
         elif 'pl_insolerr1' == thiskey: xclbrkey = 'insol_uperr'
         elif 'pl_insolerr2' == thiskey: xclbrkey = 'insol_lowerr'
+        elif 'pl_insollim' == thiskey: xclbrkey = 'insol_lim'
         elif 'pl_ratdor' == thiskey: xclbrkey = 'ars'
         elif 'pl_ratdorerr1' == thiskey: xclbrkey = 'ars_uperr'
         elif 'pl_ratdorerr2' == thiskey: xclbrkey = 'ars_lowerr'
+        elif 'pl_ratdorlim' == thiskey: xclbrkey = 'ars_lim'
         elif 'pl_ratror' == thiskey: xclbrkey = 'rprs'
         elif 'pl_ratrorerr1' == thiskey: xclbrkey = 'rprs_uperr'
         elif 'pl_ratrorerr2' == thiskey: xclbrkey = 'rprs_lowerr'
+        elif 'pl_ratrorlim' == thiskey: xclbrkey = 'rprs_lim'
         elif 'st_teff' == thiskey: xclbrkey = 'T*'
         elif 'st_tefferr1' == thiskey: xclbrkey = 'T*_uperr'
         elif 'st_tefferr2' == thiskey: xclbrkey = 'T*_lowerr'
+        elif 'st_tefflim' == thiskey: xclbrkey = 'T*_lim'
         elif 'st_teffreflink' == thiskey: xclbrkey = 'T*_ref'
         elif 'st_refname' == thiskey: xclbrkey = 'ref_st'
         elif 'st_mass' == thiskey: xclbrkey = 'M*'
         elif 'st_masserr1' == thiskey: xclbrkey = 'M*_uperr'
         elif 'st_masserr2' == thiskey: xclbrkey = 'M*_lowerr'
+        elif 'st_masslim' == thiskey: xclbrkey = 'M*_lim'
         elif 'st_rad' == thiskey: xclbrkey = 'R*'
         elif 'st_raderr1' == thiskey: xclbrkey = 'R*_uperr'
         elif 'st_raderr2' == thiskey: xclbrkey = 'R*_lowerr'
+        elif 'st_radlim' == thiskey: xclbrkey = 'R*_lim'
         elif 'st_radreflink' == thiskey: xclbrkey = 'R*_ref'
         elif 'st_lum' == thiskey: xclbrkey = 'L*'
         elif 'st_lumerr1' == thiskey: xclbrkey = 'L*_uperr'
         elif 'st_lumerr2' == thiskey: xclbrkey = 'L*_lowerr'
+        elif 'st_lumlim' == thiskey: xclbrkey = 'L*_lim'
         elif 'st_logg' == thiskey: xclbrkey = 'LOGG*'
         elif 'st_loggerr1' == thiskey: xclbrkey = 'LOGG*_uperr'
         elif 'st_loggerr2' == thiskey: xclbrkey = 'LOGG*_lowerr'
+        elif 'st_logglim' == thiskey: xclbrkey = 'LOGG*_lim'
         elif 'st_loggreflink' == thiskey: xclbrkey = 'LOGG*_ref'
         elif 'st_dens' == thiskey: xclbrkey = 'RHO*'
         elif 'st_denserr1' == thiskey: xclbrkey = 'RHO*_uperr'
         elif 'st_denserr2' == thiskey: xclbrkey = 'RHO*_lowerr'
+        elif 'st_denslim' == thiskey: xclbrkey = 'RHO*_lim'
         elif 'st_metfe' == thiskey: xclbrkey = 'FEH*'
         elif 'st_met' == thiskey: xclbrkey = 'FEH*'
         elif 'st_metfeerr1' == thiskey: xclbrkey = 'FEH*_uperr'
         elif 'st_meterr1' == thiskey: xclbrkey = 'FEH*_uperr'
         elif 'st_metfeerr2' == thiskey: xclbrkey = 'FEH*_lowerr'
         elif 'st_meterr2' == thiskey: xclbrkey = 'FEH*_lowerr'
+        elif 'st_metfelim' == thiskey: xclbrkey = 'FEH*_lim'
+        elif 'st_metlim' == thiskey: xclbrkey = 'FEH*_lim'
         elif 'st_metratio' == thiskey: xclbrkey = 'FEH*_units'
         elif 'st_metreflink' == thiskey: xclbrkey = 'FEH*_ref'
+        elif 'sy_jmag' == thiskey: xclbrkey = 'Jmag'
+        elif 'sy_jmagerr1' == thiskey: xclbrkey = 'Jmag_uperr'
+        elif 'sy_jmagerr2' == thiskey: xclbrkey = 'Jmag_lowerr'
+        # elif 'sy_jmaglim' == thiskey: xclbrkey = 'Jmag_lim'
         elif 'sy_hmag' == thiskey: xclbrkey = 'Hmag'
         elif 'sy_hmagerr1' == thiskey: xclbrkey = 'Hmag_uperr'
         elif 'sy_hmagerr2' == thiskey: xclbrkey = 'Hmag_lowerr'
+        # elif 'sy_hmaglim' == thiskey: xclbrkey = 'Hmag_lim'
+        elif 'sy_kmag' == thiskey: xclbrkey = 'Kmag'
+        elif 'sy_kmagerr1' == thiskey: xclbrkey = 'Kmag_uperr'
+        elif 'sy_kmagerr2' == thiskey: xclbrkey = 'Kmag_lowerr'
+        # elif 'sy_kmaglim' == thiskey: xclbrkey = 'Kmag_lim'
         elif 'st_age' == thiskey: xclbrkey = 'AGE*'
         elif 'st_ageerr1' == thiskey: xclbrkey = 'AGE*_uperr'
         elif 'st_ageerr2' == thiskey: xclbrkey = 'AGE*_lowerr'
+        elif 'st_agelim' == thiskey: xclbrkey = 'AGE*_lim'
         elif 'sy_dist' == thiskey: xclbrkey = 'dist'
         elif 'sy_disterr1' == thiskey: xclbrkey = 'dist_uperr'
         elif 'sy_disterr2' == thiskey: xclbrkey = 'dist_lowerr'
+        # elif 'sy_distlim' == thiskey: xclbrkey = 'dist_lim'
         elif 'st_spectype' == thiskey: xclbrkey = 'spTyp'
-        else: xclbrkey = None
+        else:
+            # print('HEY NO MATCH FOR THIS ARCHIVE KEYWORD!',thiskey)
+            xclbrkey = None
         if xclbrkey is not None: matchlist.append(xclbrkey)
         pass
     if len(matchlist) != len(header):
@@ -584,60 +717,119 @@ def translatekeys(header):
         pass
     return matchlist
 # -------------- -----------------------------------------------------
+# -- SCRAPE -- -------------------------------------------------------
+def scrapeversion():
+    '''
+    2.0.0: GMR: Code changes to use the new MAST API
+    2.0.1: GMR: See #539 bugfixes after PR #546
+    '''
+    return dawgie.VERSION(2,0,1)
+# ------------ -------------------------------------------------------
 # -- MAST -- ---------------------------------------------------------
-def mast(selfstart, out, dbs, queryurl, mirror,
-         alt=None,
-         action='&action=Search&resolver=SIMBAD&radius=3.0',
-         outfmt='&outputformat=CSV&max_records=100000',
-         opt='&sci_aec=S'):
-    '''Query and download from MAST'''
-    found = False
-    temploc = dawgie.context.data_stg
-    targetID = list(selfstart['starID'].keys())
-    querytarget = targetID[0].replace(' ', '+')
-    targetID.extend(selfstart['starID'][targetID[0]]['aliases'])
-    queryform = queryurl + querytarget + action + outfmt + opt
-    with urlrequest.urlopen(queryform) as temp:
-        framelist = temp.read().decode('utf-8').split('\n')
-        pass
-    namelist = []
-    instlist = []
-    for frame in framelist:
-        row = frame.split(',')
-        row = [v.strip() for v in row if v]
-        if len(row) > 2:
-            if row[1] in targetID:
-                namelist.append(row[0].lower())
-                instlist.append(row[8])
-                found = True
+def mastapi(tfl, out, dbs, download_url=None, hst_url=None, verbose=False):
+    '''Uses MAST API tools to download data'''
+
+    target = list(tfl['starID'].keys())[0]
+    obstable = tfl['starID'][target]['datatable']
+    obsids = [o['obsid'] for o in obstable]
+    obsids = set(obsids)  # obsids are generally repeated many times. this will save lots of time
+
+    allsci = []
+    allurl = []
+    allmiss = []
+    for o in obsids:
+        donmast = False
+        request = {'service':'Mast.Caom.Products', 'params':{'obsid':o}, 'format':'json'}
+        _h, datastr = masttool.mast_query(request)
+        data = json.loads(datastr)
+        if data['data']: donmast = True
+        dtlvl = None
+        clblvl = None
+        obscol = ''
+        thisurl = ''
+        if donmast:
+            if 'SPITZER' in data['data'][0].get("obs_collection", None).upper():
+                # Relying on disk data for now.
+                obscol = 'SPITZER'
+                dtlvl = 'SEE WITH KYLE'
+                clblvl = 666
+                thisurl = 'https:do.not.dl.for.now'
                 pass
-            pass
-        pass
-    if found:
-        tempdir = tempfile.mkdtemp(dir=temploc, prefix=targetID[0])
-        ignname = []
-        igninst = []
-        for name, inst in zip(namelist, instlist):
-            ext = '_flt.fits'
-            if inst in ['WFC3', 'NICMOS']: ext = '_ima.fits'
-            outfile = os.path.join(tempdir, name+ext)
-            try: urlrequest.urlretrieve(mirror+name+ext, outfile)
-            except(urllib.error.ContentTooShortError, urllib.error.URLError):
-                log.warning('>-- Mirror1 %s %s %s', name, ext, 'NOT FOUND')
-                try: urlrequest.urlretrieve(alt+name.upper()+ext.upper(), outfile)
-                except (urllib.error.ContentTooShortError, urllib.error.HTTPError):
-                    log.warning('>-- Mirror2 %s %s %s', name, ext, 'NOT FOUND')
-                    ignname.append(name)
-                    igninst.append(inst)
-                    pass
+            if 'JWST' in data['data'][0].get("obs_collection", None):
+                obscol = 'JWST'
+                dtlvl = 'CALINTS'
+                clblvl = 2
+                thisurl = download_url
                 pass
+            if 'HST' in data['data'][0].get("obs_collection", None):
+                obscol = 'HST'
+                # No comment on mast api missing ima files. See HST hack below.
+                dtlvl = 'FLT'
+                clblvl = 2
+                thisurl = hst_url
+                pass
+            scidata = [x for x in data['data'] if
+                       (x.get("productType", None) == 'SCIENCE') and
+                       (x.get("dataRights", None) == 'PUBLIC') and
+                       (x.get("calib_level", None) == clblvl) and
+                       (x.get("productSubGroupDescription", None) == dtlvl)]
+            allsci.extend(scidata)
+            allmiss.extend([obscol]*len(scidata))
+            allurl.extend([thisurl]*len(scidata))
+            if verbose: log.warning('%s: %s', o, len(scidata))
             pass
-        locations = [tempdir]
-        new = dbscp(locations, dbs, out)
-        shutil.rmtree(tempdir, True)
+        else:
+            log.warning('>-- TROUBLE reading the data file. donmast = %s', donmast)
         pass
-    ingested = found and new
-    return ingested
+    tempdir = tempfile.mkdtemp(dir=dawgie.context.data_stg,
+                               prefix=target.replace(' ', '')+'_')
+    thisobsids = [row['productFilename'].split('_')[-2] for row in allsci]
+    for irow, row in enumerate(allsci):
+        # HST: mast api hack
+        if allmiss[irow] in ['HST']:
+            thisobsid = row['productFilename'].split('_')[-2]
+            # 6/13/24 note that GJ 1132 STIS is sometimes having trouble here
+            # the MAST downloaded file is ldlm01m0q_flt.fits but it's coming up as a ima.fits maybe?
+            if row['project'] in ['CALSTIS']:
+                thisobsid = thisobsid.upper()+'%2F'+thisobsid+'_flt.fits'
+            else:
+                # want ida504e9 --> IDA504E9Q%2Fida504e9q_ima.fits
+                # and ida504e9q --> IDA504E9QQ%2Fida504e9q_ima.fits
+                # (currently the second one gets a double 'qq' toward the end, which fails)
+
+                # special case for K2-3 and others with a couple weird 's' files
+                if len(thisobsid)==9 and thisobsid.endswith('s'):
+                    thisobsid = thisobsid[:-1].upper()+'QQ%2F'+thisobsid+'_ima.fits'
+                # remove the second double-q (the lower-case one)
+                elif len(thisobsid)==9 and thisobsid.endswith('q') and not thisobsid.startswith('ldl'):
+                    thisobsid = thisobsid.upper()+'Q%2F'+thisobsid+'_ima.fits'
+                    # thisobsid = thisobsid.replace('qq_ima','q_ima')
+                # special case for K2-3 and others with a couple weird 's' files
+                elif thisobsid+'s' in thisobsids:
+                    thisobsid = thisobsid.upper()+'Q%2F'+thisobsid+'s_ima.fits'
+                else:
+                    thisobsid = thisobsid.upper()+'Q%2F'+thisobsid+'q_ima.fits'
+            fileout = os.path.join(tempdir, os.path.basename(thisobsid))
+            shellcom = "'".join(["curl -s -L -X GET ",
+                                 allurl[irow]+"product_name="+thisobsid,
+                                 " --output ",
+                                 fileout,
+                                 ""])
+            subprocess.run(shellcom, shell=True, check=False)
+        # JWST
+        elif allmiss[irow] in ['JWST']:
+            payload = {"uri":row['dataURI']}
+            resp = requests.get(allurl[irow], params=payload)
+            fileout = os.path.join(tempdir, os.path.basename(row['productFilename']))
+            with open(fileout,'wb') as flt: flt.write(resp.content)
+        # SPITZER DO NOTHING FOR NOW DL IS TOO LONG
+        else: pass
+        if verbose: log.warning('>-- %s %s', os.path.getsize(fileout), fileout)
+        pass
+    locations = [tempdir]
+    new = dbscp(target, locations, dbs, out)
+    shutil.rmtree(tempdir, True)
+    return new
 # ---------- ---------------------------------------------------------
 # -- DISK -- ---------------------------------------------------------
 def disk(selfstart, out, diskloc, dbs):
@@ -661,21 +853,16 @@ def disk(selfstart, out, diskloc, dbs):
 
     if locations is None:
         log.warning('ADD data subdirectory name to list in target/edit.py!!')
-        # exit('ADD it')
-        pass
 
     # make sure that the data storage directory exists for this star
-    # dang this gives 'permission denied' error for access to /proj/sdp
-    # I guess I'll have to create all the new directories by command-line
     for loc in locations:
         if not os.path.exists(loc): os.makedirs(loc)
-        pass
 
-    if locations is not None: merge = dbscp(locations, dbs, out)
+    if locations is not None: merge = dbscp('on disk', locations, dbs, out)
     return merge
 # ---------- ---------------------------------------------------------
 # -- DBS COPY -- -----------------------------------------------------
-def dbscp(locations, dbs, out):
+def dbscp(target, locations, dbs, out, verbose=False):
     '''Format data into SV'''
     copied = False
     imalist = None
@@ -689,77 +876,96 @@ def dbscp(locations, dbs, out):
                             if '.fits' in imafits])
             pass
         pass
+
+    okfiles = []
+    Nfails = 0
     for fitsfile in imalist:
-        filedict = {'md5':None, 'sha':None, 'loc':None, 'observatory':None,
-                    'instrument':None, 'detector':None, 'filter':None, 'mode':None}
-        m = subprocess.check_output(['md5sum', '-b', fitsfile])
-        s = subprocess.check_output(['sha1sum', '-b', fitsfile])
-        m = m.decode('utf-8').split(' ')
-        s = s.decode('utf-8').split(' ')
-        md5 = m[0]
-        sha = s[0]
-        filedict['md5'] = md5
-        filedict['sha'] = sha
-        filedict['loc'] = fitsfile
-        with pyfits.open(fitsfile) as pf:
-            mainheader = pf[0].header
+        try:
+            pyfits.open(fitsfile)
+            okfiles.append(True)
+        except OSError:
+            # print('Failed file read:',fitsfile)
+            okfiles.append(False)
+            Nfails += 1
+    log.warning('--< %s: %i out of %i MAST files are unreadable >--',target,Nfails,len(imalist))
 
-            # HST
-            if 'SCI' in mainheader.get('FILETYPE',''):
-                keys = [k for k in mainheader.keys() if k != '']
-                keys = list(set(keys))
-
-                if 'TELESCOP' in keys: filedict['observatory'] = mainheader['TELESCOP']
-                if 'INSTRUME' in keys: filedict['instrument'] = mainheader['INSTRUME']
-                if 'DETECTOR' in keys:
-                    filedict['detector'] = mainheader['DETECTOR'].replace('-', '.')
-                if 'FILTER' in keys: filedict['filter'] = mainheader['FILTER']
-                if ('SCAN_RAT' in keys) and (mainheader['SCAN_RAT'] > 0):
-                    filedict['mode'] = 'SCAN'
+    if Nfails==0:
+        for fitsfile in imalist:
+            filedict = {'md5':None, 'sha':None, 'loc':None, 'observatory':None,
+                        'instrument':None, 'detector':None, 'filter':None, 'mode':None}
+            m = subprocess.check_output(['md5sum', '-b', fitsfile])
+            s = subprocess.check_output(['sha1sum', '-b', fitsfile])
+            m = m.decode('utf-8').split(' ')
+            s = s.decode('utf-8').split(' ')
+            md5 = m[0]
+            sha = s[0]
+            filedict['md5'] = md5
+            filedict['sha'] = sha
+            filedict['loc'] = fitsfile
+            with pyfits.open(fitsfile) as pf:
+                mainheader = pf[0].header
+                # HST
+                if 'SCI' in mainheader.get('FILETYPE',''):
+                    keys = [k for k in mainheader.keys() if k != '']
+                    keys = list(set(keys))
+                    if 'TELESCOP' in keys: filedict['observatory'] = mainheader['TELESCOP']
+                    if 'INSTRUME' in keys: filedict['instrument'] = mainheader['INSTRUME']
+                    if 'DETECTOR' in keys:
+                        filedict['detector'] = mainheader['DETECTOR'].replace('-', '.')
+                    if 'FILTER' in keys: filedict['filter'] = mainheader['FILTER']
+                    if ('SCAN_RAT' in keys) and (mainheader['SCAN_RAT'] > 0):
+                        filedict['mode'] = 'SCAN'
+                        pass
+                    else: filedict['mode'] = 'STARE'
+                    if 'FOCUS' in keys and filedict['detector'] is None:
+                        filedict['detector'] = mainheader['FOCUS']
+                        filedict['mode'] = 'IMAGE'
+                        pass
+                    if filedict['instrument'] in ['STIS']:
+                        filedict['filter'] = mainheader['OPT_ELEM']
+                        pass
+                    out['name'][mainheader['ROOTNAME']] = filedict
                     pass
-                else: filedict['mode'] = 'STARE'
-                if 'FOCUS' in keys and filedict['detector'] is None:
-                    filedict['detector'] = mainheader['FOCUS']
-                    filedict['mode'] = 'IMAGE'
+                # Spitzer
+                elif ('spitzer' in mainheader.get('TELESCOP').lower() and
+                      'sci' in mainheader.get('EXPTYPE').lower()):
+                    filedict['observatory'] = mainheader.get('TELESCOP')
+                    filedict['instrument'] = mainheader.get('INSTRUME')
+                    filedict['mode'] = mainheader.get('READMODE')
+                    filedict['detector'] = 'IR'
+                    if mainheader.get('CHNLNUM') == 1: filedict['filter'] = "36"
+                    elif mainheader.get('CHNLNUM') == 2: filedict['filter'] = "45"
+                    else: filedict['filter'] = mainheader.get('CHNLNUM')
+                    out['name'][str(mainheader.get('DPID'))] = filedict
                     pass
-                if filedict['instrument'] in ['STIS']:
-                    filedict['filter'] = mainheader['OPT_ELEM']
+                # JWST
+                elif 'JWST' in mainheader.get('TELESCOP'):
+                    filedict['observatory'] = mainheader.get('TELESCOP')
+                    filedict['instrument'] = mainheader.get('INSTRUME')
+                    filedict['detector'] = mainheader.get('DETECTOR')
+                    filedict['filter'] = mainheader.get('FILTER')
+                    if mainheader.get('PUPIL'): filedict['mode'] = mainheader.get('PUPIL')
+                    else: filedict['mode'] = mainheader.get('GRATING', '')
+                    key = mainheader.get("FILENAME").split('.')[0]
+                    out['name'][key] = filedict
+                    if verbose: log.warning('--< %s: %s %s %s %s %s',
+                                            key,
+                                            filedict['observatory'],
+                                            filedict['instrument'],
+                                            filedict['detector'],
+                                            filedict['filter'],
+                                            filedict['mode'])
                     pass
-
-                out['name'][mainheader['ROOTNAME']] = filedict
-
-            # Spitzer
-            elif 'spitzer' in mainheader.get('TELESCOP').lower() and 'sci' in mainheader.get('EXPTYPE').lower():
-                filedict['observatory'] = mainheader.get('TELESCOP')
-                filedict['instrument'] = mainheader.get('INSTRUME')
-                filedict['mode'] = mainheader.get('READMODE')
-                filedict['detector'] = 'IR'
-                if mainheader.get('CHNLNUM') == 1: filedict['filter'] = "36"
-                elif mainheader.get('CHNLNUM') == 2: filedict['filter'] = "45"
-                else: filedict['filter'] = mainheader.get('CHNLNUM')
-                out['name'][str(mainheader.get('DPID'))] = filedict
                 pass
-
-            # JWST
-            elif 'jwst' in mainheader.get('TELESCOP').lower():
-                # Add filter for science frames only
-                filedict['observatory'] = mainheader.get('TELESCOP').strip()
-                filedict['instrument'] = mainheader.get('INSTRUME').strip()
-                filedict['mode'] = mainheader.get('PUPIL').strip()  # maybe EXP_TYPE?
-                filedict['detector'] = mainheader.get('DETECTOR').strip()
-                filedict['filter'] = mainheader.get('FILTER').strip()
-                out['name'][mainheader.get("FILENAME")] = filedict
-                pass
-
-        mastout = os.path.join(dbs, md5+'_'+sha)
-        onmast = os.path.isfile(mastout)
-        if not onmast:
-            shutil.copyfile(fitsfile, mastout)
-            os.chmod(mastout, int('0664', 8))
+            mastout = os.path.join(dbs, md5+'_'+sha)
+            onmast = os.path.isfile(mastout)
+            if not onmast:
+                shutil.copyfile(fitsfile, mastout)
+                os.chmod(mastout, int('0664', 8))
             pass
         copied = True
-        out['STATUS'].append(True)
-        pass
-
+    else:
+        copied = False
+    out['STATUS'].append(copied)
     return copied
 # -------------- -----------------------------------------------------

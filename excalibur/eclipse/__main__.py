@@ -15,9 +15,17 @@ tn = os.environ.get('TARGET_NAME', None)
 
 if fep: dawgie.util.set_ports(int(fep))
 
-dawgie.security.initialize(os.path.expandvars(os.path.expanduser
-                                              (dawgie.context.gpg_home)))
+dawgie.security.initialize(os.path.expandvars
+                           (os.path.expanduser
+                            (dawgie.context.guest_public_keys)))
 dawgie.db.reopen()
-excalibur.eclipse.bot.Actor('eclipse', 4, rid, tn).do()
+
+if tn in ['', '__all__']: pass
+else:
+    name = ['normalize', 'spectrum', 'whitelight', None][-1]  # -1 to run them all
+    subtasks = excalibur.eclipse.bot.Actor('eclipse', 4, rid, tn)
+    pass
+
+subtasks.do(name)
 dawgie.db.close()
 dawgie.security.finalize()

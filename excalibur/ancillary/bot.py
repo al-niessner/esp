@@ -1,4 +1,7 @@
 '''ancillary bot ds'''
+#  Careful: Commenting out tasks below will mess up the pipeline during startup
+#          (tasks listed here are compiled into the algorithm/task tree)
+
 # -- IMPORTS -- ------------------------------------------------------
 import dawgie
 

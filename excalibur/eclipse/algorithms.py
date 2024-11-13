@@ -10,12 +10,7 @@ import excalibur.eclipse as ecl
 import excalibur.system as sys
 import excalibur.transit.algorithms as trnalg
 import excalibur.transit.core as trncore
-import excalibur.target.edit as trgedit
-# ------------- ------------------------------------------------------
-# -- ALGO RUN OPTIONS -- ---------------------------------------------
-# FILTERS
-fltrs = (trgedit.activefilters.__doc__).split('\n')
-fltrs = [t.strip() for t in fltrs if len(t.replace(' ', '')) > 0]
+
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 # ECLIPSE CLASSES INHERIT FROM TRANSIT CLASSES

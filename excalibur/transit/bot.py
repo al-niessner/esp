@@ -12,7 +12,8 @@ class Actor(dawgie.Task):
         return [
             trnalg.normalization(),
             trnalg.whitelight(),
-            trnalg.spectrum()
+            trnalg.spectrum(),
+            trnalg.starspots()
         ]
     pass
 

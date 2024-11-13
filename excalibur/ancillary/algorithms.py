@@ -11,6 +11,8 @@ import excalibur.ancillary as anc
 import excalibur.ancillary.core as anccore
 import excalibur.ancillary.states as ancstates
 
+import excalibur.runtime.algorithms as rtalg
+
 import excalibur.system as sys
 import excalibur.system.algorithms as sysalg
 
@@ -18,11 +20,6 @@ from excalibur.target.targetlists import get_target_lists
 
 from excalibur.ancillary.core import savesv
 
-# ------------- ------------------------------------------------------
-# -- ALGO RUN OPTIONS -- ---------------------------------------------
-# FILTERS
-# fltrs = (trgedit.activefilters.__doc__).split('\n')
-# fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class estimate(dawgie.Algorithm):
@@ -31,6 +28,7 @@ class estimate(dawgie.Algorithm):
         '''__init__ ds'''
         self._version_ = anccore.estimateversion()
         self._type = 'ancillary'
+        self.__rt = rtalg.autofill()
         self.__fin = sysalg.finalize()
         self.__out = [ancstates.EstimateSV('parameters')]
         return
@@ -41,7 +39,8 @@ class estimate(dawgie.Algorithm):
 
     def previous(self):
         '''previous ds'''
-        return [dawgie.ALG_REF(sys.task, self.__fin)]
+        return [dawgie.ALG_REF(sys.task, self.__fin)] + \
+                self.__rt.refs_for_validity()
 
     def state_vectors(self):
         '''state_vectors ds'''
@@ -49,15 +48,21 @@ class estimate(dawgie.Algorithm):
 
     def run(self, ds, ps):
         '''run ds'''
-        update = False
-        vfin, _ = anccore.checksv(self.__fin.sv_as_dict()['parameters'])
-        if vfin:
-            update = anccore.estimate(self.__fin.sv_as_dict()['parameters'],
-                                      self.__out[0])
-            pass
-        if update: ds.update()
-        else: raise dawgie.NoValidOutputDataError(
-                f'No output created for ANCILLARY.{self.name()}')
+
+        # stop here if it is not a runtime target
+        if not self.__rt.is_valid():
+            log.warning('--< ANCILLARY.%s: not a valid target >--', self.name().upper())
+
+        else:
+            update = False
+            vfin, _ = anccore.checksv(self.__fin.sv_as_dict()['parameters'])
+            if vfin:
+                update = anccore.estimate(self.__fin.sv_as_dict()['parameters'],
+                                          self.__out[0])
+            if update: ds.update()
+            else: raise dawgie.NoValidOutputDataError(
+                    f'No output created for ANCILLARY.{self.name()}')
+
         return
 
 class population(dawgie.Analyzer):
@@ -65,8 +70,13 @@ class population(dawgie.Analyzer):
     def __init__(self):
         '''__init__ ds'''
         self._version_ = dawgie.VERSION(1,0,3)
+        self.__est = estimate()
         self.__out = ancstates.PopulationSV('statistics')
         return
+
+    def previous(self):
+        '''Input State Vectors: ancillary.estimate'''
+        return [dawgie.ALG_REF(sys.task, self.__est)]
 
     def feedback(self):
         '''feedback ds'''
@@ -78,8 +88,8 @@ class population(dawgie.Analyzer):
 
     def traits(self)->[dawgie.SV_REF, dawgie.V_REF]:
         '''traits ds'''
-        return [dawgie.V_REF(anc.task, estimate(),
-                             estimate().state_vectors()[0], 'data')]
+        return [dawgie.SV_REF(anc.task, estimate(),
+                              estimate().state_vectors()[0])]
 
     def state_vectors(self):
         '''state_vectors ds'''
@@ -90,6 +100,9 @@ class population(dawgie.Analyzer):
 
         targetlists = get_target_lists()
 
+        aspecttargets = []
+        for a in aspects: aspecttargets.append(a)
+
         # group together values by attribute
         svname = 'ancillary.estimate.parameters'
 
@@ -99,24 +112,14 @@ class population(dawgie.Analyzer):
         st_attrs_roudier62 = defaultdict(list)
         pl_attrs_roudier62 = defaultdict(list)
 
-        # for trgt in aspects:
-        #    target_sample = '__all__'
+        for trgt in targetlists['active']:
+            if trgt not in aspecttargets:
+                log.warning('--< ANCILLARY.POPULATION: target missing: %s >--', trgt)
+
         # Only consider the 'active' stars, not aliases/misspellings/dropped/etc
-
-        # print('len',len(targetlists['active']))
-        # print('len',filter(lambda tgt: 'STATUS' in aspects[tgt][svname], targetlists['active']))
-        # i = 0
-        # for a in filter(lambda tgt: 'STATUS' in aspects[tgt][svname], targetlists['active']):
-        #    #print(a)
-        #    i += 1
-        # print('len for real',i)
-        # exit()
-
         # for trgt in targetlists['active']:
-        for trgt in filter(lambda tgt: 'STATUS' in aspects[tgt][svname], targetlists['active']):
-
-            # target_sample = 'active'
-
+        # for trgt in filter(lambda tgt: 'STATUS' in aspects[tgt][svname], targetlists['active']):
+        for trgt in filter(lambda tgt: tgt in aspecttargets, targetlists['active']):
             anc_data = aspects[trgt][svname]
 
             # verify SV succeeded for target
@@ -136,10 +139,8 @@ class population(dawgie.Analyzer):
                         pl_attrs[key].append(anc_data['data'][pl][key])
 
         # Loop through a second group of targets.  (this subset will be overplotted in the histos)
-        # for trgt in targetlists['roudier62']:
-        for trgt in filter(lambda tgt: 'STATUS' in aspects[tgt][svname], targetlists['roudier62']):
-            # target_sample = 'roudier62'
-
+        # for trgt in filter(lambda tgt: 'STATUS' in aspects[tgt][svname], targetlists['roudier62']):
+        for trgt in filter(lambda tgt: tgt in aspecttargets, targetlists['roudier62']):
             anc_data = aspects[trgt][svname]
 
             # verify SV succeeded for target
@@ -163,7 +164,6 @@ class population(dawgie.Analyzer):
         self.__out['data']['pl_attrs'] = pl_attrs
         self.__out['data']['st_attrs_roudier62'] = st_attrs_roudier62
         self.__out['data']['pl_attrs_roudier62'] = pl_attrs_roudier62
-        # self.__out['data']['sample'] = target_sample
         self.__out['STATUS'].append(True)
         aspects.ds().update()
 

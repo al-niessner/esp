@@ -1,4 +1,4 @@
-#! /usr/bin/env python3.8
+#! /usr/bin/env python3
 
 import argparse
 import git
@@ -39,7 +39,7 @@ def fetch_existing_messages (mfn:str)->{str:str}:
         close = content.find ('}', index) +1
         key = content[index:close]
         index = content.find ('[//]: # (DO NOT REMOVE: finish rid)', close)
-        result[key] = content[close+3:index-1]
+        result[key] = content[close+3:index-1].strip()
         index = content.find ('DO NOT REMOVE: start rid', index)
         pass
     return result
@@ -69,7 +69,9 @@ def update (existing:{str:str}, events:[(int, str, str)]):
 
 def write (mfn:str, messages:{str:str})->None:
     block = []
-    for message in sorted (messages, reverse=True):
+    for message in sorted (messages,
+                           key=lambda m:int(m[1:m.find(',')]),
+                           reverse=True):
         block.append ('[//]: # (DO NOT REMOVE: start rid {})'.format (message))
         block.append ('')
         block.append (messages[message])

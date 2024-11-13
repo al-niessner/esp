@@ -14,6 +14,7 @@ The algorithm engine has N goals:
 '''
 # -- IMPORTS -- ------------------------------------------------------
 import builtins
+import collections
 import dawgie
 import numpy
 import scipy.stats
@@ -28,6 +29,8 @@ context = {'data_cal':os.environ.get ('DATA_CALIBR', '/proj/data/cal'),
                                         '/proj/data/WFC3_target_list.xlsx')}
 os.environ['LDTK_ROOT'] = context['ldtk_root']
 __version__ = '${UNDEFINED}'
+
+identity = collections.namedtuple('identity', ['serial'])
 
 class ValuesList(dawgie.Value, list):
     '''ValuesList ds'''
@@ -64,40 +67,10 @@ class ValueScalar(dawgie.Value):
     def features (self):
         '''features ds'''
         return []
+    def new(self,value):
+        '''method to keep from explicitly needing dawgie'''
+        return ValueScalar(value if value is not None else self.__content)
     def value(self):
         '''value ds'''
         return self.__content
-    pass
-
-class Visitor(dawgie.Visitor):
-    '''Visitor ds'''
-    def add_declaration (self, text:str, **kwds)->None:
-        '''add_declaration ds'''
-        print ('declaration', text, kwds)
-        return
-
-    def add_image (self, alternate:str, label:str, img:bytes)->None:
-        '''add_image ds'''
-        print ('image', label, alternate, len(img))
-        return
-
-    def add_primitive (self, value, label:str=None)->None:
-        '''add_primitive ds'''
-        print ('primitive', label, value)
-        return
-
-    def add_table (self, clabels:[str], rows:int=0,
-                   title:str=None)->dawgie.TableVisitor:
-        '''add_table ds'''
-        print ('table', clabels, rows, title)
-        return VisitorTable()
-    pass
-
-class VisitorTable(dawgie.TableVisitor):
-    '''VisitorTable ds'''
-    # pylint: disable=too-few-public-methods
-    def get_cell (self, r:int, c:int)->Visitor:
-        '''get_cell ds'''
-        print ('table element', r, c)
-        return Visitor()
     pass

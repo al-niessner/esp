@@ -10,6 +10,7 @@ from excalibur.transit.core import composite_spectrum, jwst_lightcurve
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import cauchy, norm, t
+from scipy.interpolate import interp1d
 # ------------- ------------------------------------------------------
 # -- SV -- -----------------------------------------------------------
 class NormSV(dawgie.StateVector):
@@ -27,32 +28,43 @@ class NormSV(dawgie.StateVector):
         '''name ds'''
         return self.__name
 
-    def view(self, visitor:dawgie.Visitor)->None:
+    def view(self, caller:excalibur.identity, visitor:dawgie.Visitor)->None:
         '''view ds'''
         if self['STATUS'][-1]:
             for p in self['data'].keys():
                 visitor.add_declaration('PLANET: ' + p)
                 for v, m in zip(self['data'][p]['vignore'], self['data'][p]['trial']):
-                    strignore = str(int(v)) + ' ' + m
+                    strignore = str(int(v)) + '  ' + m
                     visitor.add_declaration('VISIT: ' + strignore)
                     pass
                 vrange = self['data'][p]['vrange']
                 for index, v in enumerate(self['data'][p]['visits']):
-                    wave = self['data'][p]['wave'][index]
-                    nspec = self['data'][p]['nspec'][index]
-                    myfig = plt.figure()
-                    plt.title('Visit: '+str(v))
-                    for w,s in zip(wave, nspec):
-                        select = (w > np.min(vrange)) & (w < np.max(vrange))
-                        plt.plot(w[select], s[select], 'o')
-                        pass
-                    plt.ylabel('Normalized Spectra')
-                    plt.xlabel('Wavelength [$\\mu$m]')
-                    plt.xlim(np.min(vrange), np.max(vrange))
-                    buf = io.BytesIO()
-                    myfig.savefig(buf, format='png')
-                    visitor.add_image('...', ' ', buf.getvalue())
-                    plt.close(myfig)
+
+                    if 'plot_normalized_byvisit' in self['data'][p].keys():
+                        textlabel = '--------- Visit: '+str(v)+' ---------'
+                        if index >= len(self['data'][p]['plot_normalized_byvisit']):
+                            # this is an error!  should be a plot for each visit!
+                            pass
+                        else:
+                            visitor.add_image('...', textlabel,
+                                              self['data'][p]['plot_normalized_byvisit'][index])
+
+                    # keep the on-the-fly plotting, so that older RUNIDs still work
+                    else:
+                        wave = self['data'][p]['wave'][index]
+                        nspec = self['data'][p]['nspec'][index]
+                        myfig = plt.figure()
+                        plt.title('Visit: '+str(v))
+                        for w,s in zip(wave, nspec):
+                            select = (w > np.min(vrange)) & (w < np.max(vrange))
+                            plt.plot(w[select], s[select], 'o')
+                        plt.ylabel('Normalized Spectra')
+                        plt.xlabel('Wavelength [$\\mu$m]')
+                        plt.xlim(np.min(vrange), np.max(vrange))
+                        buf = io.BytesIO()
+                        myfig.savefig(buf, format='png')
+                        visitor.add_image('...', ' ', buf.getvalue())
+                        plt.close(myfig)
                     pass
                 pass
             pass
@@ -74,50 +86,94 @@ class WhiteLightSV(dawgie.StateVector):
         '''name ds'''
         return self.__name
 
-    def view(self, visitor:dawgie.Visitor)->None:
+    def view(self, caller:excalibur.identity, visitor:dawgie.Visitor)->None:
         '''view ds'''
         if self['STATUS'][-1]:
             if 'HST' in self.__name:
                 mergesv = bool(self.__name == 'HST')
                 for p in self['data'].keys():
-                    visits = self['data'][p]['visits']
-                    phase = self['data'][p]['phase']
-                    allwhite = self['data'][p]['allwhite']
-                    postim = self['data'][p]['postim']
-                    postphase = self['data'][p]['postphase']
-                    postlc = self['data'][p]['postlc']
-                    postflatphase = self['data'][p]['postflatphase']
-                    if mergesv: allfltrs = self['data'][p]['allfltrs']
-                    myfig = plt.figure(figsize=(10, 6))
-                    plt.title(p)
+                    visits = np.array(self['data'][p]['visits'])
+                    # phase,allwhite is the data before shifting
+                    phase = np.array(self['data'][p]['phase'])
+                    allwhite = np.array(self['data'][p]['allwhite'])
+                    # postphase,allwhite/postim is the data after shifting
+                    postphase = np.array(self['data'][p]['postphase'])
+                    postim = np.array(self['data'][p]['postim'])
+                    # phase,postlc is the model
+                    postflatphase = np.array(self['data'][p]['postflatphase'])
+                    postlc = np.array(self['data'][p]['postlc'])
+
+                    # myfig = plt.figure(figsize=(10, 6))
+                    # plt.title('Planet '+p, fontsize=14)
+                    myfig, (ax1, ax2) = plt.subplots(2, 1, figsize=(9, 7), sharex=True,
+                                                     gridspec_kw={'height_ratios': [3, 1]})
+                    myfig.subplots_adjust(hspace=0.03, right=0.8)
+                    ax1.set_title('Planet '+p, fontsize=16)
+                    # ax1.set_xlabel('Orbital Phase', fontsize=14)
+                    ax1.set_ylabel('Normalized Post-Whitelight Curve', fontsize=14)
                     for index, v in enumerate(visits):
-                        plt.plot(phase[index], allwhite[index], 'k+')
+                        # plot the normalized/shifted data
                         if mergesv:
-                            vlabel = allfltrs[index]
-                            plt.plot(postphase[index], allwhite[index]/postim[index], 'o',
-                                     label=vlabel)
-                            pass
+                            vlabel = self['data'][p]['allfltrs'][index]
                         else:
-                            plt.plot(postphase[index], allwhite[index]/postim[index], 'o',
-                                     label=str(v))
-                            pass
-                        pass
+                            vlabel = 'visit '+str(v)
+                        ax1.plot(postphase[index], allwhite[index]/postim[index], 'o',
+                                 zorder=3, label=vlabel)
+
+                        # plot the pre-correction data
+                        if index==len(visits)-1:
+                            ax1.plot(phase[index], allwhite[index], 'k+', zorder=2,
+                                     label='pre-correction')
+                        else:
+                            ax1.plot(phase[index], allwhite[index], 'k+', zorder=2,)
+
+                        # add a lower panel showing the data-model residuals
+                        model_interpolator = interp1d(postflatphase[np.argsort(postflatphase)],
+                                                      postlc[np.argsort(postflatphase)],
+                                                      kind='linear', fill_value='extrapolate')
+                        model_at_observed_time = model_interpolator(postphase[index])
+                        residuals = allwhite[index]/postim[index] - model_at_observed_time
+
+                        ax2.plot(postphase[index], residuals,'o', color='black', markerfacecolor='None')
+                        ax2.axhline(y=0, color='black', linestyle='dashed', linewidth=1)
+                        ax2.set_xlabel('Orbital Phase', fontsize=14)
+                        ax2.set_ylabel('Residuals', fontsize=14)
+
+                    xdatarange = ax1.get_xlim()
+                    # use full model (not just at some points) if available
+                    if 'modellc' in self['data'][p].keys():
+                        modelphase = np.array(self['data'][p]['modelphase'])
+                        modellc = np.array(self['data'][p]['modellc'])
+                        # the points are ordered by time, not by phase
+                        #  so sorting is needed for multi-visit observations
+                        # otherwise you get weird wrap-around in the line plots
+                        ax1.plot(modelphase[np.argsort(modelphase)],
+                                 modellc[np.argsort(modelphase)],
+                                 '-', c='k', marker='None', zorder=1,
+                                 label='model')
+                        # model phases only go from -0.5 to 0.5 (not good for eclipse)
+                        # plot the model line a second time, but shifting the phases over by 1
+                        ax1.plot(modelphase[np.argsort(modelphase)] + 1,
+                                 modellc[np.argsort(modelphase)],
+                                 '-', c='k', marker='None', zorder=1)
+                    else:
+                        ax1.plot(postflatphase, postlc,
+                                 '^', zorder=1, label='model')
+                        # '^', c='green', zorder=1, label='model')
+                    ax1.set_xlim(xdatarange)
+
                     if len(visits) > 14: ncol = 2
                     else: ncol = 1
-                    plt.plot(postflatphase, postlc, '^', label='M')
-                    plt.xlabel('Orbital Phase')
-                    plt.ylabel('Normalized Post White Light Curve')
                     if mergesv:
-                        plt.legend(loc='best', ncol=ncol, mode='expand', numpoints=1,
+                        ax1.legend(loc='best', ncol=ncol, mode='expand', numpoints=1,
                                    borderaxespad=0., frameon=False)
-                        plt.tight_layout()
-                        pass
+                        # myfig.tight_layout()
                     else:
-                        plt.legend(bbox_to_anchor=(1 + 0.1*(ncol - 0.5), 0.5),
+                        ax1.legend(bbox_to_anchor=(1 + 0.1*(ncol - 0.5), 0.5),
                                    loc=5, ncol=ncol, mode='expand', numpoints=1,
                                    borderaxespad=0., frameon=False)
-                        plt.tight_layout(rect=[0,0,(1 - 0.1*ncol),1])
-                        pass
+                        # myfig.tight_layout(rect=[0,0,(1 - 0.1*ncol),1])
+
                     buf = io.BytesIO()
                     myfig.savefig(buf, format='png')
                     visitor.add_image('...', ' ', buf.getvalue())
@@ -129,8 +185,10 @@ class WhiteLightSV(dawgie.StateVector):
                     for i in range(len(self['data'][p])):
                         # plots are saved into sv
                         visitor.add_image('...', ' ', self['data'][p][i]['plot_bestfit'])
+                        visitor.add_image('...', ' ', self['data'][p][i]['plot_residual_fft'])
                         visitor.add_image('...', ' ', self['data'][p][i]['plot_posterior'])
                         visitor.add_image('...', ' ', self['data'][p][i]['plot_pixelmap'])
+
             elif 'JWST' in self.__name:
                 # for each planet
                 for p in self['data'].keys():
@@ -158,7 +216,7 @@ class SpectrumSV(dawgie.StateVector):
         '''name ds'''
         return self.__name
 
-    def view(self, visitor:dawgie.Visitor)->None:
+    def view(self, caller:excalibur.identity, visitor:dawgie.Visitor)->None:
         '''view ds'''
         if self['STATUS'][-1]:
             if self.__name == "Composite":
@@ -228,10 +286,14 @@ class SpectrumSV(dawgie.StateVector):
                         # Retro compatibility for Hs in [m]
                         if Hs > 1: Hs = Hs/(self['data'][p]['RSTAR'][0])
                         ax2 = ax.twinx()
-                        ax2.set_ylabel('$\\Delta$ [Hs]')
+                        ax2.set_ylabel('$\\Delta$ [H$_s$]')
                         axmin, axmax = ax.get_ylim()
-                        ax2.set_ylim((np.sqrt(1e-2*axmin) - rp0hs)/Hs,
-                                     (np.sqrt(1e-2*axmax) - rp0hs)/Hs)
+                        if axmin >= 0:
+                            ax2.set_ylim((np.sqrt(1e-2*axmin) - rp0hs)/Hs,
+                                         (np.sqrt(1e-2*axmax) - rp0hs)/Hs)
+                        else:
+                            ax2.set_ylim((-np.sqrt(-1e-2*axmin) - rp0hs)/Hs,
+                                         (np.sqrt(1e-2*axmax) - rp0hs)/Hs)
                         myfig.tight_layout()
                         pass
                     buf = io.BytesIO()
@@ -272,10 +334,14 @@ class SpectrumSV(dawgie.StateVector):
                             # Retro compatibility for Hs in [m]
                             if Hs > 1: Hs = Hs/(self['data'][p]['RSTAR'][0])
                             ax2 = ax.twinx()
-                            ax2.set_ylabel('$\\Delta$ [Hs]')
+                            ax2.set_ylabel('$\\Delta$ [H$_s$]')
                             axmin, axmax = ax.get_ylim()
-                            ax2.set_ylim((np.sqrt(1e-2*axmin) - rp0hs)/Hs,
-                                         (np.sqrt(1e-2*axmax) - rp0hs)/Hs)
+                            if axmin >= 0:
+                                ax2.set_ylim((np.sqrt(1e-2*axmin) - rp0hs)/Hs,
+                                             (np.sqrt(1e-2*axmax) - rp0hs)/Hs)
+                            else:
+                                ax2.set_ylim((-np.sqrt(-1e-2*axmin) - rp0hs)/Hs,
+                                             (np.sqrt(1e-2*axmax) - rp0hs)/Hs)
                             myfig.tight_layout()
                             pass
                         buf = io.BytesIO()
@@ -306,7 +372,7 @@ class SpectrumSV(dawgie.StateVector):
                         plt.title(f'Cumulative Spectrum Distribution in Hs ({perc_rejected:.1f}% rejected)')
                         ax.plot(sorted_Hs, percent)
                         ax.axvline(4,0,c='black')
-                        plt.xlabel(str('Absolute Modulation [Hs]'))
+                        plt.xlabel(str('Absolute Modulation [H$_s$]'))
                         plt.ylabel(str('Percent [%]'))
                         plt.ylim((0, 100))
                         buf = io.BytesIO()
@@ -367,6 +433,42 @@ class SpectrumSV(dawgie.StateVector):
         pass
     pass
 
+class StarspotSV(dawgie.StateVector):
+    '''transit.spectrum view'''
+    def __init__(self, name):
+        '''__init__ ds'''
+        self._version_ = dawgie.VERSION(1,1,0)
+        self.__name = name
+        self['STATUS'] = excalibur.ValuesList()
+        self['data'] = excalibur.ValuesDict()
+        self['STATUS'].append(False)
+        return
+
+    def name(self):
+        '''name ds'''
+        return self.__name
+
+    def view(self, caller:excalibur.identity, visitor:dawgie.Visitor)->None:
+        '''view ds'''
+        if self['STATUS'][-1]:
+            for p in self['data'].keys():
+                visitor.add_declaration('PLANET: ' + p)
+                for savedresult in self['data'][p].keys():
+                    # anything with 'plot' in it is a saved .png figure
+                    if 'plot' in savedresult:
+                        if savedresult=='plot_starspot_spectrum':
+                            plotlabel = 'starspot spectrum'
+                        elif savedresult=='plot_starspot_limbCoeffs':
+                            plotlabel = 'limb darkening coefficients'
+                        elif savedresult=='plot_starspot_limbdarkening':
+                            plotlabel = 'limb darkening'
+                        else:
+                            plotlabel = 'more starspot info'
+                        visitor.add_image(
+                            '...',
+                            '------ '+plotlabel+' for planet '+p+' ------',
+                            self['data'][p][savedresult])
+
 class PopulationSV(dawgie.StateVector):
     '''transit.population view'''
     def __init__(self, name):
@@ -382,7 +484,7 @@ class PopulationSV(dawgie.StateVector):
         '''name ds'''
         return self.__name
 
-    def view(self, visitor:dawgie.Visitor)->None:
+    def view(self, caller:excalibur.identity, visitor:dawgie.Visitor)->None:
         '''view ds'''
         if 'IMPARAMS' in self['data']:
             visitor.add_primitive('Spectrum Instrument Model Distribution')

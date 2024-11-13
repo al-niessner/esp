@@ -23,6 +23,7 @@ class PriorsSV(dawgie.StateVector):
         self['starmdt'] = excalibur.ValuesList()
         self['starnonmdt'] = excalibur.ValuesList()
         self['planetmdt'] = excalibur.ValuesList()
+        self['planetnonmdt'] = excalibur.ValuesList()
         self['starkeys'] = excalibur.ValuesList()
         self['planetkeys'] = excalibur.ValuesList()
         self['exts'] = excalibur.ValuesList()
@@ -34,7 +35,7 @@ class PriorsSV(dawgie.StateVector):
         '''name ds'''
         return self.__name
 
-    def view(self, visitor:dawgie.Visitor)->None:
+    def view(self, caller:excalibur.identity, visitor:dawgie.Visitor)->None:
         '''view ds'''
         if self['STATUS'][-1]:
             vlabels = ['FORCE PARAMETER',
@@ -112,7 +113,7 @@ class PopulationSV(dawgie.StateVector):
         '''name ds'''
         return self.__name
 
-    def view(self, visitor:dawgie.Visitor)->None:
+    def view(self, caller:excalibur.identity, visitor:dawgie.Visitor)->None:
         '''view ds'''
         to_process = [('----------------------Stellar Population Distributions----------------------',
                        self['data']['st_attrs'], self['data']['st_attrs_roudier62'], False),

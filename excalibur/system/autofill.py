@@ -2,6 +2,7 @@
 # -- IMPORTS -- ------------------------------------------------------
 import numpy
 import excalibur.system.core as syscore
+import logging; log = logging.getLogger(__name__)
 # ----------------- --------------------------------------------------
 # -- FILL BLANK UNCERTAINTY FIELD ------------------------------------
 def fillUncertainty(param,param_value,param_uncertainty,error_type):
@@ -73,7 +74,7 @@ def fillUncertainty(param,param_value,param_uncertainty,error_type):
             elif param in ['rp','sma','mass','R*','M*','RHO*','L*']:
                 # set uncertainty to 10% for planet radius, semi-major axis, mass
                 #   same for stellar radius, mass, density, luminosity
-                fillvalue = float(param_value) * 1.e-1
+                fillvalue = float(param_value) * 0.1
                 if param in ['rp']:
                     fillvalue = float(param_value) / 3.
                     fillvalue = float(param_value) * 0.392  # 90-percentile; 95-percentile is 0.50
@@ -94,9 +95,19 @@ def fillUncertainty(param,param_value,param_uncertainty,error_type):
                 #  (error should really be derived from errors on L*,a_p)
                 # a_p error is 5%, so 10% here should be very conservative
                 fillvalue = float(param_value) / 10.
+            elif param=='impact':
+                # impact parameter is a number from 0 to 1 (normalized to stellar radius)
+                # inclination uncertainty is ~2deg, and rp/sma is ~10, so maybe 0.2 here?
+                fillvalue = 0.2
+            elif param=='trandepth':
+                # transit depth to 20%? S/N=5 seems like a minimum for detection
+                fillvalue = float(param_value) * 0.2
+            elif param=='trandur':
+                # transit duration to 20%? S/N=5 seems reasonable I guess
+                fillvalue = float(param_value) * 0.2
             else:
                 # fallback option is to set uncertainty to 10%
-                fillvalue = float(param_value) * 1.e-1
+                fillvalue = float(param_value) * 0.1
                 print('another PARAM:',param)
                 pass
             pass
@@ -110,20 +121,53 @@ def fillUncertainty(param,param_value,param_uncertainty,error_type):
     return fillvalue,autofilled
 # ----------------- --------------------------------------------------
 # -- SELECT THE BEST PARAMETER VALUE FROM VARIOUS ARCHIVE VALUES -----
-def bestValue(values,uperrs,lowerrs,refs):
+def bestValue(values,uperrs,lowerrs,refs,lbl,bestref,bestpubIndex,
+              maximizeSelfConsistency=True,
+              selectMostRecent=False,
+              verbose=False):
     '''
     From a list of parameter values, determine the most trustworthy value
+    There are three options here:
+    1) use the Exoplanet Archive default
+    2) use the most recent publication (for a selected list of parameters, e.g. t0)
+    3) use the publication that can fill in needed params self-consistently
     '''
-    if values[0] != '':
+
+    # option to select the most recent publication for period and T0
+    if selectMostRecent: selectMostRecent = lbl in ('period', 't0')
+
+    if maximizeSelfConsistency:
+        # push the best values into the default index ([0])
+        # 1) old method. doesn't work for derived values (they have a different ref name)
+        for iref,ref in enumerate(refs):
+            if ref==bestref:
+                values[0] = values[iref]
+                uperrs[0] = uperrs[iref]
+                lowerrs[0] = lowerrs[iref]
+                refs[0] = refs[iref]
+        # 2) new method.  use the index pulled from calculate_selfConsistency_metric
+        if bestpubIndex != -1:
+            if verbose and values[0] != values[bestpubIndex]:
+                print('filling in an associated derived value!',lbl)
+                print(' old value,ref',values[0],refs[0])
+                print(' new value,ref',values[bestpubIndex],refs[bestpubIndex])
+            values[0] = values[bestpubIndex]
+            uperrs[0] = uperrs[bestpubIndex]
+            lowerrs[0] = lowerrs[bestpubIndex]
+            refs[0] = refs[bestpubIndex]
+        else:
+            if verbose: print('Oof! the best publication index is undefined!')
+            pass
+
+    if values[0] != '' and not selectMostRecent:
         # step 1: if there is a default value at the start of the list, use that
+        # -- exception: for the emphemeris (period and t_0) always use the most recent value --
         bestvalue = values[0]
         bestuperr = uperrs[0]
         bestlowerr = lowerrs[0]
         bestref = refs[0]
     else:
-        # step 2: iterate from the end of the list inward, until getting a non-blank value
-        #   (this assumes that the non-default values have been ordered by publish date,
-        #    such that the end of the list is the most recently published value)
+        # step 2: find the most recently published non-blank value
         bestvalue = ''
         bestref = ''
         bestyear = 0
@@ -148,7 +192,197 @@ def bestValue(values,uperrs,lowerrs,refs):
                     bestlowerr = lowerr
                     bestref = ref
 
+        # if selectMostRecent:
+        #     print(lbl,'old default:',values[0],' new most recent:',bestvalue)
+
     return bestvalue,bestuperr,bestlowerr,bestref
+
+# -------------------------------------------------------------------
+def calculate_selfConsistency_metric(data, setRefByHand=False,
+                                     verbose=False):
+    '''
+    Determine how many key parameters (currently 12) are provided by each publication
+    '''
+
+    # list which parameters should be considered for self-consistency
+    starParams = ['R*','FEH*','T*','LOGG*']
+    planetParams = ['rp','mass','sma','period','t0','inc','ecc','omega']
+
+    counts = []
+    Npublications = len(data['R*'])
+
+    iplanet = 0
+    nplanet = 0
+    nplanetsum = 0
+    for ipub in range(Npublications):
+        counts.append({})
+        starRef = data['R*_ref'][ipub]
+        counts[ipub]['starref'] = starRef
+        counts[ipub]['starrefcount'] = 0
+        if starRef==setRefByHand: counts[ipub]['starrefcount'] = 100
+        for starParam in starParams:
+            if starParam+'_ref' not in data.keys():
+                print('PROBLEM: missing ref param',starParam+'_ref')
+            if data[starParam+'_ref'][ipub]!=starRef and \
+               not data[starParam+'_ref'][ipub].startswith('derived'):
+                print('TROUBLE: different reference for star data',starParam,data[starParam+'_ref'][ipub])
+            if data[starParam][ipub]!='':
+                counts[ipub]['starrefcount'] += 1
+
+        # it is difficult to find the corresponding planet data
+        # the first few indices correspond to the default for each planet
+        #  then the rest is groups in batches by planet.  (batch length varies)
+        # getting the number of refs for each planet is a good first step
+        Nplanets = len(data['planets'])
+        Nref = {}
+        Nrefsum = 0
+        for planet in data['planets']:
+            Nref[planet] = len(data[planet]['rp'])
+            Nrefsum += Nref[planet]
+        if Nrefsum != len(data['R*']): log.warning('ERROR: number of star and planet pubs mismatched!')
+
+        if ipub < Nplanets:
+            planet = data['planets'][ipub]
+            ipubplanet = 0
+        else:
+            planet = data['planets'][iplanet]
+            ipubplanet = ipub - Nplanets + 1 - nplanetsum
+            nplanet += 1
+            if nplanet >= Nref[planet] - 1:  # jump to the next planet
+                nplanetsum += nplanet
+                nplanet = 0  # reset the planet publication counter back to zero
+                iplanet += 1
+        # if verbose: print('ipub cross match',ipub,planet,ipubplanet)
+        counts[ipub]['planet'] = planet
+
+        planetRef = data[planet]['rp_ref'][ipubplanet]
+        counts[ipub]['planetref'] = planetRef
+        counts[ipub]['planetrefcount'] = 0
+        if planetRef==setRefByHand: counts[ipub]['planetrefcount'] = 100
+        if verbose:
+            if starRef==planetRef:
+                print('starRef vs planetRef SAME',planet,ipub,ipubplanet,starRef,planetRef)
+            else:
+                print('starRef vs planetRef DIFF',planet,ipub,ipubplanet,starRef,planetRef)
+        for planetParam in planetParams:
+            if planetParam+'_ref' not in data[planet].keys():
+                print('PROBLEM: missing ref param',planetParam+'_ref')
+            if data[planet][planetParam+'_ref'][ipubplanet]!=planetRef and \
+               not data[planet][planetParam+'_ref'][ipubplanet].startswith('derived'):
+                print('TROUBLE: different reference for planet data',planetParam,data[planet][planetParam+'_ref'][ipub])
+            if data[planet][planetParam][ipubplanet]!='':
+                counts[ipub]['planetrefcount'] += 1
+
+        # sum up the star and planet counts (if it's the same publication)
+        if counts[ipub]['planetref']==counts[ipub]['starref']:
+            counts[ipub]['totalcount'] = counts[ipub]['starrefcount'] + counts[ipub]['planetrefcount']
+            counts[ipub]['totalref'] = counts[ipub]['starref']
+        elif counts[ipub]['planetrefcount'] > counts[ipub]['starrefcount']:
+            counts[ipub]['totalcount'] = counts[ipub]['planetrefcount']
+            counts[ipub]['totalref'] = counts[ipub]['planetref']
+        else:
+            counts[ipub]['totalcount'] = counts[ipub]['starrefcount']
+            counts[ipub]['totalref'] = counts[ipub]['starref']
+
+    # if verbose:
+    #    for count in counts: print('counts',count)
+
+    totalcounts = numpy.array([count['totalcount'] for count in counts])
+    bestscore = numpy.max(totalcounts)
+    refs = numpy.array([count['totalref'] for count in counts])
+    refs_with_max_score = refs[numpy.where(totalcounts==bestscore)]
+    if verbose: print('refs_with_max_score',refs_with_max_score)
+    bestyear = 0
+    bestref = 'ZZ'
+    for ref in refs_with_max_score:
+        try:
+            year = int(ref[-4:])
+        except ValueError:
+            # there are some refs without a year; make them lower priority
+            year = 1
+        # select the most recently published as tiebreaker
+        if year >= bestyear:
+            # use author name as tie-breaker for 2 with same year
+            if year==bestyear and bestref < ref:
+                pass
+            else:
+                bestyear = year
+                bestref = ref
+                # ref_with_max_score = ref
+
+    # alternate metric: combine total count for all planets, not just individual star+planet lines
+    bestref_oldmethod = bestref
+    for ipub in range(Npublications):
+        counts[ipub]['totalcount_singleplanet'] = counts[ipub]['totalcount']
+    if verbose: print('total counts before',[count['totalcount'] for count in counts])
+    for ipub in range(Npublications):
+        thisref = counts[ipub]['totalref']
+        thisplanet = counts[ipub]['planet']
+        for otherplanet in data['planets']:
+            if otherplanet!=thisplanet:
+                # loop through all the other pubs to find this same ref but for other planets
+                #  there should usually be a match, but not always
+                additionalCounts = 0
+                for iloop in range(Npublications):
+                    if counts[iloop]['totalref']==thisref and \
+                       counts[iloop]['planet']==otherplanet:
+                        # if verbose: print('Found other planet info for this ref:',
+                        #                  ipub,iloop,thisplanet,otherplanet,thisref)
+                        additionalCounts = counts[iloop]['totalcount_singleplanet']
+                # print('additionalCounts',thisplanet,otherplanet,additionalCounts)
+                counts[ipub]['totalcount'] += additionalCounts
+    if verbose: print('total counts after',[count['totalcount'] for count in counts])
+    totalcounts = numpy.array([count['totalcount'] for count in counts])
+    bestscore = numpy.max(totalcounts)
+    refs = numpy.array([count['totalref'] for count in counts])
+    refs_with_max_score = refs[numpy.where(totalcounts==bestscore)]
+    if verbose: print('refs_with_max_score',refs_with_max_score)
+    bestyear = 0
+    bestref = 'ZZ'
+    for ref in refs_with_max_score:
+        try:
+            year = int(ref[-4:])
+        except ValueError:
+            # there are some refs without a year; make them lower priority
+            year = 1
+        # select the most recently published as tiebreaker
+        if year >= bestyear:
+            # use author name as tie-breaker for 2 with same year
+            if year==bestyear and bestref < ref:
+                pass
+            else:
+                bestyear = year
+                bestref = ref
+                # ref_with_max_score = ref
+
+    if verbose:
+        if bestref_oldmethod==bestref:
+            print(' (old,new method give the same result)',bestref)
+        else:
+            print('MULTI-PLANET SELECTION GIVES NEW BEST PUB:',bestref_oldmethod,bestref)
+
+    # let's keep track of what parameters are missing
+    #  should be a lot with planet mass missing
+    #  FEH* sometimes missing is not a problem
+    # oof actually this is hard. maybe do it during the bestValue() selection
+
+    bestpubIndices = {'star':-1}
+    for planet in data['planets']: bestpubIndices[planet] = -1
+    for ipub in range(Npublications):
+        if data['R*_ref'][ipub]==bestref:
+            bestpubIndices['star'] = ipub
+    for planet in data['planets']:
+        for ipub in range(len(data[planet]['rp_ref'])):
+            if data[planet]['rp_ref'][ipub]==bestref:
+                bestpubIndices[planet] = ipub
+    if verbose:
+        print('bestpubIndices',bestpubIndices)
+        if bestpubIndices['star']==-1: print('ERROR!: no matching star pub?!?')
+        for planet in data['planets']:
+            if bestpubIndices[planet]==-1: print('OH NO!: no matching planet pub!',planet)
+
+    # return bestscore,ref_with_max_score,bestpubIndices
+    return bestscore,bestref,bestpubIndices
 
 # -------------------------------------------------------------------
 def estimate_mass_from_radius(radius_Jup):
@@ -292,7 +526,7 @@ def derive_SMA_from_P_and_Mstar(starInfo, planetLetter):
             # print('P M',P,M)
             # print('derived sma',newsma)
             # exit('test')
-            sma_ref_derived.append('derived from P,M*')
+            sma_ref_derived.append('derived from period,M*')
 
             # also fill in the uncertainty on sma, based on R,M uncertainties
             if Perr1=='' or Merr1=='':
@@ -388,9 +622,20 @@ def derive_LOGGplanet_from_R_and_M(starInfo, planetLetter, verbose=False):
     # print(starInfo[planetLetter].keys())
     # print()
 
-    # this one is different from above - the 'logg' field doesn't exist yet
-    if 'logg' in starInfo[planetLetter].keys() and verbose:
-        print('ERROR: logg field shouldnt exist yet')
+    # this allows for calls from overwrite, where the dictionary is filled with floats, not lists
+    # print(starInfo[planetLetter]['rp'], type(starInfo[planetLetter]['rp']))
+    if not isinstance(starInfo[planetLetter]['rp'], list):
+        starInfo[planetLetter]['rp'] = [starInfo[planetLetter]['rp']]
+        starInfo[planetLetter]['rp_lowerr'] = [starInfo[planetLetter]['rp_lowerr']]
+        starInfo[planetLetter]['rp_uperr'] = [starInfo[planetLetter]['rp_uperr']]
+        starInfo[planetLetter]['mass'] = [starInfo[planetLetter]['mass']]
+        starInfo[planetLetter]['mass_lowerr'] = [starInfo[planetLetter]['mass_lowerr']]
+        starInfo[planetLetter]['mass_uperr'] = [starInfo[planetLetter]['mass_uperr']]
+    else:
+        # this one is different from other subroutines here - the 'logg' field doesn't exist yet
+        if 'logg' in starInfo[planetLetter].keys() and verbose:
+            print('ERROR: logg field shouldnt exist yet')
+
     # for R,Rerr1,Rerr2, M,Merr1,Merr2, logg,loggerr1,loggerr2,loggref in zip(
     for R,Rerr1,Rerr2, M,Merr1,Merr2 in zip(
             starInfo[planetLetter]['rp'],
@@ -482,7 +727,11 @@ def derive_Lstar_from_R_and_T(starInfo):
             newLstar = float(R)**2 * (float(T)/sscmks['Tsun'])**4
             # print('Lstar derived',newLstar)
 
-            Lstar_derived.append(f'{newLstar:6.4f}')
+            if newLstar > 1.e-3:
+                Lstar_derived.append(f'{newLstar:6.4f}')
+            else:
+                # WD 1856 has a very low luminosity (it's a white dwarf); needs more sig-figs
+                Lstar_derived.append(f'{newLstar:10.8f}')
             Lstar_ref_derived.append('derived from R*,T*')
 
             # also fill in the uncertainty on Lstar, based on R,M uncertainties
@@ -522,7 +771,7 @@ def derive_Lstar_from_R_and_T(starInfo):
 
     return Lstar_derived, Lstar_lowerr_derived, Lstar_uperr_derived, Lstar_ref_derived
 # -------------------------------------------------------------------
-def derive_Teqplanet_from_Lstar_and_sma(starInfo, planetLetter):
+def derive_Teqplanet_from_Lstar_and_sma(starInfo, planetLetter, verbose=False):
     '''
     If planet T_equilibrium is blank, calculate it from star luminosity, planet sma
     '''
@@ -536,11 +785,17 @@ def derive_Teqplanet_from_Lstar_and_sma(starInfo, planetLetter):
     T_1AU = 278.33  # K
     # NOTE: this equilibrium temperature assumes albedo=0
 
+    # this allows for calls from overwrite, where the dictionary is filled with floats, not lists
+    # print('sma',starInfo[planetLetter]['sma'], type(starInfo[planetLetter]['sma']))
+    if not isinstance(starInfo[planetLetter]['sma'], list):
+        starInfo[planetLetter]['sma'] = [starInfo[planetLetter]['sma']]
+        starInfo[planetLetter]['sma_lowerr'] = [starInfo[planetLetter]['sma_lowerr']]
+        starInfo[planetLetter]['sma_uperr'] = [starInfo[planetLetter]['sma_uperr']]
+
     Teq_derived = []
     Teq_lowerr_derived = []
     Teq_uperr_derived = []
     Teq_ref_derived = []
-
     for Lstar,Lstarerr1,Lstarerr2, sma,smaerr1,smaerr2, \
         Teq,Teqerr1,Teqerr2,Teqref in zip(
             starInfo['L*'],starInfo['L*_lowerr'],starInfo['L*_uperr'],
@@ -554,9 +809,14 @@ def derive_Teqplanet_from_Lstar_and_sma(starInfo, planetLetter):
 
         # check for blank equilibrium temperature
         #  (but only update it if L* and sma are both defined)
-        if Teq=='' and Lstar!='' and sma!='':
+        # 6/12/24 actually let's always update it, if possible;
+        #   published values are inconsistently derived (e.g. albedo)
+        # if Teq=='' and Lstar!='' and sma!='':
+        if Lstar!='' and sma!='':
             newTeq = T_1AU * float(Lstar)**0.25 / float(sma)**0.5
             # print('Lstar derived',newTeq)
+            if verbose and Teq!='':
+                print('updating a published Teq (new,new/old):',planetLetter,newTeq,newTeq/Teq)
 
             Teq_derived.append(f'{newTeq:6.4f}')
             Teq_ref_derived.append('derived from L*,sma')
@@ -650,6 +910,168 @@ def derive_inclination_from_impactParam(starInfo, planetLetter):
     return inc_derived, inc_lowerr_derived, inc_uperr_derived, inc_ref_derived
 
 # -------------------------------------------------------------------
+def derive_impactParam_from_inclination(starInfo, planetLetter):
+    '''
+    If planet impact parameter is blank, calculate it from inclination, star radius, semi-major axis
+    '''
+
+    # get Rsun definition
+    sscmks = syscore.ssconstants(cgs=True)
+
+    imp_derived = []
+    imp_lowerr_derived = []
+    imp_uperr_derived = []
+    imp_ref_derived = []
+
+    for Rstar,Rstarerr1,Rstarerr2, sma,smaerr1,smaerr2, inc,incerr1,incerr2, \
+        imp,imperr1,imperr2,impref in zip(
+            starInfo['R*'],starInfo['R*_lowerr'],starInfo['R*_uperr'],
+            starInfo[planetLetter]['sma'],
+            starInfo[planetLetter]['sma_lowerr'],
+            starInfo[planetLetter]['sma_uperr'],
+            starInfo[planetLetter]['inc'],
+            starInfo[planetLetter]['inc_lowerr'],
+            starInfo[planetLetter]['inc_uperr'],
+            starInfo[planetLetter]['impact'],
+            starInfo[planetLetter]['impact_lowerr'],
+            starInfo[planetLetter]['impact_uperr'],
+            starInfo[planetLetter]['impact_ref']):
+
+        # check for blank impact parameter
+        #  (but only update it if inclination, R*, and sma are all defined)
+        if imp=='' and Rstar!='' and sma!='' and inc!='':
+
+            cosinc = numpy.cos(float(inc) /180.*numpy.pi)
+            newimp = cosinc * float(sma) / float(Rstar)/sscmks['Rsun/AU']
+            # print()
+            # print(' cosinc',cosinc)
+            # print(' sma/R*',float(sma) / float(Rstar)/sscmks['Rsun/AU'])
+            # print('impact derived from inclination:',newimp)
+            newimp = numpy.abs(newimp)
+            # if newimp > 1: print('STRANGE impact parameter',newimp)
+            # if newimp > 1: newimp = 1
+            newimp = min(newimp, 1)
+
+            imp_derived.append(f'{newimp:6.4f}')
+            imp_ref_derived.append('derived from inclination')
+
+            # also fill in the uncertainty on impact param, based on inc,R*,sma uncertainties
+            if Rstarerr1=='' or smaerr1=='' or incerr1=='':
+                imp_lowerr_derived.append('')
+            else:
+                impfractionalError1 = -numpy.sqrt((float(Rstarerr1)/float(Rstar))**2 +
+                                                  (float(incerr1)*numpy.pi/180./cosinc)**2 +
+                                                  (float(smaerr1)/float(sma))**2)
+                imp_lowerr_derived.append(f'{(newimp * impfractionalError1):6.4f}')
+            if Rstarerr2=='' or smaerr2=='' or incerr2=='':
+                imp_uperr_derived.append('')
+            else:
+                impfractionalError2 = numpy.sqrt((float(Rstarerr2)/float(Rstar))**2 +
+                                                 (float(incerr2)*numpy.pi/180./cosinc)**2 +
+                                                 (float(smaerr2)/float(sma))**2)
+                imp_uperr_derived.append(f'{(newimp * impfractionalError2):6.4f}')
+        else:
+            imp_derived.append(imp)
+            imp_lowerr_derived.append(imperr1)
+            imp_uperr_derived.append(imperr2)
+            imp_ref_derived.append(impref)
+
+    return imp_derived, imp_lowerr_derived, imp_uperr_derived, imp_ref_derived
+
+# -------------------------------------------------------------------
+def derive_sma_from_ars(starInfo, planetLetter):
+    '''
+    If planet semi-major axis is blank, calculate it a/Rp (e.g. Stassun)
+    '''
+
+    # get Rsun definition
+    sscmks = syscore.ssconstants(cgs=True)
+
+    sma_derived = []
+    sma_lowerr_derived = []
+    sma_uperr_derived = []
+    sma_ref_derived = []
+
+    for Rstar,Rstarerr1,Rstarerr2, ars,arserr1,arserr2, \
+        sma,smaerr1,smaerr2, smaref, in zip(
+            starInfo['R*'],starInfo['R*_lowerr'],starInfo['R*_uperr'],
+            starInfo[planetLetter]['ars'],
+            starInfo[planetLetter]['ars_lowerr'],
+            starInfo[planetLetter]['ars_uperr'],
+            starInfo[planetLetter]['sma'],
+            starInfo[planetLetter]['sma_lowerr'],
+            starInfo[planetLetter]['sma_uperr'],
+            starInfo[planetLetter]['sma_ref']):
+
+        # check for blank semi-major axis
+        #  (but only update it if R* and a/R* are defined)
+        if sma=='' and Rstar!='' and ars!='':
+            newsma = float(ars) * float(Rstar)*sscmks['Rsun/AU']
+
+            sma_derived.append(f'{newsma:6.4f}')
+            sma_ref_derived.append('derived from a/R*')
+
+            # also fill in the uncertainty on sma, based on R*,a/R* uncertainties
+            #  hmm, these are going to be larger than they should
+            #   since the two uncertainties are correlated
+            #  it's probably better to just use the a/R* uncertainty straight up
+            # no wait, forget that.  they are actually two independent measurements
+            if Rstarerr1=='' or arserr1=='':
+                sma_lowerr_derived.append('')
+            else:
+                smafractionalError1 = -numpy.sqrt((float(Rstarerr1)/float(Rstar))**2 +
+                                                  (float(arserr1)/float(ars))**2)
+                # smafractionalError1 = -numpy.sqrt((float(arserr1)/float(ars))**2)
+                sma_lowerr_derived.append(f'{(newsma * smafractionalError1):6.4f}')
+            if Rstarerr2=='' or arserr2=='':
+                sma_uperr_derived.append('')
+            else:
+                smafractionalError2 = numpy.sqrt((float(Rstarerr2)/float(Rstar))**2 +
+                                                 (float(arserr2)/float(ars))**2)
+                # smafractionalError2 = numpy.sqrt((float(arserr2)/float(ars))**2)
+                sma_uperr_derived.append(f'{(newsma * smafractionalError2):6.4f}')
+        else:
+            sma_derived.append(sma)
+            sma_lowerr_derived.append(smaerr1)
+            sma_uperr_derived.append(smaerr2)
+            sma_ref_derived.append(smaref)
+
+    return sma_derived, sma_lowerr_derived, sma_uperr_derived, sma_ref_derived
+# -------------------------------------------------------------------
+
+def fill_in_some_blank_omegas(starInfo, planetLetter):
+    '''
+    If omega is blank and eccentricity is zero, omega is undefined (fill with zero)
+    '''
+
+    omega_filled = []
+    omega_lowerr_filled = []
+    omega_uperr_filled = []
+    omega_ref_filled = []
+
+    for ecc,omega,omegalowerr,omegauperr,omegaref in zip(starInfo[planetLetter]['ecc'],
+                                                         starInfo[planetLetter]['omega'],
+                                                         starInfo[planetLetter]['omega_lowerr'],
+                                                         starInfo[planetLetter]['omega_uperr'],
+                                                         starInfo[planetLetter]['omega_ref']):
+        # print('omega,ecc',omega,ecc)
+        circular = False
+        if ecc!='' and float(ecc)==0:
+            circular = True
+        if omega=='' and circular:
+            omega_filled.append('0')
+            omega_ref_filled.append('derived from ecc=0 (undefined)')
+            omega_lowerr_filled.append('100')
+            omega_uperr_filled.append('100')
+        else:
+            omega_filled.append(omega)
+            omega_lowerr_filled.append(omegalowerr)
+            omega_uperr_filled.append(omegauperr)
+            omega_ref_filled.append(omegaref)
+
+    return omega_filled, omega_lowerr_filled, omega_uperr_filled, omega_ref_filled
+
+# -------------------------------------------------------------------
 def fixZeroUncertainties(starInfo, starParam, planetParam):
     '''
     If any uncertainty is zero, remove it.  We don't want chi-squared=infinity
@@ -713,6 +1135,89 @@ def checkValidData(starInfo, starParam, planetParam):
                     missingParams.append(planet+':'+param+'_lowerr')
 
     if missingParams:
+        # print()
+        # for planet in starInfo['planets']:
+        #     print(' target param check',starInfo[planet].keys())
+        # print()
         # print('missing parameters in the target state vector:',missingParams)
         return False
     return True
+# -------------------------------------------------------------------
+
+def fixPublishedLimits(systemInfo, starLimitReplacements, planetLimitReplacements,
+                       verbose=False):
+    '''
+    Check for and fix any upper/lower limits
+    Fix them as prescribed by the input replacement values
+    '''
+
+    for param in starLimitReplacements:
+        # print()
+        # print('star param',param)
+        # print('values before',param,systemInfo[param])
+        # print('lim before',param,systemInfo[param+'_lim'])
+        # print('refs before',param,systemInfo[param+'_ref'])
+
+        for ipl in range(len(systemInfo[param])):
+            if systemInfo[param+'_lim'][ipl]=='1' or systemInfo[param+'_lim'][ipl]=='-1':
+                if verbose: print('Fixing limit',param,
+                                  systemInfo[param][ipl],
+                                  systemInfo[param+'_lim'][ipl],
+                                  systemInfo[param+'_ref'][ipl])
+                if starLimitReplacements[param] != 'keep value':
+                    systemInfo[param][ipl] = starLimitReplacements[param]
+                systemInfo[param+'_lim'][ipl] = '0'
+
+        # print('values after',param,systemInfo[param])
+        # print('lim after',param,systemInfo[param+'_lim'])
+        # print('refs after',param,systemInfo[param+'_ref'])
+
+    for param in planetLimitReplacements:
+        # print()
+        # print('param',param)
+
+        for p in systemInfo['planets']:
+            # print('values before',p,param,systemInfo[p][param])
+            # print('lim before',p,param,systemInfo[p][param+'_lim'])
+            # print('refs before',p,param,systemInfo[p][param+'_ref'])
+
+            for ipl in range(len(systemInfo[p][param])):
+                if systemInfo[p][param+'_lim'][ipl]=='1' or \
+                   systemInfo[p][param+'_lim'][ipl]=='-1':
+                    if verbose: print('Fixing limit',p,param,
+                                      systemInfo[p][param][ipl],
+                                      systemInfo[p][param+'_lim'][ipl],
+                                      systemInfo[p][param+'_ref'][ipl])
+                    if planetLimitReplacements[param] != 'keep value':
+                        systemInfo[p][param][ipl] = planetLimitReplacements[param]
+                    systemInfo[p][param+'_lim'][ipl] = '0'
+                    if param=='ecc':
+                        systemInfo[p][param+'_ref'][ipl] = 'derived from eccentricity upper limit'
+
+            # print('values after',p,param,systemInfo[p][param])
+            # print('lim after',p,param,systemInfo[p][param+'_lim'])
+            # print('refs after',p,param,systemInfo[p][param+'_ref'])
+
+    # check for eccentricity values that are really upper limits
+    #  use less than 2-sigma or 3-sigma as criteria?
+    for p in systemInfo['planets']:
+        # print('eccentricity check',p,systemInfo[p]['ecc'][ipl],
+        #      'uperr',systemInfo[p]['ecc_uperr'][ipl],
+        #      'loerr',systemInfo[p]['ecc_lowerr'][ipl])
+        for ipl in range(len(systemInfo[p][param])):
+            # note that this fix-limits call comes before the fill-uncertainty call
+            #  so a blank ecc might be set to zero, but the lowerr is still blank
+            if systemInfo[p]['ecc'][ipl]!='' and float(systemInfo[p]['ecc'][ipl])>0 \
+               and systemInfo[p]['ecc_lowerr'][ipl]!='':
+                # print('eccentricity check',p,systemInfo[p]['ecc'],
+                #       systemInfo[p]['ecc_uperr'],systemInfo[p]['ecc_lowerr'])
+                ecc_SNR = -float(systemInfo[p]['ecc'][ipl]) / float(systemInfo[p]['ecc_lowerr'][ipl])
+                if ecc_SNR < 2:
+                    log.warning('SYSTEM: should be an ecc upper limit!? SNR=%s',ecc_SNR)
+                    systemInfo[p]['ecc'][ipl] = '0'
+                    systemInfo[p]['ecc_ref'][ipl] = 'derived from eccentricity upper limit'
+
+    # print()
+    return systemInfo
+
+# -------------------------------------------------------------------

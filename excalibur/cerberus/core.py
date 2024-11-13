@@ -2,15 +2,19 @@
 # -- IMPORTS -- ------------------------------------------------------
 import dawgie
 import excalibur
-# pylint: disable=import-self
-import excalibur.cerberus.core
 import excalibur.system.core as syscore
 from excalibur.target.targetlists import get_target_lists
 # from excalibur.cerberus.core import savesv
-from excalibur.util.cerberus import crbce,getmmw
-from excalibur.cerberus.plotting import rebinData, plot_bestfit, \
+from excalibur.cerberus.forwardModel import \
+    ctxtupdt, absorb, \
+    crbmodel, cloudyfmcerberus, clearfmcerberus, offcerberus, \
+    offcerberus1, offcerberus2, offcerberus3, offcerberus4, \
+    offcerberus5, offcerberus6, offcerberus7, offcerberus8
+from excalibur.cerberus.plotting import rebinData, plot_spectrumfit, \
     plot_corner, plot_vsPrior, plot_walkerEvolution, \
-    plot_fitsVStruths, plot_massVSmetals
+    plot_fitsVStruths, plot_fitUncertainties, plot_massVSmetals
+from excalibur.cerberus.bounds import setPriorBound, addPriors, \
+    getProfileLimits_HSTG141, applyProfiling
 
 import logging
 log = logging.getLogger(__name__)
@@ -20,32 +24,16 @@ pymc3log.setLevel(logging.ERROR)
 import os
 import pymc3 as pm
 import numpy as np
-import matplotlib.image as img
 import matplotlib.pyplot as plt
 from collections import defaultdict
+from collections import namedtuple
 
-import theano.tensor as tt
-import theano.compile.ops as tco
-
-import scipy.constants as cst
 from scipy.interpolate import interp1d as itp
 
-# -- GLOBAL CONTEXT FOR PYMC3 DETERMINISTICS ---------------------------------------------
-from collections import namedtuple
-CONTEXT = namedtuple('CONTEXT', ['cleanup', 'model', 'p', 'solidr', 'orbp', 'tspectrum',
-                                 'xsl', 'spc', 'modparlbl', 'hzlib'])
-ctxt = CONTEXT(cleanup=None, model=None, p=None, solidr=None, orbp=None, tspectrum=None,
-               xsl=None, spc=None, modparlbl=None, hzlib=None)
-def ctxtupdt(cleanup=None, model=None, p=None, solidr=None, orbp=None, tspectrum=None,
-             xsl=None, spc=None, modparlbl=None, hzlib=None):
-    '''
-G. ROUDIER: Update context
-    '''
-    excalibur.cerberus.core.ctxt = CONTEXT(cleanup=cleanup, model=model, p=p,
-                                           solidr=solidr, orbp=orbp,
-                                           tspectrum=tspectrum, xsl=xsl, spc=spc,
-                                           modparlbl=modparlbl, hzlib=hzlib)
-    return
+CERB_PARAMS = namedtuple('cerberus_params_from_runtime',[
+    'MCMC_chain_length',
+    'fitCloudParameters', 'fitT', 'fitCtoO', 'fitNtoO'])
+
 # ------------- ------------------------------------------------------
 # -- SV VALIDITY -- --------------------------------------------------
 def checksv(sv):
@@ -80,18 +68,39 @@ def myxsecs(spc, out,
             xmspecies=['TIO', 'H2O', 'H2CO', 'HCN', 'CO', 'CO2', 'NH3', 'CH4'].copy(),
             verbose=False):
     '''
-G. ROUDIER: Builds Cerberus cross section library
+    G. ROUDIER: Builds Cerberus cross section library
     '''
+    # logarithmicOpacitySumming = True
+    logarithmicOpacitySumming = False
     cs = False
+    planetLetters = []
     for p in spc['data'].keys():
+        if len(p)==1:  # filter out non-planetletter keywords, e.g. 'models','target'
+            if 'WB' in spc['data'][p].keys():  # make sure it has a spectrum (Kepler-37e bug)
+                planetLetters.append(p)
+            else:
+                log.warning('--< CERBERUS.XSLIB: wavelength grid is missing for %s %s >--', spc['data']['target'],p)
+    for p in planetLetters:
         out['data'][p] = {}
+
+        # model has to be specified, if there is a list of models
+        # if 'models' in spc['data'].keys():
+        #    arielModel = spc['data']['models'][0]  # arbitrary model choice; all have same WB grid
+        #    wgrid = np.array(spc['data'][p][arielModel]['WB'])
+        # else:
+
         wgrid = np.array(spc['data'][p]['WB'])
         qtgrid = gettpf(tips, knownspecies)
         library = {}
+
+        # EDIT HERE!
+        # print('cerb core  spc keys',spc['data'][p]['WB'])
+        # exit()
+
         nugrid = (1e4/np.copy(wgrid))[::-1]
         dwnu = np.concatenate((np.array([np.diff(nugrid)[0]]), np.diff(nugrid)))
         for myexomol in xmspecies:
-            log.warning('>-- %s', str(myexomol))
+            # log.warning('>-- %s', str(myexomol))
             library[myexomol] = {'I':[], 'nu':[], 'T':[],
                                  'Itemp':[], 'nutemp':[], 'Ttemp':[],
                                  'SPL':[], 'SPLNU':[]}
@@ -118,7 +127,16 @@ G. ROUDIER: Builds Cerberus cross section library
                 sigma2 = np.array(library[myexomol]['Itemp'])[select]
                 for nubin, mydw in zip(nugrid, dwnu):
                     select = ((matnu > (nubin-mydw/2.)) & (matnu <= nubin+mydw/2.))
-                    bini.append(np.sum(sigma2[select]))
+                    if logarithmicOpacitySumming:
+                        # linearsum = np.sum(sigma2[select])
+                        logmean = np.mean(np.log(sigma2[select]))
+                        Nbin = np.sum(select)
+                        # print('Nbin',Nbin)
+                        bini.append(Nbin * np.exp(logmean))
+                        # print('old,new',linearsum,Nbin * np.exp(logmean),
+                        #      'Nbin,min,max',Nbin,np.min(sigma2[select]),np.max(sigma2[select]))
+                    else:
+                        bini.append(np.sum(sigma2[select]))
                     pass
                 bini = np.array(bini)/dwnu
                 library[myexomol]['nu'].extend(list(nugrid))
@@ -163,12 +181,12 @@ G. ROUDIER: Builds Cerberus cross section library
                 plt.legend(bbox_to_anchor=(0.95, 0., 0.12, 1),
                            loc=5, ncol=1, mode='expand', numpoints=1,
                            borderaxespad=0., frameon=True)
-                plt.savefig(myexomol+'_xslib.png', dpi=200)
+                plt.savefig(excalibur.context['data_dir']+'/bryden/'+myexomol+'_xslib.png', dpi=200)
                 plt.show()
                 pass
             pass
         for mycia in cialist:
-            log.warning('>-- %s', str(mycia))
+            # log.warning('>-- %s', str(mycia))
             myfile = '_'.join((os.path.join(ciadir, mycia), '2011.cia'))
             library[mycia] = {'I':[], 'nu':[], 'T':[],
                               'Itemp':[], 'nutemp':[], 'Ttemp':[],
@@ -194,7 +212,12 @@ G. ROUDIER: Builds Cerberus cross section library
                     sigma2 = np.array(library[mycia]['Itemp'])[select]
                     for nubin, mydw in zip(nugrid, dwnu):
                         select = (matnu > (nubin-mydw/2.)) & (matnu <= nubin+mydw/2.)
-                        bini.append(np.sum(sigma2[select]))
+                        if logarithmicOpacitySumming:
+                            logmean = np.mean(np.log(sigma2[select]))
+                            Nbin = np.sum(select)
+                            bini.append(Nbin * np.exp(logmean))
+                        else:
+                            bini.append(np.sum(sigma2[select]))
                         pass
                     bini = np.array(bini)/dwnu
                     library[mycia]['nu'].extend(list(nugrid))
@@ -232,7 +255,7 @@ G. ROUDIER: Builds Cerberus cross section library
                 pass
             pass
         for ks in knownspecies:
-            log.warning('>-- %s', str(ks))
+            # log.warning('>-- %s', str(ks))
             library[ks] = {'MU':[], 'I':[], 'nu':[], 'S':[],
                            'g_air':[], 'g_self':[],
                            'Epp':[], 'eta':[], 'delta':[]}
@@ -294,6 +317,9 @@ G. ROUDIER: Builds Cerberus cross section library
             mmr = 2.3  # Fortney 2015 for hot Jupiters
             solrad = 10.
             Hsmax = 15.
+            # increase the number of scale heights from 15 to 20, to match the Ariel forward model
+            # (this is the range used for xslib; also has to be set for atmos)
+            Hsmax = 20.
             nlevels = 100.
             pgrid = np.arange(np.log(solrad)-Hsmax, np.log(solrad)+Hsmax/nlevels,
                               Hsmax/(nlevels-1))
@@ -303,7 +329,7 @@ G. ROUDIER: Builds Cerberus cross section library
             allwavenumbers = []
             alltemperatures = []
             for Tstep in np.arange(300, 2000, 100):
-                log.warning('>---- %s K', str(Tstep))
+                # log.warning('>---- %s K', str(Tstep))
                 sigma, lsig = absorb(library[ks], qtgrid[ks], Tstep, pressuregrid, mmr,
                                      False, False, wgrid, debug=False)
                 allxsections.append(sigma[0])
@@ -321,7 +347,12 @@ G. ROUDIER: Builds Cerberus cross section library
                 sigma2 = np.array(allxsections)[indextemp]
                 for nubin, mydw in zip(nugrid, dwnu):
                     select = ((matnu > (nubin-mydw/2.)) & (matnu <= nubin+mydw/2.))
-                    bini.append(np.sum(sigma2[select]))
+                    if logarithmicOpacitySumming:
+                        logmean = np.mean(np.log(sigma2[select]))
+                        Nbin = np.sum(select)
+                        bini.append(Nbin * np.exp(logmean))
+                    else:
+                        bini.append(np.sum(sigma2[select]))
                     pass
                 bini = np.array(bini)/dwnu
                 library[ks]['nu'].extend(list(nugrid))
@@ -414,1389 +445,378 @@ def atmosversion():
     '''
     return dawgie.VERSION(1,3,2)
 
-def atmos(fin, xsl, spc, out, ext,
+def atmos(fin, xsl, spc, runtime_params, out, ext,
           hazedir=os.path.join(excalibur.context['data_dir'], 'CERBERUS/HAZE'),
-          singlemod=None, mclen=int(1e4), sphshell=False, verbose=False):
+          singlemod=None, mclen=int(1e4), verbose=False):
     '''
-G. ROUDIER: Cerberus retrievial
+    G. ROUDIER: Cerberus retrieval
     '''
-    noClouds = True
 
-    am = False
+    okfit = False
     orbp = fin['priors'].copy()
+
     ssc = syscore.ssconstants(mks=True)
     crbhzlib = {'PROFILE':[]}
     hazelib(crbhzlib, hazedir=hazedir, verbose=False)
-    # MODELS
-    modfam = ['TEC', 'PHOTOCHEM']
-    if ext=='Ariel-sim': modfam = ['TEC']
-    modparlbl = {'TEC':['XtoH', 'CtoO', 'NtoO'],
-                 'PHOTOCHEM':['HCN', 'CH4', 'C2H2', 'CO2', 'H2CO']}
-    # if ext=='Ariel-sim': modparlbl = {'TEC':['XtoH', 'CtoO']}
+    # SELECT WHICH MODELS TO RUN FOR THIS FILTER
+    if ext=='Ariel-sim':
+        modfam = ['TEC']  # Ariel sims are currently only TEC equilibrium models
+        # modparlbl = {'TEC':['XtoH', 'CtoO']}
+        modparlbl = {'TEC':['XtoH', 'CtoO', 'NtoO']}
+        # ** select which Ariel model to fit.  there are 8 options **
+        # atmosModels = ['cerberus', 'cerberusNoclouds',
+        #               'cerberuslowmmw', 'cerberuslowmmwNoclouds',
+        #               'taurex', 'taurexNoclouds',
+        #               'taurexlowmmw', 'taurexlowmmwNoclouds']
+        arielModel = 'cerberusNoclouds'
+        # arielModel = 'cerberus'
+        # arielModel = 'taurex'
+
+        # if the ariel sim doesn't have clouds, then don't fit the clouds
+        # fitCloudParameters = 'Noclouds' not in arielModel
+        #  OR
+        # don't fit the 4 cloud parameters, even if the model has clouds
+        # fitCloudParameters = False
+        #  OR
+        # do fit the 4 cloud parameters, even if the model doesn't have cloud
+        # fitCloudParameters = True
+        #
+        # print('fitCloudParameters for retrieved model:',runtime_params.fitCloudParameters)
+
+        # option to fix N/O
+        if not runtime_params.fitNtoO:
+            modparlbl = {'TEC':['XtoH', 'CtoO']}
+        # option to fix C/O
+        if not runtime_params.fitCtoO:
+            modparlbl = {'TEC':['XtoH']}
+
+        # print('name of the forward model:',arielModel)
+        # print('available models',spc['data']['models'])
+        if arielModel not in spc['data']['models']:
+            log.warning('--< BIG PROB: ariel model doesnt exist!!! >--')
+    else:
+        modfam = ['TEC', 'PHOTOCHEM']
+        modparlbl = {'TEC':['XtoH', 'CtoO', 'NtoO'],
+                     'PHOTOCHEM':['HCN', 'CH4', 'C2H2', 'CO2', 'H2CO']}
+        if not runtime_params.fitNtoO:
+            modparlbl['TEC'].remove('NtoO')
+        if not runtime_params.fitCtoO:
+            modparlbl['TEC'].remove('CtoO')
+
     if (singlemod is not None) and (singlemod in modfam):
         modfam = [modfam[modfam.index(singlemod)]]
-        pass
+
+    # save the stellar params, so that analysis knows the stellar metallicity
+    starParams = ['R*', 'M*', 'LOGG*', 'T*', 'L*', 'RHO*', 'FEH*',
+                  'Jmag', 'Hmag', 'Kmag', 'spTyp', 'AGE*', 'dist']
+    out['data']['stellar_params'] = {}
+    for starParam in starParams:
+        out['data']['stellar_params'][starParam] = orbp[starParam]
+
     # PLANET LOOP
     for p in spc['data'].keys():
-        out['data'][p] = {}
-        out['data'][p]['MODELPARNAMES'] = modparlbl
-        eqtemp = orbp['T*']*np.sqrt(orbp['R*']*ssc['Rsun/AU']/(2.*orbp[p]['sma']))
-        tspc = np.array(spc['data'][p]['ES'])
-        terr = np.array(spc['data'][p]['ESerr'])
-        twav = np.array(spc['data'][p]['WB'])
-        tspecerr = abs(tspc**2 - (tspc + terr)**2)
-        tspectrum = tspc**2
-        if 'STIS-WFC3' in ext:
-            filters = np.array(spc['data'][p]['Fltrs'])
-            cond_specG750 = filters == 'HST-STIS-CCD-G750L-STARE'
-            # MASKING G750 WAV > 0.80
-            twav_G750 = twav[cond_specG750]
-            tspec_G750 = tspectrum[cond_specG750]
-            tspecerr_G750 = tspecerr[cond_specG750]
-            mask = (twav_G750 > 0.80) & (twav_G750 < 0.95)
-            tspec_G750[mask] = np.nan
-            tspecerr_G750[mask] = np.nan
-            tspectrum[cond_specG750] = tspec_G750
-            tspecerr[cond_specG750] = tspecerr_G750
-            pass
-        # CLEAN UP G750
-#         cond_nan = np.isfinite(tspec_G750)
-#         coefs_spec_G750 = poly.polyfit(twav_G750[cond_nan], tspec_G750[cond_nan], 1)
-#         slp = twav_G750*coefs_spec_G750[1] + coefs_spec_G750[0]
-#         mask = abs(slp - tspec_G750) >= 7 * np.nanmedian(tspecerr_G750)
-#         tspec_G750[mask] = np.nan
-#         tspectrum[cond_specG750] = tspec_G750
-        Hs = spc['data'][p]['Hs']
-        #  Clean up
-        spechs = (np.sqrt(tspectrum) - np.sqrt(np.nanmedian(tspectrum)))/Hs
-        cleanup2 = abs(spechs) > 3e0  # excluding everything above +-3 Hs
-        tspectrum[cleanup2] = np.nan
-        tspecerr[cleanup2] = np.nan
-        twav[cleanup2] = np.nan
-        cleanup = np.isfinite(tspectrum) & (tspecerr < 1e0)
-        #
-        cleanup = np.isfinite(tspectrum)
-        solidr = orbp[p]['rp']*ssc['Rjup']  # MK
+        # make sure that it really is a planet letter, not another dict key
+        #  (ariel has other keys, e.g. 'target', 'planets', 'models')
+        # make sure it has a spectrum (Kepler-37e bug)
+        if len(p)==1 and 'WB' not in spc['data'][p].keys():
+            log.warning('--< CERBERUS.ATMOS: wavelength grid is missing for %s %s >--',spc['data']['target'],p)
+        elif len(p)==1 and 'WB' in spc['data'][p].keys():
+            if ext=='Ariel-sim':
+                if arielModel in spc['data'][p].keys():
+                    inputData = spc['data'][p][arielModel]
+                    # make sure that the wavelength is saved in usual location
+                    # (the cerberus forward models expect it to come after [p])
+                    # spc['data'][p]['WB'] = spc['data'][p][arielModel]['WB']
+                    inputData['WB'] = spc['data'][p]['WB']
+                else:
+                    log.warning('--< THIS arielModel DOESNT EXIST!!! (rerun ariel task?) >--')
+            else:
+                inputData = spc['data'][p]
 
-        for model in modfam:
-            ctxtupdt(cleanup=cleanup, model=model, p=p, solidr=solidr, orbp=orbp,
-                     tspectrum=tspectrum, xsl=xsl, spc=spc, modparlbl=modparlbl,
-                     hzlib=crbhzlib)
-            out['data'][p][model] = {}
-            out['data'][p][model]['prior_ranges'] = {}
-            # keep track of the bounds put on each parameter
-            # this will be helpful for later plotting and analysis
-            prior_ranges = {}
-            nodes = []
-            with pm.Model():
-                if not noClouds:
-                    # CLOUD TOP PRESSURE
-                    prior_ranges['CTP'] = (-6,1)
-                    ctp = pm.Uniform('CTP', -6., 1.)
-                    nodes.append(ctp)
+            out['data'][p] = {}
+            out['data'][p]['MODELPARNAMES'] = modparlbl
 
-                    # HAZE SCAT. CROSS SECTION SCALE FACTOR
-                    prior_ranges['Hscale'] = (-6,6)
-                    hza = pm.Uniform('HScale', -6e0, 6e0)
-                    nodes.append(hza)
+            # save the planet params (mass), so that analysis can make a mass-metallicity plot
+            out['data'][p]['planet_params'] = orbp[p]
+            # save the tier and #-of-visits (for Ariel-sim targets), for plot labelling
+            if ext=='Ariel-sim':
+                out['data'][p]['tier'] = spc['data'][p][arielModel]['tier']
+                out['data'][p]['visits'] = spc['data'][p][arielModel]['visits']
 
-                # OFFSET BETWEEN STIS AND WFC3 filters
-                if 'STIS-WFC3' in ext:
-                    cond_off0 = filters == 'HST-STIS-CCD-G430L-STARE'
-                    cond_off1 = filters == 'HST-STIS-CCD-G750L-STARE'
-                    cond_off2 = filters == 'HST-WFC3-IR-G102-SCAN'
-                    cond_off3 = filters == 'HST-WFC3-IR-G141-SCAN'
-                    valid0 = True in cond_off0
-                    valid1 = True in cond_off1
-                    valid2 = True in cond_off2
-                    valid3 = True in cond_off3
-                    if 'STIS' in filters[0]:
-                        if valid0:  # G430
-                            if valid1 and valid2 and valid3:  # G430-G750-G102-G141
-                                off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off0]))
-                                off1_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off1]))
-                                off2_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off2]))
-                                off0 = pm.Uniform('OFF0', -off0_value, off0_value)
-                                nodes.append(off0)
-                                off1 = pm.Uniform('OFF1', -off1_value, off1_value)
-                                nodes.append(off1)
-                                off2 = pm.Uniform('OFF2', -off2_value, off2_value)
-                                nodes.append(off2)
-                            if valid1 and valid2 and not valid3:
-                                off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off2])- np.nanmedian(1e2*tspectrum[cond_off0]))
-                                off1_value = abs(np.nanmedian(1e2*tspectrum[cond_off2])- np.nanmedian(1e2*tspectrum[cond_off1]))
-                                off0 = pm.Uniform('OFF0', -off0_value, off0_value)
-                                nodes.append(off0)
-                                off1 = pm.Uniform('OFF1', -off1_value, off1_value)
-                                nodes.append(off1)
-                            if valid1 and valid3 and not valid2:
-                                off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off0]))
-                                off1_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off1]))
-                                off0 = pm.Uniform('OFF0', -off0_value, off0_value)
-                                nodes.append(off0)
-                                off1 = pm.Uniform('OFF1', -off1_value, off1_value)
-                                nodes.append(off1)
-                            if valid2 and valid3 and not valid1:
-                                off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off0]))
-                                off1_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off2]))
-                                off0 = pm.Uniform('OFF0', -off0_value, off0_value)
-                                nodes.append(off0)
-                                off1 = pm.Uniform('OFF1', -off1_value, off1_value)
-                                nodes.append(off1)
-                            if valid3 and not valid1 and not valid2:
-                                off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off0]))
-                                off0 = pm.Uniform('OFF0', -off0_value, off0_value)
-                                nodes.append(off0)
-                        if not valid0:
-                            if valid1 and valid2 and valid3:
-                                off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off1]))
-                                off1_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off2]))
-                                off0 = pm.Uniform('OFF0', -off0_value, off0_value)
-                                nodes.append(off0)
-                                off1 = pm.Uniform('OFF1', -off1_value, off1_value)
-                                nodes.append(off1)
-                            if valid1 and valid3 and not valid2:
-                                off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off1]))
-                                off0 = pm.Uniform('OFF0', -off0_value, off0_value)
-                                nodes.append(off0)
-                            if valid1 and valid2 and not valid3:
-                                off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off2])- np.nanmedian(1e2*tspectrum[cond_off1]))
-                                off0 = pm.Uniform('OFF0', -off0_value, off0_value)
-                                nodes.append(off0)
-                            if valid1 and valid2 and not valid3:
-                                off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off2])- np.nanmedian(1e2*tspectrum[cond_off1]))
-                                off0 = pm.Uniform('OFF0', -off0_value, off0_value)
-                                nodes.append(off0)
+            # eqtemp1 = orbp['T*']*np.sqrt(orbp['R*']*ssc['Rsun/AU']/(2.*orbp[p]['sma']))
+            # use of L* might be better than T*,R*; it's more of a direct observable
+            # eqtemp2 = 278.6 * orbp['L*']**0.25 / np.sqrt(orbp[p]['sma'])
 
-                    if 'WFC3' in filters[0]:
-                        if valid2 and valid3:
-                            off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3])- np.nanmedian(1e2*tspectrum[cond_off2]))
-                            off0 = pm.Uniform('OFF0', -off0_value, off0_value)
-                            nodes.append(off0)
-                # KILL HAZE POWER INDEX FOR SPHERICAL SHELL
-                if not noClouds:
-                    if sphshell:
-                        prior_ranges['HLoc'] = (-6,1)
-                        hzloc = pm.Uniform('HLoc', -6.0, 1.0)
-                        nodes.append(hzloc)
+            # These four estimates of T_equilibrium are usually about the same
+            #  but sometimes they are very different
+            #  system/consistency.py checks for and flags these inconsistencies
+            # print('eqtemp check',eqtemp1)
+            # print('eqtemp check',eqtemp2)
+            # print('eqtemp check',orbp[p]['teq'])
+            # print('eqtemp check',inputData['model_params']['Teq'])
 
-                        prior_ranges['HThick'] = (1,20)
-                        hzthick = pm.Uniform('HThick', 1.0, 20.0)
-                        nodes.append(hzthick)
-                        pass
-                    else:
-                        prior_ranges['HIndex'] = (-4,0)
-                        hzi = pm.Uniform('HIndex', -4e0, 0e0)
-                        nodes.append(hzi)
-                        pass
-                # BOOST TEMPERATURE PRIOR TO [75%, 150%] Teq
-                prior_ranges['T'] = (0.75e0*eqtemp, 1.5e0*eqtemp)
-                tpr = pm.Uniform('T', 0.75e0*eqtemp, 1.5e0*eqtemp)
-                nodes.append(tpr)
+            # CAREFUL:
+            #  equilibrium temperatures from the archive sometimes don't match this!
+            #  e.g. GJ 3053=LHS 1140 b,c (the Archive has 379K,709K vs 216,403K here)
+            #  that one is wrong it seems. Lillo-Box 2020 has strange extra factor
 
-                # MODEL SPECIFIC ABSORBERS
-                for param in modparlbl[model]:
-                    if param=='XtoH':
-                        prior_ranges['[X/H]'] = (-6,6)
-                    elif param=='CtoO':
-                        prior_ranges['[C/O]'] = (-6,6)
-                    elif param=='NtoO':
-                        prior_ranges['[N/O]'] = (-6,6)
-                    else:
-                        prior_ranges[param] = (-6,6)
-                modelpar = pm.Uniform(model, lower=-6e0, upper=6e0,
-                                      shape=len(modparlbl[model]))
-                nodes.append(modelpar)
+            # print('model_params',inputData['model_params'])
 
-                # CERBERUS MCMC
-                if noClouds:
-                    print('RUNNING MCMC - NO CLOUDS!')
-                    _mcdata = pm.Normal('mcdata', mu=clearfmcerberus(*nodes),
-                                        tau=1e0/(np.nanmedian(tspecerr[cleanup])**2),
-                                        observed=tspectrum[cleanup])
-                    pass
+            # bottom line:
+            #  use the same Teq as in ariel-sim, otherwise truth/retrieved won't match
+            if ext=='Ariel-sim':
+                eqtemp = inputData['model_params']['Teq']
+            else:
+                # (real data doesn't have any 'model_params' defined)
+                # eqtemp = orbp['T*']*np.sqrt(orbp['R*']*ssc['Rsun/AU']/(2.*orbp[p]['sma']))
+                eqtemp = float(orbp[p]['teq'])
 
-                elif sphshell:
+            tspc = np.array(inputData['ES'])
+            terr = np.array(inputData['ESerr'])
+            twav = np.array(inputData['WB'])
+            # twav = np.array(spc['data'][p]['WB'])
+
+            tspecerr = abs(tspc**2 - (tspc + terr)**2)
+            tspectrum = tspc**2
+            if 'STIS-WFC3' in ext:
+                filters = np.array(inputData['Fltrs'])
+                cond_specG750 = filters == 'HST-STIS-CCD-G750L-STARE'
+                # MASKING G750 WAV > 0.80
+                twav_G750 = twav[cond_specG750]
+                tspec_G750 = tspectrum[cond_specG750]
+                tspecerr_G750 = tspecerr[cond_specG750]
+                mask = (twav_G750 > 0.80) & (twav_G750 < 0.95)
+                tspec_G750[mask] = np.nan
+                tspecerr_G750[mask] = np.nan
+                tspectrum[cond_specG750] = tspec_G750
+                tspecerr[cond_specG750] = tspecerr_G750
+            Hs = inputData['Hs']
+            #  Clean up
+            spechs = (np.sqrt(tspectrum) - np.sqrt(np.nanmedian(tspectrum)))/Hs
+            cleanup2 = abs(spechs) > 3e0  # excluding everything above +-3 Hs
+            tspectrum[cleanup2] = np.nan
+            tspecerr[cleanup2] = np.nan
+            twav[cleanup2] = np.nan
+            # cleanup = np.isfinite(tspectrum) & (tspecerr < 1e0)
+            cleanup = np.isfinite(tspectrum)
+            solidr = orbp[p]['rp']*ssc['Rjup']  # MK
+
+            for model in modfam:
+                ctxtupdt(cleanup=cleanup, model=model, p=p, solidr=solidr, orbp=orbp,
+                         tspectrum=tspectrum, xsl=xsl, spc=spc, modparlbl=modparlbl,
+                         hzlib=crbhzlib)
+                out['data'][p][model] = {}
+
+                # new method for setting priors (no change, but easier to view in bounds.py)
+                priorRangeTable = setPriorBound(eqtemp)
+
+                out['data'][p][model]['prior_ranges'] = {}
+                # keep track of the bounds put on each parameter
+                # this will be helpful for later plotting and analysis
+                nodes = []
+                with pm.Model():
+
+                    # set the fixed parameters (the ones that are not being fit this time)
+                    fixedParams = {}
+                    if not runtime_params.fitCloudParameters:
+                        fixedParams['CTP'] = inputData['model_params']['CTP']
+                        fixedParams['HScale'] = inputData['model_params']['HScale']
+                        fixedParams['HLoc'] = inputData['model_params']['HLoc']
+                        fixedParams['HThick'] = inputData['model_params']['HThick']
+                    if not runtime_params.fitT:
+                        fixedParams['T'] = inputData['model_params']['T']
+                    if not runtime_params.fitNtoO:
+                        fixedParams['NtoO'] = 0.
+                    if not runtime_params.fitCtoO:
+                        fixedParams['CtoO'] = inputData['model_params']['C/O']
+                    # print('fixedparams',fixedParams)
+
+                    # OFFSET BETWEEN STIS AND WFC3 filters
                     if 'STIS-WFC3' in ext:
+                        cond_off0 = filters == 'HST-STIS-CCD-G430L-STARE'
+                        cond_off1 = filters == 'HST-STIS-CCD-G750L-STARE'
+                        cond_off2 = filters == 'HST-WFC3-IR-G102-SCAN'
+                        cond_off3 = filters == 'HST-WFC3-IR-G141-SCAN'
+                        valid0 = True in cond_off0
+                        valid1 = True in cond_off1
+                        valid2 = True in cond_off2
+                        valid3 = True in cond_off3
                         if 'STIS' in filters[0]:
                             if valid0:  # G430
                                 if valid1 and valid2 and valid3:  # G430-G750-G102-G141
-                                    _mcdata = pm.Normal('mcdata', mu=offcerberus(*nodes),
-                                                        tau=1e0/tspecerr[cleanup]**2,
-                                                        observed=tspectrum[cleanup])
-                                if valid1 and valid2 and not valid3:
-                                    _mcdata = pm.Normal('mcdata', mu=offcerberus1(*nodes),
-                                                        tau=1e0/tspecerr[cleanup]**2,
-                                                        observed=tspectrum[cleanup])
-                                if valid1 and valid3 and not valid2:
-                                    _mcdata = pm.Normal('mcdata', mu=offcerberus2(*nodes),
-                                                        tau=1e0/tspecerr[cleanup]**2,
-                                                        observed=tspectrum[cleanup])
-                                if valid2 and valid3 and not valid1:
-                                    _mcdata = pm.Normal('mcdata', mu=offcerberus3(*nodes),
-                                                        tau=1e0/tspecerr[cleanup]**2,
-                                                        observed=tspectrum[cleanup])
-                                if valid3 and not valid1 and not valid2:
-                                    _mcdata = pm.Normal('mcdata', mu=offcerberus4(*nodes),
-                                                        tau=1e0/tspecerr[cleanup]**2,
-                                                        observed=tspectrum[cleanup])
-                            if not valid0:
+                                    off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3]) -
+                                                     np.nanmedian(1e2*tspectrum[cond_off0]))
+                                    off1_value = abs(np.nanmedian(1e2*tspectrum[cond_off3]) -
+                                                     np.nanmedian(1e2*tspectrum[cond_off1]))
+                                    off2_value = abs(np.nanmedian(1e2*tspectrum[cond_off3]) -
+                                                     np.nanmedian(1e2*tspectrum[cond_off2]))
+                                    nodes.append(pm.Uniform('OFF0', -off0_value, off0_value))
+                                    nodes.append(pm.Uniform('OFF1', -off1_value, off1_value))
+                                    nodes.append(pm.Uniform('OFF2', -off2_value, off2_value))
+                                elif valid1 and valid2 and not valid3:
+                                    off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off2]) -
+                                                     np.nanmedian(1e2*tspectrum[cond_off0]))
+                                    off1_value = abs(np.nanmedian(1e2*tspectrum[cond_off2]) -
+                                                     np.nanmedian(1e2*tspectrum[cond_off1]))
+                                    nodes.append(pm.Uniform('OFF0', -off0_value, off0_value))
+                                    nodes.append(pm.Uniform('OFF1', -off1_value, off1_value))
+                                elif valid1 and valid3 and not valid2:
+                                    off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3]) -
+                                                     np.nanmedian(1e2*tspectrum[cond_off0]))
+                                    off1_value = abs(np.nanmedian(1e2*tspectrum[cond_off3]) -
+                                                     np.nanmedian(1e2*tspectrum[cond_off1]))
+                                    nodes.append(pm.Uniform('OFF0', -off0_value, off0_value))
+                                    nodes.append(pm.Uniform('OFF1', -off1_value, off1_value))
+                                elif valid2 and valid3 and not valid1:
+                                    off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3]) -
+                                                     np.nanmedian(1e2*tspectrum[cond_off0]))
+                                    off1_value = abs(np.nanmedian(1e2*tspectrum[cond_off3]) -
+                                                     np.nanmedian(1e2*tspectrum[cond_off2]))
+                                    nodes.append(pm.Uniform('OFF0', -off0_value, off0_value))
+                                    nodes.append(pm.Uniform('OFF1', -off1_value, off1_value))
+                                elif valid3 and not valid1 and not valid2:
+                                    off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3]) -
+                                                     np.nanmedian(1e2*tspectrum[cond_off0]))
+                                    nodes.append(pm.Uniform('OFF0', -off0_value, off0_value))
+                            else:
                                 if valid1 and valid2 and valid3:
-                                    _mcdata = pm.Normal('mcdata', mu=offcerberus5(*nodes),
-                                                        tau=1e0/tspecerr[cleanup]**2,
-                                                        observed=tspectrum[cleanup])
+                                    off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3]) -
+                                                     np.nanmedian(1e2*tspectrum[cond_off1]))
+                                    off1_value = abs(np.nanmedian(1e2*tspectrum[cond_off3]) -
+                                                     np.nanmedian(1e2*tspectrum[cond_off2]))
+                                    nodes.append(pm.Uniform('OFF0', -off0_value, off0_value))
+                                    nodes.append(pm.Uniform('OFF1', -off1_value, off1_value))
                                 if valid1 and valid3 and not valid2:
-                                    _mcdata = pm.Normal('mcdata', mu=offcerberus6(*nodes),
-                                                        tau=1e0/tspecerr[cleanup]**2,
-                                                        observed=tspectrum[cleanup])
+                                    off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3]) -
+                                                     np.nanmedian(1e2*tspectrum[cond_off1]))
+                                    nodes.append(pm.Uniform('OFF0', -off0_value, off0_value))
                                 if valid1 and valid2 and not valid3:
-                                    _mcdata = pm.Normal('mcdata', mu=offcerberus7(*nodes),
-                                                        tau=1e0/tspecerr[cleanup]**2,
-                                                        observed=tspectrum[cleanup])
+                                    off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off2]) -
+                                                     np.nanmedian(1e2*tspectrum[cond_off1]))
+                                    nodes.append(pm.Uniform('OFF0', -off0_value, off0_value))
+                                if valid1 and valid2 and not valid3:
+                                    off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off2]) -
+                                                     np.nanmedian(1e2*tspectrum[cond_off1]))
+                                    nodes.append(pm.Uniform('OFF0', -off0_value, off0_value))
                         if 'WFC3' in filters[0]:
                             if valid2 and valid3:
-                                _mcdata = pm.Normal('mcdata', mu=offcerberus8(*nodes),
-                                                    tau=1e0/tspecerr[cleanup]**2,
-                                                    observed=tspectrum[cleanup])
-                            if not valid2:
-                                _mcdata = pm.Normal('mcdata', mu=spshfmcerberus(*nodes),
-                                                    tau=1e0/(np.nanmedian(tspecerr[cleanup])**2),
-                                                    observed=tspectrum[cleanup])
-                            if not valid3:
-                                _mcdata = pm.Normal('mcdata', mu=spshfmcerberus(*nodes),
-                                                    tau=1e0/(np.nanmedian(tspecerr[cleanup])**2),
-                                                    observed=tspectrum[cleanup])
-                                pass
-                            pass
-                    if 'STIS-WFC3' not in ext:
-                        print('STANDARD MCMC (WITH CLOUDS)')
-                        _mcdata = pm.Normal('mcdata', mu=spshfmcerberus(*nodes),
+                                off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3]) -
+                                                 np.nanmedian(1e2*tspectrum[cond_off2]))
+                                nodes.append(pm.Uniform('OFF0', -off0_value, off0_value))
+
+                    # new cleaned-up version of adding on the prior bounds as pymc nodes
+                    nodes, prior_ranges = addPriors(priorRangeTable, runtime_params,
+                                                    model, modparlbl[model])
+
+                    # before calling MCMC, save the fixed-parameter info in the context
+                    ctxtupdt(cleanup=cleanup, model=model, p=p, solidr=solidr, orbp=orbp,
+                             tspectrum=tspectrum, xsl=xsl, spc=spc, modparlbl=modparlbl,
+                             hzlib=crbhzlib, fixedParams=fixedParams)
+
+                    # CERBERUS MCMC
+                    if not runtime_params.fitCloudParameters:
+                        log.warning('--< RUNNING MCMC - NO CLOUDS! >--')
+                        _mcdata = pm.Normal('mcdata', mu=clearfmcerberus(*nodes),
                                             tau=1e0/(np.nanmedian(tspecerr[cleanup])**2),
                                             observed=tspectrum[cleanup])
                         pass
-                    pass
-                else:
-                    _mcdata = pm.Normal('mcdata', mu=fmcerberus(*nodes),
-                                        tau=1e0/(np.nanmedian(tspecerr[cleanup])**2),
-                                        observed=tspectrum[cleanup])
-                    pass
-                log.warning('>-- MCMC nodes: %s', str([n.name for n in nodes]))
-                trace = pm.sample(mclen, cores=4, tune=int(mclen/4),
-                                  compute_convergence_checks=False, step=pm.Metropolis(),
-                                  progressbar=verbose)
-                # GMR: Should be able to find it... Joker
-                # pylint: disable=no-member
-                mcpost = pm.stats.summary(trace)
-                pass
-            mctrace = {}
-            for key in mcpost['mean'].keys():
-                tracekeys = key.split('[')
-                if tracekeys.__len__() > 1:
-                    indtrace = int(tracekeys[1].split(']')[0])
-                    mctrace[key] = trace[tracekeys[0]][:, indtrace]
-                    pass
-                else: mctrace[key] = trace[tracekeys[0]]
-                pass
-            out['data'][p][model]['MCTRACE'] = mctrace
-        out['data'][p][model]['prior_ranges'] = prior_ranges
-        out['data'][p]['WAVELENGTH'] = np.array(spc['data'][p]['WB'])
-        out['data'][p]['SPECTRUM'] = np.array(spc['data'][p]['ES'])
-        out['data'][p]['ERRORS'] = np.array(spc['data'][p]['ESerr'])
-        if ext=='Ariel-sim':
-            print('key check',spc['data'][p].keys())
-            # wavelength should be identical to just above, but just in case load it here too
-            if 'true_spectrum' in spc['data'][p].keys():
 
-                out['data'][p]['TRUTH_SPECTRUM'] = np.array(spc['data'][p]['true_spectrum']['fluxDepth'])
-                out['data'][p]['TRUTH_WAVELENGTH'] = np.array(spc['data'][p]['true_spectrum']['wavelength_um'])
-                out['data'][p]['TRUTH_MODELPARAMS'] = spc['data'][p]['model_params']
-        out['data'][p]['VALID'] = cleanup
-        #  big problem!!! this line was missing!  added 7/9/23
-        out['STATUS'].append(True)
-        am = True
-        pass
-    return am
-# ----------- --------------------------------------------------------
-# -- CERBERUS MODEL -- -----------------------------------------------
-def crbmodel(mixratio, rayleigh, cloudtp, rp0, orbp, xsecs, qtgrid,
-             temp, wgrid, lbroadening=False, lshifting=False,
-             cialist=['H2-H', 'H2-H2', 'H2-He', 'He-H'].copy(),
-             xmollist=['TIO', 'CH4', 'H2O', 'H2CO', 'HCN', 'CO', 'CO2', 'NH3'].copy(),
-             nlevels=100, Hsmax=15., solrad=10.,
-             hzlib=None, hzp=None, hzslope=-4., hztop=None, hzwscale=1e0,
-             cheq=None, h2rs=True, logx=False, pnet='b', sphshell=False,
-             verbose=False, debug=False):
-    '''
-    G. ROUDIER: Cerberus forward model probing up to 'Hsmax' scale heights from solid
-    radius solrad evenly log divided amongst nlevels steps
-    '''
-    ssc = syscore.ssconstants(mks=True)
-    pgrid = np.arange(np.log(solrad)-Hsmax, np.log(solrad)+Hsmax/nlevels,
-                      Hsmax/(nlevels-1))
-    pgrid = np.exp(pgrid)
-    dp = np.diff(pgrid[::-1])
-    p = pgrid[::-1]
-    z = [0e0]
-    dz = []
-    addz = []
-    if cheq is not None:
-        mixratio, fH2, fHe = crbce(p, temp,
-                                   C2Or=cheq['CtoO'], X2Hr=cheq['XtoH'],
-                                   N2Or=cheq['NtoO'])
-        mixratio['CO2'] = mixratio['NH3']
-        mmw, fH2, fHe = getmmw(mixratio, protosolar=False, fH2=fH2, fHe=fHe)
-        pass
-    else: mmw, fH2, fHe = getmmw(mixratio)
-    mmw = mmw*cst.m_p  # [kg]
-    Hs = cst.Boltzmann*temp/(mmw*1e-2*(10.**float(orbp[pnet]['logg'])))  # [m]
-    for press, dpress in zip(p[:-1], dp):
-        rdz = abs(Hs/2.*np.log(1. + dpress/press))
-        if addz: dz.append(addz[-1]/2. + rdz)
-        else: dz.append(2.*rdz)
-        addz.append(2.*rdz)
-        z.append(z[-1]+addz[-1])
-        pass
-    dz.append(addz[-1])
-    rho = p*1e5/(cst.Boltzmann*temp)
-    tau, wtau = gettau(xsecs, qtgrid, temp, mixratio, z, dz, rho, rp0, p, wgrid,
-                       lbroadening, lshifting, cialist, fH2, fHe, xmollist, rayleigh,
-                       hzlib, hzp, hzslope, hztop,
-                       h2rs=h2rs, sphshell=sphshell, hzwscale=hzwscale,
-                       verbose=verbose, debug=debug)
-    # SEMI FINITE CLOUD ------------------------------------------------------------------
-    reversep = np.array(p[::-1])
-    selectcloud = p > 10.**cloudtp
-    blocked = False
-    if all(selectcloud):
-        tau = tau*0
-        blocked = True
-        pass
-    if not all(~selectcloud) and not blocked:
-        cloudindex = np.max(np.arange(len(p))[selectcloud])+1
-        for index in np.arange(wtau.size):
-            myspl = itp(reversep, tau[:,index])
-            tau[cloudindex,index] = myspl(10.**cloudtp)
-            tau[:cloudindex,index] = 0.
-            pass
-        ctpdpress = 10.**cloudtp - p[cloudindex]
-        ctpdz = abs(Hs/2.*np.log(1. + ctpdpress/p[cloudindex]))
-        rp0 += (z[cloudindex]+ctpdz)
-        pass
-    atmdepth = 2e0*np.array(np.mat((rp0+np.array(z))*np.array(dz))*
-                            np.mat(1. - np.exp(-tau))).flatten()
-    model = (rp0**2 + atmdepth)/(orbp['R*']*ssc['Rsun'])**2
-    noatm = rp0**2/(orbp['R*']*ssc['Rsun'])**2
-    noatm = np.nanmin(model)
-    rp0hs = np.sqrt(noatm*(orbp['R*']*ssc['Rsun'])**2)
-    if verbose:
-        fig, ax = plt.subplots(figsize=(10,6))
-        axes = [ax, ax.twinx(), ax.twinx()]
-        fig.subplots_adjust(left=0.125, right=0.775)
-        axes[-1].spines['right'].set_position(('axes', 1.2))
-        axes[-1].set_frame_on(True)
-        axes[-1].patch.set_visible(False)
-        axes[0].plot(wtau, 1e2*model)
-        axes[0].plot(wtau, model*0+1e2*noatm, '--')
-        axes[0].set_xlabel('Wavelength $\\lambda$[$\\mu m$]')
-        axes[0].set_ylabel('Transit Depth [%]')
-        axes[0].get_yaxis().get_major_formatter().set_useOffset(False)
-        yaxmin, yaxmax = axes[0].get_ylim()
-        ax2min = (np.sqrt(1e-2*yaxmin)*orbp['R*']*ssc['Rsun'] - rp0hs)/Hs
-        ax2max = (np.sqrt(1e-2*yaxmax)*orbp['R*']*ssc['Rsun'] - rp0hs)/Hs
-        axes[-1].set_ylabel('Transit Depth Modulation [Hs]')
-        axes[-1].set_ylim(ax2min, ax2max)
-        axes[-1].get_yaxis().get_major_formatter().set_useOffset(False)
-        axes[1].set_ylabel('Transit Depth Modulation [ppm]')
-        axes[1].set_ylim(1e6*(1e-2*yaxmin-noatm), 1e6*(1e-2*yaxmax-noatm))
-        axes[1].get_yaxis().get_major_formatter().set_useOffset(False)
-        if logx:
-            plt.semilogx()
-            plt.xlim([np.min(wtau), np.max(wtau)])
-            pass
-        plt.show()
-        pass
-    return model[::-1]
-# --------------------------- ----------------------------------------
-# -- TAU -- ----------------------------------------------------------
-def gettau(xsecs, qtgrid, temp, mixratio,
-           z, dz, rho, rp0, p, wgrid, lbroadening, lshifting,
-           cialist, fH2, fHe, xmollist, rayleigh, hzlib, hzp, hzslope, hztop,
-           h2rs=True, sphshell=False, isothermal=True, hzwscale=1e0,
-           verbose=False, debug=False):
-    '''
-G. ROUDIER: Builds optical depth matrix
-    '''
-    # SPHERICAL SHELL --------------------------------------------------------------------
-    if sphshell:
-        # MATRICES INIT ------------------------------------------------------------------
-        tau = np.zeros((len(z), wgrid.size))
-        # DL ARRAY, Z VERSUS ZPRIME ------------------------------------------------------
-        dlarray = []
-        zprime = np.array(z)
-        dzprime = np.array(dz)
-        for iz, thisz in enumerate(z):
-            dl = np.sqrt((rp0 + zprime + dzprime)**2 - (rp0 + thisz)**2)
-            dl[:iz] = 0e0
-            dl[iz:] = dl[iz:] - np.sqrt((rp0 + zprime[iz:])**2 - (rp0 + thisz)**2)
-            dlarray.append(dl)
-            pass
-        dlarray = np.array(dlarray)
-        # GAS ARRAY, ZPRIME VERSUS WAVELENGTH  -------------------------------------------
-        for elem in mixratio:
-            mmr = 10.**(mixratio[elem]-6.)
-            # Fake use of xmollist due to changes in xslib v112
-            # THIS HAS TO BE FIXED
-            # if elem not in xmollist:
-            if not xmollist:
-                # HITEMP/HITRAN ROTHMAN ET AL. 2010 --------------------------------------
-                sigma, lsig = absorb(xsecs[elem], qtgrid[elem], temp, p, mmr,
-                                     lbroadening, lshifting, wgrid, debug=False)
-                sigma = np.array(sigma)  # cm^2/mol
-                if True in sigma < 0: sigma[sigma < 0] = 0e0
-                if True in ~np.isfinite(sigma): sigma[~np.isfinite(sigma)] = 0e0
-                sigma = sigma*1e-4  # m^2/mol
-                pass
-            else:
-                # EXOMOL HILL ET AL. 2013 ------------------------------------------------
-                sigma, lsig = getxmolxs(temp, xsecs[elem])
-                sigma = np.array(sigma)   # cm^2/mol
-                if True in sigma < 0: sigma[sigma < 0] = 0e0
-                if True in ~np.isfinite(sigma): sigma[~np.isfinite(sigma)] = 0e0
-                sigma = np.array(sigma)*1e-4  # m^2/mol
-                pass
-            if isothermal: tau = tau + mmr*sigma*np.array([rho]).T
-            pass
-        # CIA ARRAY, ZPRIME VERSUS WAVELENGTH  -------------------------------------------
-        for cia in cialist:
-            if cia == 'H2-H2':
-                f1 = fH2
-                f2 = fH2
-                pass
-            if cia == 'H2-He':
-                f1 = fH2
-                f2 = fHe
-                pass
-            if cia == 'H2-H':
-                f1 = fH2
-                f2 = fH2*2.
-                pass
-            if cia == 'He-H':
-                f1 = fHe
-                f2 = fH2*2.
-                pass
-            # HITRAN RICHARD ET AL. 2012
-            sigma, lsig = getciaxs(temp, xsecs[cia])  # cm^5/mol^2
-            sigma = np.array(sigma)*1e-10  # m^5/mol^2
-            if True in sigma < 0: sigma[sigma < 0] = 0e0
-            if True in ~np.isfinite(sigma): sigma[~np.isfinite(sigma)] = 0e0
-            tau = tau + f1*f2*sigma*np.array([rho**2]).T
-            pass
-        # RAYLEIGH ARRAY, ZPRIME VERSUS WAVELENGTH  --------------------------------------
-        # NAUS & UBACHS 2000
-        slambda0 = 750.*1e-3  # microns
-        sray0 = 2.52*1e-28*1e-4  # m^2/mol
-        sigma = sray0*(wgrid[::-1]/slambda0)**(-4)
-        tau = tau + fH2*sigma*np.array([rho]).T
-        # HAZE ARRAY, ZPRIME VERSUS WAVELENGTH  ------------------------------------------
-        if hzlib is None:
-            slambda0 = 750.*1e-3  # microns
-            sray0 = 2.52*1e-28*1e-4  # m^2/mol
-            sigma = sray0*(wgrid[::-1]/slambda0)**(hzslope)
-            hazedensity = np.ones(len(z))
-            tau = tau + (10.**rayleigh)*sigma*np.array([hazedensity]).T
-            pass
-        if hzlib is not None:
-            # WEST ET AL. 2004
-            sigma = 0.0083*(wgrid[::-1])**(hzslope)*(1e0 +
-                                                     0.014*(wgrid[::-1])**(hzslope/2e0) +
-                                                     0.00027*(wgrid[::-1])**(hzslope))
-            if hzp in ['MAX', 'MEDIAN', 'AVERAGE']:
-                frh = hzlib['PROFILE'][0][hzp][0]
-                rh = frh(p)
-                rh[rh < 0] = 0.
-                refhzp = float(p[rh == np.max(rh)])
-                if hztop is None: hzshift = 0e0
-                else: hzshift = hztop - np.log10(refhzp)
-                splp = np.log10(p[::-1])
-                splrh = rh[::-1]
-                thisfrh = itp(splp, splrh,
-                              kind='linear', bounds_error=False, fill_value=0e0)
-                hzwdist = hztop - np.log10(p)
-                if hzwscale > 0:
-                    preval = hztop - hzwdist/hzwscale - hzshift
-                    rh = thisfrh(preval)
-                    rh[rh < 0] = 0e0
-                    pass
-                else: rh = thisfrh(np.log10(p))*0
-                if debug:
-                    jptprofile = 'J'+hzp
-                    jdata = np.array(hzlib['PROFILE'][0][jptprofile])
-                    jpres = np.array(hzlib['PROFILE'][0]['PRESSURE'])
-                    myfig = plt.figure(figsize=(12, 6))
-                    plt.plot(1e6*jdata, jpres, color='blue',
-                             label='Lavvas et al. 2017')
-                    plt.axhline(refhzp, linestyle='--', color='blue')
-                    plt.plot(1e6*rh, p, 'r', label='Parametrized density profile')
-                    plt.plot(1e6*thisfrh(np.log10(p) - hzshift), p, 'g^')
-                    if hztop is not None:
-                        plt.axhline(10**hztop, linestyle='--', color='red')
+                    else:
+                        if 'STIS-WFC3' in ext:
+                            if 'STIS' in filters[0]:
+                                if valid0:  # G430
+                                    if valid1 and valid2 and valid3:  # G430-G750-G102-G141
+                                        _mcdata = pm.Normal('mcdata', mu=offcerberus(*nodes),
+                                                            tau=1e0/tspecerr[cleanup]**2,
+                                                            observed=tspectrum[cleanup])
+                                    elif valid1 and valid2 and not valid3:
+                                        _mcdata = pm.Normal('mcdata', mu=offcerberus1(*nodes),
+                                                            tau=1e0/tspecerr[cleanup]**2,
+                                                            observed=tspectrum[cleanup])
+                                    elif valid1 and valid3 and not valid2:
+                                        _mcdata = pm.Normal('mcdata', mu=offcerberus2(*nodes),
+                                                            tau=1e0/tspecerr[cleanup]**2,
+                                                            observed=tspectrum[cleanup])
+                                    elif valid2 and valid3 and not valid1:
+                                        _mcdata = pm.Normal('mcdata', mu=offcerberus3(*nodes),
+                                                            tau=1e0/tspecerr[cleanup]**2,
+                                                            observed=tspectrum[cleanup])
+                                    elif valid3 and not valid1 and not valid2:
+                                        _mcdata = pm.Normal('mcdata', mu=offcerberus4(*nodes),
+                                                            tau=1e0/tspecerr[cleanup]**2,
+                                                            observed=tspectrum[cleanup])
+                                else:
+                                    if valid1 and valid2 and valid3:
+                                        _mcdata = pm.Normal('mcdata', mu=offcerberus5(*nodes),
+                                                            tau=1e0/tspecerr[cleanup]**2,
+                                                            observed=tspectrum[cleanup])
+                                    elif valid1 and valid3 and not valid2:
+                                        _mcdata = pm.Normal('mcdata', mu=offcerberus6(*nodes),
+                                                            tau=1e0/tspecerr[cleanup]**2,
+                                                            observed=tspectrum[cleanup])
+                                    elif valid1 and valid2 and not valid3:
+                                        _mcdata = pm.Normal('mcdata', mu=offcerberus7(*nodes),
+                                                            tau=1e0/tspecerr[cleanup]**2,
+                                                            observed=tspectrum[cleanup])
+                            if 'WFC3' in filters[0]:
+                                if valid2 and valid3:
+                                    _mcdata = pm.Normal('mcdata', mu=offcerberus8(*nodes),
+                                                        tau=1e0/tspecerr[cleanup]**2,
+                                                        observed=tspectrum[cleanup])
+                                elif not valid2:
+                                    _mcdata = pm.Normal('mcdata', mu=cloudyfmcerberus(*nodes),
+                                                        tau=1e0/(np.nanmedian(tspecerr[cleanup])**2),
+                                                        observed=tspectrum[cleanup])
+                                elif not valid3:
+                                    _mcdata = pm.Normal('mcdata', mu=cloudyfmcerberus(*nodes),
+                                                        tau=1e0/(np.nanmedian(tspecerr[cleanup])**2),
+                                                        observed=tspectrum[cleanup])
+                                    pass
+                                pass
+                        if 'STIS-WFC3' not in ext:
+                            log.warning('--< STANDARD MCMC (WITH CLOUDS) >--')
+                            _mcdata = pm.Normal('mcdata', mu=cloudyfmcerberus(*nodes),
+                                                tau=1e0/(np.nanmedian(tspecerr[cleanup])**2),
+                                                observed=tspectrum[cleanup])
+                            pass
                         pass
-                    plt.semilogy()
-                    plt.semilogx()
-                    plt.gca().invert_yaxis()
-                    plt.xlim([1e-4, np.max(1e6*rh)])
-                    plt.tick_params(axis='both', labelsize=20)
-                    plt.xlabel('Aerosol Density [$n.{cm}^{-3}$]', fontsize=24)
-                    plt.ylabel('Pressure [bar]', fontsize=24)
-                    plt.title('Aerosol density profile', fontsize=24)
-                    plt.legend(loc='center left', frameon=False, fontsize=24,
-                               bbox_to_anchor=(1, 1))
-                    myfig.tight_layout()
-                    plt.show()
+
+                    log.warning('>-- MCMC nodes: %s', str([n.name for n in nodes]))
+                    trace = pm.sample(mclen, cores=4, tune=int(mclen/4),
+                                      compute_convergence_checks=False, step=pm.Metropolis(),
+                                      progressbar=verbose)
+                    # GMR: Should be able to find it... Joker
+                    # pylint: disable=no-member
+                    mcpost = pm.stats.summary(trace)
+                mctrace = {}
+                for key in mcpost['mean'].keys():
+                    tracekeys = key.split('[')
+                    if tracekeys.__len__() > 1:
+                        indtrace = int(tracekeys[1].split(']')[0])
+                        mctrace[key] = trace[tracekeys[0]][:, indtrace]
+                    else:
+                        mctrace[key] = trace[tracekeys[0]]
                     pass
-                pass
-            else:
-                rh = np.array([np.nanmean(hzlib['PROFILE'][0]['CONSTANT'])]*len(z))
-                negrh = rh < 0e0
-                if True in negrh: rh[negrh] = 0e0
-                pass
-            tau = tau + (10.**rayleigh)*sigma*np.array([rh]).T
-            pass
-        tau = 2e0*np.array(np.mat(dlarray)*np.mat(tau))
-        pass
-    else:
-        # PLANE PARALLEL APPROXIMATION ---------------------------------------------------
-        firstelem = True
-        vectauelem = []
-        for myz in list(z):
-            tauelem = 0e0
-            index = list(z).index(myz)
-            for myzp, dzp, myrho in zip(z[index:], dz[index:], rho[index:]):
-                dl = (np.sqrt((rp0+myzp+dzp)**2. - (rp0+myz)**2.) -
-                      np.sqrt((rp0+myzp)**2. - (rp0+myz)**2.))
-                tauelem += myrho*dl
-                pass
-            vectauelem.append(tauelem)
-            pass
-        vectauelem = np.array([vectauelem]).T
-        for elem in mixratio:
-            mmr = 10.**(mixratio[elem]-6.)
-            if elem not in xmollist:
-                # Rothman et .al 2010
-                sigma, lsig = absorb(xsecs[elem], qtgrid[elem], temp,
-                                     p, mmr, lbroadening, lshifting, wgrid,
-                                     debug=False)  # cm^2/mol
-                sigma = np.array(sigma)
-                if np.sum(sigma < 0) > 0: sigma[sigma < 0] = 0
-                if np.sum(~np.isfinite(sigma)) > 0: sigma[~np.isfinite(sigma)] = 0
-                sigma = np.array(sigma)*1e-4  # m^2/mol
-                if sigma.shape[0] < 2: sigma = sigma*np.array([np.ones(len(z))]).T
-                pass
-            else:
-                # Hill et al. 2013
-                sigma, lsig = getxmolxs(temp, xsecs[elem])  # cm^2/mol
-                sigma = np.array(sigma)
-                if np.sum(sigma < 0) > 0: sigma[sigma < 0] = 0
-                if np.sum(~np.isfinite(sigma)) > 0: sigma[~np.isfinite(sigma)] = 0
-                sigma = np.array(sigma)*1e-4  # m^2/mol
-                sigma = sigma*np.array([np.ones(len(z))]).T
-                pass
-            # Tinetti et .al 2011
-            tauz = vectauelem*sigma
-            if firstelem:
-                tau = np.array(tauz)*mmr
-                firstelem = False
-                pass
-            else: tau = tau+np.array(tauz)*mmr
-            pass
-        veccia = []
-        for myz in list(z):
-            tauelem = 0.
-            index = list(z).index(myz)
-            for myzp, dzp, myrho in zip(z[index:], dz[index:], rho[index:]):
-                dl = (np.sqrt((rp0+myzp+dzp)**2. - (rp0+myz)**2.) -
-                      np.sqrt((rp0+myzp)**2. - (rp0+myz)**2.))
-                tauelem += (myrho**2)*dl
-                pass
-            veccia.append(tauelem)
-            pass
-        veccia = np.array([veccia]).T
-        for cia in cialist:
-            tauz = []
-            if cia == 'H2-H2':
-                f1 = fH2
-                f2 = fH2
-                pass
-            if cia == 'H2-He':
-                f1 = fH2
-                f2 = fHe
-                pass
-            if cia == 'H2-H':
-                f1 = fH2
-                f2 = fH2*2.
-                pass
-            if cia == 'He-H':
-                f1 = fHe
-                f2 = fH2*2.
-                pass
-            # Richard et al. 2012
-            sigma, lsig = getciaxs(temp, xsecs[cia])  # cm^5/mol^2
-            sigma = np.array(sigma)*1e-10  # m^5/mol^2
-            if np.sum(sigma < 0) > 0: sigma[sigma < 0] = 0
-            if np.sum(~np.isfinite(sigma)) > 0: sigma[~np.isfinite(sigma)] = 0
-            tauz = veccia*sigma
-            if firstelem:
-                tau = np.array(tauz)*f1*f2
-                firstelem = False
-                pass
-            else: tau = tau+np.array(tauz)*f1*f2
-            pass
-        if h2rs:
-            # Naus & Ubachs 2000
-            slambda0 = 750.*1e-3  # microns
-            sray0 = 2.52*1e-28*1e-4  # m^2/mol
-            sray = sray0*(wgrid[::-1]/slambda0)**(-4)
-            tauz = vectauelem*sray
-            if firstelem:
-                tau = np.array(tauz)*fH2
-                firstelem = False
-                pass
-            else: tau = tau+np.array(tauz)*fH2
-            pass
-        if hzlib is None:
-            slambda0 = 750.*1e-3  # microns
-            sray0 = 2.52*1e-28*1e-4  # m^2/mol
-            sray = (10**rayleigh)*sray0*(wgrid[::-1]/slambda0)**(hzslope)
-            tauz = vectauelem*sray
-            if firstelem:
-                tau = np.array(tauz)
-                firstelem = False
-                pass
-            else: tau = tau+np.array(tauz)
-            pass
-        if hzlib is not None:
-            # West et al. 2004
-            tauaero = (10**rayleigh)*(0.0083*(wgrid[::-1])**(hzslope)*
-                                      (1+0.014*(wgrid[::-1])**(hzslope/2e0)+
-                                       0.00027*(wgrid[::-1])**(hzslope)))
-            vectauhaze = []
-            if hzp in ['MAX', 'MEDIAN', 'AVERAGE']:
-                frh = hzlib['PROFILE'][0][hzp][0]
-                rh = frh(p)
-                rh[rh < 0] = 0e0
-                refhzp = float(p[rh == np.max(rh)])
-                if hztop is None: hzshift = 0e0
-                else: hzshift = hztop - np.log10(refhzp)
-                splp = np.log10(p[::-1]) + hzshift
-                splrh = rh[::-1]
-                thisfrh = itp(splp, splrh,
-                              kind='linear', bounds_error=False, fill_value=0e0)
-                rh = thisfrh(np.log10(p))
-                rh[rh < 0] = 0e0
-                if verbose:
-                    jptprofile = 'J'+hzp
-                    jdata = np.array(hzlib['PROFILE'][0][jptprofile])
-                    jpres = np.array(hzlib['PROFILE'][0]['PRESSURE'])
-                    plt.figure(figsize=(12, 6))
-                    plt.plot(1e6*jdata, jpres, color='blue',
-                             label='Zhang, West et al. 2014')
-                    plt.axhline(refhzp, linestyle='--', color='blue')
-                    plt.plot(1e6*rh, p, color='red', label='Parametrized density profile')
-                    plt.plot(1e6*rh, p, 'r*')
-                    if hztop is not None:
-                        plt.axhline(10**hztop, linestyle='--', color='red')
-                        pass
-                    plt.semilogy()
-                    plt.semilogx()
-                    plt.gca().invert_yaxis()
-                    plt.xlim([1e-10, 1e4])
-                    plt.tick_params(axis='both', labelsize=20)
-                    plt.xlabel('Aerosol Density [$n.{cm}^{-3}$]', fontsize=24)
-                    plt.ylabel('Pressure [bar]', fontsize=24)
-                    plt.title('Aerosol density profile', fontsize=24)
-                    plt.legend(loc=3, frameon=False, fontsize=24)
-                    plt.show()
-                    pass
-                pass
-            else:
-                rh = np.array(hzlib['PROFILE'][0]['CONSTANT'])
-                negrh = rh < 0e0
-                if True in negrh: rh[negrh] = 0e0
-                pass
-            for myz in list(z):
-                tauelem = 0.
-                index = list(z).index(myz)
-                for myzp, dzp, rhohaze, in zip(z[index:], dz[index:], rh[index:]):
-                    dl = (np.sqrt((rp0+myzp+dzp)**2. - (rp0+myz)**2.) -
-                          np.sqrt((rp0+myzp)**2. - (rp0+myz)**2.))
-                    tauelem += rhohaze*dl
-                    pass
-                vectauhaze.append(tauelem)
-                pass
-            tauz = (np.array([vectauhaze]).T*np.array([p]).T)*tauaero
-            tau = tau + np.array(tauz)
-            pass
-        tau *= 2
-        pass
-    if debug:
-        plt.figure(figsize=(12, 6))
-        plt.imshow(np.log10(tau), aspect='auto', origin='lower',
-                   extent=[max(wgrid), min(wgrid), np.log10(max(p)), np.log10(min(p))])
-        plt.ylabel('log10(Pressure)', fontsize=24)
-        plt.xlabel('Wavelength [$\\mu m$]', fontsize=24)
-        plt.gca().invert_xaxis()
-        plt.title('log10(Optical Depth)', fontsize=24)
-        plt.tick_params(axis='both', labelsize=20)
-        cbar = plt.colorbar()
-        cbar.ax.tick_params(labelsize=20)
-        plt.show()
-        pass
-    return tau, 1e4/lsig
-# --------- ----------------------------------------------------------
-# -- ATTENUATION COEFFICIENT -- --------------------------------------
-def absorb(xsecs, qtgrid, T, p, mmr, lbroadening, lshifting, wgrid,
-           iso=0, Tref=296., debug=False):
-    '''
-G. ROUDIER: HITRAN HITEMP database parser
-    '''
-    select = (np.array(xsecs['I']) == iso+1)
-    S = np.array(xsecs['S'])[select]
-    E = np.array(xsecs['Epp'])[select]
-    gself = np.array(xsecs['g_self'])[select]
-    nu = np.array(xsecs['nu'])[select]
-    delta = np.array(xsecs['delta'])[select]
-    eta = np.array(xsecs['eta'])[select]
-    gair = np.array(xsecs['g_air'])[select]
-    Qref = float(qtgrid['SPL'][iso](Tref))
-    try: Q = float(qtgrid['SPL'][iso](T))
-    except ValueError: Q = np.nan
-    c2 = 1e2*cst.h*cst.c/cst.Boltzmann
-    tips = (Qref*np.exp(-c2*E/T)*(1.-np.exp(-c2*nu/T)))/(Q*np.exp(-c2*E/Tref)*
-                                                         (1.-np.exp(-c2*nu/Tref)))
-    if np.all(~np.isfinite(tips)): tips = 0
-    sigma = S*tips
-    ps = mmr*p
-    gamma = np.array(np.mat(p-ps).T*np.mat(gair*(Tref/T)**eta)+np.mat(ps).T*np.mat(gself))
-    if lbroadening:
-        if lshifting: matnu = np.array(np.mat(np.ones(p.size)).T*np.mat(nu) +
-                                       np.mat(p).T*np.mat(delta))
-        else: matnu = np.array(nu)*np.array([np.ones(len(p))]).T
-        pass
-    else: matnu = np.array(nu)
-    absgrid = []
-    nugrid = (1e4/wgrid)[::-1]
-    dwnu = np.concatenate((np.array([np.diff(nugrid)[0]]), np.diff(nugrid)))
-    if lbroadening:
-        for mymatnu, mygamma in zip(matnu, gamma):
-            binsigma = np.mat(sigma)*np.mat(intflor(nugrid, dwnu/2.,
-                                                    np.array([mymatnu]).T,
-                                                    np.array([mygamma]).T))
-            binsigma = np.array(binsigma).flatten()
-            absgrid.append(binsigma/dwnu)
-            pass
-        pass
-    else:
-        binsigma = []
-        for nubin, dw in zip(nugrid, dwnu):
-            select = (matnu > (nubin-dw/2.)) & (matnu <= nubin+dw/2.)
-            binsigma.append(np.sum(sigma[select]))
-            pass
-        binsigma = np.array(binsigma)/dwnu
-        absgrid.append(binsigma)
-        pass
-    if debug:
-        plt.semilogy(1e4/matnu.T, sigma, '.')
-        plt.semilogy(wgrid[::-1], binsigma, 'o')
-        plt.xlabel('Wavelength $\\lambda$[$\\mu m$]')
-        plt.ylabel('Absorption Coeff [$cm^{2}.molecule^{-1}$]')
-        plt.show()
-        pass
-    return absgrid, nugrid
-# ----------------------------- --------------------------------------
-# -- PRESSURE BROADENING -- ------------------------------------------
-def intflor(wave, dwave, nu, gamma):
-    '''
-G. ROUDIER: Pressure Broadening
-    '''
-    f = 1e0/np.pi*(np.arctan((wave+dwave - nu)/gamma) -
-                   np.arctan((wave-dwave - nu)/gamma))
-    return f
-# ------------------------- ------------------------------------------
-# -- CIA -- ----------------------------------------------------------
-def getciaxs(temp, xsecs):
-    '''
-G. ROUDIER: Wrapper around CIA Cerberus library
-    '''
-    sigma = np.array([thisspl(temp) for thisspl in xsecs['SPL']])
-    nu = np.array(xsecs['SPLNU'])
-    select = np.argsort(nu)
-    nu = nu[select]
-    sigma = sigma[select]
-    return sigma, nu
-# --------- ----------------------------------------------------------
-# -- EXOMOL -- -------------------------------------------------------
-def getxmolxs(temp, xsecs):
-    '''
-G. ROUDIER: Wrapper around EXOMOL Cerberus library
-    '''
-    sigma = np.array([thisspl(temp) for thisspl in xsecs['SPL']])
-    nu = np.array(xsecs['SPLNU'])
-    select = np.argsort(nu)
-    nu = nu[select]
-    sigma = sigma[select]
-    return sigma, nu
-# -------------------------- -----------------------------------------
-# -- PYMC3 DETERMINISTIC FUNCTIONS -- --------------------------------
-@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dvector],
-           otypes=[tt.dvector])
-def fmcerberus(*crbinputs):
-    '''
-    G. ROUDIER: Wrapper around Cerberus forward model
-    '''
-    ctp, hza, hzi, tpr, mdp = crbinputs
-    fmc = np.zeros(ctxt.tspectrum.size)
-    if ctxt.model == 'TEC':
-        tceqdict = {}
-        tceqdict['XtoH'] = float(mdp[0])
-        tceqdict['CtoO'] = float(mdp[1])
-        tceqdict['NtoO'] = float(mdp[2])
-        fmc = crbmodel(None, float(hza), float(ctp), ctxt.solidr, ctxt.orbp,
-                       ctxt.xsl['data'][ctxt.p]['XSECS'],
-                       ctxt.xsl['data'][ctxt.p]['QTGRID'],
-                       float(tpr), np.array(ctxt.spc['data'][ctxt.p]['WB']),
-                       hzslope=float(hzi), cheq=tceqdict, pnet=ctxt.p,
-                       verbose=False, debug=False)
-        pass
-    else:
-        mixratio = {}
-        for index, key in enumerate(ctxt.modparlbl[ctxt.model]):
-            mixratio[key] = float(mdp[index])
-            pass
-        fmc = crbmodel(mixratio, float(hza), float(ctp), ctxt.solidr, ctxt.orbp,
-                       ctxt.xsl['data'][ctxt.p]['XSECS'],
-                       ctxt.xsl['data'][ctxt.p]['QTGRID'],
-                       float(tpr), np.array(ctxt.spc['data'][ctxt.p]['WB']),
-                       hzslope=float(hzi), cheq=None, pnet=ctxt.p,
-                       verbose=False, debug=False)
-        pass
-    fmc = fmc[ctxt.cleanup] - np.nanmean(fmc[ctxt.cleanup])
-    fmc = fmc + np.nanmean(ctxt.tspectrum[ctxt.cleanup])
-    return fmc
+                out['data'][p][model]['MCTRACE'] = mctrace
 
-@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
-                   tt.dvector],
-           otypes=[tt.dvector])
-def spshfmcerberus(*crbinputs):
-    '''
-    G. ROUDIER: Wrapper around Cerberus forward model, spherical shell symmetry
-    '''
-    ctp, hza, hzloc, hzthick, tpr, mdp = crbinputs
-    # ctp, hza, hzloc, hzthick, tpr, mdp = crbinputs
-    fmc = np.zeros(ctxt.tspectrum.size)
-    if ctxt.model == 'TEC':
-        tceqdict = {}
-        tceqdict['XtoH'] = float(mdp[0])
-        tceqdict['CtoO'] = float(mdp[1])
-        tceqdict['NtoO'] = float(mdp[2])
-        fmc = crbmodel(None, float(hza), float(ctp), ctxt.solidr, ctxt.orbp,
-                       ctxt.xsl['data'][ctxt.p]['XSECS'],
-                       ctxt.xsl['data'][ctxt.p]['QTGRID'],
-                       float(tpr), np.array(ctxt.spc['data'][ctxt.p]['WB']),
-                       hzlib=ctxt.hzlib,  hzp='AVERAGE', hztop=float(hzloc),
-                       hzwscale=float(hzthick), cheq=tceqdict, pnet=ctxt.p,
-                       sphshell=True, verbose=False, debug=False)
-        pass
-    else:
-        mixratio = {}
-        for index, key in enumerate(ctxt.modparlbl[ctxt.model]):
-            mixratio[key] = float(mdp[index])
-            pass
-        fmc = crbmodel(mixratio, float(hza), float(ctp), ctxt.solidr, ctxt.orbp,
-                       ctxt.xsl['data'][ctxt.p]['XSECS'],
-                       ctxt.xsl['data'][ctxt.p]['QTGRID'],
-                       float(tpr), np.array(ctxt.spc['data'][ctxt.p]['WB']),
-                       hzlib=ctxt.hzlib,  hzp='AVERAGE', hztop=float(hzloc),
-                       hzwscale=float(hzthick), cheq=None, pnet=ctxt.p,
-                       sphshell=True, verbose=False, debug=False)
-        pass
-    fmc = fmc[ctxt.cleanup] - np.nanmean(fmc[ctxt.cleanup])
-    fmc = fmc + np.nanmean(ctxt.tspectrum[ctxt.cleanup])
-    return fmc
+                out['data'][p][model]['prior_ranges'] = prior_ranges
+            out['data'][p]['WAVELENGTH'] = np.array(inputData['WB'])
+            out['data'][p]['SPECTRUM'] = np.array(inputData['ES'])
+            out['data'][p]['ERRORS'] = np.array(inputData['ESerr'])
+            if ext=='Ariel-sim':
+                if 'true_spectrum' in inputData.keys():
 
-@tco.as_op(itypes=[tt.dscalar, tt.dvector],
-           otypes=[tt.dvector])
-def clearfmcerberus(*crbinputs):
-    '''
-    Wrapper around Cerberus forward model - NO CLOUDS!
-    '''
-    # print(' running a NO-CLOUDS forward model')
-    ctp = 3.    # cloud deck is very deep - 1000 bars
-    hza = -10.  # small number means essentially no haze
-    hzloc = 0.
-    hzthick = 0.
+                    out['data'][p]['TRUTH_SPECTRUM'] = np.array(inputData['true_spectrum']['fluxDepth'])
+                    # wavelength should be the same as just above, but just in case load it here too
+                    out['data'][p]['TRUTH_WAVELENGTH'] = np.array(inputData['true_spectrum']['wavelength_um'])
+                    out['data'][p]['TRUTH_MODELPARAMS'] = inputData['model_params']
+                    # print('true modelparams in atmos:',inputData['model_params'])
+            out['data'][p]['VALID'] = cleanup
+            out['STATUS'].append(True)
 
-    tpr, mdp = crbinputs
-    fmc = np.zeros(ctxt.tspectrum.size)
-    if ctxt.model == 'TEC':
-        tceqdict = {}
-        tceqdict['XtoH'] = float(mdp[0])
-        tceqdict['CtoO'] = float(mdp[1])
-        tceqdict['NtoO'] = float(mdp[2])
-        fmc = crbmodel(None, float(hza), float(ctp), ctxt.solidr, ctxt.orbp,
-                       ctxt.xsl['data'][ctxt.p]['XSECS'],
-                       ctxt.xsl['data'][ctxt.p]['QTGRID'],
-                       float(tpr), np.array(ctxt.spc['data'][ctxt.p]['WB']),
-                       hzlib=ctxt.hzlib,  hzp='AVERAGE', hztop=float(hzloc),
-                       hzwscale=float(hzthick), cheq=tceqdict, pnet=ctxt.p,
-                       sphshell=True, verbose=False, debug=False)
-        pass
-    else:
-        mixratio = {}
-        for index, key in enumerate(ctxt.modparlbl[ctxt.model]):
-            mixratio[key] = float(mdp[index])
+            okfit = True
             pass
-        fmc = crbmodel(mixratio, float(hza), float(ctp), ctxt.solidr, ctxt.orbp,
-                       ctxt.xsl['data'][ctxt.p]['XSECS'],
-                       ctxt.xsl['data'][ctxt.p]['QTGRID'],
-                       float(tpr), np.array(ctxt.spc['data'][ctxt.p]['WB']),
-                       hzlib=ctxt.hzlib,  hzp='AVERAGE', hztop=float(hzloc),
-                       hzwscale=float(hzthick), cheq=None, pnet=ctxt.p,
-                       sphshell=True, verbose=False, debug=False)
-        pass
-    fmc = fmc[ctxt.cleanup] - np.nanmean(fmc[ctxt.cleanup])
-    fmc = fmc + np.nanmean(ctxt.tspectrum[ctxt.cleanup])
-    return fmc
-
-@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
-                   tt.dscalar, tt.dscalar, tt.dscalar, tt.dvector],
-           otypes=[tt.dvector])
-# @tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar],
-#             otypes=[tt.dvector])
-def offcerberus(*crbinputs):
-    '''
-R.ESTRELA: ADD offsets between STIS filters and STIS and WFC3 filters
-    '''
-    ctp, hza, off0, off1, off2, hzloc, hzthick, tpr, mdp = crbinputs
-#     off0, off1, off2 = crbinputs
-#     ctp = -2.5744083
-#     hza = -1.425234
-#     hzloc = -0.406851
-#     hzthick = 5.58950953
-#     tpr = 1551.41137
-#     mdp = [-1.24882918, -4.08582557, -2.4664526]
-    wbb = np.array(ctxt.spc['data'][ctxt.p]['WB'])
-    flt = np.array(ctxt.spc['data'][ctxt.p]['Fltrs'])
-    #  cond_wav = (wbb < 0.56) | (wbb > 1.02)
-    fmc = np.zeros(ctxt.tspectrum.size)
-    if ctxt.model == 'TEC':
-        tceqdict = {}
-        tceqdict['XtoH'] = float(mdp[0])
-        tceqdict['CtoO'] = float(mdp[1])
-        tceqdict['NtoO'] = float(mdp[2])
-        fmc = crbmodel(None, float(hza), float(ctp), ctxt.solidr, ctxt.orbp,
-                       ctxt.xsl['data'][ctxt.p]['XSECS'],
-                       ctxt.xsl['data'][ctxt.p]['QTGRID'],
-                       float(tpr), wbb,
-                       hzlib=ctxt.hzlib,  hzp='AVERAGE', hztop=float(hzloc),
-                       hzwscale=float(hzthick), cheq=tceqdict, pnet=ctxt.p,
-                       sphshell=True, verbose=False, debug=False)
-        pass
-    else:
-        mixratio = {}
-        for index, key in enumerate(ctxt.modparlbl[ctxt.model]):
-            mixratio[key] = float(mdp[index])
-            pass
-        fmc = crbmodel(mixratio, float(hza), float(ctp), ctxt.solidr, ctxt.orbp,
-                       ctxt.xsl['data'][ctxt.p]['XSECS'],
-                       ctxt.xsl['data'][ctxt.p]['QTGRID'],
-                       float(tpr), np.array(ctxt.spc['data'][ctxt.p]['WB']),
-                       hzlib=ctxt.hzlib,  hzp='AVERAGE', hztop=float(hzloc),
-                       hzwscale=float(hzthick), cheq=None, pnet=ctxt.p,
-                       sphshell=True, verbose=False, debug=False)
-        pass
-    cond_G430 = flt[ctxt.cleanup] == 'HST-STIS-CCD-G430L-STARE'
-    cond_G141 = flt[ctxt.cleanup] == 'HST-WFC3-IR-G141-SCAN'
-    tspectrum_clean = ctxt.tspectrum[ctxt.cleanup]
-    fmc = fmc[ctxt.cleanup] - np.nanmean(fmc[ctxt.cleanup][cond_G141])
-    fmc = fmc + np.nanmean(tspectrum_clean[cond_G141])
-#     fmc = fmc[ctxt.cleanup] - np.nanmean(fmc[ctxt.cleanup])
-#     fmc = fmc + np.nanmean(ctxt.tspectrum[ctxt.cleanup])
-    ww = wbb
-    ww = ww[ctxt.cleanup]
-    cond_G750 = flt[ctxt.cleanup] == 'HST-STIS-CCD-G750L-STARE'
-    cond_G102 = flt[ctxt.cleanup] == 'HST-WFC3-IR-G102-SCAN'
-    fmc[cond_G430] = fmc[cond_G430] - 1e-2*float(off0)
-    fmc[cond_G750] = fmc[cond_G750] - 1e-2*float(off1)
-    fmc[cond_G102] = fmc[cond_G102] - 1e-2*float(off2)
-    return fmc
-
-@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
-                   tt.dscalar, tt.dscalar, tt.dvector],
-           otypes=[tt.dvector])
-def offcerberus1(*crbinputs):
-    '''
-R.ESTRELA: ADD offsets between STIS filters and STIS and WFC3 filters
-    '''
-    ctp, hza, off0, off1, hzloc, hzthick, tpr, mdp = crbinputs
-    wbb = np.array(ctxt.spc['data'][ctxt.p]['WB'])
-    fmc = np.zeros(ctxt.tspectrum.size)
-    if ctxt.model == 'TEC':
-        tceqdict = {}
-        tceqdict['XtoH'] = float(mdp[0])
-        tceqdict['CtoO'] = float(mdp[1])
-        tceqdict['NtoO'] = float(mdp[2])
-        fmc = crbmodel(None, float(hza), float(ctp), ctxt.solidr, ctxt.orbp,
-                       ctxt.xsl['data'][ctxt.p]['XSECS'],
-                       ctxt.xsl['data'][ctxt.p]['QTGRID'],
-                       float(tpr), wbb,
-                       hzlib=ctxt.hzlib,  hzp='AVERAGE', hztop=float(hzloc),
-                       hzwscale=float(hzthick), cheq=tceqdict, pnet=ctxt.p,
-                       sphshell=True, verbose=False, debug=False)
-        pass
-    else:
-        mixratio = {}
-        for index, key in enumerate(ctxt.modparlbl[ctxt.model]):
-            mixratio[key] = float(mdp[index])
-            pass
-        fmc = crbmodel(mixratio, float(hza), float(ctp), ctxt.solidr, ctxt.orbp,
-                       ctxt.xsl['data'][ctxt.p]['XSECS'],
-                       ctxt.xsl['data'][ctxt.p]['QTGRID'],
-                       float(tpr), np.array(ctxt.spc['data'][ctxt.p]['WB']),
-                       hzlib=ctxt.hzlib,  hzp='AVERAGE', hztop=float(hzloc),
-                       hzwscale=float(hzthick), cheq=None, pnet=ctxt.p,
-                       sphshell=True, verbose=False, debug=False)
-        pass
-    fmc = fmc[ctxt.cleanup] - np.nanmean(fmc[ctxt.cleanup])
-    fmc = fmc + np.nanmean(ctxt.tspectrum[ctxt.cleanup])
-    ww = wbb
-    ww = ww[ctxt.cleanup]
-    flt = np.array(ctxt.spc['data'][ctxt.p]['Fltrs'])
-    cond_G430 = 'HST-STIS-CCD-G430L-STARE' in flt
-    cond_G750 = 'HST-STIS-CCD-G750L-STARE' in flt
-    fmc[cond_G430] = fmc[cond_G430] + 1e-2*float(off0)
-    fmc[cond_G750] = fmc[cond_G750] + 1e-2*float(off1)
-    return fmc
-
-@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
-                   tt.dscalar, tt.dscalar, tt.dvector],
-           otypes=[tt.dvector])
-def offcerberus2(*crbinputs):
-    '''
-R.ESTRELA: ADD offsets between STIS filters and STIS and WFC3 filters
-    '''
-    ctp, hza, off0, off1, hzloc, hzthick, tpr, mdp = crbinputs
-    wbb = np.array(ctxt.spc['data'][ctxt.p]['WB'])
-    fmc = np.zeros(ctxt.tspectrum.size)
-    if ctxt.model == 'TEC':
-        tceqdict = {}
-        tceqdict['XtoH'] = float(mdp[0])
-        tceqdict['CtoO'] = float(mdp[1])
-        tceqdict['NtoO'] = float(mdp[2])
-        fmc = crbmodel(None, float(hza), float(ctp), ctxt.solidr, ctxt.orbp,
-                       ctxt.xsl['data'][ctxt.p]['XSECS'],
-                       ctxt.xsl['data'][ctxt.p]['QTGRID'],
-                       float(tpr), wbb,
-                       hzlib=ctxt.hzlib,  hzp='AVERAGE', hztop=float(hzloc),
-                       hzwscale=float(hzthick), cheq=tceqdict, pnet=ctxt.p,
-                       sphshell=True, verbose=False, debug=False)
-        pass
-    else:
-        mixratio = {}
-        for index, key in enumerate(ctxt.modparlbl[ctxt.model]):
-            mixratio[key] = float(mdp[index])
-            pass
-        fmc = crbmodel(mixratio, float(hza), float(ctp), ctxt.solidr, ctxt.orbp,
-                       ctxt.xsl['data'][ctxt.p]['XSECS'],
-                       ctxt.xsl['data'][ctxt.p]['QTGRID'],
-                       float(tpr), np.array(ctxt.spc['data'][ctxt.p]['WB']),
-                       hzlib=ctxt.hzlib,  hzp='AVERAGE', hztop=float(hzloc),
-                       hzwscale=float(hzthick), cheq=None, pnet=ctxt.p,
-                       sphshell=True, verbose=False, debug=False)
-        pass
-    fmc = fmc[ctxt.cleanup] - np.nanmean(fmc[ctxt.cleanup])
-    fmc = fmc + np.nanmean(ctxt.tspectrum[ctxt.cleanup])
-    ww = wbb
-    ww = ww[ctxt.cleanup]
-    flt = np.array(ctxt.spc['data'][ctxt.p]['Fltrs'])
-    cond_G430 = 'HST-STIS-CCD-G430-STARE' in flt
-    cond_G750 = 'HST-STIS-CCD-G750-STARE' in flt
-    fmc[cond_G430] = fmc[cond_G430] + 1e-2*float(off0)
-    fmc[cond_G750] = fmc[cond_G750] + 1e-2*float(off1)
-    return fmc
-
-@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
-                   tt.dscalar, tt.dscalar, tt.dvector],
-           otypes=[tt.dvector])
-def offcerberus3(*crbinputs):
-    '''
-R.ESTRELA: ADD offsets between STIS filters and STIS and WFC3 filters
-    '''
-    ctp, hza, off0, off1, hzloc, hzthick, tpr, mdp = crbinputs
-    wbb = np.array(ctxt.spc['data'][ctxt.p]['WB'])
-    fmc = np.zeros(ctxt.tspectrum.size)
-    flt = np.array(ctxt.spc['data'][ctxt.p]['Fltrs'])
-    if ctxt.model == 'TEC':
-        tceqdict = {}
-        tceqdict['XtoH'] = float(mdp[0])
-        tceqdict['CtoO'] = float(mdp[1])
-        tceqdict['NtoO'] = float(mdp[2])
-        fmc = crbmodel(None, float(hza), float(ctp), ctxt.solidr, ctxt.orbp,
-                       ctxt.xsl['data'][ctxt.p]['XSECS'],
-                       ctxt.xsl['data'][ctxt.p]['QTGRID'],
-                       float(tpr), wbb,
-                       hzlib=ctxt.hzlib,  hzp='AVERAGE', hztop=float(hzloc),
-                       hzwscale=float(hzthick), cheq=tceqdict, pnet=ctxt.p,
-                       sphshell=True, verbose=False, debug=False)
-        pass
-    else:
-        mixratio = {}
-        for index, key in enumerate(ctxt.modparlbl[ctxt.model]):
-            mixratio[key] = float(mdp[index])
-            pass
-        fmc = crbmodel(mixratio, float(hza), float(ctp), ctxt.solidr, ctxt.orbp,
-                       ctxt.xsl['data'][ctxt.p]['XSECS'],
-                       ctxt.xsl['data'][ctxt.p]['QTGRID'],
-                       float(tpr), np.array(ctxt.spc['data'][ctxt.p]['WB']),
-                       hzlib=ctxt.hzlib,  hzp='AVERAGE', hztop=float(hzloc),
-                       hzwscale=float(hzthick), cheq=None, pnet=ctxt.p,
-                       sphshell=True, verbose=False, debug=False)
-        pass
-    fmc = fmc[ctxt.cleanup] - np.nanmean(fmc[ctxt.cleanup])
-    fmc = fmc + np.nanmean(ctxt.tspectrum[ctxt.cleanup])
-    ww = wbb
-    ww = ww[ctxt.cleanup]
-    cond_G430 = 'HST-STIS-CCD-G430-STARE' in flt
-    cond_G102 = 'HST-WFC3-IR-G102-SCAN' in flt
-    fmc[cond_G430] = fmc[cond_G430] + 1e-2*float(off0)
-    fmc[cond_G102] = fmc[cond_G102] + 1e-2*float(off1)
-    return fmc
-
-@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
-                   tt.dvector],
-           otypes=[tt.dvector])
-def offcerberus4(*crbinputs):
-    '''
-R.ESTRELA: ADD offsets between STIS filters and STIS and WFC3 filters
-    '''
-    ctp, hza, off0, hzloc, hzthick, tpr, mdp = crbinputs
-    wbb = np.array(ctxt.spc['data'][ctxt.p]['WB'])
-    fmc = np.zeros(ctxt.tspectrum.size)
-    flt = np.array(ctxt.spc['data'][ctxt.p]['Fltrs'])
-    if ctxt.model == 'TEC':
-        tceqdict = {}
-        tceqdict['XtoH'] = float(mdp[0])
-        tceqdict['CtoO'] = float(mdp[1])
-        tceqdict['NtoO'] = float(mdp[2])
-        fmc = crbmodel(None, float(hza), float(ctp), ctxt.solidr, ctxt.orbp,
-                       ctxt.xsl['data'][ctxt.p]['XSECS'],
-                       ctxt.xsl['data'][ctxt.p]['QTGRID'],
-                       float(tpr), wbb,
-                       hzlib=ctxt.hzlib,  hzp='AVERAGE', hztop=float(hzloc),
-                       hzwscale=float(hzthick), cheq=tceqdict, pnet=ctxt.p,
-                       sphshell=True, verbose=False, debug=False)
-        pass
-    else:
-        mixratio = {}
-        for index, key in enumerate(ctxt.modparlbl[ctxt.model]):
-            mixratio[key] = float(mdp[index])
-            pass
-        fmc = crbmodel(mixratio, float(hza), float(ctp), ctxt.solidr, ctxt.orbp,
-                       ctxt.xsl['data'][ctxt.p]['XSECS'],
-                       ctxt.xsl['data'][ctxt.p]['QTGRID'],
-                       float(tpr), np.array(ctxt.spc['data'][ctxt.p]['WB']),
-                       hzlib=ctxt.hzlib,  hzp='AVERAGE', hztop=float(hzloc),
-                       hzwscale=float(hzthick), cheq=None, pnet=ctxt.p,
-                       sphshell=True, verbose=False, debug=False)
-        pass
-    fmc = fmc[ctxt.cleanup] - np.nanmean(fmc[ctxt.cleanup])
-    fmc = fmc + np.nanmean(ctxt.tspectrum[ctxt.cleanup])
-    ww = wbb
-    ww = ww[ctxt.cleanup]
-    cond_G430 = 'HST-STIS-CCD-G430-STARE' in flt
-    fmc[cond_G430] = fmc[cond_G430] + 1e-2*float(off0)
-    return fmc
-
-@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
-                   tt.dscalar, tt.dscalar, tt.dvector],
-           otypes=[tt.dvector])
-def offcerberus5(*crbinputs):
-    '''
-R.ESTRELA: ADD offsets between STIS filters and STIS and WFC3 filters
-    '''
-    ctp, hza, off0, off1, hzloc, hzthick, tpr, mdp = crbinputs
-    wbb = np.array(ctxt.spc['data'][ctxt.p]['WB'])
-    fmc = np.zeros(ctxt.tspectrum.size)
-    flt = np.array(ctxt.spc['data'][ctxt.p]['Fltrs'])
-    if ctxt.model == 'TEC':
-        tceqdict = {}
-        tceqdict['XtoH'] = float(mdp[0])
-        tceqdict['CtoO'] = float(mdp[1])
-        tceqdict['NtoO'] = float(mdp[2])
-        fmc = crbmodel(None, float(hza), float(ctp), ctxt.solidr, ctxt.orbp,
-                       ctxt.xsl['data'][ctxt.p]['XSECS'],
-                       ctxt.xsl['data'][ctxt.p]['QTGRID'],
-                       float(tpr), wbb,
-                       hzlib=ctxt.hzlib,  hzp='AVERAGE', hztop=float(hzloc),
-                       hzwscale=float(hzthick), cheq=tceqdict, pnet=ctxt.p,
-                       sphshell=True, verbose=False, debug=False)
-        pass
-    else:
-        mixratio = {}
-        for index, key in enumerate(ctxt.modparlbl[ctxt.model]):
-            mixratio[key] = float(mdp[index])
-            pass
-        fmc = crbmodel(mixratio, float(hza), float(ctp), ctxt.solidr, ctxt.orbp,
-                       ctxt.xsl['data'][ctxt.p]['XSECS'],
-                       ctxt.xsl['data'][ctxt.p]['QTGRID'],
-                       float(tpr), np.array(ctxt.spc['data'][ctxt.p]['WB']),
-                       hzlib=ctxt.hzlib,  hzp='AVERAGE', hztop=float(hzloc),
-                       hzwscale=float(hzthick), cheq=None, pnet=ctxt.p,
-                       sphshell=True, verbose=False, debug=False)
-        pass
-    fmc = fmc[ctxt.cleanup] - np.nanmean(fmc[ctxt.cleanup])
-    fmc = fmc + np.nanmean(ctxt.tspectrum[ctxt.cleanup])
-    ww = wbb
-    ww = ww[ctxt.cleanup]
-    cond_G102 = 'HST-WFC3-IR-G102-SCAN' in flt
-    cond_G750 = 'HST-STIS-CCD-G750-STARE' in flt
-    fmc[cond_G750] = fmc[cond_G750] + 1e-2*float(off0)
-    fmc[cond_G102] = fmc[cond_G102] + 1e-2*float(off1)
-    return fmc
-
-@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
-                   tt.dvector],
-           otypes=[tt.dvector])
-def offcerberus6(*crbinputs):
-    '''
-R.ESTRELA: ADD offsets between STIS filters and STIS and WFC3 filters
-    '''
-    ctp, hza, off0, hzloc, hzthick, tpr, mdp = crbinputs
-    wbb = np.array(ctxt.spc['data'][ctxt.p]['WB'])
-    fmc = np.zeros(ctxt.tspectrum.size)
-    flt = np.array(ctxt.spc['data'][ctxt.p]['Fltrs'])
-    if ctxt.model == 'TEC':
-        tceqdict = {}
-        tceqdict['XtoH'] = float(mdp[0])
-        tceqdict['CtoO'] = float(mdp[1])
-        tceqdict['NtoO'] = float(mdp[2])
-        fmc = crbmodel(None, float(hza), float(ctp), ctxt.solidr, ctxt.orbp,
-                       ctxt.xsl['data'][ctxt.p]['XSECS'],
-                       ctxt.xsl['data'][ctxt.p]['QTGRID'],
-                       float(tpr), wbb,
-                       hzlib=ctxt.hzlib,  hzp='AVERAGE', hztop=float(hzloc),
-                       hzwscale=float(hzthick), cheq=tceqdict, pnet=ctxt.p,
-                       sphshell=True, verbose=False, debug=False)
-        pass
-    else:
-        mixratio = {}
-        for index, key in enumerate(ctxt.modparlbl[ctxt.model]):
-            mixratio[key] = float(mdp[index])
-            pass
-        fmc = crbmodel(mixratio, float(hza), float(ctp), ctxt.solidr, ctxt.orbp,
-                       ctxt.xsl['data'][ctxt.p]['XSECS'],
-                       ctxt.xsl['data'][ctxt.p]['QTGRID'],
-                       float(tpr), np.array(ctxt.spc['data'][ctxt.p]['WB']),
-                       hzlib=ctxt.hzlib,  hzp='AVERAGE', hztop=float(hzloc),
-                       hzwscale=float(hzthick), cheq=None, pnet=ctxt.p,
-                       sphshell=True, verbose=False, debug=False)
-        pass
-    fmc = fmc[ctxt.cleanup] - np.nanmean(fmc[ctxt.cleanup])
-    fmc = fmc + np.nanmean(ctxt.tspectrum[ctxt.cleanup])
-    ww = wbb
-    ww = ww[ctxt.cleanup]
-    cond_G750 = 'HST-STIS-CCD-G750-STARE' in flt
-    fmc[cond_G750] = fmc[cond_G750] + 1e-2*float(off0)
-    return fmc
-
-@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
-                   tt.dvector],
-           otypes=[tt.dvector])
-def offcerberus7(*crbinputs):
-    '''
-R.ESTRELA: ADD offsets between STIS filters and WFC3 filters
-    '''
-    ctp, hza, off0, hzloc, hzthick, tpr, mdp = crbinputs
-    wbb = np.array(ctxt.spc['data'][ctxt.p]['WB'])
-    fmc = np.zeros(ctxt.tspectrum.size)
-    flt = np.array(ctxt.spc['data'][ctxt.p]['Fltrs'])
-    if ctxt.model == 'TEC':
-        tceqdict = {}
-        tceqdict['XtoH'] = float(mdp[0])
-        tceqdict['CtoO'] = float(mdp[1])
-        tceqdict['NtoO'] = float(mdp[2])
-        fmc = crbmodel(None, float(hza), float(ctp), ctxt.solidr, ctxt.orbp,
-                       ctxt.xsl['data'][ctxt.p]['XSECS'],
-                       ctxt.xsl['data'][ctxt.p]['QTGRID'],
-                       float(tpr), wbb,
-                       hzlib=ctxt.hzlib,  hzp='AVERAGE', hztop=float(hzloc),
-                       hzwscale=float(hzthick), cheq=tceqdict, pnet=ctxt.p,
-                       sphshell=True, verbose=False, debug=False)
-        pass
-    else:
-        mixratio = {}
-        for index, key in enumerate(ctxt.modparlbl[ctxt.model]):
-            mixratio[key] = float(mdp[index])
-            pass
-        fmc = crbmodel(mixratio, float(hza), float(ctp), ctxt.solidr, ctxt.orbp,
-                       ctxt.xsl['data'][ctxt.p]['XSECS'],
-                       ctxt.xsl['data'][ctxt.p]['QTGRID'],
-                       float(tpr), np.array(ctxt.spc['data'][ctxt.p]['WB']),
-                       hzlib=ctxt.hzlib,  hzp='AVERAGE', hztop=float(hzloc),
-                       hzwscale=float(hzthick), cheq=None, pnet=ctxt.p,
-                       sphshell=True, verbose=False, debug=False)
-        pass
-    fmc = fmc[ctxt.cleanup] - np.nanmean(fmc[ctxt.cleanup])
-    fmc = fmc + np.nanmean(ctxt.tspectrum[ctxt.cleanup])
-    ww = wbb
-    ww = ww[ctxt.cleanup]
-    cond_G750 = 'HST-STIS-CCD-G750-STARE' in flt
-    fmc[cond_G750] = fmc[cond_G750] + 1e-2*float(off0)
-    return fmc
-
-@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
-                   tt.dscalar, tt.dscalar, tt.dvector],
-           otypes=[tt.dvector])
-def offcerberus8(*crbinputs):
-    '''
-R.ESTRELA: ADD offsets between WFC3 filters
-    '''
-    ctp, hza, off0, hzloc, hzthick, tpr, mdp = crbinputs
-    wbb = np.array(ctxt.spc['data'][ctxt.p]['WB'])
-    fmc = np.zeros(ctxt.tspectrum.size)
-    flt = np.array(ctxt.spc['data'][ctxt.p]['Fltrs'])
-    if ctxt.model == 'TEC':
-        tceqdict = {}
-        tceqdict['XtoH'] = float(mdp[0])
-        tceqdict['CtoO'] = float(mdp[1])
-        tceqdict['NtoO'] = float(mdp[2])
-        fmc = crbmodel(None, float(hza), float(ctp), ctxt.solidr, ctxt.orbp,
-                       ctxt.xsl['data'][ctxt.p]['XSECS'],
-                       ctxt.xsl['data'][ctxt.p]['QTGRID'],
-                       float(tpr), wbb,
-                       hzlib=ctxt.hzlib,  hzp='AVERAGE', hztop=float(hzloc),
-                       hzwscale=float(hzthick), cheq=tceqdict, pnet=ctxt.p,
-                       sphshell=True, verbose=False, debug=False)
-        pass
-    else:
-        mixratio = {}
-        for index, key in enumerate(ctxt.modparlbl[ctxt.model]):
-            mixratio[key] = float(mdp[index])
-            pass
-        fmc = crbmodel(mixratio, float(hza), float(ctp), ctxt.solidr, ctxt.orbp,
-                       ctxt.xsl['data'][ctxt.p]['XSECS'],
-                       ctxt.xsl['data'][ctxt.p]['QTGRID'],
-                       float(tpr), np.array(ctxt.spc['data'][ctxt.p]['WB']),
-                       hzlib=ctxt.hzlib,  hzp='AVERAGE', hztop=float(hzloc),
-                       hzwscale=float(hzthick), cheq=None, pnet=ctxt.p,
-                       sphshell=True, verbose=False, debug=False)
-        pass
-    fmc = fmc[ctxt.cleanup] - np.nanmean(fmc[ctxt.cleanup])
-    fmc = fmc + np.nanmean(ctxt.tspectrum[ctxt.cleanup])
-    ww = wbb
-    ww = ww[ctxt.cleanup]
-    cond_G102 = 'HST-WFC3-IR-G102-SCAN' in flt
-    fmc[cond_G102] = fmc[cond_G102] + 1e-2*float(off0)
-    return fmc
+    return okfit
 # ----------------------------------- --------------------------------
 # -- HAZE DENSITY PROFILE LIBRARY -- ---------------------------------
 def hazelib(sv,
@@ -1946,58 +966,6 @@ def hazelib(sv,
     sv['PROFILE'].append(vdensity)
     return
 # ---------------------------------- ---------------------------------
-# -- ROUDIER ET AL. 2021 RELEASE -- ----------------------------------
-def rlsversion():
-    '''
-    GMR:110 Initial release to IPAC
-    GMR:111 Removed empty keys
-    '''
-    return dawgie.VERSION(1,1,1)
-
-def release(trgt, fin, out, verbose=False):
-    '''
-    GMR: Format Cerberus SV products to be released to IPAC
-    trgt [INPUT]: target name
-    fin [INPUT]: system.finalize.parameters
-    out [INPUT/OUTPUT]
-    ext [INPUT]: 'HST-WFC3-IR-G141-SCAN'
-    verbose [OPTIONAL]: verbosity
-    '''
-    rlsed = False
-    plist = fin['priors']['planets']
-    thispath = os.path.join(excalibur.context['data_dir'], 'CERBERUS')
-    for p in plist:
-        intxtf = os.path.join(thispath, 'P.CERBERUS.atmos', trgt+p+'.txt')
-        incorrpng = os.path.join(thispath, 'P.CERBERUS.atmos', trgt+p+'_atmos_corr.png')
-        intxtpng = os.path.join(thispath, 'P.CERBERUS.atmos', trgt+p+'_atmos.png')
-        out['data'][p] = {}
-        try:
-            atm = np.loadtxt(intxtf)
-            out['data'][p]['atmos'] = atm
-            out['STATUS'].append(True)
-            pass
-        except FileNotFoundError: pass
-        try:
-            corrplot = img.imread(incorrpng)
-            out['data'][p]['corrplot'] = corrplot
-            out['STATUS'].append(True)
-            pass
-        except FileNotFoundError: pass
-        try:
-            modelplot = img.imread(intxtpng)
-            out['data'][p]['modelplot'] = modelplot
-            out['STATUS'].append(True)
-            pass
-        except FileNotFoundError: pass
-        if not out['data'][p]:
-            if verbose: log.warning('--< No data found for %s', p)
-            out['data'].pop(p)
-            pass
-        pass
-    rlsed = out['STATUS'][-1]
-    if verbose: log.warning('--< %s', out['STATUS'])
-    return rlsed
-# --------------------------------- ----------------------------------
 # -- RESULTS ----------------------------------------------------------
 def resultsversion():
     '''
@@ -2005,7 +973,7 @@ def resultsversion():
     '''
     return dawgie.VERSION(1,0,0)
 # ------------------------------ -------------------------------------
-def results(trgt, filt, fin, xsl, atm, out, verbose=False):
+def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
     '''
     Plot out the results from atmos()
     trgt [INPUT]: target name
@@ -2022,213 +990,394 @@ def results(trgt, filt, fin, xsl, atm, out, verbose=False):
 
     completed_at_least_one_planet = False
 
+    # load in the table of limits used for profiling
+    if filt=='HST-WFC3-IR-G141-SCAN':
+        profilingLimits = getProfileLimits_HSTG141()
+    else:
+        profilingLimits = []
+
     for p in fin['priors']['planets']:
         # print('post-analysis for planet:',p)
 
         # TEC params - X/H, C/O, N/O
         # disEq params - HCN, CH4, C2H2, CO2, H2CO
 
-        # limit results to just the TEC model
-        if 'TEC' not in atm[p]['MODELPARNAMES'].keys():
-            log.warning('>-- %s', 'TROUBLE: theres no TEC fit!?')
-            return False
+        # check whether this planet was analyzed
+        # (some planets are skipped, because they have an unbound atmosphere)
+        if p not in atm.keys():
+            log.warning('>-- CERBERUS.RESULTS: this planet is missing cerb fit: %s %s', trgt, p)
 
-        alltraces = []
-        allkeys = []
-        for key in atm[p]['TEC']['MCTRACE']:
-            # print('fillin tru the keys again?',key)
-
-            alltraces.append(atm[p]['TEC']['MCTRACE'][key])
-
-            if key=='TEC[0]': allkeys.append('[X/H]')
-            elif key=='TEC[1]': allkeys.append('[C/O]')
-            elif key=='TEC[2]': allkeys.append('[N/O]')
-            else: allkeys.append(key)
-        # print('allkeys',allkeys)
-
-        # make note of the bounds placed on each parameter
-        if 'prior_ranges' in atm[p]['TEC'].keys():
-            prior_ranges = atm[p]['TEC']['prior_ranges']
         else:
-            prior_ranges = {}
+            out['data'][p] = {}
 
-        if 'CTP' in allkeys:
-            noClouds = False
-        else:
-            noClouds = True
+            # limit results to just the TEC model?  No, not for HST/G141
+            # but do verify that TEC exists at least
+            if 'TEC' not in atm[p]['MODELPARNAMES'].keys():
+                log.warning('>-- %s', 'TROUBLE: theres no TEC fit!?')
+                return False
 
-        # ndim = len(alltraces)
-        # nsamples = len(alltraces[0])
-        # print('ndim,nsamples',ndim,nsamples)
+            # there was a bug before where PHOTOCHEM was passed in for Ariel
+            # just in case, filter out models that are missing
+            models = []
+            for modelName in atm[p]['MODELPARNAMES']:
+                if modelName in atm[p].keys(): models.append(modelName)
+            for modelName in models:
+                # for modelName in atm[p]['MODELPARNAMES']:
+                allTraces = []
+                allKeys = []
+                for key in atm[p][modelName]['MCTRACE']:
+                    # print('fillin tru the keys again?',key)
+                    allTraces.append(atm[p][modelName]['MCTRACE'][key])
+                    if modelName=='TEC':
+                        if key=='TEC[0]': allKeys.append('[X/H]')
+                        elif key=='TEC[1]': allKeys.append('[C/O]')
+                        elif key=='TEC[2]': allKeys.append('[N/O]')
+                        else: allKeys.append(key)
+                    elif modelName=='PHOTOCHEM':
+                        if key=='PHOTOCHEM[0]': allKeys.append('HCN')
+                        elif key=='PHOTOCHEM[1]': allKeys.append('CH4')
+                        elif key=='PHOTOCHEM[2]': allKeys.append('C2H2')
+                        elif key=='PHOTOCHEM[3]': allKeys.append('CO2')
+                        elif key=='PHOTOCHEM[4]': allKeys.append('H2CO')
+                        else: allKeys.append(key)
+                    else:
+                        allKeys.append(key)
+                # print('allKeys',allKeys)
 
-        # save the relevant info
-        transitdata = {}
-        transitdata['wavelength'] = atm[p]['WAVELENGTH']
-        transitdata['depth'] = atm[p]['SPECTRUM']**2
-        transitdata['error'] = 2 * atm[p]['SPECTRUM'] * atm[p]['ERRORS']
+                # remove the traced phase space that is excluded by profiling
+                profileTrace, appliedLimits = applyProfiling(
+                    trgt+' '+p, profilingLimits, allTraces, allKeys)
+                keepers = np.where(profileTrace==1)
+                profiledTraces = []
+                for key in atm[p][modelName]['MCTRACE']:
+                    profiledTraces.append(atm[p][modelName]['MCTRACE'][key][keepers])
+                profiledTraces = np.array(profiledTraces)
 
-        truth_spectrum = None
-        truth_params = None
-        if 'sim' in filt:
-            if 'TRUTH_SPECTRUM' in atm[p].keys():
-                # print('NOT ERROR: true spectrum found in atmos output')
-                truth_spectrum = {'depth':atm[p]['TRUTH_SPECTRUM'],
-                                  'wavelength':atm[p]['TRUTH_WAVELENGTH']}
-                truth_params = atm[p]['TRUTH_MODELPARAMS']
-            else:
-                print('ERROR: true spectrum is missing from the atmos output')
-        elif 'TRUTH_SPECTRUM' in atm[p].keys():
-            print('ERROR: true spectrum is present for non-simulated data')
+                # make note of the bounds placed on each parameter
+                if 'prior_ranges' in atm[p][modelName].keys():
+                    prior_ranges = atm[p][modelName]['prior_ranges']
+                else:
+                    prior_ranges = {}
 
-        # print('results',atm[p]['TEC'].keys())
-        # print('results',atm[p]['TEC']['MCTRACE'].keys())
+                fitCloudParameters = 'CTP' in allKeys
+                fitNtoO = '[N/O]' in allKeys
+                fitCtoO = '[C/O]' in allKeys
+                fitT = 'T' in allKeys
 
-        # print('T',np.median(atm[p]['TEC']['MCTRACE']['T']))
-        # if not noClouds:
-            # print('CTP',np.median(atm[p]['TEC']['MCTRACE']['CTP']))
-            # print('Hscale',np.median(atm[p]['TEC']['MCTRACE']['HScale']))
-            # print('HLoc  ',np.median(atm[p]['TEC']['MCTRACE']['HLoc']))
-            # print('HThick',np.median(atm[p]['TEC']['MCTRACE']['HThick']))
-        # print('TEC0',np.median(atm[p]['TEC']['MCTRACE']['TEC[0]']))
-        # print('TEC1',np.median(atm[p]['TEC']['MCTRACE']['TEC[1]']))
-        # print('TEC2',np.median(atm[p]['TEC']['MCTRACE']['TEC[2]']))
+                # ndim = len(allTraces)
+                # nsamples = len(allTraces[0])
+                # print('ndim,nsamples',ndim,nsamples)
 
-        tprtrace = atm[p]['TEC']['MCTRACE']['T']
-        mdplist = [key for key in atm[p]['TEC']['MCTRACE'] if 'TEC' in key]
-        mdptrace = []
-        # print('mdplist',mdplist)
-        for key in mdplist: mdptrace.append(atm[p]['TEC']['MCTRACE'][key])
-        if not noClouds:
-            ctptrace = atm[p]['TEC']['MCTRACE']['CTP']
-            hzatrace = atm[p]['TEC']['MCTRACE']['HScale']
-            hloctrace = atm[p]['TEC']['MCTRACE']['HLoc']
-            hthicktrace = atm[p]['TEC']['MCTRACE']['HThick']
-            ctp = np.median(ctptrace)
-            hza = np.median(hzatrace)
-            hloc = np.median(hloctrace)
-            hthc = np.median(hthicktrace)
-            # print('fit results; CTP:',ctp)
-            # print('fit results; Hscale:',hza)
-            # print('fit results; HLoc:',hloc)
-            # print('fit results; HThick:',hthc)
-        else:
-            ctp = 3.
-            hza = 0.
-            hloc = 0.
-            hthc = 0.
-        tpr = np.median(tprtrace)
-        mdp = np.median(np.array(mdptrace), axis=1)
-        # print('fit results; T:',tpr)
-        # print('fit results; mdplist:',mdp)
+                # save the relevant info
+                transitdata = {}
+                transitdata['wavelength'] = atm[p]['WAVELENGTH']
+                transitdata['depth'] = atm[p]['SPECTRUM']**2
+                transitdata['error'] = 2 * atm[p]['SPECTRUM'] * atm[p]['ERRORS']
 
-        solidr = fin['priors'][p]['rp'] * ssc['Rjup']
+                truth_spectrum = None
+                truth_params = None
+                if 'sim' in filt:
+                    if 'TRUTH_SPECTRUM' in atm[p].keys():
+                        # print('NOT ERROR: true spectrum found in atmos output')
+                        truth_spectrum = {'depth':atm[p]['TRUTH_SPECTRUM'],
+                                          'wavelength':atm[p]['TRUTH_WAVELENGTH']}
+                        truth_params = atm[p]['TRUTH_MODELPARAMS']
+                    else:
+                        print('ERROR: true spectrum is missing from the atmos output')
+                elif 'TRUTH_SPECTRUM' in atm[p].keys():
+                    print('ERROR: true spectrum is present for non-simulated data')
 
-        tceqdict = {}
-        tceqdict['XtoH'] = float(mdp[0])
-        tceqdict['CtoO'] = float(mdp[1])
-        tceqdict['NtoO'] = float(mdp[2])
+                # print('results',atm[p][modelName].keys())
+                # print('results',atm[p][modelName]['MCTRACE'].keys())
 
-        # print('CONFIRMING xsl keys',xsl[p].keys())  # (XSECS, QTGRID)
+                # print('T',np.median(atm[p][modelName]['MCTRACE']['T']))
+                # if fitCloudParameters:
+                #     print('CTP',np.median(atm[p][modelName]['MCTRACE']['CTP']))
+                #     print('HScale',np.median(atm[p][modelName]['MCTRACE']['HScale']))
+                #     print('HLoc  ',np.median(atm[p][modelName]['MCTRACE']['HLoc']))
+                #     print('HThick',np.median(atm[p][modelName]['MCTRACE']['HThick']))
+                # print('TEC0',np.median(atm[p][modelName]['MCTRACE']['TEC[0]']))
+                # print('TEC1',np.median(atm[p][modelName]['MCTRACE']['TEC[1]']))
+                # print('TEC2',np.median(atm[p][modelName]['MCTRACE']['TEC[2]']))
 
-        crbhzlib = {'PROFILE':[]}
-        hazedir = os.path.join(excalibur.context['data_dir'], 'CERBERUS/HAZE')
-        hazelib(crbhzlib, hazedir=hazedir, verbose=False)
+                tprtrace = atm[p][modelName]['MCTRACE']['T']
+                tprtraceProfiled = atm[p][modelName]['MCTRACE']['T'][keepers]
+                mdplist = [key for key in atm[p][modelName]['MCTRACE'] if modelName in key]
+                # print('mdplist',mdplist)
+                mdptrace = []
+                mdptraceProfiled = []
+                for key in mdplist: mdptrace.append(atm[p][modelName]['MCTRACE'][key])
+                for key in mdplist: mdptraceProfiled.append(atm[p][modelName]['MCTRACE'][key][keepers])
+                if fitCloudParameters:
+                    ctptrace = atm[p][modelName]['MCTRACE']['CTP']
+                    hzatrace = atm[p][modelName]['MCTRACE']['HScale']
+                    hloctrace = atm[p][modelName]['MCTRACE']['HLoc']
+                    hthicktrace = atm[p][modelName]['MCTRACE']['HThick']
+                    ctp = np.median(ctptrace)
+                    hza = np.median(hzatrace)
+                    hloc = np.median(hloctrace)
+                    hthc = np.median(hthicktrace)
+                    # print('fit results; CTP:',ctp)
+                    # print('fit results; HScale:',hza)
+                    # print('fit results; HLoc:',hloc)
+                    # print('fit results; HThick:',hthc)
+                    ctptraceProfiled = atm[p][modelName]['MCTRACE']['CTP'][keepers]
+                    hzatraceProfiled = atm[p][modelName]['MCTRACE']['HScale'][keepers]
+                    hloctraceProfiled = atm[p][modelName]['MCTRACE']['HLoc'][keepers]
+                    hthicktraceProfiled = atm[p][modelName]['MCTRACE']['HThick'][keepers]
+                    ctpProfiled = np.median(ctptraceProfiled)
+                    hzaProfiled = np.median(hzatraceProfiled)
+                    hlocProfiled = np.median(hloctraceProfiled)
+                    hthcProfiled = np.median(hthicktraceProfiled)
+                else:
+                    ctp = atm[p]['TRUTH_MODELPARAMS']['CTP']
+                    hza = atm[p]['TRUTH_MODELPARAMS']['HScale']
+                    hloc = atm[p]['TRUTH_MODELPARAMS']['HLoc']
+                    hthc = atm[p]['TRUTH_MODELPARAMS']['HThick']
+                    ctpProfiled = ctp
+                    hzaProfiled = hza
+                    hlocProfiled = hloc
+                    hthcProfiled = hthc
+                    # print(' ctp hza hloc hthc',ctp,hza,hloc,hthc)
+                if fitT:
+                    tpr = np.median(tprtrace)
+                    tprProfiled = np.median(tprtraceProfiled)
+                else:
+                    tpr = atm[p]['TRUTH_MODELPARAMS']['T']
+                    tprProfiled = tpr
+                mdp = np.median(np.array(mdptrace), axis=1)
+                mdpProfiled = np.median(np.array(mdptraceProfiled), axis=1)
+                # print('fit results; T:',tpr)
+                # print('fit results; mdplist:',mdp)
 
-        fmc = np.zeros(transitdata['depth'].size)
-        fmc = crbmodel(None, float(hza), float(ctp),
-                       solidr, fin['priors'],
-                       xsl[p]['XSECS'], xsl[p]['QTGRID'],
-                       float(tpr),
-                       transitdata['wavelength'],
-                       hzlib=crbhzlib, hzp='AVERAGE', hztop=float(hloc),
-                       hzwscale=float(hthc), cheq=tceqdict, pnet=p,
-                       sphshell=True, verbose=False, debug=False)
-        # print('median fmc',np.nanmedian(fmc))
-        # print('mean model',np.nanmean(fmc))
-        # print('mean data',np.nanmean(transitdata['depth']))
-        patmos_model = fmc - np.nanmean(fmc) + np.nanmean(transitdata['depth'])
-        # print('median pmodel',np.nanmedian(patmos_model))
+                solidr = fin['priors'][p]['rp'] * ssc['Rjup']
 
-        # make an array of 10 random walker results
-        nrandomwalkers = 10
-        nrandomwalkers = 100
-        fmcarray = []
-        for _ in range(nrandomwalkers):
-            iwalker = int(len(tprtrace) * np.random.rand())
-            # iwalker = max(0, len(tprtrace) - 1 - int(1000* np.random.rand()))
-            if not noClouds:
-                ctp = ctptrace[iwalker]
-                hza = hzatrace[iwalker]
-                hloc = hloctrace[iwalker]
-                hthc = hthicktrace[iwalker]
-            tpr = tprtrace[iwalker]
-            mdp = np.array(mdptrace)[:,iwalker]
-            # print('shape mdp',mdp.shape)
-            # if not noClouds:
-            #    print('fit results; CTP:',ctp)
-            #    print('fit results; Hscale:',hza)
-            #    print('fit results; HLoc:',hloc)
-            #    print('fit results; HThick:',hthc)
-            # print('fit results; T:',tpr)
-            # print('fit results; mdplist:',mdp)
+                if modelName=='TEC':
+                    # if len(mdp)!=3: log.warning('--< Expecting 3 molecules for TEQ model! >--')
+                    mixratio = None
+                    mixratioProfiled = None
+                    tceqdict = {}
+                    tceqdictProfiled = {}
+                    tceqdict['XtoH'] = float(mdp[0])
+                    tceqdictProfiled['XtoH'] = float(mdpProfiled[0])
+                    if fitCtoO:
+                        tceqdict['CtoO'] = float(mdp[1])
+                        tceqdictProfiled['CtoO'] = float(mdpProfiled[1])
+                    else:
+                        if ('TRUTH_MODELPARAMS' in atm[p]) and ('CtoO' in atm[p]['TRUTH_MODELPARAMS']):
+                            # print('truth params',atm[p]['TRUTH_MODELPARAMS'])
+                            tceqdict['CtoO'] = atm[p]['TRUTH_MODELPARAMS']['CtoO']
+                        else:
+                            # default is C/O=1.  Maybe the default should actually be Solar?
+                            tceqdict['CtoO'] = 0.
+                        tceqdictProfiled['CtoO'] = tceqdict['CtoO']
 
-            tceqdict = {}
-            tceqdict['XtoH'] = float(mdp[0])
-            tceqdict['CtoO'] = float(mdp[1])
-            tceqdict['NtoO'] = float(mdp[2])
+                    if fitNtoO:
+                        tceqdict['NtoO'] = float(mdp[2])
+                        tceqdictProfiled['NtoO'] = float(mdpProfiled[2])
+                    else:
+                        if ('TRUTH_MODELPARAMS' in atm[p]) and ('NtoO' in atm[p]['TRUTH_MODELPARAMS']):
+                            # print('truth params',atm[p]['TRUTH_MODELPARAMS'])
+                            tceqdict['NtoO'] = atm[p]['TRUTH_MODELPARAMS']['NtoO']
+                        else:
+                            tceqdict['NtoO'] = 0.
+                        tceqdictProfiled['NtoO'] = tceqdict['NtoO']
+                elif modelName=='PHOTOCHEM':
+                    if len(mdp)!=5: log.warning('--< Expecting 5 molecules for PHOTOCHEM model! >--')
+                    tceqdict = None
+                    mixratio = {}
+                    mixratio['HCN'] = float(mdp[0])
+                    mixratio['CH4'] = float(mdp[1])
+                    mixratio['C2H2'] = float(mdp[2])
+                    mixratio['CO2'] = float(mdp[3])
+                    mixratio['H2CO'] = float(mdp[4])
+                    tceqdictProfiled = None
+                    mixratioProfiled = {}
+                    mixratioProfiled['HCN'] = float(mdpProfiled[0])
+                    mixratioProfiled['CH4'] = float(mdpProfiled[1])
+                    mixratioProfiled['C2H2'] = float(mdpProfiled[2])
+                    mixratioProfiled['CO2'] = float(mdpProfiled[3])
+                    mixratioProfiled['H2CO'] = float(mdpProfiled[4])
 
-            fmcrand = np.zeros(transitdata['depth'].size)
-            fmcrand = crbmodel(None, float(hza), float(ctp),
+                else:
+                    log.warning('--< Expecting TEQ or PHOTOCHEM model! >--')
+
+                crbhzlib = {'PROFILE':[]}
+                hazedir = os.path.join(excalibur.context['data_dir'], 'CERBERUS/HAZE')
+                hazelib(crbhzlib, hazedir=hazedir, verbose=False)
+
+                paramValues_median = (tpr, ctp, hza, hloc, hthc, tceqdict, mixratio)
+                paramValues_profiled = (tprProfiled,
+                                        ctpProfiled, hzaProfiled, hlocProfiled, hthcProfiled,
+                                        tceqdictProfiled, mixratioProfiled)
+
+                # print('median fmc',np.nanmedian(fmc))
+                fmc = np.zeros(transitdata['depth'].size)
+                fmc = crbmodel(mixratio, float(hza), float(ctp),
                                solidr, fin['priors'],
                                xsl[p]['XSECS'], xsl[p]['QTGRID'],
                                float(tpr),
                                transitdata['wavelength'],
                                hzlib=crbhzlib, hzp='AVERAGE', hztop=float(hloc),
                                hzwscale=float(hthc), cheq=tceqdict, pnet=p,
-                               sphshell=True, verbose=False, debug=False)
-            # print('len',len(fmcrand))
-            # print('median fmc',np.nanmedian(fmcrand))
-            # print('mean model',np.nanmean(fmcrand))
-            # print('stdev model',np.nanstd(fmcrand))
-            fmcarray.append(fmcrand)
+                               verbose=False, debug=False)
+                # print('median fmc',np.nanmedian(fmc))
+                # print('mean model',np.nanmean(fmc))
+                # print('mean data',np.nanmean(transitdata['depth']))
+                patmos_model = fmc - np.nanmean(fmc) + np.nanmean(transitdata['depth'])
+                # print('median pmodel',np.nanmedian(patmos_model))
 
-        # _______________MAKE SOME PLOTS________________
-        out['data'][p] = {}
-        saveDir = os.path.join(excalibur.context['data_dir'], 'bryden/')
-        # print('saveDir',saveDir)
+                fmcProfiled = np.zeros(transitdata['depth'].size)
+                fmcProfiled = crbmodel(mixratioProfiled, float(hzaProfiled), float(ctpProfiled),
+                                       solidr, fin['priors'],
+                                       xsl[p]['XSECS'], xsl[p]['QTGRID'],
+                                       float(tprProfiled),
+                                       transitdata['wavelength'],
+                                       hzlib=crbhzlib, hzp='AVERAGE', hztop=float(hlocProfiled),
+                                       hzwscale=float(hthcProfiled), cheq=tceqdictProfiled, pnet=p,
+                                       verbose=False, debug=False)
+                patmos_modelProfiled = fmcProfiled - np.nanmean(fmcProfiled) + np.nanmean(transitdata['depth'])
 
-        # _______________BEST-FIT SPECTRUM PLOT________________
-        transitdata = rebinData(transitdata)
-        out['data'][p]['plot_spectrum'] = plot_bestfit(transitdata,
-                                                       patmos_model, fmcarray,
-                                                       truth_spectrum,
-                                                       filt, trgt, p, saveDir)
+                # calculate chi2 values to see which is the best fit
+                offsets_model = (patmos_model - transitdata['depth']) / transitdata['error']
+                chi2model = np.nansum(offsets_model**2)
+                # print('chi2',chi2model)
 
-        # _______________CORNER PLOT________________
-        out['data'][p]['plot_corner'] = plot_corner(allkeys, alltraces,
-                                                    prior_ranges,
-                                                    # truth_params,
-                                                    filt, trgt, p, saveDir)
+                # actually the profiled chi2 isn't used below just now, so has to be commented out
+                # offsets_modelProfiled = (patmos_modelProfiled - transitdata['depth']) / transitdata['error']
+                # chi2modelProfiled = np.nansum(offsets_modelProfiled**2)
+                # print('chi2 after profiling',chi2modelProfiled)
 
-        # _______________VS-PRIOR PLOT________________
-        out['data'][p]['plot_vsprior'] = plot_vsPrior(allkeys, alltraces,
-                                                      truth_params, prior_ranges,
-                                                      filt, trgt, p, saveDir)
+                # make an array of 10 random walker results
+                nrandomwalkers = 100
+                nrandomwalkers = 1000
 
-        # _______________WALKER-EVOLUTION PLOT________________
-        out['data'][p]['plot_walkerevol'] = plot_walkerEvolution(allkeys, alltraces,
-                                                                 truth_params, prior_ranges,
-                                                                 filt, trgt, p, saveDir)
+                # fix the random seed for each target/planet, so that results are reproducable
+                intFromTarget = 1  # arbitrary initialization for the random seed
+                for char in trgt+' '+p:
+                    intFromTarget = (123 * intFromTarget + ord(char)) % 100000
+                np.random.seed(intFromTarget)
 
-        out['target'].append(trgt)
-        out['planets'].append(p)
-        completed_at_least_one_planet = True
-        # print('out-data keys at end of this planet',out['data'][p].keys())
+                chi2best = chi2model
+                patmos_bestFit = patmos_model
+                paramValues_bestFit = paramValues_profiled
+                fmcarray = []
+                for _ in range(nrandomwalkers):
+                    iwalker = int(len(tprtrace) * np.random.rand())
+                    # iwalker = max(0, len(tprtrace) - 1 - int(1000* np.random.rand()))
+                    if fitCloudParameters:
+                        ctp = ctptrace[iwalker]
+                        hza = hzatrace[iwalker]
+                        hloc = hloctrace[iwalker]
+                        hthc = hthicktrace[iwalker]
+                    if fitT:
+                        tpr = tprtrace[iwalker]
+                    mdp = np.array(mdptrace)[:,iwalker]
+                    # print('shape mdp',mdp.shape)
+                    # if fitCloudParameters:
+                    #    print('fit results; CTP:',ctp)
+                    #    print('fit results; HScale:',hza)
+                    #    print('fit results; HLoc:',hloc)
+                    #    print('fit results; HThick:',hthc)
+                    # print('fit results; T:',tpr)
+                    # print('fit results; mdplist:',mdp)
+
+                    if modelName=='TEC':
+                        mixratio = None
+                        tceqdict = {}
+                        tceqdict['XtoH'] = float(mdp[0])
+                        if fitCtoO:
+                            tceqdict['CtoO'] = float(mdp[1])
+                        else:
+                            tceqdict['CtoO'] = atm[p]['TRUTH_MODELPARAMS']['CtoO']
+                        if fitNtoO:
+                            tceqdict['NtoO'] = float(mdp[2])
+                        else:
+                            if ('TRUTH_MODELPARAMS' in atm[p]) and ('NtoO' in atm[p]['TRUTH_MODELPARAMS']):
+                                tceqdict['NtoO'] = atm[p]['TRUTH_MODELPARAMS']['NtoO']
+                            else:
+                                # log.warning('--< NtoO is missing from TRUTH_MODELPARAMS >--')
+                                tceqdict['NtoO'] = 0.
+
+                    elif modelName=='PHOTOCHEM':
+                        tceqdict = None
+                        mixratio = {}
+                        mixratio['HCN'] = float(mdp[0])
+                        mixratio['CH4'] = float(mdp[1])
+                        mixratio['C2H2'] = float(mdp[2])
+                        mixratio['CO2'] = float(mdp[3])
+                        mixratio['H2CO'] = float(mdp[4])
+
+                    fmcrand = np.zeros(transitdata['depth'].size)
+                    fmcrand = crbmodel(mixratio, float(hza), float(ctp),
+                                       solidr, fin['priors'],
+                                       xsl[p]['XSECS'], xsl[p]['QTGRID'],
+                                       float(tpr),
+                                       transitdata['wavelength'],
+                                       hzlib=crbhzlib, hzp='AVERAGE', hztop=float(hloc),
+                                       hzwscale=float(hthc), cheq=tceqdict, pnet=p,
+                                       verbose=False, debug=False)
+                    # print('len',len(fmcrand))
+                    # print('median fmc',np.nanmedian(fmcrand))
+                    # print('mean model',np.nanmean(fmcrand))
+                    # print('stdev model',np.nanstd(fmcrand))
+                    fmcarray.append(fmcrand)
+
+                    # check to see if this model is the best one
+                    patmos_modelrand = fmcrand - np.nanmean(fmcrand) + np.nanmean(transitdata['depth'])
+                    offsets_modelrand = (patmos_modelrand - transitdata['depth']) / transitdata['error']
+                    chi2modelrand = np.nansum(offsets_modelrand**2)
+                    # print('chi2 for a random walker',chi2modelrand)
+                    if chi2modelrand < chi2best:
+                        # print('  using this as best',chi2modelrand)
+                        chi2best = chi2modelrand
+                        patmos_bestFit = patmos_modelrand
+                        paramValues_bestFit = (tpr, ctp, hza, hloc, hthc, tceqdict, mixratio)
+
+                # _______________MAKE SOME PLOTS________________
+                saveDir = os.path.join(excalibur.context['data_dir'], 'bryden/')
+
+                # _______________BEST-FIT SPECTRUM PLOT________________
+                transitdata = rebinData(transitdata)
+
+                out['data'][p]['plot_spectrum_'+modelName],_ = plot_spectrumfit(
+                    transitdata, patmos_model, patmos_modelProfiled, patmos_bestFit, fmcarray,
+                    truth_spectrum,
+                    fin['priors'],anc['data'][p], atm[p],
+                    filt, modelName, trgt, p, saveDir)
+
+                if verbose:
+                    print('paramValues median  ',paramValues_median)
+                    print('paramValues profiled',paramValues_profiled)
+                    print('paramValues bestFit ',paramValues_bestFit)
+
+                # _______________CORNER PLOT________________
+                out['data'][p]['plot_corner_'+modelName],_ = plot_corner(
+                    allKeys, allTraces, profiledTraces,
+                    paramValues_bestFit, truth_params, prior_ranges,
+                    filt, modelName, trgt, p, saveDir)
+
+                # _______________WALKER-EVOLUTION PLOT________________
+                out['data'][p]['plot_walkerevol_'+modelName],_ = plot_walkerEvolution(
+                    allKeys, allTraces, profiledTraces,
+                    truth_params, prior_ranges, appliedLimits,
+                    filt, modelName, trgt, p, saveDir)
+
+                # _______________VS-PRIOR PLOT________________
+                out['data'][p]['plot_vsprior_'+modelName],_ = plot_vsPrior(
+                    allKeys, allTraces, profiledTraces,
+                    truth_params, prior_ranges, appliedLimits,
+                    filt, modelName, trgt, p, saveDir)
+
+            out['target'].append(trgt)
+            out['planets'].append(p)
+            completed_at_least_one_planet = True
+            # print('out-data keys at end of this planet',out['data'][p].keys())
 
     if completed_at_least_one_planet: out['STATUS'].append(True)
     return out['STATUS'][-1]
 # --------------------------------------------------------------------
-def analysis(aspects, out, verbose=False):
+def analysis(aspects, filt, out, verbose=False):
     '''
     Plot out the population analysis (retrieval vs truth, mass-metallicity, etc)
     aspects: cross-target information
@@ -2237,95 +1386,220 @@ def analysis(aspects, out, verbose=False):
     '''
     if verbose: print('cerberus/analysis...')
 
-    svname = 'cerberus.atmos'
-    filts = ['Ariel-sim']
-    targetlists = get_target_lists()
+    aspecttargets = []
+    for a in aspects: aspecttargets.append(a)
 
-    for filt in filts:
+    svname = 'cerberus.atmos'
+
+    alltargetlists = get_target_lists()
+
+    # allow for analysis of multiple target lists
+    analysistargetlists = []
+
+    if filt=='Ariel-sim':
+        # analysistargetlists.append({
+        #    'targetlistname':'Roudier+ 2022',
+        #    'targets':alltargetlists['roudier62']})
+        # analysistargetlists.append({
+        #    'targetlistname':'MCS Nov.2023 Transit-list',
+        #    'targets':alltargetlists['arielMCS_Nov2023_transit']})
+        # analysistargetlists.append({
+        #    'targetlistname':'MCS Nov.2023 max-visits=25',
+        #    'targets':alltargetlists['arielMCS_Nov2023_maxVisits25']})
+        # analysistargetlists.append({
+        #    'targetlistname':'MCS Feb.2024 Transit-list',
+        #    'targets':alltargetlists['arielMCS_Feb2024_transit']})
+        # analysistargetlists.append({
+        #    'targetlistname':'MCS Feb.2024 max-visits=25',
+        #    'targets':alltargetlists['arielMCS_Feb2024_maxVisits25']})
+        # analysistargetlists.append({
+        #    'targetlistname':'2-year science time; Thorngren mmw (Aug.2024)',
+        #    'targets':alltargetlists['ariel_Aug2024_2years']})
+        analysistargetlists.append({
+            'targetlistname':'2-year science time; Thorngren mmw (Nov.2024)',
+            'targets':alltargetlists['ariel_Nov2024_2years']})
+    else:
+        analysistargetlists.append({
+            'targetlistname':'All Excalibur targets',
+            'targets':alltargetlists['active']})
+        # analysistargetlists.append({
+        #    'targetlistname':'Roudier+ 2022',
+        #    'targets':alltargetlists['roudier62']})
+        # analysistargetlists.append({
+        #    'targetlistname':'All G141 targets',
+        #    'targets':alltargetlists['G141']})
+
+    for targetlist in analysistargetlists:
+        # print('  running targetlist=',targetlist['targetlistname'])
         param_names = []
+        masses = []
+        stellarFEHs = []
         truth_values = defaultdict(list)
         fit_values = defaultdict(list)
         fit_errors = defaultdict(list)
+        fit_errors2sided = defaultdict(list)
 
-        # for trgt in filter(lambda tgt: 'STATUS' in aspects[tgt][svname+'.'+filt], targetlists['active']):
-        # JenkinsPEP8 needs this param outside loop
-        # svname_with_filter = svname+'.'+filt
-        # for trgt in filter(lambda tgt: 'STATUS' in aspects[tgt][svname_with_filter], targetlists['active']):
-        # nope! still not jenkins compatible. arg!
-        for trgt in targetlists['active']:
-            # print('target with valid data format for this filter:',trgt)
+        # FIXMEE: move to config file and fix this code
+        for trgt in targetlist['targets']:
+            # print('        cycling through targets',trgt)
+            if trgt not in aspecttargets:
+                log.warning('--< CERBERUS ANALYSIS: TARGET NOT IN ASPECT %s %s >--',filt,trgt)
+            elif svname+'.'+filt not in aspects[trgt]:
+                # some targets don't have this filter; no problem
+                # log.warning('--< NO CERB.ATMOS for this FILTER+TARGET %s %s >--',filt,trgt)
+                pass
+            elif 'STATUS' not in aspects[trgt][svname+'.'+filt]:
+                log.warning('--< CERBERUS ANALYSIS: FORMAT ERROR - NO STATUS %s %s >--',filt,trgt)
+            else:
+                # print('target with valid data format for this filter:',filt,trgt)
+                atmosFit = aspects[trgt][svname+'.'+filt]
 
-            system_data = aspects[trgt][svname+'.'+filt]
+                # if 'stellar_params' in atmosFit['data']:  # strange. this doesn't work
+                if 'stellar_params' in atmosFit['data'].keys():
+                    stellarFEH = atmosFit['data']['stellar_params']['FEH*']
+                else:
+                    stellarFEH = 0
+                    log.warning('--< CERBERUS ANALYSIS: no FEH* for %s >--',trgt)
 
-            # verify SV succeeded for target
-            if system_data['STATUS'][-1]:
-                for planetLetter in system_data['data'].keys():
-                    if 'TEC' not in system_data['data'][planetLetter]['MODELPARNAMES'].keys():
-                        print(' BIG PROBLEM theres no TEC model!')
-                    elif 'TRUTH_MODELPARAMS' not in system_data['data'][planetLetter].keys():
-                        print(' TEMP PROBLEM theres no truth info')
-                    else:
+                # verify SV succeeded for target
+                if not atmosFit['STATUS'][-1]:
+                    log.warning('--< CERBERUS ANALYSIS: STATUS IS FALSE FOR CERB.ATMOS %s %s >--',filt,trgt)
+                else:
+                    for planetLetter in atmosFit['data'].keys():
+                        # print(trgt,atmosFit['data'][planetLetter]['MODELPARNAMES'])
+                        # print(trgt,atmosFit['data'][planetLetter]['planet_params'])
 
-                        alltraces = []
-                        allkeys = []
-                        for key in system_data['data'][planetLetter]['TEC']['MCTRACE']:
-                            alltraces.append(system_data['data'][planetLetter]['TEC']['MCTRACE'][key])
+                        # print('   keys:',atmosFit['data'][planetLetter].keys())
+                        if planetLetter=='stellar_params':  # this is not a planet letter
+                            pass
 
-                            if key=='TEC[0]': allkeys.append('[X/H]')
-                            elif key=='TEC[1]': allkeys.append('[C/O]')
-                            elif key=='TEC[2]': allkeys.append('[N/O]')
-                            else: allkeys.append(key)
-
-                        for key,trace in zip(allkeys,alltraces):
-                            if key not in param_names: param_names.append(key)
-                            fit_values[key].append(np.median(trace))
-                            lo = np.percentile(np.array(trace), 16)
-                            hi = np.percentile(np.array(trace), 84)
-                            fit_errors[key].append((hi-lo)/2)
-
-                        if isinstance(system_data['data'][planetLetter]['TRUTH_MODELPARAMS'], dict):
-                            truth_params = system_data['data'][planetLetter]['TRUTH_MODELPARAMS'].keys()
-                            # print('truth keys:',system_data['data'][planetLetter]['TRUTH_MODELPARAMS'].keys())
+                        elif 'TEC' not in atmosFit['data'][planetLetter]['MODELPARNAMES']:
+                            log.warning('--< CERBERUS ANALYSIS: BIG PROBLEM theres no TEC model! %s %s >--',filt,trgt)
+                        elif 'prior_ranges' not in atmosFit['data'][planetLetter]['TEC']:
+                            log.warning('--< CERBERUS ANALYSIS: SKIP (no prior info) - %s %s >--',filt,trgt)
                         else:
-                            truth_params = []
-                            print('CORRUPTED TRUTH (bad dict trouble)')
-
-                        for trueparam,fitparam in zip(['Teq','metallicity','C/O','Mp'],
-                                                      ['T','[X/H]','[C/O]','Mp']):
-                            if trueparam in truth_params:
-                                true_value = system_data['data'][planetLetter]['TRUTH_MODELPARAMS'][trueparam]
-                                # careful here: metallicity and C/O have to be converted to log-solar
-                                if trueparam=='metallicity':
-                                    true_value = np.log10(true_value)
-                                elif trueparam=='C/O':
-                                    true_value = np.log10(true_value/0.55)  # solar is C/O=0.55 ?
-                                truth_values[fitparam].append(true_value)
+                            if 'planet_params' in atmosFit['data'][planetLetter]:
+                                masses.append(atmosFit['data'][planetLetter]['planet_params']['mass'])
                             else:
-                                truth_values[fitparam].append(666)
-                        # print('fits',dict(fit_values))
-                        # print('truths',dict(truth_values))
-                        # print()
+                                masses.append(666)
 
-    # plot analysis of the results.  save as png and as state vector for states/view
-    saveDir = os.path.join(excalibur.context['data_dir'], 'bryden/')
-    # jenkins doesn't like to have a triple-packed return here because it's fussy
-    plotarray = plot_fitsVStruths(
-        truth_values, fit_values, fit_errors, saveDir)
-    fitTplot, fitMetalplot, fitCOplot = plotarray[0],plotarray[1],plotarray[2]
-    massMetalsplot = plot_massVSmetals(
-        truth_values, fit_values, fit_errors, saveDir)
+                            stellarFEHs.append(stellarFEH)
 
-    # save the analysis as .csv file? (in /proj/data/spreadsheets/)
-    # savesv(aspects, targetlists)
+                            # (prior range should be the same for all the targets)
+                            prior_ranges = atmosFit['data'][planetLetter]['TEC']['prior_ranges']
 
-    # Add to SV
+                            allTraces = []
+                            allKeys = []
+                            for key in atmosFit['data'][planetLetter]['TEC']['MCTRACE']:
+                                allTraces.append(atmosFit['data'][planetLetter]['TEC']['MCTRACE'][key])
+
+                                if key=='TEC[0]': allKeys.append('[X/H]')
+                                elif key=='TEC[1]': allKeys.append('[C/O]')
+                                elif key=='TEC[2]': allKeys.append('[N/O]')
+                                else: allKeys.append(key)
+
+                            for key,trace in zip(allKeys,allTraces):
+                                if key not in param_names: param_names.append(key)
+                                med = np.median(trace)
+                                fit_values[key].append(med)
+                                lo = np.percentile(np.array(trace), 16)
+                                hi = np.percentile(np.array(trace), 84)
+                                fit_errors[key].append((hi-lo)/2)
+                                fit_errors2sided[key].append([med-lo,hi-med])
+                                if verbose:
+                                    if key=='[N/O]' and (hi-lo)/2 < 2:
+                                        print('N/O',trgt,np.median(trace),(hi-lo)/2)
+                            if ('TRUTH_MODELPARAMS' in atmosFit['data'][planetLetter].keys()) and \
+                               (isinstance(atmosFit['data'][planetLetter]['TRUTH_MODELPARAMS'], dict)):
+                                truth_params = atmosFit['data'][planetLetter]['TRUTH_MODELPARAMS'].keys()
+                                # print('truth keys:',truth_params)
+                            else:
+                                truth_params = []
+
+                            for trueparam,fitparam in zip(['Teq','metallicity','C/O','N/O','Mp'],
+                                                          ['T','[X/H]','[C/O]','[N/O]','Mp']):
+                                if trueparam in truth_params:
+                                    true_value = atmosFit['data'][planetLetter]['TRUTH_MODELPARAMS'][trueparam]
+                                    # (metallicity and C/O do not have to be converted to log-solar)
+                                    # if trueparam=='metallicity':
+                                    #    true_value = np.log10(true_value)
+                                    # elif trueparam=='C/O':
+                                    #    true_value = np.log10(true_value/0.54951)  # solar is C/O=0.55
+                                    # elif trueparam=='N/O':
+                                    #     true_value = true_value
+                                    if fitparam=='[N/O]' and true_value==666:
+                                        truth_values[fitparam].append(0)
+                                    else:
+                                        truth_values[fitparam].append(true_value)
+
+                                    if verbose:
+                                        if trueparam=='Teq' and true_value > 3333:
+                                            print('strangely high T',trgt,true_value)
+                                        if trueparam=='metallicity' and true_value > 66:
+                                            print('strangely high [X/H]',trgt,true_value)
+                                            print('atmosFit',atmosFit['data'][planetLetter])
+                                        if trueparam=='C/O' and true_value > 0.5:
+                                            print('strangely high [C/O]',trgt,true_value)
+
+                                elif trueparam=='Mp':
+                                    # if the planet mass is not in the Truth dictionary, pull it from system
+                                    # print(' input keys',atmosFit['data'][planetLetter]['planet_params'])
+                                    # print(' planet mass from system params:',
+                                    #      atmosFit['data'][planetLetter]['planet_params']['mass'])
+                                    truth_values[fitparam].append(
+                                        atmosFit['data'][planetLetter]['planet_params']['mass'])
+                                elif trueparam=='N/O':
+                                    truth_values[fitparam].append(0)
+                                else:
+                                    truth_values[fitparam].append(666)
+
+        # plot analysis of the results.  save as png and as state vector for states/view
+        saveDir = os.path.join(excalibur.context['data_dir'], 'bryden/')
+        fitCOplot = False
+        fitNOplot = False
+        if 'sim' in filt:
+            # for simulated data, compare retrieval against the truth
+            #  note that the length of plotarray depends on whether N/O and C/O are fit parameters
+            # jenkins doesn't like to have a triple-packed return here because it's fussy
+            plotarray = plot_fitsVStruths(
+                truth_values, fit_values, fit_errors, prior_ranges, filt, saveDir)
+            # fitTplot, fitMetalplot, fitCOplot, fitNOplot = plotarray[0],plotarray[1],plotarray[2],plotarray[3]
+            fitTplot = plotarray[0]
+            fitMetalplot = plotarray[1]
+            if len(plotarray) > 2: fitCOplot = plotarray[2]
+            if len(plotarray) > 3: fitNOplot = plotarray[3]
+        else:
+            # for real data, make a histogram of the retrieved uncertainties
+            #  note that the length of plotarray depends on whether N/O and C/O are fit parameters
+            plotarray = plot_fitUncertainties(
+                fit_values, fit_errors, prior_ranges, filt, saveDir)
+            fitTplot = plotarray[0]
+            fitMetalplot = plotarray[1]
+            if len(plotarray) > 2: fitCOplot = plotarray[2]
+            if len(plotarray) > 3: fitNOplot = plotarray[3]
+
+        massMetalsplot,_ = plot_massVSmetals(truth_values['Mp'], stellarFEHs, truth_values,
+                                             fit_values, fit_errors2sided, prior_ranges,
+                                             filt, saveDir)
+
+        # save the analysis as .csv file? (in /proj/data/spreadsheets/)
+        # savesv(aspects, targetlist)
+
+        # targetlistname = targetlist['targetlistname']
+
+        # Add to SV
+        out['data']['truths'] = dict(truth_values)
+        out['data']['values'] = dict(fit_values)
+        out['data']['errors'] = dict(fit_errors)
+        out['data']['plot_massVmetals'] = massMetalsplot
+        out['data']['plot_fitT'] = fitTplot
+        out['data']['plot_fitMetal'] = fitMetalplot
+        if fitCOplot: out['data']['plot_fitCO'] = fitCOplot
+        if fitNOplot: out['data']['plot_fitNO'] = fitNOplot
+
     out['data']['params'] = param_names
-    out['data']['truths'] = dict(truth_values)
-    out['data']['values'] = dict(fit_values)
-    out['data']['errors'] = dict(fit_errors)
-    out['data']['plot_fitT'] = fitTplot
-    out['data']['plot_fitMetal'] = fitMetalplot
-    out['data']['plot_fitCO'] = fitCOplot
-    out['data']['plot_massVmetals'] = massMetalsplot
+    out['data']['targetlistnames'] = [
+        targetlist['targetlistname'] for targetlist in analysistargetlists]
+
     out['STATUS'].append(True)
     return out['STATUS'][-1]

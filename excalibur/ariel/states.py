@@ -18,8 +18,8 @@ class PriorsSV(dawgie.StateVector):
         self._version_ = dawgie.VERSION(1,1,4)
         self.__name = name
         self['STATUS'] = excalibur.ValuesList()
-        self['target'] = excalibur.ValuesList()
-        self['planets'] = excalibur.ValuesList()
+        # self['target'] = excalibur.ValuesList()
+        # self['planets'] = excalibur.ValuesList()
         self['data'] = excalibur.ValuesDict()
         # self['spectrum'] = excalibur.ValuesDict()
         # self['spectrum_params'] = excalibur.ValuesDict()
@@ -30,7 +30,7 @@ class PriorsSV(dawgie.StateVector):
         '''name ds'''
         return self.__name
 
-    def view(self, visitor:dawgie.Visitor)->None:
+    def view(self, caller:excalibur.identity, visitor:dawgie.Visitor)->None:
         '''view ds'''
         if self['STATUS'][-1]:
 
@@ -38,11 +38,19 @@ class PriorsSV(dawgie.StateVector):
             # (alternative below: load a saved .png file)
             plotStateVector = True
 
+            target = self['data']['target']
+
             if plotStateVector:
-                for target,planetLetter in zip(self['target'],self['planets']):
-                    visitor.add_image('...',
-                                      '------ simulated Ariel spectrum for '+target+' '+planetLetter+' ------',
-                                      self['data'][planetLetter]['plot_simspectrum'])
+                for planetLetter in self['data']['planets']:
+                    for model in self['data']['models']:
+                        # problem: for multiplanet systems, individual models may fail
+                        # so there might be some missing planets here
+                        # but there should be all models present, if any models present
+                        if planetLetter in self['data'].keys():
+                            if model in self['data'][planetLetter].keys():
+                                visitor.add_image('...',
+                                                  '------ simulated Ariel spectrum for '+target+' '+planetLetter+'  MODEL:'+model+' ------',
+                                                  self['data'][planetLetter][model]['plot_simspectrum'])
 
             else:
                 # determine the most recent RID from subdir filenames
@@ -53,20 +61,21 @@ class PriorsSV(dawgie.StateVector):
                     if subdir.startswith('RID') and len(subdir)==6 and \
                        subdir > bestsubdir: bestsubdir = subdir
 
-                for target,planetLetter in zip(self['target'],self['planets']):
-                    myfig = plt.figure()
-                    plotDir = arielPlotDir + bestsubdir
-                    plot2show = img.imread(os.path.join(
-                        plotDir,
-                        'ariel_taurexAtmos_'+target+'_'+planetLetter+'.png'))
-                    plt.imshow(plot2show)
-                    plt.axis('off')
-                    buf = io.BytesIO()
-                    myfig.savefig(buf, format='png')
-                    visitor.add_image('...',
-                                      '------ simulated Ariel spectrum for '+target+' '+planetLetter+' ------',
-                                      buf.getvalue())
-                    plt.close(myfig)
+                for planetLetter in self['data']['planets']:
+                    for model in self['data']['models']:
+                        myfig = plt.figure()
+                        plotDir = arielPlotDir + bestsubdir
+                        plot2show = img.imread(os.path.join(
+                            plotDir,
+                            'ariel_'+model+'Atmos_'+target+'_'+planetLetter+'.png'))
+                        plt.imshow(plot2show)
+                        plt.axis('off')
+                        buf = io.BytesIO()
+                        myfig.savefig(buf, format='png')
+                        visitor.add_image('...',
+                                          '------ simulated Ariel spectrum for '+target+' '+planetLetter+'  MODEL:'+model+' ------',
+                                          buf.getvalue())
+                        plt.close(myfig)
 
         return
 

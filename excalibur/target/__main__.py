@@ -15,15 +15,20 @@ tn = os.environ.get('TARGET_NAME', None)
 
 if fep: dawgie.util.set_ports(int(fep))
 
-dawgie.security.initialize(os.path.expandvars(os.path.expanduser
-                                              (dawgie.context.gpg_home)))
+dawgie.security.initialize(os.path.expandvars
+                           (os.path.expanduser
+                            (dawgie.context.guest_public_keys)))
 dawgie.db.reopen()
-excalibur.target.bot.Actor('target', 4, rid).do()
 
-if tn == '':
-    for tn in dawgie.db.targets():
-        excalibur.target.bot.Agent('target', 4, rid, tn).do()
+if tn in ['', '__all__']:
+    name = ['alert', 'create', None][-1]  # -1 to run them all
+    subtasks = excalibur.target.bot.Agent('target', 4, rid)
+    pass
 else:
-    excalibur.target.bot.Agent('target', 4, rid, tn).do()
+    name = ['autofill', 'scrape', None][-1]  # -1 to run them all
+    subtasks = excalibur.target.bot.Actor('target', 4, rid, tn)
+    pass
+
+subtasks.do(name)
 dawgie.db.close()
 dawgie.security.finalize()

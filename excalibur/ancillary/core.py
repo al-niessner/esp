@@ -25,7 +25,6 @@ def getestimators():
         StEstimator(name='luminosity', units='L_sun', descr='Stellar luminosity',
                     method=ancestor.st_luminosity,
                     ref='from R_star & T_star'),
-        ancestor.StellarTypeEstimator(),
         StEstimator(name='spTyp', units='', descr='Spectral type',
                     method=ancestor.st_spTyp,
                     ref='Exoplanet Archive'),
@@ -46,7 +45,7 @@ def getestimators():
         ancestor.TeqEstimator(),
         PlEstimator(name='metallicity', units='logarithmic',
                     descr='metallicity', method=ancestor.pl_metals,
-                    ref='Fortney et al 2013'),
+                    ref='Thorngren et al 2016'),
         PlEstimator(name='mmw', units='AMU',
                     descr='mean molecular weight (CBE)', method=ancestor.pl_mmw,
                     ref='CEA (T=1000K;C/O=solar)'),
@@ -61,12 +60,18 @@ def getestimators():
         PlEstimator(name='modulation_max', units='dimensionless',
                     descr='spectral modulation (max)', method=ancestor.pl_modulationmax,
                     ref='Zellem et al 2017'),
-        PlEstimator(name='ZFOM', units='ppm',
+        PlEstimator(name='ZFOM', units='dimensionless',
                     descr='Zellem Figure-of-Merit (CBE)', method=ancestor.pl_ZFOM,
                     ref='Zellem et al 2017'),
-        PlEstimator(name='ZFOM_max', units='ppm',
+        PlEstimator(name='ZFOM_max', units='dimensionless',
                     descr='Zellem Figure-of-Merit (max)', method=ancestor.pl_ZFOMmax,
                     ref='Zellem et al 2017'),
+        PlEstimator(name='TSM', units='dimensionless',
+                    descr='Transit figure-of-merit', method=ancestor.pl_TSM,
+                    ref='Kempton et al 2018'),
+        PlEstimator(name='ESM', units='dimensionless',
+                    descr='Eclipse figure-of-merit', method=ancestor.pl_ESM,
+                    ref='Kempton et al 2018'),
         PlEstimator(name='v_wind', units='km/s',
                     descr='Stellar wind velocity', method=ancestor.pl_windVelocity,
                     ref='Parker solution'),
@@ -165,6 +170,9 @@ def savesv(aspects, targetlists):
     save the results as a csv file in /proj/data/spreadsheets
     '''
 
+    aspecttargets = []
+    for a in aspects: aspecttargets.append(a)
+
     svname = 'ancillary.estimate.parameters'
 
     # RID = int(os.environ.get('RUNID', None))
@@ -229,7 +237,9 @@ def savesv(aspects, targetlists):
         outfile.write('\n')
 
         # loop through each target, with one row per planet
-        for trgt in targetlists['active']:
+        # for trgt in targetlists['active']:
+        for trgt in filter(lambda tgt: tgt in aspecttargets, targetlists['active']):
+
             ancillary_data = aspects[trgt][svname]
 
             for planet_letter in ancillary_data['data']['planets']:

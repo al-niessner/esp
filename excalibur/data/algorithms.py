@@ -10,15 +10,17 @@ import excalibur.data.core as datcore
 import excalibur.data.states as datstates
 
 import excalibur.target as trg
-import excalibur.target.edit as trgedit
 import excalibur.target.states as trgstates
 import excalibur.target.algorithms as trgalg
+
 import excalibur.system as sys
 import excalibur.system.algorithms as sysalg
+
+import excalibur.runtime.algorithms as rtalg
+import excalibur.runtime.binding as rtbind
 # ------------- ------------------------------------------------------
 # -- ALGO RUN OPTIONS -- ---------------------------------------------
-fltrs = (trgedit.activefilters.__doc__).split('\n')
-fltrs = [t.strip() for t in fltrs if t.replace(' ', '')]
+fltrs = [str(fn) for fn in rtbind.filter_names.values()]
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class collect(dawgie.Algorithm):
@@ -27,8 +29,9 @@ class collect(dawgie.Algorithm):
     '''
     def __init__(self):
         '''__init__ ds'''
-        self._version_ = dawgie.VERSION(1,1,2)
+        self._version_ = datcore.collectversion()
         self.__create = trgalg.create()
+        self.__rt = rtalg.autofill()
         self.__scrape = trgalg.scrape()
         self.__out = trgstates.FilterSV('frames')
         return
@@ -40,7 +43,8 @@ class collect(dawgie.Algorithm):
     def previous(self):
         '''Input State Vectors: target.create, target.scrape'''
         return [dawgie.ALG_REF(trg.analysis, self.__create),
-                dawgie.ALG_REF(trg.task, self.__scrape)]
+                dawgie.ALG_REF(trg.task, self.__scrape)] + \
+                self.__rt.refs_for_validity()
 
     def state_vectors(self):
         '''Output State Vectors: data.collect'''
@@ -48,20 +52,27 @@ class collect(dawgie.Algorithm):
 
     def run(self, ds, ps):
         '''Top level algorithm call'''
-        update = False
-        create = self.__create.sv_as_dict()['filters']
-        scrape = self.__scrape.sv_as_dict()['databases']
-        valid, errstring = datcore.checksv(scrape)
-        if valid:
-            for key in create.keys(): self.__out[key] = create[key]
-            for name in create['activefilters']['NAMES']:
-                ok = self._collect(name, scrape, self.__out)
-                update = update or ok
-                pass
-            if update: ds.update()
-            else: self._raisenoout(self.name())
-            pass
-        else: self._failure(errstring)
+
+        # stop here if it is not a runtime target
+        if not self.__rt.is_valid():
+            log.warning('--< DATA.%s: not a valid target >--', self.name().upper())
+
+        else:
+            update = False
+            create = self.__create.sv_as_dict()
+            scrape = self.__scrape.sv_as_dict()['databases']
+            valid, errstring = datcore.checksv(scrape)
+            if valid:
+                for key in create['filters'].keys(): self.__out[key] = create['filters'][key]
+                # 7/2/24 we want to always collect all filters, so don't use proceed(fltr) here
+                # for fltr in self.__rt.sv_as_dict()['status']['allowed_filter_names']:
+                for fltr in fltrs:
+                    ok = self._collect(fltr, scrape, self.__out)
+                    update = update or ok
+
+                if update: ds.update()
+                else: self._raisenoout(self.name())
+            else: self._failure(errstring)
         return
 
     @staticmethod
@@ -70,10 +81,9 @@ class collect(dawgie.Algorithm):
         raise dawgie.NoValidOutputDataError(f'No output created for DATA.{myname}')
 
     @staticmethod
-    def _collect(name, scrape, out):
+    def _collect(fltr, scrape, out):
         '''Core code call'''
-        log.warning('--< DATA COLLECT: %s >--', name)
-        collected = datcore.collect(name, scrape, out)
+        collected = datcore.collect(fltr, scrape, out)
         return collected
 
     @staticmethod
@@ -92,7 +102,8 @@ class timing(dawgie.Algorithm):
         self._version_ = datcore.timingversion()
         self.__fin = sysalg.finalize()
         self.__col = collect()
-        self.__out = [datstates.TimingSV(ext) for ext in fltrs]
+        self.__rt = rtalg.autofill()
+        self.__out = [datstates.TimingSV(fltr) for fltr in fltrs]
         return
 
     def name(self):
@@ -102,7 +113,8 @@ class timing(dawgie.Algorithm):
     def previous(self):
         '''Input State Vectors: system.finalize, data.collect'''
         return [dawgie.ALG_REF(sys.task, self.__fin),
-                dawgie.ALG_REF(dat.task, self.__col)]
+                dawgie.ALG_REF(dat.task, self.__col)] + \
+                self.__rt.refs_for_proceed()
 
     def state_vectors(self):
         '''Output State Vectors: data.timing'''
@@ -110,25 +122,21 @@ class timing(dawgie.Algorithm):
 
     def run(self, ds, ps):
         '''Top level algorithm call'''
+
         update = False
         fin = self.__fin.sv_as_dict()['parameters']
         vfin, efin = datcore.checksv(fin)
         col = self.__col.sv_as_dict()['frames']
         vcol, ecol = datcore.checksv(col)
-        validtype = []
-        for test in col['activefilters'].keys():
-            if test in fltrs: validtype.append(test)
-            pass
         svupdate = []
         if vfin and vcol:
-            for ext in validtype:
-                # pylint: disable=protected-access
-                prcd = trgedit.proceed(ds._tn(), ext, verbose=False)
-                if prcd:
-                    update = self._timing(fin, ext, col['activefilters'][ext],
-                                          self.__out[fltrs.index(ext)])
-                    if update: svupdate.append(self.__out[fltrs.index(ext)])
-                    pass
+            for fltr in self.__rt.sv_as_dict()['status']['allowed_filter_names']:
+                if fltr in col['activefilters'].keys():
+                    # stop here if it is not a runtime target
+                    self.__rt.proceed(fltr)
+                    update = self._timing(fin, fltr, col['activefilters'][fltr],
+                                          self.__out[fltrs.index(fltr)])
+                    if update: svupdate.append(self.__out[fltrs.index(fltr)])
                 pass
             pass
         else:
@@ -146,10 +154,10 @@ class timing(dawgie.Algorithm):
         raise dawgie.NoValidOutputDataError(f'No output created for DATA.{myname}')
 
     @staticmethod
-    def _timing(fin, ext, colin, out):
+    def _timing(fin, fltr, colin, out):
         '''Core code call'''
-        log.warning('--< DATA TIMING: %s >--', ext)
-        chunked = datcore.timing(fin, ext, colin, out, verbose=False)
+        log.warning('--< DATA TIMING: %s >--', fltr)
+        chunked = datcore.timing(fin, fltr, colin, out, verbose=False)
         return chunked
 
     @staticmethod
@@ -168,8 +176,9 @@ class calibration(dawgie.Algorithm):
         self._version_ = dawgie.VERSION(1,4,4)
         self.__fin = sysalg.finalize()
         self.__col = collect()
+        self.__rt = rtalg.autofill()
         self.__tim = timing()
-        self.__out = [datstates.CalibrateSV(ext) for ext in fltrs]
+        self.__out = [datstates.CalibrateSV(fltr) for fltr in fltrs]
         return
 
     def name(self):
@@ -180,7 +189,8 @@ class calibration(dawgie.Algorithm):
         '''Input State Vectors: system.finalize, data.collect, data.timing'''
         return [dawgie.ALG_REF(sys.task, self.__fin),
                 dawgie.ALG_REF(dat.task, self.__col),
-                dawgie.ALG_REF(dat.task, self.__tim)]
+                dawgie.ALG_REF(dat.task, self.__tim)] + \
+                self.__rt.refs_for_proceed()
 
     def state_vectors(self):
         '''Output State Vectors: data.calibration'''
@@ -188,31 +198,29 @@ class calibration(dawgie.Algorithm):
 
     def run(self, ds, ps):
         '''Top level algorithm call'''
+
         update = False
         cll = self.__col.sv_as_dict()['frames']
         vcll, ecll = datcore.checksv(cll)
         fin = self.__fin.sv_as_dict()['parameters']
         vfin, sfin = datcore.checksv(fin)
-        validtype = []
-        for test in cll['activefilters'].keys():
-            if test in fltrs: validtype.append(test)
-            pass
         svupdate = []
-        for datatype in validtype:
-            tim = self.__tim.sv_as_dict()[datatype]
-            vtim, etim = datcore.checksv(tim)
-            # pylint: disable=protected-access
-            prcd = trgedit.proceed(ds._tn(), datatype, verbose=False)
-            if vfin and vcll and vtim and prcd:
-                # pylint: disable=protected-access
-                update = self._calib(fin, cll['activefilters'][datatype], tim, ds._tn(),
-                                     datatype, self.__out[fltrs.index(datatype)])
-                if update: svupdate.append(self.__out[fltrs.index(datatype)])
-                pass
-            else:
-                message = [m for m in [sfin, ecll, etim] if m is not None]
-                if not prcd: message = ['Kicked by edit.processme()']
-                self._failure(message[0])
+        for fltr in self.__rt.sv_as_dict()['status']['allowed_filter_names']:
+            if fltr in cll['activefilters']:
+                # stop here if it is not a runtime target
+                self.__rt.proceed(fltr)
+
+                tim = self.__tim.sv_as_dict()[fltr]
+                vtim, etim = datcore.checksv(tim)
+                if vfin and vcll and vtim:
+                    # FIXMEE: this code needs repaired by moving out to config
+                    update = self._calib(fin, cll['activefilters'][fltr], tim,
+                                         repr(self).split('.')[1],  # this is the target name
+                                         fltr, self.__out[fltrs.index(fltr)], ps)
+                    if update: svupdate.append(self.__out[fltrs.index(fltr)])
+                else:
+                    message = [m for m in [sfin, ecll, etim] if m is not None]
+                    self._failure(message[0])
                 pass
             pass
         self.__out = svupdate
@@ -226,12 +234,13 @@ class calibration(dawgie.Algorithm):
         raise dawgie.NoValidOutputDataError(f'No output created for DATA.{myname}')
 
     @staticmethod
-    def _calib(fin, cll, tim, tid, flttype, out):
+    def _calib(fin, cll, tim, tid, flttype, out, ps):
         '''Core code call'''
         log.warning('--< DATA CALIBRATION: %s >--', flttype)
         caled = False
         if 'SCAN' in flttype:
-            caled = datcore.scancal(cll, tim, tid, flttype, out, verbose=False)
+            caled = datcore.scancal(cll, tim, tid, flttype, out,
+                                    verbose=False)
             pass
         if 'G430' in flttype:
             caled = datcore.stiscal_G430L(fin, cll, tim, tid, flttype, out,
@@ -243,9 +252,9 @@ class calibration(dawgie.Algorithm):
         if 'Spitzer' in flttype:
             caled = datcore.spitzercal(cll, out)
             pass
-        if 'NIRISS' in flttype:
-            caled = datcore.jwstcal_NIRISS(fin, cll, tim, tid, flttype, out,
-                                           verbose=False)
+        if 'JWST' in flttype:
+            caled = datcore.jwstcal(fin, cll, tim, flttype, out,
+                                    ps=ps, verbose=False, debug=False)
             pass
         return caled
 

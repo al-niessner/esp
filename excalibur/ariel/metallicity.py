@@ -7,23 +7,25 @@ import numpy as np
 
 # ______________________________________________________
 
-def massMetalRelationDisp(logmetStar,Mp):
+def massMetalRelationDisp(logmetStar,Mp,thorngren=False):
     '''
     Add some realistic scatter to the mass-metallicity relation
     (not that we know reality)
     '''
-    logmet = massMetalRelation(logmetStar,Mp)
+    logmet = massMetalRelation(logmetStar,Mp,thorngren=thorngren)
 
     # FINESSE used a dispersion of just 0.3
     #  Swain analysis of Thorgren 2016 finds a lot more scatter (0.8)
-    dispersion = 0.8
+    # dispersion = 0.8
+    # march 22, 2024 (RUNID > 923) switching back to 0.3
+    dispersion = 0.3
 
     logmet += np.random.normal(scale=dispersion)
 
     return logmet
 # ______________________________________________________
 
-def massMetalRelation(logmetStar, Mp):
+def massMetalRelation(logmetStar, Mp, thorngren=False):
     '''
     Assume an inverse-linear relationship between planet mass and metallicity
     Include a limit on metallicity of +2.0 dex, relative to the parent star
@@ -34,16 +36,33 @@ def massMetalRelation(logmetStar, Mp):
     # Mp = 10/318 = 10Earths gives met = +2 dex
     # Mp = 1/318 = 1Earth would give met = +3 dex, but capped at +2 dex
 
-    slope = -1.
-    maxMetal = 2.
-    # Mpivot = 1.   # (earth units)
-    # intercept = maxMetal - slope*Mpivot
-    # Mpivot = -1.5  # (jupiter units)
-    intercept = 0.5  # metallicity for Jupiter mass
+    if thorngren:
+        # mass-metallicity relation from Thorngren et al 2016
+        slope = -0.45
+        # metallicity for Jupiter mass (trend value; Jupiter itself is lower)
+        intercept = np.log10(9.7)
 
-    logmet = intercept + slope*np.log10(Mp)
-    logmet = min(maxMetal,logmet)
-    logmet += logmetStar
+        if logmetStar=='':
+            log.warning('--< Star metallicity missing in Ariel-sim : add to overwriter.py >--')
+            logmet = intercept + slope*np.log10(Mp)
+        else:
+            logmet = logmetStar + intercept + slope*np.log10(Mp)
+
+    else:
+        # mass-metallicity relation from FINESSE proposal (Fortney motivated)
+        slope = -1.
+        maxMetal = 2.
+        # Mpivot = 1.   # (earth units)
+        # intercept = maxMetal - slope*Mpivot
+        # Mpivot = -1.5  # (jupiter units)
+        intercept = 0.5  # metallicity for Jupiter mass
+
+        logmet = logmetStar + intercept + slope*np.log10(Mp)
+        # change so that it can handle an array of masses (from cerberus/plotting)
+        if isinstance(Mp,float):
+            logmet = min(maxMetal,logmet)
+        else:
+            logmet[np.where(logmet > maxMetal)] = maxMetal
 
     return logmet
 # ______________________________________________________
@@ -61,12 +80,15 @@ def randomStarMetal():
     return logmetStar
 # ______________________________________________________
 
-def randomCtoO():
+def randomCtoO_linear():
     '''
     Assign a random C-to-O ratio to each system
     Allow a small fraction (~5%) of stars to have more C than O
     Actually that's too much.  Consensus at the May2023 JWST conference was less than that I think
     Let's go with -0.2+-0.1, which gives 2.3% with more C than O
+    March 2024 update (allowing planets to have more variety than stars):
+     - use solar C/O as median
+     - have a stdev of 0.3 dex
     '''
 
     # this is from my excel check of Hinkel's Hypatia catalog
@@ -78,10 +100,11 @@ def randomCtoO():
     # in order to see how well FINESSE can do with some oddballs
     # this gives 4.8% with C>O
     # logCtoO=-0.2 + 0.12*np.random.normal()
-    logCtoO=-0.2 + 0.1*np.random.normal()
+    # logCtoO=-0.2 + 0.1*np.random.normal()
 
-    # reminder: solar is -0.26
-    #  we seem to be below average
+    logCtoO_solar = -0.26  # solar C/O is 0.55
+
+    logCtoO = logCtoO_solar + 0.3*np.random.normal()
 
     CtoO = 10.**logCtoO
     return CtoO

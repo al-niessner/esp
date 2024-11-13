@@ -5,6 +5,12 @@ import excalibur.system.core as syscore
 import numpy as np
 import scipy
 import math
+
+from astropy.modeling.models import BlackBody
+from astropy import units as u
+
+from excalibur.ariel.metallicity import massMetalRelation
+
 # ------------- ------------------------------------------------------
 # -- ESTIMATOR PROTOTYPES -- -----------------------------------------
 class Estimator:
@@ -68,37 +74,6 @@ class StEstimator(Estimator):
         return self._method(priors, ests)
 # -------------------------- -----------------------------------------
 # -- COLLECTION OF ESTIMATORS ----------------------------------------
-class StellarTypeEstimator(StEstimator):
-    '''StellarTypeEstimator ds'''
-    def __init__(self):
-        '''__init__ ds'''
-        StEstimator.__init__(self, name='stellar_type',
-                             descr='Harvard system stellar type',
-                             scale=['M', 'K', 'G', 'F', 'A', 'B', 'unknown'],
-                             plot='bar', ref='from T_star')
-        return
-
-    def run(self, priors, ests):
-        '''Estimates the Harvard system spectral type using the
-        prior stellar temperature from NExSci
-        Temperature ranges taken from
-        https://en.wikipedia.org/wiki/Stellar_classification'''
-
-        if 'T*' not in priors.keys(): return 'unknown'
-        if isinstance(priors['T*'],str): return 'unknown'
-
-        st_temp = priors['T*']
-
-        if st_temp >= 30e3: st_type = 'O'
-        elif st_temp >= 10e3: st_type = 'B'
-        elif st_temp >= 7.5e3: st_type = 'A'
-        elif st_temp >= 6e3: st_type = 'F'
-        elif st_temp >= 5.2e3: st_type = 'G'
-        elif st_temp >= 3.7e3: st_type = 'K'
-        elif st_temp >= 2.4e3: st_type = 'M'
-        else: st_type = 'unknown'
-
-        return st_type
 
 class TeqEstimator(PlEstimator):
     '''TeqEstimator ds'''
@@ -125,7 +100,7 @@ class HEstimator(PlEstimator):
     def __init__(self):
         '''__init__ ds'''
         PlEstimator.__init__(self, name='H', descr='Atmospheric scale height (CBE)',
-                             units='km',ref='Fortney metallicity')
+                             units='km',ref='Thorngren metallicity')
 
     def run(self, priors, ests, pl):
         '''run ds'''
@@ -193,10 +168,20 @@ def pl_metals(priors, _ests, pl):
         # print('no mass for this planet')
         return None
 
+    # logmetStar = 0
+    logmetStar = priors['FEH*']
+
     # 318 Earth masses per Jupiter mass
     # pivot point (where metallicity is max value) is at 10 Earth masses
-    metallicity = 3 - np.log10(318.*priors[pl]['mass'])
-    metallicity = min(metallicity, 2)
+    # metallicity = 3 - np.log10(318.*priors[pl]['mass'])
+    # metallicity = min(metallicity, 2)
+    # above is more or less the same as massMetalRelation(thorngren=False)
+    # metallicity = massMetalRelation(logmetStar, priors[pl]['mass'], thorngren=False)
+    # print('Mp,metallicity old',priors[pl]['mass'],metallicity)
+
+    metallicity = massMetalRelation(logmetStar, priors[pl]['mass'], thorngren=True)
+    # print('Mp,metallicity new',priors[pl]['mass'],metallicity)
+
     return metallicity
 
 def pl_mmw(priors, _ests, pl):
@@ -300,8 +285,8 @@ def pl_ZFOM(priors, _ests, pl):
     modulation = pl_modulation(priors, _ests, pl)
     ZFOM = modulation / 10**(Hmag/5)
 
-    # normalization to make it easier to read
-    return ZFOM * 1.e6
+    # normalization to make it scaled similar to TSM
+    return ZFOM * 1.e8
 
 def pl_ZFOMmax(priors, _ests, pl):
     '''pl_ZFOMmax ds'''
@@ -323,10 +308,11 @@ def pl_ZFOMmax(priors, _ests, pl):
 
     # calculate Zellem Figure-of-Merit (Zellem 2017, Eq.10)
     modulation = pl_modulationmax(priors, _ests, pl)
-    ZFOM = modulation / 10**(Hmag/5)
+    ZFOMmax = modulation / 10**(Hmag/5)
+    # print('ZFOMmax',ZFOMmax*1.e8)
 
-    # normalization to make it easier to read
-    return ZFOM * 1.e6
+    # normalization to make it scaled similar to TSM
+    return ZFOMmax * 1.e8
 
 def pl_density(priors, _ests, pl):
     '''pl_density ds'''
@@ -638,4 +624,101 @@ def pl_beta_rad(priors, _ests, pl):
 
     return Beta
 
+def pl_TSM(priors, _ests, pl):
+    '''pl_TSM'''
+
+    sscmks = syscore.ssconstants(cgs=True)
+
+    error_message = ''
+    if priors[pl]['mass'] == '': error_message = 'missing planet mass'
+    if 'sma' not in priors[pl].keys(): error_message = 'missing semi-major axis'
+    if priors[pl]['sma']=='': error_message = 'missing semi-major axis'
+    if priors['R*']=='': error_message = 'missing R*'
+    if priors['T*']=='': error_message = 'missing T*'
+    if not error_message=='': return error_message
+    if 'Jmag' in priors.keys():
+        Jmag = priors['Jmag']
+        if Jmag=='': return 'blank Jmag'
+    elif 'Hmag' in priors.keys():
+        # print(' NOTE: using Hmag instead of Jmag for TSM (temp fix)')
+        Jmag = priors['Hmag']
+        if Jmag=='': return 'blank Jmag'
+    else:
+        return 'no Jmag'
+
+    # calculate TSM figure-of-merit (Kempton 2018, Eq.1)
+
+    eqtemp = priors['T*']*np.sqrt(priors['R*']*sscmks['Rsun/AU']/
+                                  (2.*priors[pl]['sma']))
+
+    Rp_earth = priors[pl]['rp'] * sscmks['Rjup']/sscmks['Rearth']
+    Mp_earth = priors[pl]['mass'] * sscmks['Mjup']/sscmks['Mearth']
+    Rstar_sun = priors['R*']
+
+    if Rp_earth < 1.5:
+        scaleFactor = 0.190
+    elif Rp_earth < 2.75:
+        scaleFactor = 1.26
+    elif Rp_earth < 4.0:
+        scaleFactor = 1.28
+    else:
+        scaleFactor = 1.15
+    # scaleFactor = 1
+    # print('scaleFactor',scaleFactor)
+
+    TSM = scaleFactor * eqtemp * Rp_earth**3 / Rstar_sun**2 / Mp_earth \
+        / 10**(Jmag/5)
+    # print('TSM',TSM)
+    # zfommax = pl_ZFOMmax(priors, _ests, pl)
+    # print('zfommax',zfommax)
+    # print('zellem/kempton ratio',zfommax / TSM)
+
+    return TSM
+
+def pl_ESM(priors, _ests, pl):
+    '''pl_ESM'''
+
+    sscmks = syscore.ssconstants(cgs=True)
+
+    error_message = ''
+    if 'sma' not in priors[pl].keys(): error_message = 'missing semi-major axis'
+    if priors[pl]['sma']=='': error_message = 'missing semi-major axis'
+    if priors['R*']=='': error_message = 'missing R*'
+    if priors['T*']=='': error_message = 'missing T*'
+    if not error_message=='': return error_message
+
+    if 'Kmag' in priors.keys():
+        Kmag = priors['Kmag']
+        if Kmag=='': return 'blank Kmag'
+    elif 'Hmag' in priors.keys():
+        print(' NOTE: using Hmag instead of Kmag for ESM (temp fix)')
+        Kmag = priors['Hmag']
+        if Kmag=='': return 'blank Kmag'
+    else:
+        return 'no Kmag'
+
+    # calculate ESM figure-of-merit (Kempton 2018, Eq.4)
+
+    Tstar = priors['T*']
+    eqtemp = Tstar*np.sqrt(priors['R*']*sscmks['Rsun/AU']/
+                           (2.*priors[pl]['sma']))
+    Tday = 1.1 * eqtemp
+
+    Rp_cgs = priors[pl]['rp'] * sscmks['Rjup']
+    Rstar_cgs = priors['R*'] * sscmks['Rsun']
+
+    scaleFactor = 4.29e6
+
+    BBplanet = BlackBody(temperature=Tday*u.K)
+    BBstar = BlackBody(temperature=Tstar*u.K)
+    ESM = scaleFactor * BBplanet(7.5*u.micron) / BBstar(7.5*u.micron) \
+        * (Rp_cgs / Rstar_cgs)**2 \
+        / 10**(Kmag/5)
+    # print('ESM factor1',scaleFactor)
+    # print('ESM factor2',BBplanet(7.5*u.micron) / BBstar(7.5*u.micron))
+    # print('ESM factor3',Rp_cgs**2 / Rstar_cgs**2)
+    # print('ESM factor4',1/ 10**(Kmag/5))
+    # print('ESM',ESM)
+
+    return ESM
 # --------------------------- ----------------------------------------

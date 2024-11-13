@@ -7,11 +7,19 @@ import dawgie
 import dawgie.context
 
 import excalibur
+
+import excalibur.runtime as rtime
+import excalibur.runtime.algorithms as rtalg
+import excalibur.runtime.binding as rtbind
+
 import excalibur.target as trg
-import excalibur.target.edit as trgedit
 import excalibur.target.core as trgcore
+import excalibur.target.edit as trgedit
 import excalibur.target.monitor as trgmonitor
 import excalibur.target.states as trgstates
+
+fltrs = [str(fn) for fn in rtbind.filter_names.values()]
+
 # ------------- ------------------------------------------------------
 # -- ALGO RUN OPTIONS -- ---------------------------------------------
 # GENERATE DATABASE IDs
@@ -24,6 +32,9 @@ diskloc = os.path.join(excalibur.context['data_dir'], 'sci')
 queryform = 'https://archive.stsci.edu/hst/search.php?target='
 mirror1 = 'http://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/data/pub/HSTCA/'
 mirror2 = 'http://archives.esac.esa.int/ehst-sl-server/servlet/data-action?ARTIFACT_ID='
+# MAST API
+durl = 'https://mast.stsci.edu/api/v0.1/Download/file?'
+hsturl = 'https://mast.stsci.edu/search/hst/api/v0.1/retrieve_product?'
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class alert(dawgie.Analyzer):
@@ -101,6 +112,7 @@ class autofill(dawgie.Algorithm):
         '''__init__ ds'''
         self._version_ = trgcore.autofillversion()
         self.__create = create()
+        self.__rt = rtalg.autofill()
         self.__out = trgstates.TargetSV('parameters')
         return
 
@@ -110,7 +122,8 @@ class autofill(dawgie.Algorithm):
 
     def previous(self):
         '''Input State Vectors: target.create'''
-        return [dawgie.ALG_REF(trg.analysis, self.__create)]
+        return [dawgie.ALG_REF(trg.analysis, self.__create),
+                dawgie.V_REF(rtime.task, self.__rt, self.__rt.sv_as_dict()['status'], 'isValidTarget')]
 
     def state_vectors(self):
         '''Output State Vectors: target.autofill'''
@@ -119,19 +132,33 @@ class autofill(dawgie.Algorithm):
     def run(self, ds, ps):
         '''Top level algorithm call'''
         update = False
-        crt = self.__create.sv_as_dict()['starIDs']
-        valid, errstring = trgcore.checksv(crt)
-        # pylint: disable=protected-access
-        if valid and ds._tn() in crt['starID']: update = self._autofill(crt, ds._tn())
-        else: self._failure(errstring)
-        if update: ds.update()
-        else: raise dawgie.NoValidOutputDataError(
-                f'No output created for TARGET.{self.name()}')
+
+        # FIXMEE: this code needs repaired by moving out to config (Geoff added)
+        target = repr(self).split('.')[1]
+
+        # stop here if it is not a runtime target
+        if not self.__rt.is_valid():
+            log.warning('--< TARGET.%s: %s not a valid target >--',
+                        target, self.name().upper())
+            pass
+        else:
+            crt = self.__create.sv_as_dict()
+            valid, errstring = trgcore.checksv(crt['starIDs'])
+            if valid and (target in crt['starIDs']['starID']):
+                log.warning('--< TARGET AUTOFILL: %s >--', target)
+                update = self._autofill(crt, target)
+            else: self._failure(errstring)
+
+            if update: ds.update()
+            else: raise dawgie.NoValidOutputDataError(
+                    f'No output created for TARGET.{self.name()}')
+            pass
         return
 
     def _autofill(self, crt, thistarget):
         '''Core code call'''
-        solved = trgcore.autofill(crt, thistarget, self.__out)
+        # currently we are running this on all filters, not just the available ones
+        solved = trgcore.autofill(crt, thistarget, self.__out, fltrs)
         return solved
 
     @staticmethod
@@ -145,12 +172,12 @@ class autofill(dawgie.Algorithm):
 class scrape(dawgie.Algorithm):
     '''
     Download data or ingest data from disk
-    2.0.0: GMR: Code changes to use the new MAST API
     '''
     def __init__(self):
         '''__init__ ds'''
-        self._version_ = dawgie.VERSION(2,0,0)
+        self._version_ = trgcore.scrapeversion()
         self.__autofill = autofill()
+        self.__rt = rtalg.autofill()
         self.__out = trgstates.DatabaseSV('databases')
         return
 
@@ -160,7 +187,8 @@ class scrape(dawgie.Algorithm):
 
     def previous(self):
         '''Input State Vectors: target.autofill'''
-        return [dawgie.ALG_REF(trg.task, self.__autofill)]
+        return [dawgie.ALG_REF(trg.task, self.__autofill),
+                dawgie.V_REF(rtime.task, self.__rt, self.__rt.sv_as_dict()['status'],'isValidTarget')]
 
     def state_vectors(self):
         '''Output State Vectors: target.scrape'''
@@ -168,31 +196,38 @@ class scrape(dawgie.Algorithm):
 
     def run(self, ds, ps):
         '''Top level algorithm call'''
-        # update = False
-        var_autofill = self.__autofill.sv_as_dict()['parameters']
-        valid, errstring = trgcore.checksv(var_autofill)
-        # if valid: update = self._scrape(var_autofill, self.__out)
-        if valid: _ = self._scrape(var_autofill, self.__out)
-        else: self._failure(errstring)
-        # if update: ds.update()
-        # else: raise dawgie.NoValidOutputDataError(
-        #         f'No output created for TARGET.{self.name()}')
-        # If there's no fits data files, 'update' will return as False
-        # Let's not do an error crash though;
-        # still finish off the target.scrape output,
-        # even if there's no HST or Spitzer data
-        ds.update()
+
+        # stop here if it is not a runtime target
+        if not self.__rt.is_valid():
+            log.warning('--< TARGET.%s: not a valid target >--', self.name().upper())
+        else:
+            var_autofill = self.__autofill.sv_as_dict()['parameters']
+            valid, errstring = trgcore.checksv(var_autofill)
+            if valid:
+                # FIXMEE: this code needs repaired by moving out to config (Geoff added)
+                log.warning('--< TARGET SCRAPE: %s >--', repr(self).split('.')[1])
+                self._scrape(var_autofill, self.__out)
+            else:
+                self._failure(errstring)
+            # GMR: always update.
+            # Sims / proceed() do not require data nor full set of system parameters.
+            ds.update()
         return
 
     @staticmethod
-    def _scrape(arg_autofill, out):
+    def _scrape(tfl, out):
         '''Core code call'''
         dbs = os.path.join(dawgie.context.data_dbs, 'mast')
         if not os.path.exists(dbs): os.makedirs(dbs)
+
         # Download from MAST
-        umast = trgcore.mast(arg_autofill, out, dbs, queryform, mirror1, alt=mirror2)
-        # Get data from diskloc
-        udisk = trgcore.disk(arg_autofill, out, diskloc, dbs)
+        umast = trgcore.mastapi(tfl, out, dbs,
+                                download_url=durl, hst_url=hsturl, verbose=False)
+
+        # Data on DISK
+        # udisk gets prioritized over umast for duplicates
+        udisk = trgcore.disk(tfl, out, diskloc, dbs)
+
         return udisk or umast
 
     @staticmethod
@@ -237,6 +272,6 @@ class regress(dawgie.Regression):
 
     def variables(self)->[dawgie.SV_REF, dawgie.V_REF]:
         '''variables ds'''
-        return [dawgie.SV_REF(trg.task,autofill(),autofill().state_vectors()[0])]
+        return [dawgie.SV_REF(trg.task,autofill(), autofill().state_vectors()[0])]
     pass
 # -------------------------------------------------------------------

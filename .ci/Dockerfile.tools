@@ -1,7 +1,7 @@
 FROM esp_base:ghrVersion
 ENV DAWGIE_AE_BASE_PATH /proj/src/ae/excalibur
 ENV DAWGIE_AE_BASE_PACKAGE excalibur
-ENV DAWGIE_DB_HOST mentor.jpl.nasa.gov
+ENV DAWGIE_DB_HOST excalibur.jpl.nasa.gov
 ENV DAWGIE_DB_IMPL post
 ENV DAWGIE_DB_NAME ops
 ENV DAWGIE_DB_PATH sdpuser:h8pwds!

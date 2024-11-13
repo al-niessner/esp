@@ -15,14 +15,19 @@ tn = os.environ.get('TARGET_NAME', None)
 
 if fep: dawgie.util.set_ports(int(fep))
 
-dawgie.security.initialize(os.path.expandvars(os.path.expanduser
-                                              (dawgie.context.gpg_home)))
+dawgie.security.initialize(os.path.expandvars
+                           (os.path.expanduser
+                            (dawgie.context.guest_public_keys)))
 dawgie.db.reopen()
 
-if tn == '':
-    excalibur.ancillary.bot.Agent('ancillary', 4, rid).do()
+if tn in ['', '__all__']:
+    name = 'population'
+    subtasks = excalibur.ancillary.bot.Agent('ancillary', 4, rid)
 else:
-    excalibur.ancillary.bot.Actor('ancillary', 4, rid, tn).do()
+    name = 'estimate'
+    subtasks = excalibur.ancillary.bot.Actor('ancillary', 4, rid, tn)
+    pass
 
+subtasks.do(name)
 dawgie.db.close()
 dawgie.security.finalize()

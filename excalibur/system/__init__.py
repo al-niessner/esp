@@ -1,7 +1,7 @@
 '''
 SYSTEM manages the astrophysical parameters of the target observed
 - VALIDATE parameters from target.autofill, report missing parameters
-- FINALIZE parameters using target/edit.py function ppar()
+- FINALIZE parameters using overwriter.py function ppar()
 '''
 ignore = False
 

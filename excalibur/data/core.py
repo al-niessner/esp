@@ -26,12 +26,15 @@ import pyvo as vo
 
 import numpy as np
 import numpy.polynomial.polynomial as poly
+
 import astropy.io.fits as pyfits
 import astropy.units
-from astropy.wcs import WCS
+from astropy.modeling.models import BlackBody as astrobb
 from astropy.coordinates import SkyCoord
 from astropy.time import Time
+from astropy.wcs import WCS
 
+from multiprocessing import Pool
 # ------------- ------------------------------------------------------
 # -- SV VALIDITY -- --------------------------------------------------
 def checksv(sv):
@@ -45,77 +48,91 @@ def checksv(sv):
     return valid, errstring
 # ----------------- --------------------------------------------------
 # -- COLLECT DATA -- -------------------------------------------------
+def collectversion():
+    '''
+    1.1.3: GMR: bugfix for JWST NIRSPEC filters
+    '''
+    return dawgie.VERSION(1,1,3)
+
 def collect(name, scrape, out):
     '''
     G. ROUDIER: Filters data from target.scrape.databases according to active filters
     '''
     collected = False
-    obs, ins, det, fil, mod = name.split('-')
-    for rootname in scrape['name'].keys():
-        ok = scrape['name'][rootname]['observatory'] in [obs.strip()]
-        ok = ok and (scrape['name'][rootname]['instrument'] in [ins.strip()])
-        ok = ok and (scrape['name'][rootname]['detector'] in [det.strip()])
-        ok = ok and (scrape['name'][rootname]['filter'] in [fil.strip()])
-        ok = ok and (scrape['name'][rootname]['mode'] in [mod.strip()])
-        if ok:
-            out['activefilters'][name]['ROOTNAME'].append(rootname)
-            loc = scrape['name'][rootname]['md5']+'_'+scrape['name'][rootname]['sha']
-            out['activefilters'][name]['LOC'].append(loc)
-            out['activefilters'][name]['TOTAL'].append(True)
-            collected = True
+    if name.split('-')[1]=='sim':  # for simulated instrument, there is no data to collect
+        pass
+    else:
+        obs, ins, det, fil, mod = name.split('-')
+        for rootname in scrape['name'].keys():
+            ok = scrape['name'][rootname]['observatory'] in [obs.strip()]
+            ok = ok and (scrape['name'][rootname]['instrument'] in [ins.strip()])
+            ok = ok and (det.strip() in scrape['name'][rootname]['detector'])
+            ok = ok and (scrape['name'][rootname]['filter'] in [fil.strip()])
+            ok = ok and (scrape['name'][rootname]['mode'] in [mod.strip()])
+            if ok:
+                out['activefilters'][name]['ROOTNAME'].append(rootname)
+                loc = scrape['name'][rootname]['md5']+'_'+scrape['name'][rootname]['sha']
+                out['activefilters'][name]['LOC'].append(loc)
+                out['activefilters'][name]['TOTAL'].append(True)
+                collected = True
+                pass
             pass
         pass
     if collected:
-        log.warning('>-- %s', str(int(np.sum(out['activefilters'][name]['TOTAL']))))
+        log.warning('--< DATA COLLECT: %s in %s >--',
+                    str(int(np.sum(out['activefilters'][name]['TOTAL']))), name)
         out['STATUS'].append(True)
-        pass
     else:
-        log.warning('>-- NO DATA')
+        log.warning('--< DATA COLLECT: NO DATA in %s >--', name)
         out['activefilters'].pop(name, None)
-        pass
     return collected
 # ------------------ -------------------------------------------------
 # -- TIMING -- -------------------------------------------------------
 def timingversion():
-    '''1.2.0: GMR: Create outputs with top level keys'''
-    return dawgie.VERSION(1,2,0)
+    '''
+    1.1.0: GMR: HST
+    1.2.0: K. Pearson: Spitzer
+    1.3.0: GMR: JWST
+    '''
+    return dawgie.VERSION(1,3,0)
 
 def timing(force, ext, clc, out, verbose=False):
     '''
-    G. ROUDIER: Uses system orbital parameters to guide the dataset towards transit, eclipse or phasecurve tasks
-    K. Pearson: Spitzer
+    Uses system orbital parameters to guide the dataset towards
+    transit, eclipse or phasecurve tasks
     '''
+    ssc = syscore.ssconstants()
     chunked = False
     priors = force['priors'].copy()
     dbs = os.path.join(dawgie.context.data_dbs, 'mast')
-    data = {'LOC':[], 'SCANANGLE':[], 'TIME':[], 'EXPLEN':[]}
+    data = {'LOC':[], 'SCANANGLE':[], 'TIME':[], 'EXPLEN':[], 'ISORTEXP':[]}
     # LOAD DATA ------------------------------------------------------
-    if 'jwst' in ext.lower():
+    if 'JWST' in ext:
+        # Segmented datasets, length clc['LOC'] is the number of segments
+        alldinm = []  # Flatten integration number
+        alldtms = []  # Flatten times
+        alldidr = []  # Flatten integration durations
         for loc in sorted(clc['LOC']):
             fullloc = os.path.join(dbs, loc)
             with pyfits.open(fullloc) as hdulist:
-                header0 = hdulist[0].header
-                ftime = []
-                exptime = []
                 for hdu in hdulist:
-                    if "primary" in hdu.name.lower():
-                        # keywords for NIRISS
-                        start = hdu.header.get("TIME-BJD")
-                        ngroup = hdu.header.get("ngroups",1)
-                        dtgroup = hdu.header.get("tgroup") / (24*60*60.)
-                        # nframe = fits.header.get("nframes",1)
-                        # dtframe = fits.header.get("tframes")
-                        # https://jwst-docs.stsci.edu/near-infrared-imager-and-slitless-spectrograph/niriss-instrumentation/niriss-detector-overview/niriss-detector-readout-patterns
-                        # Future handle multiple frames
-                        data['TIME'].extend([start + i*dtgroup for i in range(ngroup)])
-                        data['EXPLEN'].extend([dtgroup]*ngroup)
-                        data['LOC'].append(loc)
+                    if 'PRIMARY' in hdu.name: pass
+                    elif "INT_TIMES" in hdu.name:
+                        alldinm.extend(hdu.data['integration_number'])
+                        alldtms.extend(hdu.data['int_mid_MJD_UTC'])
+                        alldidr.extend(hdu.data['int_end_MJD_UTC'] -
+                                       hdu.data['int_start_MJD_UTC'])
                         pass
                     pass
                 pass
             pass
+        isort = np.argsort(alldtms)
+        data['ISORTEXP'].extend(isort)
+        data['TIME'].extend(np.array(alldtms)[isort])  # [MJD-UTC]
+        data['EXPLEN'].extend(np.array(alldidr)[isort])  # [days]
+        data['LOC'].extend(sorted(clc['LOC']))
         pass
-    if 'Spitzer' in ext:
+    elif 'Spitzer' in ext:
         for loc in sorted(clc['LOC']):
             fullloc = os.path.join(dbs, loc)
             with pyfits.open(fullloc) as hdulist:
@@ -136,6 +153,7 @@ def timing(force, ext, clc, out, verbose=False):
                     else:
                         ftime.append(start)
                         exptime.append(hdu.header['EXPTIME'])
+                        pass
                     pass
                 data['LOC'].append(loc)
                 data['TIME'].extend(ftime)
@@ -189,7 +207,7 @@ def timing(force, ext, clc, out, verbose=False):
                 pass
             pass
         pass
-    data['IGNORED'] = [False]*len(data['LOC'])
+    data['IGNORED'] = [False]*len(data['TIME'])
     time = np.array(data['TIME'].copy())
     ignore = np.array(data['IGNORED'].copy())
     exposlen = np.array(data['EXPLEN'].copy())
@@ -197,18 +215,78 @@ def timing(force, ext, clc, out, verbose=False):
     ordt = np.argsort(time)
     exlto = exposlen.copy()[ordt]
     tmeto = time.copy()[ordt]
-    ssc = syscore.ssconstants()
-    if 'Spitzer' not in ext and 'JWST' not in ext:
-        ignto = ignore.copy()[ordt]
-        scato = scanangle.copy()[ordt]
-        pass
-
+    ignto = ignore.copy()[ordt]
+    if 'HST' in ext: scato = scanangle.copy()[ordt]
     if tmeto.size > 1:
         timingplist = [p for p in priors['planets'] if p not in force['pignore']]
         for p in timingplist:
             out['data'][p] = {}
-
-            if 'Spitzer' in ext or 'JWST' in ext:
+            if 'JWST' in ext:  # JWST --------------------------------
+                smaors = priors[p]['sma']/priors['R*']/ssc['Rsun/AU']
+                tmjd = priors[p]['t0']
+                if tmjd > 2400000.5: tmjd -= 2400000.5
+                z, phase = time2z(time, priors[p]['inc'], tmjd, smaors,
+                                  priors[p]['period'], priors[p]['ecc'])
+                zto = z.copy()[ordt]
+                phsto = phase.copy()[ordt]
+                # VISIT NUMBERING
+                visto = np.ones(time.size)
+                vis = np.ones(time.size)
+                # think of something else for phasecurves
+                wherev = np.where(np.diff(phsto) < 0)[0]
+                for index in wherev: visto[index+1:] += 1
+                # TRANSIT VISIT PHASECURVE
+                out['data'][p]['transit'] = []
+                out['data'][p]['eclipse'] = []
+                out['data'][p]['phasecurve'] = []
+                for v in set(visto):
+                    selv = (visto == v)
+                    trlim = 1e0
+                    posphsto = phsto.copy()
+                    posphsto[posphsto < 0] = posphsto[posphsto < 0] + 1e0
+                    tecrit = abs(np.arcsin(trlim/smaors))/(2e0*np.pi)
+                    select = (abs(zto[selv]) < trlim)
+                    pcconde = False
+                    if (np.any(select) and ((np.min(abs(posphsto[selv][select] - 0.5)) <
+                                             tecrit))):
+                        out['eclipse'].append(int(v))
+                        out['data'][p]['eclipse'].append(int(v))
+                        pcconde = True
+                        pass
+                    pccondt = False
+                    if np.any(select) and (np.min(abs(phsto[selv][select])) < tecrit):
+                        out['transit'].append(int(v))
+                        out['data'][p]['transit'].append(int(v))
+                        pccondt = True
+                        pass
+                    if pcconde and pccondt:
+                        out['phasecurve'].append(int(v))
+                        out['data'][p]['phasecurve'].append(int(v))
+                        pass
+                    pass
+                vis[ordt] = visto.astype(int)
+                ignore[ordt] = ignto
+                # PLOTS
+                if verbose:
+                    plt.figure()
+                    plt.plot(phsto, 'k.')
+                    plt.plot(np.arange(phsto.size)[~ignto], phsto[~ignto], 'bo')
+                    for i in wherev: plt.axvline(i, ls='--', color='r')
+                    plt.xlim(0, time.size - 1)
+                    plt.ylim(-0.5, 0.5)
+                    plt.xlabel('Time index')
+                    plt.ylabel('Orbital Phase [2pi rad]')
+                    plt.show()
+                    pass
+                out['data'][p]['wherev'] = wherev
+                out['data'][p]['visits'] = vis
+                out['data'][p]['z'] = z
+                out['data'][p]['phase'] = phase
+                out['data'][p]['ordt'] = ordt
+                out['data'][p]['ignore'] = ignore
+                out['STATUS'].append(True)
+                pass
+            elif 'Spitzer' in ext:  # SPITZER ------------------------
                 out['data'][p]['transit'] = []
                 out['data'][p]['eclipse'] = []
                 out['data'][p]['phasecurve'] = []
@@ -220,7 +298,9 @@ def timing(force, ext, clc, out, verbose=False):
 
                 # https://arxiv.org/pdf/1001.2010.pdf eq 33
                 w = priors[p].get('omega',0)
-                tme = priors[p]['t0']+ priors[p]['period']*0.5 * (1 + priors[p]['ecc']*(4./np.pi)*np.cos(np.deg2rad(w)))
+                tme = (priors[p]['t0'] +
+                       priors[p]['period']*0.5*(1 + priors[p]['ecc']*
+                                                (4./np.pi)*np.cos(np.deg2rad(w))))
                 tm = priors[p]['t0']
                 if tm > 2400000.5 and 'Spitzer' in ext:
                     tme -= 2400000.5
@@ -236,27 +316,31 @@ def timing(force, ext, clc, out, verbose=False):
                 events = np.unique(np.floor(tphase))
                 min_images = 200
                 for e in events:  # loop through different years
-
-                    tmask = (tphase > e + (offset-2*pdur)) & (tphase < e + (offset+2*pdur))
-                    mmask = (tphase > e + (offset-2*pdur+0.25)) & (tphase < e + (offset+2*pdur+0.25))
-                    emask = (ephase > e + (offset-2*pdur)) & (ephase < e + (offset+2*pdur))
-                    # emask2 = (ephase > (e-1) + (offset-2*pdur)) & (ephase < (e-1) + (offset+2*pdur))  # eclipse at prior orbit
-                    # tmask2 = (tphase > (e+1) + (offset-2*pdur)) & (tphase < (e+1) + (offset+2*pdur) )  # transit at next orbit
+                    tmask = ((tphase > e + (offset-2*pdur)) &
+                             (tphase < e + (offset+2*pdur)))
+                    mmask = ((tphase > e + (offset-2*pdur+0.25)) &
+                             (tphase < e + (offset+2*pdur+0.25)))
+                    emask = ((ephase > e + (offset-2*pdur)) &
+                             (ephase < e + (offset+2*pdur)))
+                    # emask2 = (ephase > (e-1) + (offset-2*pdur)) &
+                    # (ephase < (e-1) + (offset+2*pdur))  # eclipse at prior orbit
+                    # tmask2 = (tphase > (e+1) + (offset-2*pdur)) &
+                    # (tphase < (e+1) + (offset+2*pdur) )  # transit at next orbit
                     if tmask.sum() > min_images:
                         out['data'][p]['transit'].append(e)
                     if emask.sum() > min_images:
                         out['data'][p]['eclipse'].append(e)
-                    if tmask.sum() > min_images and emask.sum() > min_images and mmask.sum() > min_images:
+                    if ((tmask.sum() > min_images) and (emask.sum() > min_images) and (mmask.sum() > min_images)):
                         out['data'][p]['phasecurve'].append(e)
-
                 visto = np.floor(tphase)
                 out['STATUS'].append(True)
                 pass
-            else:  # HST
+            elif 'HST' in ext:  # HST --------------------------------
                 smaors = priors[p]['sma']/priors['R*']/ssc['Rsun/AU']
                 tmjd = priors[p]['t0']
                 if tmjd > 2400000.5: tmjd -= 2400000.5
-                z, phase = time2z(time, priors[p]['inc'], tmjd, smaors, priors[p]['period'], priors[p]['ecc'])
+                z, phase = time2z(time, priors[p]['inc'], tmjd, smaors,
+                                  priors[p]['period'], priors[p]['ecc'])
                 zto = z.copy()[ordt]
                 phsto = phase.copy()[ordt]
                 tmetod = [np.diff(tmeto)[0]]
@@ -269,15 +353,14 @@ def timing(force, ext, clc, out, verbose=False):
                 # THRESHOLDS
                 rbtthr = 25e-1*thrs  # HAT-P-11
                 vstthr = 3e0*thro
-                # VISIT NUMBERING --------------------------------------------
+                # VISIT NUMBERING
                 whereo = np.where(tmetod > rbtthr)[0]
                 wherev = np.where(tmetod > vstthr)[0]
                 visto = np.ones(tmetod.size)
                 dvis = np.ones(tmetod.size)
                 vis = np.ones(tmetod.size)
-
                 for index in wherev: visto[index:] += 1
-                # DOUBLE SCAN VISIT RE NUMBERING -----------------------------
+                # DOUBLE SCAN VISIT RE NUMBERING
                 dvisto = visto.copy()
                 for v in set(visto):
                     selv = (visto == v)
@@ -290,7 +373,7 @@ def timing(force, ext, clc, out, verbose=False):
                         dvisto[selv] = vdbvisto
                         pass
                     pass
-                # ORBIT NUMBERING --------------------------------------------
+                # ORBIT NUMBERING
                 orbto = np.ones(tmetod.size)
                 orb = np.ones(tmetod.size)
                 for v in set(visto):
@@ -318,7 +401,7 @@ def timing(force, ext, clc, out, verbose=False):
                             pass
                         pass
                     pass
-                # TRANSIT VISIT PHASECURVE -----------------------------------
+                # TRANSIT VISIT PHASECURVE
                 out['data'][p]['svntransit'] = []
                 out['data'][p]['svneclipse'] = []
                 out['data'][p]['svnphasecurve'] = []
@@ -330,7 +413,7 @@ def timing(force, ext, clc, out, verbose=False):
                     tecrit = abs(np.arcsin(trlim/smaors))/(2e0*np.pi)
                     select = (abs(zto[selv]) < trlim)
                     pcconde = False
-                    if np.any(select) and (np.min(abs(posphsto[selv][select] - 0.5)) < tecrit):
+                    if (np.any(select) and (np.min(abs(posphsto[selv][select] - 0.5)) < tecrit)):
                         out['eclipse'].append(int(v))
                         out['data'][p]['svneclipse'].append(int(v))
                         pcconde = True
@@ -357,7 +440,7 @@ def timing(force, ext, clc, out, verbose=False):
                     tecrit = abs(np.arcsin(trlim/smaors))/(2e0*np.pi)
                     select = (abs(zto[selv]) < trlim)
                     pcconde = False
-                    if np.any(select)and(np.min(abs(posphsto[selv][select] - 0.5)) < tecrit):
+                    if (np.any(select) and (np.min(abs(posphsto[selv][select] - 0.5)) < tecrit)):
                         out['data'][p]['eclipse'].append(int(v))
                         pcconde = True
                         pass
@@ -372,8 +455,7 @@ def timing(force, ext, clc, out, verbose=False):
                 orb[ordt] = orbto.astype(int)
                 dvis[ordt] = dvisto.astype(int)
                 ignore[ordt] = ignto
-
-                # PLOTS ------------------------------------------------------
+                # PLOTS
                 if verbose:
                     plt.figure()
                     plt.plot(phsto, 'k.')
@@ -384,7 +466,6 @@ def timing(force, ext, clc, out, verbose=False):
                     plt.ylim(-0.5, 0.5)
                     plt.xlabel('Time index')
                     plt.ylabel('Orbital Phase [2pi rad]')
-
                     plt.figure()
                     plt.plot(tmetod, 'o')
                     plt.plot(tmetod*0+vstthr, 'r--')
@@ -395,7 +476,6 @@ def timing(force, ext, clc, out, verbose=False):
                     plt.xlabel('Time index')
                     plt.ylabel('Frame Separation [Days]')
                     plt.semilogy()
-
                     if np.max(dvis) > np.max(vis):
                         plt.figure()
                         plt.plot(dvisto, 'o')
@@ -421,17 +501,265 @@ def timing(force, ext, clc, out, verbose=False):
                 out['data'][p]['ignore'] = ignore
                 out['STATUS'].append(True)
                 pass
-
             log.warning('>-- Planet: %s', p)
             log.warning('--< Transit: %s', str(out['data'][p]['transit']))
             log.warning('--< Eclipse: %s', str(out['data'][p]['eclipse']))
             log.warning('--< Phase Curve: %s', str(out['data'][p]['phasecurve']))
-
-            if out['data'][p]['transit'] or out['data'][p]['eclipse'] or out['data'][p]['phasecurve']: chunked = True
+            if (out['data'][p]['transit'] or out['data'][p]['eclipse'] or
+                out['data'][p]['phasecurve']): chunked = True
             pass
         pass
     return chunked
 # ------------ -------------------------------------------------------
+# -- JWST CALIBRATION -- ---------------------------------------------
+def jwstcal(fin, clc, tim, ext, out, ps=None, verbose=False, debug=False):
+    '''
+    G. ROUDIER: Extracts and Wavelength calibrates JWST datasets
+    '''
+    dbs = os.path.join(dawgie.context.data_dbs, 'mast')
+    data = {'LOC':[], 'EPS':[],
+            'EXP':[], 'EXPERR':[], 'EXPFLAG':[], 'TIME':[]}
+    # TEMP CI
+    _ = tim
+    _ = out
+    _ = verbose
+    _ = data
+    # -------
+    alldinm = []  # Flatten integration number
+    alldexp = []  # Flatten exposure time serie
+    allwaves = []
+    alldet = []
+    alldintimes = []
+    for loc in sorted(clc['LOC']):
+        fullloc = os.path.join(dbs, loc)
+        with pyfits.open(fullloc) as hdulist:
+            nints = None
+            for hdu in hdulist:
+                if 'PRIMARY' in hdu.name:
+                    nints = hdu.header['NINTS']
+                    alldet.extend(nints*[hdu.header['DETECTOR']])
+                    pass
+                elif ('WAVELENGTH' in hdu.name) and nints:
+                    allwaves.extend(nints*[hdu.data])
+                    pass
+                elif 'INT_TIMES' in hdu.name:
+                    alldinm.extend(hdu.data['integration_number'])
+                    alldintimes.extend(hdu.data['int_mid_MJD_UTC'])
+                    pass
+                elif 'SCI' in hdu.name:
+                    alldexp.extend(hdu.data)
+                    pass
+                pass
+            pass
+        pass
+    # Time ordered data
+    isort = np.argsort(alldintimes)
+
+    alldexp = np.array(alldexp)
+    allwaves = np.array(allwaves)
+    alldintimes = np.array(alldintimes)
+    alldet = np.array(alldet)
+
+    alldexp = alldexp[isort]
+    allwaves = allwaves[isort]
+    alldintimes = alldintimes[isort]
+    alldet = alldet[isort]
+
+    # Calibration files
+    reffile = jwstreffiles(ext)
+    Tstar = fin['priors']['T*']
+    bbfunc = astrobb(Tstar*astropy.units.K)
+    if 'NIRISS' in ext:
+        # NIRISS
+        # reffile[0]: images of the 3 orders [296, 2088] +20 on each side
+        # reffile[1]: calibrated wavelength, pixel XY, throughput for the 3 orders
+        refwave = []  # Reference wavelength for each order
+        refX = []  # X reference
+        refY = []  # Y reference
+        refT = []  # Throughput curve
+        refB = []  # Blackbody model curve
+        refS = []  # Blackbody*Throughput curve
+        for order in np.arange(3):
+            refwave.append(reffile[1][order]['WAVELENGTH'])
+            refX.append(reffile[1][order]['X'] - 20.)
+            refY.append(reffile[1][order]['Y'] - 20.)
+            refT.append(reffile[1][order]['THROUGHPUT'])
+            bbstar = bbfunc(refwave[-1]*astropy.units.um)
+            refB.append(bbstar)
+            refS.append(refT[-1]*refB[-1]/np.nansum(refB[-1]))
+            pass
+        YY, XX = np.mgrid[0:alldexp[0].shape[0], 0:alldexp[0].shape[1]]
+        # Mixing Matrix
+        MM = list(reffile[0])
+        # Transforms
+        TMX = []
+        TMY = []
+        for thisrefX, thisrefS in zip(refX, refS):
+            orderme = np.argsort(thisrefX)
+            TMX.append(itp.CubicSpline(thisrefX[orderme], thisrefS[orderme]))
+            if debug:
+                select = (thisrefX > 0) & (thisrefX < alldexp[0].shape[1])
+                plt.plot(thisrefX[select], thisrefS[select], 'o')
+                test = np.arange(0, 2048, step=0.1)
+                plt.plot(test, TMX[-1](test), '+')
+                plt.show()
+                # BANG
+                # Order 3 interpolated negative values
+                pass
+            pass
+        # STOP TEST JWST
+        _ = YY
+        _ = XX
+        _ = MM
+        _ = TMY
+        pass
+    elif 'NIRSPEC' in ext:
+        all1d = []
+        all1dwave = []
+        excld = []
+        sel1 = np.array(['1' in test for test in alldet])
+        sel2 = np.array(['2' in test for test in alldet])
+        timeorder1 = np.argsort(alldintimes[sel1])
+        timeorder2 = np.argsort(alldintimes[sel2])
+        _NRS1 = alldexp[sel1][timeorder1]
+        _NRS1w = allwaves[sel1][timeorder1]
+        _NRS2 = alldexp[sel2][timeorder2]
+        _NRS2w = allwaves[sel2][timeorder2]
+        if ps > 1:
+            with Pool(ps) as pool:
+                multiout = pool.map(starnirspeccal, list(zip(alldexp, allwaves)))
+                pool.close()
+                pool.join()
+                pass
+            excld, all1d, all1dwave = zip(*multiout)
+            pass
+        else:
+            for it, thisexp in enumerate(alldexp):
+                this1d = np.sum(thisexp, axis=0)
+                this1dwave = np.nanmedian(allwaves[it], axis=0)
+                this1d[this1d < 0] = np.nan
+                logthis1d = np.log10(this1d)
+                flood = []
+                stdflood = []
+                ws = 32
+                for i in np.arange(logthis1d.size):
+                    il = int(i - ws/2)
+                    il = max(il, 0)
+                    iu = int(i + ws/2)
+                    if iu >= logthis1d.size: iu = logthis1d.size - 1
+                    test = logthis1d[il:iu]
+                    select = ((test > np.nanpercentile(test, 10)) &
+                              (test < np.nanpercentile(test, 90)))
+                    flood.append(np.nanmedian(test[select]))
+                    stdflood.append(np.nanstd(test[select]))
+                    pass
+                stdflood = np.array(stdflood)
+                stdflood[~np.isfinite(stdflood)] = np.nanmedian(stdflood)
+                ff = int(np.sqrt(ws))
+                s1 = (logthis1d - (np.array(flood) - ff*stdflood)) < 0
+                s2 = (logthis1d - (np.array(flood) + ff*stdflood)) > 0
+                select = s1 | s2
+                this1d[select | ~np.isfinite(flood)] = np.nan
+                excld.append(np.sum(select))
+                all1d.append(this1d)
+                all1dwave.append(this1dwave)
+                if debug:
+                    plt.figure()
+                    plt.imshow(np.log10(thisexp), aspect='auto')
+                    plt.colorbar()
+                    plt.figure()
+                    plt.plot(np.log10(this1d), 'o')
+                    plt.plot(flood)
+                    plt.plot(np.array(flood) - ff*stdflood, color='r', ls='--')
+                    plt.plot(np.array(flood) + ff*stdflood, color='r', ls='--')
+                    plt.show()
+                    pass
+                if verbose: log.warning('>-- : %d/%d', it, len(alldexp))
+                pass
+            pass
+        out['STATUS'].append(True)
+        out['data']['EXCLNUM'] = excld
+        out['data']['IGNORED'] = np.array(excld) > int(len(all1d[0])/2)
+        out['data']['SPECTRUM'] = all1d
+        out['data']['WAVE'] = all1dwave
+        pass
+    return True
+
+def starnirspeccal(thoseargs):
+    '''
+    * trick because of the way map works
+    '''
+    return nirspeccal(*thoseargs)
+
+def nirspeccal(thisexp, thosewaves):
+    '''
+    NIRSPEC calibration - The cheap version
+    '''
+    this1d = np.sum(thisexp, axis=0)
+    this1dwave = np.nanmedian(thosewaves, axis=0)
+    this1d[this1d < 0] = np.nan
+    logthis1d = np.log10(this1d)
+    flood = []
+    stdflood = []
+    ws = 32
+    for i in np.arange(logthis1d.size):
+        il = int(i - ws/2)
+        il = max(il, 0)
+        iu = int(i + ws/2)
+        if iu >= logthis1d.size: iu = logthis1d.size - 1
+        test = logthis1d[il:iu]
+        select = ((test > np.nanpercentile(test, 10)) &
+                  (test < np.nanpercentile(test, 90)))
+        flood.append(np.nanmedian(test[select]))
+        stdflood.append(np.nanstd(test[select]))
+        pass
+    stdflood = np.array(stdflood)
+    stdflood[~np.isfinite(stdflood)] = np.nanmedian(stdflood)
+    ff = int(np.sqrt(ws))
+    s1 = (logthis1d - (np.array(flood) - ff*stdflood)) < 0
+    s2 = (logthis1d - (np.array(flood) + ff*stdflood)) > 0
+    select = s1 | s2
+    this1d[select | ~np.isfinite(flood)] = np.nan
+    return (np.sum(select), this1d, this1dwave)
+
+def jwstreffiles(thisext):
+    '''
+    G. ROUDIER: Returns a list of reference files for wavelegnth calibration
+    Source: https://jwst-crds.stsci.edu
+    Local: /proj/sdp/data/cal/
+    '''
+    thisdir = None
+    if 'NIRISS' in thisext:
+        # Note: do something smarter to get latest files
+        # --< DATA CALIBRATION: JWST-NIRISS-NIS-CLEAR-GR700XD >--
+        thisdir = 'NIRISS'
+        thisprofile = 'jwst_niriss_specprofile_0022.fits'
+        thistrace = 'jwst_niriss_spectrace_0023.fits'
+        pass
+    if 'NIRSPEC' in thisext:
+        # --< DATA CALIBRATION: JWST-NIRSPEC-NRS-F290LP-G395H >--
+        thisdir = 'NIRSPEC'
+        thisprofile = 'jwst_nirspec_g395h_disp_20160902193401.fits'
+        thistrace = thisprofile
+        thisdir = None
+        pass
+    if thisdir is None: reffiles = None
+    else:
+        fpath = os.path.join(excalibur.context['data_cal'], thisdir, thisprofile)
+        # Trace template for each order (2D ARRAY)
+        with pyfits.open(fpath) as prfhdul:
+            orders = [hdu.data for hdu in prfhdul if hdu.data is not None]
+            pass
+        # Trace pixel (waves[0]['X'], waves[0]['Y']) and
+        # associated calibrated wavelength (waves[0]['WAVELENGTH']) (1D ARRAYS)
+        fpath = os.path.join(excalibur.context['data_cal'], thisdir, thistrace)
+        with pyfits.open(fpath) as trchdul:
+            waves = [hdu.data for hdu in trchdul if hdu.data is not None]
+            pass
+        reffiles = [orders, waves]
+        pass
+    return reffiles
+# ---------------------- ---------------------------------------------
 # -- CALIBRATE SCAN DATA -- ------------------------------------------
 def scancal(clc, tim, tid, flttype, out,
             emptythr=1e3, frame2png=False, verbose=False, debug=False):
@@ -1985,6 +2313,7 @@ def stiscal_G750L(_fin, clc, tim, tid, flttype, out,
             diff_list = []
             all_infile = []
             for infile in glob.glob(f'{filefringe}/{name_sel}*_flt.fits'):
+                # print(' infile',infile)
                 hdu = pyfits.open(infile)
                 all_infile.append(infile)
                 header_flat = hdu[0].header
@@ -1995,6 +2324,9 @@ def stiscal_G750L(_fin, clc, tim, tid, flttype, out,
                 diff = abs(time_exp-time_flat_s)
                 diff_list.append(diff)
                 pass
+            # 6/11/24 GB
+            #  There is a bug here where AU Mic and WASP-127 crash.
+            #  The diff_list is empty, so the np.min(diff_list) crashes.
             cond_win = np.where(diff_list == np.min(diff_list))
             all_infile = np.array(all_infile)
             sel_flatfile = all_infile[cond_win][0]
@@ -2513,6 +2845,20 @@ def stiscal_G430L(fin, clc, tim, tid, flttype, out,
         loggerr = np.sqrt(abs(fin['priors']['LOGG*_uperr']*
                               fin['priors']['LOGG*_lowerr']))
         terr = np.sqrt(abs(fin['priors']['T*_uperr']*fin['priors']['T*_lowerr']))
+
+        # 6/11/24 GB
+        # bug for LP 791-18 when running LDPSetCreator called from stiscal_G430L()
+        #  the parameters passed into it are fine:
+        #   teff 2960.0 55.0
+        #   logg 3.0512 0.09
+        #   FEH* -0.09 0.19
+        # print('calling LDPSetCreator')
+        # print('   teff',fin['priors']['T*'], terr)
+        # print('   logg',fin['priors']['b']['logg'], loggerr)
+        # print('   FEH*',fin['priors']['FEH*'], feherr)
+        # print('  filters',filters)
+        loggerr = np.max(loggerr,0.1)
+
         sc = LDPSetCreator(teff=(fin['priors']['T*'], terr),
                            logg=(fin['priors']['b']['logg'], loggerr),
                            z=(fin['priors']['FEH*'], feherr),
@@ -3506,11 +3852,16 @@ def spitzercal(clc, out):
                     if fits.data.ndim == 3: dcube = fits.data.copy()
 
                     # convert from ADU to e/s
-                    dcube *= float(fits.header.get('FLUXCONV',0.1257))
+                    dcube /= float(fits.header.get('FLUXCONV',0.1257))
                     dcube *= float(fits.header.get('GAIN',3.7))
 
                     idur = fits.header.get('ATIMEEND') - fits.header.get('AINTBEG')
                     nimgs = dcube.shape[0]
+                    exptime = idur/nimgs  # sec
+
+                    # convert from Mjy/sr to DN/s then to e/s and finally e
+                    dcube *= exptime
+
                     dt = idur/nimgs/(24*60*60)
                     dcube[np.isnan(dcube)] = 0
                     dcube[np.isinf(dcube)] = 0

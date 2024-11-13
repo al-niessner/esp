@@ -2,21 +2,22 @@
 # -- IMPORTS -- ------------------------------------------------------
 import dawgie
 
-# pylint: disable=import-self
+import excalibur
 import excalibur.data.core as datcore
 import excalibur.system.core as syscore
 import excalibur.util.cerberus as crbutil
 from excalibur.util import elca
-import excalibur.transit.core
+from excalibur.cerberus.plotting import rebinData
 
+import os
 import io
 import copy
 import logging
 import random
 import lmfit as lm
+import matplotlib as mpl
 import matplotlib.pyplot as plt
-
-# pylint: disable=import-error
+import sys
 from ultranest import ReactiveNestedSampler
 
 import pymc3 as pm
@@ -27,7 +28,8 @@ pymc3log.setLevel(logging.ERROR)
 from scipy.optimize import least_squares, brentq
 import scipy.constants as cst
 from scipy.signal import savgol_filter
-from scipy.stats import gaussian_kde
+from scipy.stats import gaussian_kde, skew, kurtosis
+from numpy.fft import fft, fftfreq
 
 import theano.tensor as tt
 import theano.compile.ops as tco
@@ -61,14 +63,14 @@ def ctxtupdt(alt=None, ald=None, allz=None, orbp=None, commonoim=None, ecc=None,
     '''
 G. ROUDIER: Update global context for pymc3 deterministics
     '''
-    excalibur.transit.core.ctxt = CONTEXT(alt=alt, ald=ald, allz=allz, orbp=orbp,
-                                          commonoim=commonoim, ecc=ecc, g1=g1, g2=g2,
-                                          g3=g3, g4=g4, ootoindex=ootoindex,
-                                          ootorbits=ootorbits, orbits=orbits,
-                                          period=period, selectfit=selectfit,
-                                          smaors=smaors, time=time, tmjd=tmjd, ttv=ttv,
-                                          valid=valid, visits=visits, aos=aos, avi=avi,
-                                          ginc=ginc, gttv=gttv)
+    sys.modules[__name__].ctxt = CONTEXT(alt=alt, ald=ald, allz=allz, orbp=orbp,
+                                         commonoim=commonoim, ecc=ecc, g1=g1, g2=g2,
+                                         g3=g3, g4=g4, ootoindex=ootoindex,
+                                         ootorbits=ootorbits, orbits=orbits,
+                                         period=period, selectfit=selectfit,
+                                         smaors=smaors, time=time, tmjd=tmjd, ttv=ttv,
+                                         valid=valid, visits=visits, aos=aos, avi=avi,
+                                         ginc=ginc, gttv=gttv)
     return
 
 import ldtk
@@ -109,8 +111,111 @@ def normversion():
     1.1.6: add timing parameter start model
     1.1.7: new sigma clip for spitzer
     1.1.8: added jwst filter
+    1.1.9: NIRSPEC
     '''
     return dawgie.VERSION(1,1,9)
+
+def norm_jwst(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
+    '''
+    JWST spectra normalization
+    '''
+    normed = False
+    priors = fin['priors'].copy()
+    ssc = syscore.ssconstants()
+    spectra = np.array(cal['data']['SPECTRUM'])
+    wave = np.array(cal['data']['WAVE'])
+    # TEST
+    # spectra = spectra[:10]
+    # wave = wave[:10]
+    # END TEST
+    wavelen = []
+    wavetemplate = []
+    for w in wave:
+        if len(w) not in wavelen:
+            wavelen.append(len(w))
+            wavetemplate.append(w)
+            pass
+        pass
+    newspectra = []
+    newwave = []
+    alllen = []
+    for s, w in zip(spectra, wave):
+        newspectra.append(s)
+        neww = w
+        if len(w) != len(s): neww = wavetemplate[wavelen.index(len(s))]
+        newwave.append(neww)
+        alllen.append(len(s))
+        pass
+    spectra = np.array(newspectra)
+    wave = np.array(newwave)
+    events = [pnet for pnet in tme['data'].keys()
+              if (pnet in priors.keys()) and tme['data'][pnet][selftype]]
+    for p in events:
+        log.warning('>-- Planet: %s', p)
+        out['data'][p] = {}
+        rpors = priors[p]['rp']/priors['R*']*ssc['Rjup/Rsun']
+        mttref = priors[p]['t0']
+        if mttref > 2400000.5: mttref -= 2400000.5
+        ignore = np.array(tme['data'][p]['ignore']) | np.array(cal['data']['IGNORED'])
+        z = tme['data'][p]['z']
+        # TEST
+        # z = z[:10]
+        # END TEST
+        uniqlen = []
+        allwavet = []
+        alltemplates = []
+        for thislen in set(alllen):
+            uniqlen.append(thislen)
+            select = np.array(alllen) == thislen
+            soot = abs(z[select]) > (1e0 + 2e0*rpors)
+            wavet, template = tplbuild(spectra[select][soot], wave[select][soot],
+                                       [np.min([np.min(w) for w in wave[select]]),
+                                        np.max([np.max(w) for w in wave[select]])],
+                                       np.diff(wave[select][0]),
+                                       medest=True, verbose=debug)
+            template = np.array(template)
+            wavet = np.array(wavet)
+            template[template > 1] = np.nan
+            allwavet.append(wavet)
+            alltemplates.append(template)
+            pass
+        if verbose:
+            plt.figure()
+            for x, y in zip(allwavet, alltemplates): plt.plot(x, y)
+            plt.semilogy()
+            plt.show()
+            pass
+        allnorms = []
+        allnwaves = []
+        for ws, s in zip(wave, spectra):
+            t = alltemplates[uniqlen.index(len(s))]
+            w = allwavet[uniqlen.index(len(s))]
+            norms = []
+            for thisw in w:
+                dist = list(abs(ws - thisw))
+                norms.append(s[dist.index(np.min(dist))])
+                pass
+            allnorms.append(np.array(norms) / t)
+            allnwaves.append(w)
+            pass
+        if verbose:
+            plt.figure()
+            for x, a in zip(allnwaves, allnorms): plt.plot(x, a)
+            plt.show()
+            pass
+        out['data'][p]['visits'] = tme['data'][p]['visits']
+        out['data'][p]['ignore'] = ignore
+        out['data'][p]['nspec'] = allnorms
+        out['data'][p]['wave'] = allnwaves
+        out['data'][p]['z'] = tme['data'][p]['z']
+        out['data'][p]['phase'] = tme['data'][p]['phase']
+        out['data'][p]['wavet'] = allwavet
+        out['data'][p]['template'] = alltemplates
+        pass
+    _ = ext
+    out['STATUS'].append(True)
+    normed = True
+    return normed
 
 def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
     '''
@@ -141,6 +246,24 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
         visits = tme['data'][p]['visits']
         phase = tme['data'][p]['phase']
         z = tme['data'][p]['z']
+
+        # calculate z and phase over an orbit
+        #  interpolate in this grid to get the phase defining the transit start/stop
+        # print('keys',tme['data'][p].keys())  # no 'time'!
+        smaors = priors[p]['sma']/priors['R*']/ssc['Rsun/AU']
+        tmjd = priors[p]['t0']
+        if tmjd > 2400000.5: tmjd -= 2400000.5
+        timeredo = np.linspace(0,priors[p]['period'],1000)
+        zredo, phaseredo = datcore.time2z(timeredo, priors[p]['inc'], tmjd, smaors,
+                                          priors[p]['period'], priors[p]['ecc'])
+        select = (phaseredo < 0.25) & (phaseredo > -0.25)
+        ordered = np.argsort(phaseredo[select])
+        # figure out the phase corresponding to z = 1+rp,1-rp OOT limits
+        intransit_phase_min = np.interp(-1 - rpors, zredo[select][ordered],
+                                        phaseredo[select][ordered])
+        intransit_phase_max = np.interp(1 + rpors, zredo[select][ordered],
+                                        phaseredo[select][ordered])
+
         zoot = z.copy()
         out['data'][p]['vrange'] = vrange
         out['data'][p]['visits'] = []
@@ -158,6 +281,7 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
         out['data'][p]['vignore'] = []
         out['data'][p]['stdns'] = []
         out['data'][p]['hstbreath'] = []
+
         singlevisit = False
         svnkey = 'svn'+selftype
         if tme['data'][p][svnkey].__len__() == 1:
@@ -182,6 +306,11 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
             if True in selv: firstorb = int(np.min(orbits[selv]))
             else: firstorb = int(1)
             # ORBIT SELECTION FOR HST BREATHING MODEL ------------------------------------
+            #  ootminus is the orbits before transit
+            #  inorb is the orbits during transit
+            #  ootplus is the orbits after transit
+            # Note that these categories can overlap -
+            #   ootplus/ootminus are based on the median, but inorb is for any points
             ootplus = []
             ootpv = []
             ootminus = []
@@ -200,6 +329,12 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
                     pass
                 if np.any(abs(zorb) < (1e0 + rpors)): inorb.append(int(o))
                 pass
+            if verbose:
+                print(' orbits before transit:',ootminus,ootmv)
+                print(' orbits after transit: ',ootplus,ootpv)
+                print(' orbits in transit:',inorb)
+
+            # this reorders the orders
             ootplus = np.array(ootplus)
             ootpv = np.array(ootpv)
             selord = np.argsort(abs(ootplus - np.mean(inorb)))
@@ -216,6 +351,7 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
             for thisorb in ootplus:
                 ckeep = keep is not None
                 badcond = np.sum(orbits[selv] == thisorb) < 7
+                # print(thisorb,'ootplus badcond',badcond)
                 if ckeep or badcond: trash.append(int(thisorb))
                 else:
                     keep = thisorb
@@ -227,6 +363,7 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
                 ckeep = keep is not None
                 zorb = zoot[selv][orbits[selv] == thisorb]
                 badcond = np.sum(zorb < -(1e0 + rpors)) < 7
+                # print(thisorb,'ootminus badcond',badcond)
                 if thisorb not in inorb:
                     if ckeep or badcond or (thisorb in [firstorb]):
                         trash.append(int(thisorb))
@@ -272,9 +409,11 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
             # VISIT SELECTION ------------------------------------------------------------
             selv = selv & (~ignore)
             viss = list(np.array(spectra)[selv])
-            visw = np.array(wave)[selv]
+            visw = list(np.array(wave)[selv])
             cwave, _t = tplbuild(viss, visw, vrange, disp[selv]*1e-4, medest=True)
             # OUT OF TRANSIT ORBITS SELECTION --------------------------------------------
+            # print('pureoot:',pureoot)
+            # print(' selv sumcheck',np.sum(selv),'out of',len(selv))
             selvoot = selv & np.array([(test in pureoot) for test in orbits])
             selvoot = selvoot & (abs(zoot) > (1e0 + rpors))
             voots = list(np.array(spectra)[selvoot])
@@ -387,6 +526,7 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
                         pass
                     pass
                 viss = np.array(viss)
+                visw = np.array(visw)
                 for spec in viss.T:
                     for orb in set(orbits[selv]):
                         selorb = orbits[selv] == orb
@@ -422,6 +562,10 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
                     wfos = []
                     allvissts = viss[thisscan].flatten()
                     allviswts = visw[thisscan].flatten()
+                    # new allviswtc calculation, from Raissa 10/10/23
+                    yfc = []
+                    for gcv in visw[thisscan]: yfc.extend(gcv)
+                    allviswts = np.array(yfc)
                     dcwave = [np.diff(cwave)[0]]
                     dcwave.extend(np.diff(cwave))
                     for cw, dcw in zip(cwave, dcwave):
@@ -564,18 +708,7 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
                     out['data'][p]['photnoise'].append(nphotn)
                     out['data'][p]['stdns'].append(np.nanstd(np.nanmedian(viss, axis=1)))
                     out['data'][p]['hstbreath'].append(hstbreath)
-                    if verbose:
-                        plt.figure()
-                        for w,s in zip(visw[check], vnspec):
-                            select = (w > np.min(vrange)) & (w < np.max(vrange))
-                            plt.plot(w[select], s[select], 'o')
-                            pass
-                        plt.ylabel('Normalized Spectra')
-                        plt.xlabel('Wavelength [$\\mu$m]')
-                        plt.xlim(np.min(vrange), np.max(vrange))
-                        plt.show()
-                        pass
-                    pass
+
                 else:
                     if wellcondin:
                         out['data'][p]['trial'].append('Spectral Variance Excess')
@@ -595,6 +728,7 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
                     pass
                 pass
             pass
+
         # VARIANCE EXCESS FROM LOST GUIDANCE ---------------------------------------------
         kickout = []
         if out['data'][p]['stdns'].__len__() > 2:
@@ -628,6 +762,106 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
         for v, m in zip(out['data'][p]['vignore'], out['data'][p]['trial']):
             log.warning('--< Visit %s: %s', str(int(v)), str(m))
             pass
+
+        # SAVE A PLOT FOR EACH VISIT ----------------------------------------------------
+        #  - flux as a function of wavelength on the left
+        #  - flux as a function of orbital phase on the right (whitelight)
+
+        # set the point color based on the orbit number
+        orbitColors = mpl.cm.viridis
+
+        vrange = out['data'][p]['vrange']
+        out['data'][p]['plot_normalized_byvisit'] = []
+        for index, v in enumerate(out['data'][p]['visits']):
+            # lastorbit = np.max(out['data'][p]['orbits'][index])
+            phasemin = np.min(out['data'][p]['phase'][index])
+            phasemax = np.max(out['data'][p]['phase'][index])
+
+            myfig = plt.figure(figsize=(20,5))
+            myfig.subplots_adjust(wspace=0.25)  # add some space between the two panels
+            myfig.subplots_adjust(left=0.05)
+            myfig.subplots_adjust(right=0.99)
+            plt.subplot(1,3,1)
+            plt.title('Visit: '+str(v))
+            for waves,normed_flux,phase,orbit in zip(out['data'][p]['wave'][index],
+                                                     out['data'][p]['nspec'][index],
+                                                     out['data'][p]['phase'][index],
+                                                     out['data'][p]['orbits'][index]):
+                select = (waves > np.min(vrange)) & (waves < np.max(vrange))
+                # option to set color as function of orbit
+                # clr = orbitColors((orbit - 1) / (lastorbit - 1))
+                # option to set color as function of phase/time
+                clr = orbitColors((phase - phasemin) / (phasemax - phasemin))
+                plt.plot(waves[select], normed_flux[select], 'o', c=clr)
+            plt.ylabel('Normalized Flux')
+            plt.xlabel('Wavelength [$\\mu$m]')
+            plt.xlim(np.min(vrange), np.max(vrange))
+            yrange = plt.ylim()
+
+            plt.subplot(1,3,2)
+            plt.title('Visit: '+str(v))
+            for waves,normed_flux,phase,orbit in zip(out['data'][p]['wave'][index],
+                                                     out['data'][p]['nspec'][index],
+                                                     out['data'][p]['phase'][index],
+                                                     out['data'][p]['orbits'][index]):
+                select = (waves > np.min(vrange)) & (waves < np.max(vrange))
+                whitelightpoint = np.median(normed_flux[select])
+                # option to set color as function of orbit
+                # clr = orbitColors((orbit - 1) / (lastorbit - 1))
+                # option to set color as function of phase/time
+                clr = orbitColors((phase - phasemin) / (phasemax - phasemin))
+                plt.plot(phase, whitelightpoint, 'o', c=clr, label='orbit: '+str(int(orbit)))
+
+                # alternate: show all the wavelength points, not just the whitelight median
+                plt.plot([phase]*len(normed_flux[select]),
+                         normed_flux[select], 'o', c=clr, label='orbit: '+str(int(orbit)))
+
+            # vertical dashed lines showing the in-transit times
+            # print(' Dashed lines for in-transit phases:',
+            #      intransit_phase_min,intransit_phase_max)
+            plt.plot([intransit_phase_min,intransit_phase_min],[0,10],'k--')
+            plt.plot([intransit_phase_max,intransit_phase_max],[0,10],'k--')
+            plt.ylim(yrange)
+            # plt.legend()
+            plt.ylabel('Normalized Flux')
+            plt.xlabel('Orbital Phase')
+
+            plt.subplot(1,3,3)
+            plt.title('Visit: '+str(v))
+            for waves,normed_flux,phase,orbit in zip(out['data'][p]['wave'][index],
+                                                     out['data'][p]['nspec'][index],
+                                                     out['data'][p]['phase'][index],
+                                                     out['data'][p]['orbits'][index]):
+                select = (waves > np.min(vrange)) & (waves < np.max(vrange))
+                whitelightpoint = np.median(normed_flux[select])
+                # option to set color as function of orbit
+                # clr = orbitColors((orbit - 1) / (lastorbit - 1))
+                # option to set color as function of phase/time
+                clr = orbitColors((phase - phasemin) / (phasemax - phasemin))
+                plt.plot(phase, whitelightpoint, 'o', c=clr, label='orbit: '+str(int(orbit)))
+
+                # alternate: show all the wavelength points, not just the whitelight median
+                # plt.plot([phase]*len(normed_flux[select]),
+                #         normed_flux[select], 'o', c=clr, label='orbit: '+str(int(orbit)))
+
+            # vertical dashed lines showing the in-transit times
+            # print(' Dashed lines for in-transit phases:',
+            #      intransit_phase_min,intransit_phase_max)
+            plt.plot([intransit_phase_min,intransit_phase_min],[0,10],'k--')
+            plt.plot([intransit_phase_max,intransit_phase_max],[0,10],'k--')
+            plt.ylim(yrange)
+            # plt.legend()
+            plt.ylabel('Normalized Flux')
+            plt.xlabel('Orbital Phase')
+
+            saveDir = os.path.join(excalibur.context['data_dir'], 'bryden/')
+            plt.savefig(saveDir + 'norm_'+ext+' visit'+str(v)+'.png')
+            # REDUNDANT SAVE - above saves to disk; below saves as state vector
+            buf = io.BytesIO()
+            myfig.savefig(buf, format='png')
+            out['data'][p]['plot_normalized_byvisit'].append(buf.getvalue())
+            plt.close(myfig)
+
         if out['data'][p]['visits']:
             normed = True
             out['STATUS'].append(True)
@@ -636,7 +870,7 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
     return normed
 # ------------------- ------------------------------------------------
 # -- TEMPLATE BUILDER -- ---------------------------------------------
-def tplbuild(spectra, wave, vrange, disp, superres=False, medest=False):
+def tplbuild(spectra, wave, vrange, disp, superres=False, medest=False, verbose=False):
     '''
     G. ROUDIER: Builds a spectrum template according to the peak in population density
     per wavelength bins
@@ -702,6 +936,7 @@ def tplbuild(spectra, wave, vrange, disp, superres=False, medest=False):
         else: finiteloop = guess[-1] + vdisp
         while finiteloop in guess: finiteloop += vdisp
         guess.append(finiteloop)
+        if verbose: log.warning('>-- %s/%s', str(guess[-1]), str(max(vrange) + vdisp/2e0))
         pass
     return wavet, template
 # ---------------------- ---------------------------------------------
@@ -959,9 +1194,7 @@ def hstwhitelight(allnrm, fin, out, allext, selftype, chainlen=int(1e4), verbose
             trace = pm.sample(chainlen, cores=4, tune=int(chainlen/2),
                               compute_convergence_checks=False, step=pm.Metropolis(),
                               progressbar=verbose)
-            # GMR: Should be able to find it... Joker
-            # pylint: disable=no-member
-            mcpost = pm.stats.summary(trace)
+            mcpost = pm.stats.summary(trace)  # dynamic attr so, pylint: disable=no-member
             pass
         mctrace = {}
         for key in mcpost['mean'].keys():
@@ -979,6 +1212,8 @@ def hstwhitelight(allnrm, fin, out, allext, selftype, chainlen=int(1e4), verbose
         postsep = []
         postphase = []
         postflatphase = []
+        modelphase = []
+        modellc = []
         ttvindex = 0
         if 'WFC3' in ext:
             if fixedinc: inclination = priors[p]['inc']
@@ -1004,6 +1239,18 @@ def hstwhitelight(allnrm, fin, out, allext, selftype, chainlen=int(1e4), verbose
                                     oitcp=np.nanmedian(mctrace[f'oitcp__{i}'])))
                 pass
             pass
+            modeltimes = []
+            for times in time:
+                mintime = np.min(times)
+                maxtime = np.max(times)
+                # print('min,max time for this visit',mintime,maxtime)
+                modeltimes_thisVisit = np.linspace(mintime-0.05, maxtime+0.05, num=1000)
+                modeltimes.extend(list(modeltimes_thisVisit))
+            postz, postph = datcore.time2z(np.array(modeltimes), inclination,
+                                           tmjd, smaors, period, ecc)
+            modelphase.extend(postph)
+            modellc.extend(tldlc(abs(postz), np.nanmedian(mctrace['rprs']),
+                                 g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0]))
         else:
             omtk = ctxt.tmjd
             inclination = ctxt.orbp['inc']
@@ -1028,6 +1275,8 @@ def hstwhitelight(allnrm, fin, out, allext, selftype, chainlen=int(1e4), verbose
         out['data'][p]['postsep'] = postsep
         out['data'][p]['postphase'] = postphase
         out['data'][p]['postflatphase'] = postflatphase
+        out['data'][p]['modellc'] = modellc
+        out['data'][p]['modelphase'] = modelphase
         out['data'][p]['mcpost'] = mcpost
         out['data'][p]['mctrace'] = mctrace
         out['data'][p]['allttvfltrs'] = allttvfltrs
@@ -1059,6 +1308,7 @@ def whitelight(nrm, fin, out, ext, selftype, multiwl, chainlen=int(1e4),
     '''
     G. ROUDIER: Orbital parameters recovery
     '''
+
     wl = False
     priors = fin['priors'].copy()
     ssc = syscore.ssconstants()
@@ -1159,12 +1409,14 @@ def whitelight(nrm, fin, out, ext, selftype, multiwl, chainlen=int(1e4),
         # PRIORS -----------------------------------------------------
         tmjd = priors[p]['t0']
         if tmjd > 2400000.5: tmjd -= 2400000.5
-        allttvfltrs = np.array(multiwl['data'][p]['allttvfltrs'])
-        if ext in allttvfltrs:
-            ttvmask = allttvfltrs == ext
-            alltknot = [np.median(multiwl['data'][p]['mctrace']['dtk__'+str(i)])
-                        for i, cond in enumerate(ttvmask) if cond]
-            pass
+        if p in multiwl['data'].keys():
+            allttvfltrs = np.array(multiwl['data'][p]['allttvfltrs'])
+            if ext in allttvfltrs:
+                ttvmask = allttvfltrs == ext
+                alltknot = [np.median(multiwl['data'][p]['mctrace']['dtk__'+str(i)])
+                            for i, cond in enumerate(ttvmask) if cond]
+                pass
+            else: alltknot = []
         else: alltknot = []
         period = priors[p]['period']
         ecc = priors[p]['ecc']
@@ -1193,9 +1445,11 @@ def whitelight(nrm, fin, out, ext, selftype, multiwl, chainlen=int(1e4),
         if shapettv < len(ttv): shapettv = len(ttv)
         shapevis = 2
         if shapevis < len(visits): shapevis = len(visits)
-        if 'inc' in multiwl['data'][p]['mctrace']:
-            inc = np.median(multiwl['data'][p]['mctrace']['inc'])
-            pass
+        if p in multiwl['data'].keys():
+            if 'inc' in multiwl['data'][p]['mctrace']:
+                inc = np.median(multiwl['data'][p]['mctrace']['inc'])
+                pass
+            else: inc = priors[p]['inc']
         else: inc = priors[p]['inc']
         nodes = []
         ctxtupdt(orbp=priors[p], ecc=ecc, g1=g1, g2=g2, g3=g3, g4=g4,
@@ -1253,9 +1507,7 @@ def whitelight(nrm, fin, out, ext, selftype, multiwl, chainlen=int(1e4),
             trace = pm.sample(chainlen, cores=4, tune=int(chainlen/2),
                               compute_convergence_checks=False, step=pm.Metropolis(),
                               progressbar=verbose)
-            # GMR: Should be able to find it... Joker
-            # pylint: disable=no-member
-            mcpost = pm.stats.summary(trace)
+            mcpost = pm.stats.summary(trace)  # dynamic attr so, pylint: disable=no-member
             pass
         mctrace = {}
         for key in mcpost['mean'].keys():
@@ -1273,10 +1525,17 @@ def whitelight(nrm, fin, out, ext, selftype, multiwl, chainlen=int(1e4),
         postsep = []
         postphase = []
         postflatphase = []
+        modelphase = []
+        modellc = []
         omtk = ctxt.tmjd
         inclination = ctxt.ginc
         for i, v in enumerate(visits):
-            if v in ttv: omtk = float(alltknot[ttv.index(v)])
+            # Problem - sometimes ttv exists but alltknot undefined. ok?
+            #  (new conditional added to deal with this)
+            if v in ttv:
+                if ttv.index(v) < len(alltknot):
+                    omtk = float(alltknot[ttv.index(v)])
+                else: omtk = tmjd
             else: omtk = tmjd
             postz, postph = datcore.time2z(time[i], inclination,
                                            omtk, smaors, period, ecc)
@@ -1292,11 +1551,34 @@ def whitelight(nrm, fin, out, ext, selftype, multiwl, chainlen=int(1e4),
                                 oslope=np.nanmedian(mctrace[f'oslope__{i}']),
                                 oitcp=np.nanmedian(mctrace[f'oitcp__{i}'])))
             pass
+        # finding the min/max time over all visits doesn't work
+        #  you end up covering the time between visits, with not enough points during transit
+        # instead, make a series of times covering each transit/visit and then concatenate them
+        # mintime = 1.e10
+        # maxtime = -1.e10
+        # for times in time:
+        #    mintime = np.min([mintime,np.min(times)])
+        #    maxtime = np.max([maxtime,np.max(times)])
+        # modeltimes = np.linspace(mintime-0.05, maxtime+0.05, num=1000)
+        modeltimes = []
+        for times in time:
+            mintime = np.min(times)
+            maxtime = np.max(times)
+            # print('min,max time for this visit',mintime,maxtime)
+            modeltimes_thisVisit = np.linspace(mintime-0.05, maxtime+0.05, num=1000)
+            modeltimes.extend(list(modeltimes_thisVisit))
+        postz, postph = datcore.time2z(np.array(modeltimes), inclination,
+                                       tmjd, smaors, period, ecc)
+        modelphase.extend(postph)
+        modellc.extend(tldlc(abs(postz), np.nanmedian(mctrace['rprs']),
+                             g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0]))
         out['data'][p]['postlc'] = postlc
         out['data'][p]['postim'] = postim
         out['data'][p]['postsep'] = postsep
         out['data'][p]['postphase'] = postphase
         out['data'][p]['postflatphase'] = postflatphase
+        out['data'][p]['modelphase'] = modelphase
+        out['data'][p]['modellc'] = modellc
         out['data'][p]['mcpost'] = mcpost
         out['data'][p]['mctrace'] = mctrace
         out['data'][p]['tauwhite'] = tauwhite
@@ -1443,9 +1725,9 @@ def createldgrid(minmu, maxmu, orbp,
     feherr = np.sqrt(abs(orbp['FEH*_uperr']*orbp['FEH*_lowerr']))
     loggstar = orbp['LOGG*']
     loggerr = np.sqrt(abs(orbp['LOGG*_uperr']*orbp['LOGG*_lowerr']))
-    log.warning('>-- Temperature: %s +/- %s', str(tstar), str(terr))
-    log.warning('>-- Metallicity: %s +/- %s', str(fehstar), str(feherr))
-    log.warning('>-- Surface Gravity: %s +/- %s', str(loggstar), str(loggerr))
+    # log.warning('>-- Temperature: %s +/- %s', str(tstar), str(terr))
+    # log.warning('>-- Metallicity: %s +/- %s', str(fehstar), str(feherr))
+    # log.warning('>-- Surface Gravity: %s +/- %s', str(loggstar), str(loggerr))
     niter = int(len(minmu)/segmentation) + 1
     allcl = None
     allel = None
@@ -1467,10 +1749,16 @@ def createldgrid(minmu, maxmu, orbp,
         for testprof in ps.profile_averages:
             if np.all(~np.isfinite(testprof)): itpfail = True
             pass
-        nfail = 1e0
+        icounter = 0
         while itpfail:
-            nfail *= 2
-            sc = LDPSetCreator(teff=(tstar, nfail*terr), logg=(loggstar, loggerr),
+            icounter += 1
+            # ldtk bug : crashes if there are no stellar model wavelengths inside the given range
+            # if it fails, expand the wavelength range a bit until a model grid point falls inside
+            deltamunm = icounter * (munmmax - munmmin) / 10
+            # print('icounter deltamunm',icounter,deltamunm, munmmin, munmmax)
+            filters = [BoxcarFilter(str(munm), munmmin - deltamunm, munmmax + deltamunm)]
+
+            sc = LDPSetCreator(teff=(tstar, terr), logg=(loggstar, loggerr),
                                z=(fehstar, feherr), filters=filters)
             ps = sc.create_profiles(nsamples=int(1e4))
             itpfail = False
@@ -1478,6 +1766,32 @@ def createldgrid(minmu, maxmu, orbp,
                 if np.all(~np.isfinite(testprof)): itpfail = True
                 pass
             pass
+            if icounter > 10:
+                log.warning('>-- PROBLEM: limb darkening loop doesnt converge after wider wavebin!')
+
+                # adding another loop for two troublemakers - WASP-19 and WASP-52
+                icounter = 0
+                filters = [BoxcarFilter(str(mue), mun, mux)
+                           for mue, mun, mux in zip(munm, munmmin, munmmax)]
+                while itpfail:
+                    icounter += 1
+                    # tstar = tstar + 1
+                    # print('TRYING OUT A NEW TSTAR',tstar)
+                    terr *= 1.05
+                    loggerr *= 1.05
+                    feherr *= 1.05
+                    # print('TRYING OUT A NEW TERR,LOGGERR,FEHERR',terr)
+                    sc = LDPSetCreator(teff=(tstar, terr), logg=(loggstar, loggerr),
+                                       z=(fehstar, feherr), filters=filters)
+                    ps = sc.create_profiles(nsamples=int(1e4))
+                    itpfail = False
+                    for testprof in ps.profile_averages:
+                        if np.all(~np.isfinite(testprof)): itpfail = True
+                        pass
+                    pass
+                    if icounter > 10:
+                        log.warning('>-- ERROR: limb darkening loop still does not converge!')
+                        break
         cl, el = ldx(ps.profile_mu, ps.profile_averages, ps.profile_uncertainties,
                      mumin=phoenixmin, debug=verbose, model=ldmodel)
         if allcl is None: allcl = cl
@@ -1490,10 +1804,9 @@ def createldgrid(minmu, maxmu, orbp,
     out['MU'] = avmu
     out['LD'] = allcl.T
     out['ERR'] = allel.T
-    for i, _m in enumerate(allcl.T):
-        log.warning('>-- LD%s: %s +/- %s',
-                    str(int(i)), str(float(allcl.T[i])), str(float(allel.T[i])))
-        pass
+    # for i, _m in enumerate(allcl.T):
+    #     log.warning('>-- LD%s: %s +/- %s',
+    #                str(int(i)), str(float(allcl.T[i])), str(float(allel.T[i])))
     return out
 # -------------------- -----------------------------------------------
 # -- LDX -- ----------------------------------------------------------
@@ -1572,8 +1885,8 @@ def lnldx(params, x, data=None, weights=None):
     '''
     G. ROUDIER: Linear law
     '''
-    gamma1=params['gamma1'].value
-    model=LinearModel.evaluate(x, [gamma1])
+    gamma1 = params['gamma1'].value
+    model = LinearModel.evaluate(x, [gamma1])
     if data is None: return model
     if weights is None: return data - model
     return (data - model)/weights
@@ -1599,7 +1912,7 @@ def nlldx(params, x, data=None, weights=None):
     gamma2 = params['gamma2'].value
     gamma3 = params['gamma3'].value
     gamma4 = params['gamma4'].value
-    model = NonlinearModel.evaluate(x, [gamma1, gamma2, gamma3, gamma4])
+    model = NonlinearModel.evaluate(x, np.array([gamma1, gamma2, gamma3, gamma4]))
     if data is None: return model
     if weights is None: return data - model
     return (data - model)/weights
@@ -1799,7 +2112,7 @@ def spectrum(fin, nrm, wht, out, ext, selftype,
             mixratio, fH2, fHe = crbutil.crbce(pressure, eqtemp)
             mmw, fH2, fHe = crbutil.getmmw(mixratio, protosolar=False, fH2=fH2, fHe=fHe)
             mmw = mmw*cst.m_p  # [kg]
-            Hs = cst.Boltzmann*eqtemp/(mmw*1e-2*(10.**priors[p]['logg']))  # [m]
+            Hs = cst.Boltzmann*eqtemp/(mmw*1e-2*(10.**float(priors[p]['logg'])))  # [m]
             Hs = Hs/(priors['R*']*sscmks['Rsun'])
             tauvs = 1e0/((1e-2/trdura)**2)
             ootstd = np.nanstd(data[abs(allz) > (1e0 + whiterprs)])
@@ -1851,9 +2164,7 @@ def spectrum(fin, nrm, wht, out, ext, selftype,
                 trace = pm.sample(chainlen, cores=4, tune=int(chainlen/2),
                                   compute_convergence_checks=False, step=pm.Metropolis(),
                                   progressbar=verbose)
-                # GMR: Should be able to find it... Joker
-                # pylint: disable=no-member
-                mcpost = pm.stats.summary(trace)
+                mcpost = pm.stats.summary(trace)  # dynamic attr so, pylint: disable=no-member
                 pass
             # Exclude first channel with Uniform prior
             if not startflag:
@@ -1877,15 +2188,10 @@ def spectrum(fin, nrm, wht, out, ext, selftype,
                 clspvl = np.nanmedian(trace['rprs'])
                 # now produce fitted estimates
 
-                # GMR: Huh I dont remember coding that one I m blind
-                # Pulling out a joker
-                def get_ests(n, v):
-                    '''for param get all visit param values as list'''
-                    # pylint: disable=cell-var-from-loop
-                    return [mcests[f'{n}__{i}'] for i in range(len(v))]
-
-                specparams = (mcests['rprs'], get_ests('vslope', visits),
-                              get_ests('oslope', visits), get_ests('oitcp', visits))
+                specparams = (mcests['rprs'],
+                              [mcests[f'vslope__{i}'] for i in range(len(visits))],
+                              [mcests[f'oslope__{i}'] for i in range(len(visits))],
+                              [mcests[f'oitcp__{i}'] for i in range(len(visits))])
                 _r, avs, aos, aoi = specparams
                 allimout = []
                 for iv in range(len(visits)):
@@ -1940,7 +2246,7 @@ def spectrum(fin, nrm, wht, out, ext, selftype,
             vspectrum = vspectrum**2
             Rstar = priors['R*']*sscmks['Rsun']
             Rp = priors[p]['rp']*7.14E7  # m
-            Hs = cst.Boltzmann*eqtemp/(mmw*1e-2*(10.**priors[p]['logg']))  # m
+            Hs = cst.Boltzmann*eqtemp/(mmw*1e-2*(10.**float(priors[p]['logg'])))  # m
             noatm = Rp**2/(Rstar)**2
             rp0hs = np.sqrt(noatm*(Rstar)**2)
             # Smooth spectrum
@@ -1986,7 +2292,7 @@ def spectrum(fin, nrm, wht, out, ext, selftype,
                 # Retro compatibility for Hs in [m]
                 if Hs > 1: Hs = Hs/(out['data'][p]['RSTAR'][0])
                 ax2 = ax0.twinx()
-                ax2.set_ylabel('$\\Delta$ [Hs]')
+                ax2.set_ylabel('$\\Delta$ [H$_s$]')
                 axmin, axmax = ax0.get_ylim()
                 ax2.set_ylim((np.sqrt(1e-2*axmin) - rp0hs)/Hs,
                              (np.sqrt(1e-2*axmax) - rp0hs)/Hs)
@@ -2034,7 +2340,14 @@ def nottvfiorbital(*whiteparams):
     out = []
     for i, v in enumerate(ctxt.visits):
         omt = ctxt.time[i]
-        if v in ctxt.ttv: omtk = float(ctxt.gttv[ctxt.ttv.index(v)])
+        if v in ctxt.ttv:
+            # Problem - sometimes ttv exists but gttv doesn't.  why?!
+            #  (new conditional added to deal with this)
+            if ctxt.ttv.index(v) < len(ctxt.gttv):
+                omtk = float(ctxt.gttv[ctxt.ttv.index(v)])
+            else:
+                # log.warning('>-- Strange: ttv exists but gttv doesnt')
+                omtk = ctxt.tmjd
         else: omtk = ctxt.tmjd
         omz, _pmph = datcore.time2z(omt, inclination, omtk,
                                     ctxt.smaors, ctxt.period, ctxt.ecc)
@@ -2222,7 +2535,7 @@ def fastspec(fin, nrm, wht, ext, selftype,
         mixratio, fH2, fHe = crbutil.crbce(pressure, eqtemp)
         mmw, fH2, fHe = crbutil.getmmw(mixratio, protosolar=False, fH2=fH2, fHe=fHe)
         mmw = mmw*cst.m_p  # [kg]
-        Hs = cst.Boltzmann*eqtemp/(mmw*1e-2*(10.**priors[p]['logg']))  # [m]
+        Hs = cst.Boltzmann*eqtemp/(mmw*1e-2*(10.**float(priors[p]['logg'])))  # [m]
         Hs = Hs/(priors['R*']*sscmks['Rsun'])
         tauvs = 1e0/((1e-2/trdura)**2)
         ootstd = np.nanstd(data[abs(allz) > (1e0 + whiterprs)])
@@ -2271,7 +2584,7 @@ def fastspec(fin, nrm, wht, ext, selftype,
         vspectrum = vspectrum**2
         Rstar = priors['R*']*sscmks['Rsun']
         Rp = priors[p]['rp']*7.14E7  # m
-        Hs = cst.Boltzmann*eqtemp/(mmw*1e-2*(10.**priors[p]['logg']))  # m
+        Hs = cst.Boltzmann*eqtemp/(mmw*1e-2*(10.**float(priors[p]['logg'])))  # m
         noatm = Rp**2/(Rstar)**2
         rp0hs = np.sqrt(noatm*(Rstar)**2)
         _fig, ax0 = plt.subplots(figsize=(10,6))
@@ -2282,7 +2595,7 @@ def fastspec(fin, nrm, wht, ext, selftype,
         yaxmin, yaxmax = ax0.get_ylim()
         ax2min = (np.sqrt(1e-2*yaxmin)*Rstar - rp0hs)/Hs
         ax2max = (np.sqrt(1e-2*yaxmax)*Rstar - rp0hs)/Hs
-        ax1.set_ylabel('Transit Depth Modulation [Hs]')
+        ax1.set_ylabel('Transit Depth Modulation [H$_s$]')
         ax1.set_ylim(ax2min, ax2max)
         plt.show()
         pass
@@ -2299,7 +2612,7 @@ def fastspec(fin, nrm, wht, ext, selftype,
 # nearest neighbor detrending
 class pc_fitter():
     '''pc_fitter'''
-    # pylint: disable=too-many-instance-attributes
+    # work requires these attributes so, pylint: disable=too-many-instance-attributes
     def __init__(self, time, data, dataerr, prior, bounds, syspars, neighbors=100, mode='ns', verbose=False):
         self.time = time
         self.data = data
@@ -2309,6 +2622,16 @@ class pc_fitter():
         self.syspars = syspars
         self.neighbors = neighbors
         self.verbose = verbose
+        # content is defined later but placeholder for pylint
+        self.phase = None
+        self.transit = None
+        self.wf = None
+        self.model = None
+        self.detrended = None
+        self.detrendederr = None
+        self.residuals = None
+        self.chi2 = None
+        self.bic = None
 
         if mode == 'ns':
             self.fit_nested()
@@ -2324,9 +2647,8 @@ class pc_fitter():
         self.gw, self.nearest = elca.gaussian_weights(self.syspars, neighbors=self.neighbors)
 
         def lc2min(pars):
-            # pylint: disable=invalid-unary-operand-type
-            for i, _ in enumerate(pars):
-                self.prior[freekeys[i]] = pars[i]
+            for i,p in enumerate(pars):
+                self.prior[freekeys[i]] = p
             lightcurve = elca.phasecurve(self.time, self.prior)
             detrended = self.data/lightcurve
             wf = elca.weightedflux(detrended, self.gw, self.nearest)
@@ -2358,9 +2680,8 @@ class pc_fitter():
 
         def lc2min_transit(pars):
             '''lc2min_transit ds'''
-            # pylint: disable=invalid-unary-operand-type
-            for i, _ in enumerate(pars):
-                self.prior[freekeys[i]] = pars[i]
+            for i,p in enumerate(pars):
+                self.prior[freekeys[i]] = p
             lightcurve = elca.transit(self.time, self.prior)
             detrended = self.data/lightcurve
             wf = elca.weightedflux(detrended, self.gw, self.nearest)
@@ -2369,9 +2690,8 @@ class pc_fitter():
 
         def lc2min_phasecurve(pars):
             '''lc2min_phasecurve ds'''
-            # pylint: disable=invalid-unary-operand-type
-            for i, _ in enumerate(pars):
-                self.prior[freekeys[i]] = pars[i]
+            for i,p in enumerate(pars):
+                self.prior[freekeys[i]] = p
             lightcurve = elca.phasecurve(self.time, self.prior)
             detrended = self.data/lightcurve
             wf = elca.weightedflux(detrended, self.gw, self.nearest)
@@ -2427,7 +2747,6 @@ class pc_fitter():
 
     def create_fit_variables(self):
         '''create_fit_variables ds'''
-        # pylint: disable=attribute-defined-outside-init
         self.phase = (self.time - self.parameters['tmid']) / self.parameters['per']
         self.transit = elca.phasecurve(self.time, self.parameters)
         detrended = self.data / self.transit
@@ -2790,9 +3109,18 @@ def norm_spitzer(cal, tme, fin, out, selftype, debug=False):
         # 3 sigma clip flux time series
         phase = (out['data'][p]['TIME'] - fin['priors'][p]['t0'])/fin['priors'][p]['period']
         badmask = np.zeros(out['data'][p]['TIME'].shape).astype(bool)
+
+        # estimate transit duration
+        ssc = syscore.ssconstants()
+        smaors = fin['priors'][p]['sma']/fin['priors']['R*']/ssc['Rsun/AU']
+        tdur = fin['priors'][p]['period']/(np.pi)/smaors
+        pdur = 1.75*tdur/fin['priors'][p]['period']
+
+        # loop over orbital epochs
         for i in np.unique(tme['data'][p][selftype]):
+
             # mask out orbit
-            omask = np.round(phase) == i
+            omask = (phase > (i-pdur)) & (phase < (i+pdur))
             dt = np.nanmean(np.diff(out['data'][p]['TIME'][omask]))*24*60
             if np.isnan(dt):
                 continue
@@ -2800,7 +3128,7 @@ def norm_spitzer(cal, tme, fin, out, selftype, debug=False):
                 continue
 
             ndt = int(7/dt)*2+1
-            ndt = max(25, ndt)
+            ndt = max(51, ndt)
 
             # aperture selection
             stds = []
@@ -3347,6 +3675,23 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                 priors[p]['ars'] = smaors
                 # fpfs = eclipse_ratio(priors, p, fltr)
 
+                # search priors for limb darkening
+                if '36' in fltr:
+                    pkey = 'Spitzer_IRAC1_subarray'
+                elif '45' in fltr:
+                    pkey = 'Spitzer_IRAC2_subarray'
+
+                if pkey in priors[p].keys():
+                    u0 = priors[p][pkey][0]
+                    u1 = priors[p][pkey][1]
+                    u2 = priors[p][pkey][2]
+                    u3 = priors[p][pkey][3]
+                else:
+                    u0 = 0
+                    u1 = 0
+                    u2 = 0
+                    u3 = 0
+
                 tpars = {
                     # Star
                     'T*':priors['T*'],
@@ -3361,10 +3706,11 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                     'ecc': priors['b']['ecc'],
 
                     # limb darkening (nonlinear - exotethys - pylightcurve)
-                    'u0':priors[p].get('u0',0),
-                    'u1':priors[p].get('u1',0),
-                    'u2':priors[p].get('u2',0),
-                    'u3':priors[p].get('u3',0),
+                    # precompute and add to priors in target.edit
+                    'u0':u0,
+                    'u1':u1,
+                    'u2':u2,
+                    'u3':u3,
 
                     # phase curve amplitudes
                     'c0':0, 'c1':0, 'c2':0, 'c3':0, 'c4':0,
@@ -3404,8 +3750,11 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                 wya = nrm['data'][p]['WY'][pmask]
                 npp = nrm['data'][p]['NOISEPIXEL'][pmask]
 
-                # remove zeros
-                zmask = aper != 0
+                # remove zeros and nans
+                zmask = (aper != 0) & (aper_err != 0) & (~np.isnan(aper)) & (~np.isnan(aper_err))
+                if zmask.sum() < 10:
+                    continue
+
                 aper = aper[zmask]
                 aper_err = aper_err[zmask]
                 subt = subt[zmask]
@@ -3428,14 +3777,27 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                         'rprs':[0,1.5*tpars['rprs']],
                         'tmid':[tmid-0.01,tmid+0.01],
                         # 'ars':[smaors_lo,smaors_up]
-                        'inc':[tpars['inc']-3, max(90, tpars['inc']+3)]
+                        'inc':[tpars['inc']-3, min(90, tpars['inc']+3)]
                     }
                     myfit = elca.lc_fitter(subt, aper, aper_err, syspars, tpars, mybounds, neighbors=nneighbors, max_ncalls=2e5, verbose=False)
                 elif selftype == 'eclipse':
+
+                    # perform another round of sigma clipping
+                    photmask = ~np.isnan(sigma_clip(aper, nneighbors))
+                    wxmask = ~np.isnan(sigma_clip(wxa, nneighbors))
+                    wymask = ~np.isnan(sigma_clip(wya, nneighbors))
+                    nppmask = ~np.isnan(sigma_clip(npp, nneighbors))
+                    totalmask = photmask & wxmask & wymask & nppmask
+
+                    aper = aper[totalmask]
+                    aper_err = aper_err[totalmask]
+                    subt = subt[totalmask]
+                    syspars = syspars[totalmask]
+
                     mybounds = {
                         'rprs':[0,0.5*tpars['rprs']],
                         'tmid':[tme-0.01,tme+0.01],
-                        'inc':[tpars['inc']-3, max(90, tpars['inc']+3)]
+                        'inc':[tpars['inc']-3, min(90, tpars['inc']+3)]
                         # 'ars':[smaors_lo,smaors_up],
                     }
 
@@ -3483,6 +3845,74 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                 out['data'][p][ec]['plot_posterior'] = save_plot(myfit.plot_posterior)
                 out['data'][p][ec]['plot_pixelmap'] = save_plot(myfit.plot_pixelmap)
 
+                # estimates for photon noise
+                photons = aper*1.0  # already converted to e in data task
+
+                # noise estimate in transit
+                tmask = myfit.transit < 1
+                photon_noise_timeseries = 1/np.sqrt(photons.mean())
+
+                # photon noise factor based on timeseries
+                res_std = np.round(np.std(myfit.residuals/np.median(aper)),7)
+                nf_timeseries = res_std / photon_noise_timeseries
+                raw_residual = aper/np.median(aper)-myfit.transit
+                nf_timeseries_raw = np.std(raw_residual) / photon_noise_timeseries
+
+                raw_residual = aper/np.median(aper) - myfit.transit
+                rel_residuals = myfit.residuals / np.median(aper)
+
+                # convert transit duration to seconds
+                tdur = myfit.duration_measured*24*60*60
+                tdur_freq = 1/tdur
+                print(f"raw photon noise:{nf_timeseries_raw}")
+                print(f"photon noise: {nf_timeseries}")
+
+        # create plot for residual statistics
+                fig, ax = plt.subplots(3, figsize=(10,10))
+                binspace = np.linspace(-0.02,0.02,201)
+                raw_label = f"Mean: {np.mean(raw_residual,):.4f} \n"\
+                            f"Stdev: {np.std(raw_residual):.4f} \n"\
+                            f"Skew: {skew(raw_residual):.4f} \n"\
+                            f"Kurtosis: {kurtosis(raw_residual):.4f}\n"\
+                            f"Photon Noise: {nf_timeseries_raw:.2f}"
+                ax[0].hist(raw_residual, bins=binspace,label=raw_label,color=plt.cm.jet(0.25),alpha=0.5)
+                detrend_label = f"Mean: {np.mean(rel_residuals):.4f} \n"\
+                            f"Stdev: {np.std(rel_residuals):.4f} \n"\
+                            f"Skew: {skew(rel_residuals):.4f} \n"\
+                            f"Kurtosis: {kurtosis(rel_residuals):.4f}\n"\
+                            f"Photon Noise: {nf_timeseries:.2f}"
+                ax[0].hist(rel_residuals, bins=binspace, label=detrend_label, color=plt.cm.jet(0.75),alpha=0.5)
+                ax[0].set_xlabel('Relative Flux Residuals')
+                ax[0].legend(loc='best')
+                ax[1].scatter(subt, raw_residual, marker='.', label=f"Raw ({np.std(raw_residual,0)*100:.2f} %)",color=plt.cm.jet(0.25),alpha=0.25)
+                ax[1].scatter(subt, rel_residuals, marker='.', label=f"Detrended ({np.std(rel_residuals,0)*100:.2f} %)",color=plt.cm.jet(0.75),alpha=0.25)
+                ax[1].legend(loc='best')
+                ax[1].set_xlabel('Time [BJD]')
+                ax[0].set_title(f'Residual Statistics: {p} {selftype} {fltr}')
+                ax[1].set_ylabel("Relative Flux")
+
+                # compute fourier transform of raw_residual
+                N = len(raw_residual)
+                fft_raw = fft(raw_residual)
+                fft_res = fft(rel_residuals)
+                xf = fftfreq(len(raw_residual), d=np.diff(subt).mean()*24*60*60)[:N//2]
+                # fftraw = 2.0/N * np.abs(fft_raw[0:N//2])
+                # future: square + integrate under the curve and normalize such that it equals time series variance
+                ax[2].loglog(xf, 2.0/N * np.abs(fft_raw[0:N//2]),alpha=0.5,label='Raw',color=plt.cm.jet(0.25))
+                ax[2].loglog(xf, 2.0/N * np.abs(fft_res[0:N//2]),alpha=0.5,label='Detrended',color=plt.cm.jet(0.75))
+                ax[2].axvline(tdur_freq,ls='--',color='black',alpha=0.5)
+                ax[2].set_ylabel('Power')
+                ax[2].set_xlabel('Frequency [Hz]')
+                ax[2].legend()
+                ax[2].grid(True,ls='--')
+                plt.tight_layout()
+
+                # save plot to state vector
+                buf = io.BytesIO()
+                fig.savefig(buf, format='png')
+                plt.close(fig)
+                out['data'][p][ec]['plot_residual_fft'] = buf.getvalue()
+
                 # state vectors for classifer
                 z, _phase = datcore.time2z(subt, tpars['inc'], tpars['tmid'], tpars['ars'], tpars['per'], tpars['ecc'])
                 out['data'][p][ec]['postsep'] = z
@@ -3494,6 +3924,7 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                 wl = True
             except NameError as e:
                 print("Error:",e)
+                out['data'][p].append({})
                 out['data'][p][ec].append({'error':e})
 
             pass
@@ -3623,7 +4054,7 @@ def composite_spectrum(SV, target, p='b'):
                 # Retro compatibility for Hs in [m]
                 if Hs > 1: Hs = Hs/(SV1['data'][p]['RSTAR'][0])
                 ax2 = ax.twinx()
-                ax2.set_ylabel('$\\Delta$ [Hs]', fontsize=14)
+                ax2.set_ylabel('$\\Delta$ [H$_s$]', fontsize=14)
                 axmin, axmax = ax.get_ylim()
                 ax2.set_ylim((np.sqrt(1e-2*axmin) - rp0hs)/Hs,(np.sqrt(1e-2*axmax) - rp0hs)/Hs)
                 f.tight_layout()
@@ -3675,4 +4106,199 @@ def hstspectrum(out, fltrs):
                 out[-1]['data'][planet] = {'WB': np.sort(np.array(allwav)), 'WBlow': [x for _,x in sorted(zip(allwav,allwav_lw))], 'WBup': [x for _,x in sorted(zip(allwav,allwav_up))], 'ES': [x for _,x in sorted(zip(allwav,allspec))], 'ESerr': [x for _,x in sorted(zip(allwav,allspec_err))], 'Fltrs': [x for _,x in sorted(zip(allwav,allfltrs))], 'Hs': out[ids]['data'][planet]['Hs']}
             exospec = True  # return if all inputs were empty
             out[-1]['STATUS'].append(True)
+    return exospec
+
+def starspots(fin, wht, spc, out):
+    '''
+    Viktor Sumida's starspot model
+    '''
+
+    # print('whitelight planetletters',wht['data'].keys())
+    # print('spectrum planetletters',spc['data'].keys())
+    # print('whitelight info',wht['data']['b'].keys())
+    # print('spectrum info',spc['data']['b'].keys())
+
+    # 1) make sure we have all the input parameters
+
+    # print('fin keys',fin['priors'].keys())
+
+    Rstar = fin['priors']['R*']
+    Tstar = fin['priors']['T*']
+    Lstar = fin['priors']['L*']
+    print('star R,T,L:  ',Rstar,Tstar,Lstar)
+
+    exospec = False
+
+    # planetletters = fin['priors']['planets']
+    # some of the planets available in fin (system parameters) don't have transits
+    # use either transit.whitelight or transit.spectrum for the list of planets
+    planetletters = spc['data'].keys()
+    for planetletter in planetletters:
+        Rplanet = fin['priors'][planetletter]['rp']
+        inc = fin['priors'][planetletter]['inc']
+        period = fin['priors'][planetletter]['period']
+        sma = fin['priors'][planetletter]['sma']
+        print('planet'+planetletter,'R,inc,P,a:',Rplanet,inc,period,sma)
+
+        # limb dark
+        limbCoeffs = wht['data'][planetletter]['whiteld']
+        print('limb darkening parameters from whitelight       ',limbCoeffs)
+        print('limb darkening parameters from spectrum (median)',
+              np.median(spc['data'][planetletter]['LD'],axis=0))
+        # print('limb darkening parameters from spectrum (mean)  ',
+        #      np.mean(spc['data'][planetletter]['LD'],axis=0))
+
+        # this is the spectrum without any starspot correction
+        transitdata = {}
+        transitdata['wavelength'] = spc['data'][planetletter]['WB']
+        transitdata['depth'] = spc['data'][planetletter]['ES']**2
+        transitdata['error'] = 2 * spc['data'][planetletter]['ES'] * \
+            spc['data'][planetletter]['ESerr']
+
+        # for key in spc['data'][planetletter].keys():
+        #    if key!='Teq':
+        #        print('len check on spc',key)
+        #        print('len check on spc',key,len(spc['data'][planetletter][key]))
+
+        # bins the data (for plotting only, not for science analysis)
+        transitdata = rebinData(transitdata)
+
+        # 2) save whatever inputs might be helpful later
+        out['data'][planetletter] = {}
+        out['data'][planetletter]['WB'] = transitdata['wavelength']
+        out['data'][planetletter]['ES'] = transitdata['depth']
+        out['data'][planetletter]['ESerr'] = transitdata['error']
+        out['data'][planetletter]['RSTAR'] = Rstar
+        out['data'][planetletter]['TSTAR'] = Tstar
+        out['data'][planetletter]['LD'] = limbCoeffs
+
+        # 3) for each planet, calculate starspot model based on the input parameters
+
+        #  ************************************************************
+        #               Viktor - insert your code here
+        #  ************************************************************
+
+        # I think that your result will be an array of spectra on a 2-D grid
+        #  one axis is filling factor and
+        #  one axis is the spot temperature
+        # ?????
+        spotmodel = np.zeros((100,100,100))
+
+        # 4) save the results
+        out['data'][planetletter]['spotmodel'] = spotmodel
+
+        # 5) for each planet, make a plot of the spectrum
+
+        myfig, ax = plt.subplots(figsize=(8,6))
+
+        ax.errorbar(transitdata['wavelength'], 1e2*transitdata['depth'],
+                    fmt='.', yerr=1e2*transitdata['error'], color='lightgray')
+        ax.errorbar(transitdata['binned_wavelength'], 1e2*transitdata['binned_depth'],
+                    fmt='o', yerr=1e2*transitdata['binned_error'], color='k')
+
+        plt.title('planet '+planetletter)
+        plt.xlabel(str('Wavelength [$\\mu$m]'))
+        plt.ylabel(str('$(R_p/R_*)^2$ [%]'))
+        if 'Hs' in spc['data'][planetletter]:
+            rp0hs = np.sqrt(np.nanmedian(transitdata['depth']))
+            Hs = spc['data'][planetletter]['Hs'][0]
+            ax2 = ax.twinx()
+            ax2.set_ylabel('$\\Delta$ [H$_s$]')
+            axmin, axmax = ax.get_ylim()
+            if axmin >= 0:
+                ax2.set_ylim((np.sqrt(1e-2*axmin) - rp0hs)/Hs,
+                             (np.sqrt(1e-2*axmax) - rp0hs)/Hs)
+            else:
+                ax2.set_ylim((-np.sqrt(-1e-2*axmin) - rp0hs)/Hs,
+                             (np.sqrt(1e-2*axmax) - rp0hs)/Hs)
+        myfig.tight_layout()
+
+        # print('saving plot as testsave.png')
+        # plt.savefig('/proj/data/bryden/testsave.png')
+
+        buf = io.BytesIO()
+        myfig.savefig(buf, format='png')
+        out['data'][planetletter]['plot_starspot_spectrum'] = buf.getvalue()
+        plt.close(myfig)
+
+        # 6) make a plot of the limb darkening as a function of wavelength
+
+        myfig, ax = plt.subplots(figsize=(6,4))
+
+        LD = np.array(spc['data'][planetletter]['LD'])
+        radii = np.linspace(0,1,111)
+        for iwave in range(len(transitdata['wavelength'])):
+            # vecistar is normalized such that an integral over the star is 1
+            # multiply by pi.R^2 to get the star-averaged limb-darkening
+            limbdarkening = vecistar(
+                radii,LD[iwave,0],LD[iwave,1],LD[iwave,2],LD[iwave,3]) * np.pi
+            waveColor = mpl.cm.rainbow(float(iwave)/(len(transitdata['wavelength'])-1))
+            ax.plot(radii, limbdarkening, color=waveColor)
+
+        plt.xlabel('Radius [$R_{\\star}$]',fontsize=14)
+        # plt.ylabel(str('$I(R)/I(0)$'),fontsize=14)
+        plt.ylabel('limb darkening (normalized)',fontsize=14)
+        plt.title('planet '+planetletter,fontsize=14)
+        plt.xlim([0,1])
+        ylims = ax.get_ylim()
+        # plt.ylim([0,ylims[1]])
+        plt.ylim([0.5,ylims[1]])
+
+        myfig.tight_layout()
+
+#        print('saving plot as testsave.png')
+#        plt.savefig('/proj/data/bryden/testsave.png')
+
+        buf = io.BytesIO()
+        myfig.savefig(buf, format='png')
+        out['data'][planetletter]['plot_starspot_limbdarkening'] = buf.getvalue()
+        plt.close(myfig)
+
+        # 7) also plot the limb darkening coefficients
+
+        myfig = plt.figure(figsize=(8,6))
+
+        LD = np.array(spc['data'][planetletter]['LD'])
+        # print('len check',len(spc['data'][planetletter]['LD']))
+        # print('len check',LD.shape)
+        # print('do these match now?!?',len(transitdata['wavelength']), len(LD[:-1,0]))
+        ax = myfig.add_subplot(2,2,1)
+        ax.plot(transitdata['wavelength'], LD[:-1,0],
+                color='k')
+        plt.xlabel(str('Wavelength [$\\mu$m]'))
+        plt.ylabel(str('Limb darkening coeff #1'))
+        # plt.title('planet '+planetletter)
+
+        ax = myfig.add_subplot(2,2,2)
+        ax.plot(transitdata['wavelength'], LD[:-1,1],
+                color='k')
+        plt.xlabel(str('Wavelength [$\\mu$m]'))
+        plt.ylabel(str('Limb darkening coeff #2'))
+        ax = myfig.add_subplot(2,2,3)
+
+        ax.plot(transitdata['wavelength'], LD[:-1,2],
+                color='k')
+        plt.xlabel(str('Wavelength [$\\mu$m]'))
+        plt.ylabel(str('Limb darkening coeff #3'))
+
+        ax = myfig.add_subplot(2,2,4)
+        ax.plot(transitdata['wavelength'], LD[:-1,3],
+                color='k')
+        plt.xlabel(str('Wavelength [$\\mu$m]'))
+        plt.ylabel(str('Limb darkening coeff #4'))
+        # plt.title('planet '+planetletter)
+
+        myfig.tight_layout()
+
+        # print('saving plot as testsave.png')
+        # plt.savefig('/proj/data/bryden/testsave.png')
+
+        buf = io.BytesIO()
+        myfig.savefig(buf, format='png')
+        out['data'][planetletter]['plot_limbCoeffs'] = buf.getvalue()
+        plt.close(myfig)
+
+        exospec = True
+        out['STATUS'].append(True)
+
     return exospec

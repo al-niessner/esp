@@ -2,6 +2,9 @@ FROM esp_base:ghrVersion
 ENV DAWGIE_DOCKERIZED_AE_GIT_REVISION esp-git-rev
 ENV GNUPGHOME /proj/gnupg
 ENV HOME /tmp
+ENV NUMEXPR_NUM_THREADS 1
+ENV NUMEXPR_MAX_THREADS 1
+ENV OMP_NUM_THREADS 1
 ENV PYTHONPATH /proj/src/ae:/usr/local/lib/python
 RUN set -ex && \
     mkdir /tmp/esp && \
@@ -17,5 +20,5 @@ ENTRYPOINT ["python3", "-m", "dawgie.pl.worker", \
             "-c", "cluster", \
             "-g", "/proj/gnupg"]
 CMD ["-i", "0", \
-     "-n", "mentor0.jpl.nasa.gov", \
+     "-n", "excalibur.jpl.nasa.gov", \
      "-p", "8081"]

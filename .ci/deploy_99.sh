@@ -14,7 +14,7 @@ then
 import json
 import sys
 try:
-    data = json.loads ('$(curl --connect-timeout 10 --expect100-timeout 10 -XGET https://mentor0.jpl.nasa.gov:8080/app/pl/state)')
+    data = json.loads ('$(curl --connect-timeout 10 --expect100-timeout 10 -XGET https://excalibur.jpl.nasa.gov:8080/app/pl/state)')
     if data['name'] == 'running' and data['status'] == 'active':
         print ('match')
         sys.exit(0)
@@ -28,12 +28,12 @@ EOF
     do
         sleep 600
     done
-    ${PWD}/.ci/update_runids.py -L /proj/sdp/data/logs -l ops.log -m /proj/sdp/ops/front-end/markdown/about.md
+    .ci/update_runids.py -L /proj/sdp/data/logs -l ops.log -m /proj/sdp/ops/front-end/markdown/about.md
     sendmail -f no-reply@esp.jpl.nasa.gov sdp@jpl.nasa.gov<<EOF
 Subject: esp released
 
 At release $(git rev-parse HEAD)
-Updated https://mentor0.jpl.nasa.gov:8080/pages/about.html
+Updated https://excalibur.jpl.nasa.gov:8080/pages/about.html
 
 EOF
 

@@ -25,7 +25,7 @@ class NormSV(dawgie.StateVector):
         '''name ds'''
         return self.__name
 
-    def view(self, visitor:dawgie.Visitor)->None:
+    def view(self, caller:excalibur.identity, visitor:dawgie.Visitor)->None:
         '''view ds'''
         if self['STATUS'][-1]:
             for p in self['data'].keys():
@@ -71,7 +71,7 @@ class WhiteLightSV(dawgie.StateVector):
         '''name ds'''
         return self.__name
 
-    def view(self, visitor:dawgie.Visitor)->None:
+    def view(self, caller:excalibur.identity, visitor:dawgie.Visitor)->None:
         '''view ds'''
         if self['STATUS'][-1]:
             for p in self['data'].keys():
@@ -108,8 +108,8 @@ class WhiteLightSV(dawgie.StateVector):
                     # for each event
                     for i in range(len(self['data'][p])):
                         # plots are saved into sv
-                        visitor.add_image('...', ' ', self['data'][p][i]['plot_btempcurve'])
                         visitor.add_image('...', ' ', self['data'][p][i]['plot_bestfit'])
+                        visitor.add_image('...', ' ', self['data'][p][i]['plot_residual_fft'])
                         visitor.add_image('...', ' ', self['data'][p][i]['plot_posterior'])
                         visitor.add_image('...', ' ', self['data'][p][i]['plot_pixelmap'])
                         # another centroid timeseries plot?
