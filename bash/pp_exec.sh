@@ -16,7 +16,11 @@ then
     exit -1
 fi
 
+myname="${DAWGIE_SSL_PEM_MYNAME:-excalibur.jpl.nasa.gov}"
+myself="${DAWGIE_SSL_PEM_MYSELF:-/proj/data/certs/excalibur_identity.pem}"
 docker exec \
+       -e DAWGIE_SSL_PEM_MYNAME="$myname"\
+       -e DAWGIE_SSL_PEM_MYSELF="$myself" \
        -e DISPLAY=${DISPLAY} \
        -e FE_PORT=${DAWGIE_FE_PORT:-9990} \
        -e RUNID=${RUNID:-17} \
