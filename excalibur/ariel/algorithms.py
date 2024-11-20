@@ -56,6 +56,7 @@ class sim_spectrum(dawgie.Algorithm):
             if valid:
                 runtime = self.__rt.sv_as_dict()['status']
                 runtime_params = arielcore.ARIEL_PARAMS(
+                    tier=1,
                     randomSeed=123,
                     randomCloudProperties=True,
                     thorgrenMassMetals=True,

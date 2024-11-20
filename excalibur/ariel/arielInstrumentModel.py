@@ -11,7 +11,7 @@ import h5py
 from astropy.io.misc.hdf5 import read_table_hdf5
 
 # ---------------------------- ---------------------------------------
-def load_ariel_instrument(target):
+def load_ariel_instrument(target, tier):
     '''
     Load in the output from ArielRad - uncertainty as a function of wavelength
 
@@ -22,7 +22,6 @@ def load_ariel_instrument(target):
      number of observed transits is not taken into account.
     '''
 
-    # noise_model_dir = '/proj/data/ariel/'
     noise_model_dir = excalibur.context['data_dir']+'/ariel/'
 
     # noise_model_filenames = ['arielRad_02aug2023.h5']
@@ -57,21 +56,26 @@ def load_ariel_instrument(target):
                     # print('NOTE: target not in Ariel SNR file; failing to simulate spectrum',target)
                     # log.warning('--< ARIELSIM: target not in SNR file; failing to simulate spectrum  %s >--',target)
                     #  ariel_instrument = None
-                    print('  not in this part:',noise_model_filename)
+                    # print('  not in this part:',noise_model_filename)
+                    pass
                 else:
-                    print('  found it in this part:',noise_model_filename)
-                    noiseSpectrum = read_table_hdf5(arielRad_results['errorbars_evaluated'][target],
-                                                    path='table')
-                    print('noiseSpectrum options',noiseSpectrum.keys())
+                    # print('  found it in this part:',noise_model_filename)
 
                     # use 'SNR' table to determine the required number of transits
                     # SNR is not an hdf5 table.  just access it like a normal dict
                     SNRtable = arielRad_results['SNR']['SNRTab_to_group']
                     # print('SNR options',SNRtable.keys())
 
-                    # use the ** Tier-2 ** number of visits
-                    nTransitsCH0 = SNRtable['AIRS-CH0-T2-nTransits']['value'][()]
-                    nTransitsCH1 = SNRtable['AIRS-CH1-T2-nTransits']['value'][()]
+                    if tier==1:
+                        nTransitsCH0 = SNRtable['AIRS-CH0-T1-nTransits']['value'][()]
+                        nTransitsCH1 = SNRtable['AIRS-CH1-T1-nTransits']['value'][()]
+                    elif tier==3:
+                        nTransitsCH0 = SNRtable['AIRS-CH0-T3-nTransits']['value'][()]
+                        nTransitsCH1 = SNRtable['AIRS-CH1-T3-nTransits']['value'][()]
+                    else:
+                        if tier!=2: log.warning('--< Unknown Ariel Tier!: %s >--',tier)
+                        nTransitsCH0 = SNRtable['AIRS-CH0-T2-nTransits']['value'][()]
+                        nTransitsCH1 = SNRtable['AIRS-CH1-T2-nTransits']['value'][()]
                     planetNames = SNRtable['planetName']['value'][()]
                     planetNames = np.array([name.decode('UTF-8') for name in planetNames])
 
@@ -90,9 +94,12 @@ def load_ariel_instrument(target):
                     else:
                         log.warning('--< ArielRad has non-finite # of visits: %s >--',target)
                         nVisits = 666
-                    log.warning('--< ArielRad sets the # of visits (Tier2): %s %s >--',
-                                str(nVisits),target)
+                    log.warning('--< ArielRad/Tier-%s requires %s visits for %s >--',
+                                str(tier),str(nVisits),target)
 
+                    noiseSpectrum = read_table_hdf5(arielRad_results['errorbars_evaluated'][target],
+                                                    path='table')
+                    # print('noiseSpectrum options',noiseSpectrum.keys())
                     ariel_instrument = {
                         'nVisits':nVisits,
                         'wavelength':noiseSpectrum['Wavelength'].value,

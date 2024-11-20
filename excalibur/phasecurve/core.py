@@ -265,6 +265,9 @@ def phasecurve_spitzer(nrm, fin, out, selftype, fltr):
             out['data'][p][ec]['final_pars'] = copy.deepcopy(myfit.parameters)
             out['data'][p][ec]['final_errs'] = copy.deepcopy(myfit.errors)
 
+            # 11/17/24 also save the MCMC results (for corner plot of the posteriors)
+            out['data'][p][ec]['results'] = myfit.results
+
             # extract plot data for states.py
             def save_plot(plotfn):
                 fig,_ = plotfn()

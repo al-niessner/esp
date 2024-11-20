@@ -11,7 +11,6 @@ from excalibur.ariel.metallicity import \
     massMetalRelation, massMetalRelationDisp, randomCtoO_linear
 from excalibur.ariel.clouds import fixedCloudParameters, randomCloudParameters
 from excalibur.ariel.arielInstrumentModel import load_ariel_instrument
-from excalibur.ariel.arielObservingPlan import make_tier_table
 from excalibur.ariel import forwardModels
 from excalibur.ariel.forwardModels import makeTaurexAtmos, makeCerberusAtmos
 from excalibur.cerberus.core import myxsecs
@@ -26,6 +25,7 @@ import scipy.constants as cst
 
 # does this really go here? CIcheck needs it back in algorithms
 ARIEL_PARAMS = namedtuple('ariel_params_from_runtime',[
+    'tier',
     'randomSeed',
     'randomCloudProperties',
     'thorgrenMassMetals',
@@ -62,9 +62,10 @@ def simulate_spectra(target, system_dict, runtime_params, out):
     # print(runtime_params)
     # print('metallicity dispersion?',runtime_params.includeMetallicityDispersion)
 
-    sscmks = syscore.ssconstants(mks=True)
+    # select Tier-1 or Tier-2 for spectra SNR
+    tier = runtime_params.tier
 
-    observing_plan = make_tier_table()
+    sscmks = syscore.ssconstants(mks=True)
 
     system_params = system_dict['priors']
 
@@ -132,7 +133,7 @@ def simulate_spectra(target, system_dict, runtime_params, out):
 
         # load in the wavelength bins and the noise model
         # there is a separate SNR file for each planet
-        ariel_instrument = load_ariel_instrument(target+' '+planetLetter)
+        ariel_instrument = load_ariel_instrument(target+' '+planetLetter, tier)
 
         if ariel_instrument:
             # asdf : LATER : add in uncertainty scatter to these model parameters
@@ -207,21 +208,9 @@ def simulate_spectra(target, system_dict, runtime_params, out):
 
                 # Load the instrument model and rescale based on #-of-transits
                 uncertainties = ariel_instrument['noise']
-                if target+' '+planetLetter in observing_plan:
-                    visits = observing_plan[target+' '+planetLetter]['number of visits']
-                    tier = observing_plan[target+' '+planetLetter]['tier']
-                else:
-                    # default to a single transit observation, if it's not in the Ariel list
-                    # print(target+' '+planetLetter,'not found in the Ariel observing plan')
-                    errstr = target+' '+planetLetter+' not found in observing plan'
-                    log.warning('--< ARIEL SIM_SPECTRUM: %s >--', errstr)
-                    visits = '1'
-                    tier = '1'
-                # print('# of visits:',visits,'  tier',tier,'  ',target+' '+planetLetter)
                 # use #-of-visits our ArielRad calculation, not from Edwards table
-                log.warning('--< ARIELSIM #-of-visits old-vs-new %s %s %s >--',
-                            visits,ariel_instrument['nVisits'],target+' '+planetLetter)
                 visits = ariel_instrument['nVisits']
+                # print('# of visits:',visits,'  tier',tier,'  ',target+' '+planetLetter)
 
                 uncertainties /= np.sqrt(float(visits))
 
@@ -443,8 +432,8 @@ def simulate_spectra(target, system_dict, runtime_params, out):
 
                     # PLOT THE SPECTRA
                     myfig, ax = plt.subplots(figsize=(8,4))
-                    plt.title('Ariel simulation : '+target+' '+planetLetter+' : Tier-'+str(tier)+' '+str(visits)+' visits',
-                              fontsize=16)
+                    plt.title('Ariel simulation : '+target+' '+planetLetter+
+                              ' : Tier-'+str(tier)+' '+str(visits)+' visits', fontsize=16)
                     plt.xlabel(str('Wavelength [$\\mu m$]'), fontsize=14)
                     plt.ylabel(str('$(R_p/R_*)^2$ [%]'), fontsize=14)
 

@@ -235,41 +235,47 @@ def autofill(ident, thistarget, out, allowed_filters, searchrad=0.2, ntrymax=4):
                    'pagesize':250000,  # this seems to help HD 209458 (~221K obs)
                    'removenullcolumns':True,
                    'removecache':True}
-        _h, outstr = masttool.mast_query(request)
-        outjson = json.loads(outstr)
-        # 3 - activefilters filtering on TELESCOPE INSTRUMENT FILTER
         targettable = []
         platformlist = []
-        if 'data' not in outjson: outjson['data'] = []  # special case for TOI-1338
-        log.warning('--< TARGET AUTOFILL: %s  #-of-obs %s >--', thistarget, len(outjson['data']))
-        for obs in outjson['data']:
-            for f in allowed_filters:
-                if obs['obs_collection'] is not None:
-                    pfcond = f.split('-')[0].upper() in obs['obs_collection']
-                else: pfcond = False
-                if obs['instrument_name'] is not None:
-                    nscond = f.split('-')[1] in obs['instrument_name']
-                else:
-                    nscond = False
-                if f.split('-')[1]=='sim':  # skip any simulated instruments
-                    flcond = False
-                elif (f.split('-')[0] not in ['Spitzer']) and (obs['filters'] is not None):
-                    flcond = f.split('-')[3] in obs['filters']
-                else:
-                    sptzfl = None
-                    if f.split('-')[3] in ['36']: sptzfl = 'IRAC1'
-                    if f.split('-')[3] in ['45']: sptzfl = 'IRAC2'
-                    if obs['filters'] is not None: flcond = sptzfl in obs['filters']
-                    else: flcond = False
-                if pfcond and nscond and flcond:
-                    targettable.append(obs)
-                    platformlist.append(obs['obs_collection'])
+
+        _h, outstr = mastpoke(request)
+        if outstr:
+            outjson = json.loads(outstr)  # this line fails sometimes without maskpoke loop
+
+            # 3 - activefilters filtering on TELESCOPE INSTRUMENT FILTER
+            if 'data' not in outjson: outjson['data'] = []  # special case for TOI-1338
+            log.warning('--< TARGET AUTOFILL: %s  #-of-obs %s >--', thistarget, len(outjson['data']))
+            for obs in outjson['data']:
+                for f in allowed_filters:
+                    if obs['obs_collection'] is not None:
+                        pfcond = f.split('-')[0].upper() in obs['obs_collection']
+                    else: pfcond = False
+                    if obs['instrument_name'] is not None:
+                        nscond = f.split('-')[1] in obs['instrument_name']
+                    else:
+                        nscond = False
+                    if f.split('-')[1]=='sim':  # skip any simulated instruments
+                        flcond = False
+                    elif (f.split('-')[0] not in ['Spitzer']) and (obs['filters'] is not None):
+                        flcond = f.split('-')[3] in obs['filters']
+                    else:
+                        sptzfl = None
+                        if f.split('-')[3] in ['36']: sptzfl = 'IRAC1'
+                        if f.split('-')[3] in ['45']: sptzfl = 'IRAC2'
+                        if obs['filters'] is not None: flcond = sptzfl in obs['filters']
+                        else: flcond = False
+                    if pfcond and nscond and flcond:
+                        targettable.append(obs)
+                        platformlist.append(obs['obs_collection'])
+                    pass
                 pass
-            pass
-        log.warning('--< TARGET AUTOFILL: %s  in targettable %s >--',thistarget, len(targettable))
+            log.warning('--< TARGET AUTOFILL: %s  in targettable %s >--',thistarget, len(targettable))
+        else:
+            log.warning('--< TARGET AUTOFILL: MAST FAIL (despite mastpoke) %s >--',thistarget)
         if not targettable: solved = False
         # Note: If we use data that are not known by MAST but are on disk
         # this will also return False
+
         # 4 - pid filtering
         pidlist = []
         aliaslist = []
