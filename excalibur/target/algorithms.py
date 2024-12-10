@@ -221,8 +221,8 @@ class scrape(dawgie.Algorithm):
         if not os.path.exists(dbs): os.makedirs(dbs)
 
         # Download from MAST
-        umast = trgcore.mastapi(tfl, out, dbs,
-                                download_url=durl, hst_url=hsturl, verbose=False)
+        umast = trgcore.mastapi(tfl, out, dbs, download_url=durl, hst_url=hsturl,
+                                verbose=False)
 
         # Data on DISK
         # udisk gets prioritized over umast for duplicates

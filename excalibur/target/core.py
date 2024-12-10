@@ -237,14 +237,16 @@ def autofill(ident, thistarget, out, allowed_filters, searchrad=0.2, ntrymax=4):
                    'removecache':True}
         targettable = []
         platformlist = []
-
-        _h, outstr = mastpoke(request)
+        # GMR: mastpoke returns outstr only
+        # errors (formerly _h) are logged and handled inside mastpoke
+        outstr = mastpoke(request)
         if outstr:
-            outjson = json.loads(outstr)  # this line fails sometimes without maskpoke loop
+            outjson = json.loads(outstr)  # this line fails without maskpoke loop
 
             # 3 - activefilters filtering on TELESCOPE INSTRUMENT FILTER
             if 'data' not in outjson: outjson['data'] = []  # special case for TOI-1338
-            log.warning('--< TARGET AUTOFILL: %s  #-of-obs %s >--', thistarget, len(outjson['data']))
+            log.warning('--< TARGET AUTOFILL: %s  #-of-obs %s >--',
+                        thistarget, len(outjson['data']))
             for obs in outjson['data']:
                 for f in allowed_filters:
                     if obs['obs_collection'] is not None:
@@ -269,9 +271,13 @@ def autofill(ident, thistarget, out, allowed_filters, searchrad=0.2, ntrymax=4):
                         platformlist.append(obs['obs_collection'])
                     pass
                 pass
-            log.warning('--< TARGET AUTOFILL: %s  in targettable %s >--',thistarget, len(targettable))
+            log.warning('--< TARGET AUTOFILL: %s  in targettable %s >--',
+                        thistarget, len(targettable))
+            pass
         else:
-            log.warning('--< TARGET AUTOFILL: MAST FAIL (despite mastpoke) %s >--',thistarget)
+            log.warning('--< TARGET AUTOFILL: MAST FAIL (despite mastpoke) %s >--',
+                        thistarget)
+            pass
         if not targettable: solved = False
         # Note: If we use data that are not known by MAST but are on disk
         # this will also return False
@@ -738,11 +744,12 @@ def mastapi(tfl, out, dbs, download_url=None, hst_url=None, verbose=False):
     target = list(tfl['starID'].keys())[0]
     obstable = tfl['starID'][target]['datatable']
     obsids = [o['obsid'] for o in obstable]
-    obsids = set(obsids)  # obsids are generally repeated many times. this will save lots of time
-
+    obsids = set(obsids)
+    # obsids are generally repeated many times. this will save lots of time
     allsci = []
     allurl = []
     allmiss = []
+    allraw = []
     for o in obsids:
         donmast = False
         request = {'service':'Mast.Caom.Products', 'params':{'obsid':o}, 'format':'json'}
@@ -779,10 +786,27 @@ def mastapi(tfl, out, dbs, download_url=None, hst_url=None, verbose=False):
                        (x.get("dataRights", None) == 'PUBLIC') and
                        (x.get("calib_level", None) == clblvl) and
                        (x.get("productSubGroupDescription", None) == dtlvl)]
-            allsci.extend(scidata)
-            allmiss.extend([obscol]*len(scidata))
-            allurl.extend([thisurl]*len(scidata))
-            if verbose: log.warning('%s: %s', o, len(scidata))
+            # Associated L1b JWST data (UNCAL)
+            if 'JWST' in obscol and scidata:
+                sciids = [x.get('obsID', None) for x in scidata]
+                rawdata = [x for x in data['data'] if
+                           (x.get("productType", None) == 'SCIENCE') and
+                           (x.get("dataRights", None) == 'PUBLIC') and
+                           (x.get("calib_level", None) == 1) and
+                           (x.get("productSubGroupDescription", None) == 'UNCAL') and
+                           (x.get('obsID') in sciids)]
+                allraw.extend(rawdata)
+                # --<
+                # !!! TEMPORARY !!!
+                allsci.extend(scidata)
+                allmiss.extend([obscol]*len(scidata))
+                allurl.extend([thisurl]*len(scidata))
+                pass
+            # allsci.extend(scidata)
+            # allmiss.extend([obscol]*len(scidata))
+            # allurl.extend([thisurl]*len(scidata))
+            # >--
+            if verbose: log.warning('%s: %s: %s', obscol, o, len(scidata))
             pass
         else:
             log.warning('>-- TROUBLE reading the data file. donmast = %s', donmast)
@@ -822,15 +846,25 @@ def mastapi(tfl, out, dbs, download_url=None, hst_url=None, verbose=False):
                                  fileout,
                                  ""])
             subprocess.run(shellcom, shell=True, check=False)
+            pass
         # JWST
         elif allmiss[irow] in ['JWST']:
             payload = {"uri":row['dataURI']}
             resp = requests.get(allurl[irow], params=payload)
             fileout = os.path.join(tempdir, os.path.basename(row['productFilename']))
             with open(fileout,'wb') as flt: flt.write(resp.content)
+            pass
         # SPITZER DO NOTHING FOR NOW DL IS TOO LONG
         else: pass
         if verbose: log.warning('>-- %s %s', os.path.getsize(fileout), fileout)
+        pass
+    if allraw:
+        for irow, row in enumerate(allraw):
+            payload = {"uri":row['dataURI']}
+            resp = requests.get(allurl[irow], params=payload)
+            fileout = os.path.join(tempdir, os.path.basename(row['productFilename']))
+            with open(fileout,'wb') as flt: flt.write(resp.content)
+            pass
         pass
     locations = [tempdir]
     new = dbscp(target, locations, dbs, out)
@@ -968,10 +1002,11 @@ def dbscp(target, locations, dbs, out, verbose=False):
             if not onmast:
                 shutil.copyfile(fitsfile, mastout)
                 os.chmod(mastout, int('0664', 8))
+                pass
             pass
         copied = True
-    else:
-        copied = False
+        pass
+    else: copied = False
     out['STATUS'].append(copied)
     return copied
 # -------------- -----------------------------------------------------

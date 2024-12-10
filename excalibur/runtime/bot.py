@@ -19,5 +19,7 @@ class TaskTeam(dawgie.Task):
         self.__tn = this_tn
     def list(self)->[dawgie.Task]:
         '''list of tasks to perform'''
-        return [algorithms.autofill(table=self.__table, tn=self.__tn)]
+        return [
+            algorithms.autofill(table=self.__table, tn=self.__tn)
+        ]
     pass
