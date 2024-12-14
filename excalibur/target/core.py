@@ -753,7 +753,7 @@ def mastapi(tfl, out, dbs, download_url=None, hst_url=None, verbose=False):
     for o in obsids:
         donmast = False
         request = {'service':'Mast.Caom.Products', 'params':{'obsid':o}, 'format':'json'}
-        _h, datastr = masttool.mast_query(request)
+        errmastq, datastr = masttool.mast_query(request)
         data = json.loads(datastr)
         if data['data']: donmast = True
         dtlvl = None
@@ -808,8 +808,7 @@ def mastapi(tfl, out, dbs, download_url=None, hst_url=None, verbose=False):
             # >--
             if verbose: log.warning('%s: %s: %s', obscol, o, len(scidata))
             pass
-        else:
-            log.warning('>-- TROUBLE reading the data file. donmast = %s', donmast)
+        else: log.warning('>-- No data in MAST query %s', errmastq)
         pass
     tempdir = tempfile.mkdtemp(dir=dawgie.context.data_stg,
                                prefix=target.replace(' ', '')+'_')
@@ -819,26 +818,28 @@ def mastapi(tfl, out, dbs, download_url=None, hst_url=None, verbose=False):
         if allmiss[irow] in ['HST']:
             thisobsid = row['productFilename'].split('_')[-2]
             # 6/13/24 note that GJ 1132 STIS is sometimes having trouble here
-            # the MAST downloaded file is ldlm01m0q_flt.fits but it's coming up as a ima.fits maybe?
+            # the MAST downloaded file is ldlm01m0q_flt.fits but
+            # it's coming up as a ima.fits maybe?
             if row['project'] in ['CALSTIS']:
                 thisobsid = thisobsid.upper()+'%2F'+thisobsid+'_flt.fits'
             else:
                 # want ida504e9 --> IDA504E9Q%2Fida504e9q_ima.fits
                 # and ida504e9q --> IDA504E9QQ%2Fida504e9q_ima.fits
-                # (currently the second one gets a double 'qq' toward the end, which fails)
-
+                # (currently the second one gets a double 'qq' toward the end,
+                # which fails)
                 # special case for K2-3 and others with a couple weird 's' files
                 if len(thisobsid)==9 and thisobsid.endswith('s'):
                     thisobsid = thisobsid[:-1].upper()+'QQ%2F'+thisobsid+'_ima.fits'
                 # remove the second double-q (the lower-case one)
-                elif len(thisobsid)==9 and thisobsid.endswith('q') and not thisobsid.startswith('ldl'):
+                elif (len(thisobsid)==9 and
+                      thisobsid.endswith('q') and not
+                      thisobsid.startswith('ldl')):
                     thisobsid = thisobsid.upper()+'Q%2F'+thisobsid+'_ima.fits'
                     # thisobsid = thisobsid.replace('qq_ima','q_ima')
                 # special case for K2-3 and others with a couple weird 's' files
                 elif thisobsid+'s' in thisobsids:
                     thisobsid = thisobsid.upper()+'Q%2F'+thisobsid+'s_ima.fits'
-                else:
-                    thisobsid = thisobsid.upper()+'Q%2F'+thisobsid+'q_ima.fits'
+                else: thisobsid = thisobsid.upper()+'Q%2F'+thisobsid+'q_ima.fits'
             fileout = os.path.join(tempdir, os.path.basename(thisobsid))
             shellcom = "'".join(["curl -s -L -X GET ",
                                  allurl[irow]+"product_name="+thisobsid,
@@ -876,6 +877,12 @@ def disk(selfstart, out, diskloc, dbs):
     '''Query on disk data'''
     merge = False
     targetID = list(selfstart['starID'].keys())
+
+    # This was originally designed because we wanted to ingest data from X or Y
+    # that had crazy directory names.
+    # Ditch it?
+    # Will require standardized directory names, no Kepler but KEPLER
+    # <--
     targets = trgedit.targetondisk.__doc__
     targets = targets.split('\n')
     targets = [t.strip() for t in targets if t.replace(' ', '')]
@@ -890,14 +897,25 @@ def disk(selfstart, out, diskloc, dbs):
             locations = [os.path.join(diskloc, fold) for fold in folders]
             pass
         pass
-
     if locations is None:
         log.warning('ADD data subdirectory name to list in target/edit.py!!')
+        pass
+    # -->
+
+    lookforme = targetID[0]
+    # Maybe get rid of this it may work with the original name
+    # <--
+    lookforme = lookforme.replace(' ', '')
+    lookforme = lookforme.replace('-', '')
+    lookforme = lookforme.upper()
+    # -->
+    stdlocations = [os.path.join(diskloc, lookforme)]
+    if locations is None: locations = stdlocations
 
     # make sure that the data storage directory exists for this star
     for loc in locations:
         if not os.path.exists(loc): os.makedirs(loc)
-
+        pass
     if locations is not None: merge = dbscp('on disk', locations, dbs, out)
     return merge
 # ---------- ---------------------------------------------------------
@@ -923,11 +941,15 @@ def dbscp(target, locations, dbs, out, verbose=False):
         try:
             pyfits.open(fitsfile)
             okfiles.append(True)
+            pass
         except OSError:
-            # print('Failed file read:',fitsfile)
+            log.warning('--< !!! Failed to read: %s ', fitsfile)
             okfiles.append(False)
             Nfails += 1
-    log.warning('--< %s: %i out of %i MAST files are unreadable >--',target,Nfails,len(imalist))
+            pass
+        pass
+    log.warning('--< %s: %i out of %i MAST files are unreadable >--',
+                target, Nfails, len(imalist))
 
     if Nfails==0:
         for fitsfile in imalist:
