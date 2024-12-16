@@ -328,12 +328,12 @@ def timing(force, ext, clc, out, verbose=False):
                     # (ephase < (e-1) + (offset+2*pdur))  # eclipse at prior orbit
                     # tmask2 = (tphase > (e+1) + (offset-2*pdur)) &
                     # (tphase < (e+1) + (offset+2*pdur) )  # transit at next orbit
-                    if tmask.sum() > min_images:
-                        out['data'][p]['transit'].append(e)
-                    if emask.sum() > min_images:
-                        out['data'][p]['eclipse'].append(e)
+                    if tmask.sum() > min_images: out['data'][p]['transit'].append(e)
+                    if emask.sum() > min_images: out['data'][p]['eclipse'].append(e)
                     if ((tmask.sum() > min_images) and (emask.sum() > min_images) and (mmask.sum() > min_images)):
                         out['data'][p]['phasecurve'].append(e)
+                        pass
+                    pass
                 visto = np.floor(tphase)
                 out['STATUS'].append(True)
                 pass
@@ -549,12 +549,8 @@ def jwstcal(fin, clc, tim, ext, out, ps=None, verbose=False, debug=False):
                     allunits.extend([hdu.header['BUNIT']]*len(hdu.data))
                     pass
                 # <-- L2b data only
-                elif 'ERR' in hdu.name:
-                    allerr.extend(hdu.data)
-                    pass
-                elif 'DQ' in hdu.name:
-                    alldq.extend(hdu.data)
-                    pass
+                elif 'ERR' in hdu.name: allerr.extend(hdu.data)
+                elif 'DQ' in hdu.name: alldq.extend(hdu.data)
                 elif ('WAVELENGTH' in hdu.name) and nints:
                     allwaves.extend(nints*[hdu.data])
                     pass

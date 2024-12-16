@@ -188,7 +188,8 @@ class scrape(dawgie.Algorithm):
     def previous(self):
         '''Input State Vectors: target.autofill'''
         return [dawgie.ALG_REF(trg.task, self.__autofill),
-                dawgie.V_REF(rtime.task, self.__rt, self.__rt.sv_as_dict()['status'],'isValidTarget')]
+                dawgie.V_REF(rtime.task, self.__rt, self.__rt.sv_as_dict()['status'],
+                             'isValidTarget')]
 
     def state_vectors(self):
         '''Output State Vectors: target.scrape'''

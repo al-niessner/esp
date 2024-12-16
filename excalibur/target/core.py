@@ -797,14 +797,15 @@ def mastapi(tfl, out, dbs, download_url=None, hst_url=None, verbose=False):
                            (x.get('obsID') in sciids)]
                 allraw.extend(rawdata)
                 # --<
-                # !!! TEMPORARY !!!
-                # allsci.extend(scidata)
-                # allmiss.extend([obscol]*len(scidata))
-                # allurl.extend([thisurl]*len(scidata))
+                # Downloads JWST data only
+                allsci.extend(scidata)
+                allmiss.extend([obscol]*len(scidata))
+                allurl.extend([thisurl]*len(scidata))
                 pass
-            allsci.extend(scidata)
-            allmiss.extend([obscol]*len(scidata))
-            allurl.extend([thisurl]*len(scidata))
+            # Downloads all missions
+            # allsci.extend(scidata)
+            # allmiss.extend([obscol]*len(scidata))
+            # allurl.extend([thisurl]*len(scidata))
             # >--
             if verbose: log.warning('%s: %s: %s', obscol, o, len(scidata))
             pass
@@ -813,6 +814,7 @@ def mastapi(tfl, out, dbs, download_url=None, hst_url=None, verbose=False):
     tempdir = tempfile.mkdtemp(dir=dawgie.context.data_stg,
                                prefix=target.replace(' ', '')+'_')
     thisobsids = [row['productFilename'].split('_')[-2] for row in allsci]
+
     for irow, row in enumerate(allsci):
         # HST: mast api hack
         if allmiss[irow] in ['HST']:
