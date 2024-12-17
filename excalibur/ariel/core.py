@@ -11,8 +11,7 @@ from excalibur.ariel.metallicity import \
     massMetalRelation, massMetalRelationDisp, randomCtoO_linear
 from excalibur.ariel.clouds import fixedCloudParameters, randomCloudParameters
 from excalibur.ariel.arielInstrumentModel import load_ariel_instrument
-from excalibur.ariel import forwardModels
-from excalibur.ariel.forwardModels import makeTaurexAtmos, makeCerberusAtmos
+from excalibur.ariel.forwardModels import makeCerberusAtmos
 from excalibur.cerberus.core import myxsecs
 
 import os
@@ -30,10 +29,6 @@ ARIEL_PARAMS = namedtuple('ariel_params_from_runtime',[
     'randomCloudProperties',
     'thorgrenMassMetals',
     'includeMetallicityDispersion'])
-
-def init():
-    '''make sure libraries are initialized'''
-    forwardModels.init()
 
 # ---------------------------- ---------------------------------------
 # -- SV VALIDITY -- --------------------------------------------------
@@ -54,7 +49,7 @@ def simulate_spectra(target, system_dict, runtime_params, out):
     '''
     Simulate Ariel spectra, adding noise based on the Ariel instrument model
     Mulitple spectra are now calculated, allowing a choice within cerberus.atmos fitting
-    1) both Taurex and Cerberus atmosphere models
+    1) only Cerberus atmosphere models now; Taurex option removed Dec.2024
     2) with or without clouds
     3) two models for metallicity/mmw (mmw=2.3 or FINESSE mass-metallicity relation)
     4) TEC vs DISEQ models [NOT IMPLEMENTED YET!]
@@ -76,30 +71,7 @@ def simulate_spectra(target, system_dict, runtime_params, out):
     # specify which models should be calculated (use these as keys within data)
     atmosModels = ['cerberus', 'cerberusNoclouds',
                    'cerberuslowmmw', 'cerberuslowmmwNoclouds']
-    # atmosModels = ['cerberus']
-    # atmosModels = ['cerberus', 'cerberusNoclouds']
-    #  these 8 models were calculated in 2023 runs; less models used in 2024
-    # atmosModels = ['cerberus', 'cerberusNoclouds',
-    #               'cerberuslowmmw', 'cerberuslowmmwNoclouds',
-    #               'taurex', 'taurexNoclouds',
-    #               'taurexlowmmw', 'taurexlowmmwNoclouds']
-    # atmosModels = ['taurexNoclouds']
-    # atmosModels = ['taurex', 'taurexNoclouds',
-    #               'taurexlowmmw', 'taurexlowmmwNoclouds']
-    # atmosModels = ['cerberusNoclouds']
-    # atmosModels = ['cerberusNoclouds','taurexNoclouds']
-    # atmosModels = ['cerberusNoclouds','cerberus',
-    #               'cerberuslowmmw', 'cerberuslowmmwNoclouds']
-    # atmosModels = ['cerberusNoclouds', 'taurexNoclouds', 'cerberus']
-    # atmosModels = ['cerberuslowmmw']
-    # atmosModels = ['cerberuslowmmwNoclouds']
-    # atmosModels = ['cerberusNoclouds',
-    #               'cerberusNocloudsR1000',
-    #               'cerberusNocloudsR3000',
-    #               'cerberusNocloudsR6000',
-    #               'cerberusNocloudsR10000']
-    #               'cerberusNocloudsR10000',
-    #               'cerberusNocloudsR15000']
+
     out['data']['models'] = atmosModels
     # save target,planet names, for plotting (in states.py)
     out['data']['target'] = target
@@ -311,15 +283,7 @@ def simulate_spectra(target, system_dict, runtime_params, out):
                         fluxDepth_by_molecule = cerbModel_by_molecule
 
                     elif 'taurex' in atmosModel:
-                        if 'Noclouds' in atmosModel:
-                            taurexModel = makeTaurexAtmos(model_params, clouds=False)
-                        else:
-                            taurexModel = makeTaurexAtmos(model_params)
-
-                        wn,fluxDepth = taurexModel[:2]
-                        fluxDepth_by_molecule = {}
-                        wavelength_um = 1e4 / wn
-
+                        sys.exit('ERROR: taurex no longer an option')
                     else:
                         sys.exit('ERROR: unknown model')
 
@@ -458,16 +422,12 @@ def simulate_spectra(target, system_dict, runtime_params, out):
                                  lw=1, zorder=2, label=molecule)
                     yrange = plt.ylim()
                     # plot the simulated data points
-                    #  maybe leave off the simulated points?
-                    #  it's too messy when plotting by molecule
-                    # but keep it for taurex, which isn't broken down by molecule
-                    if 'taurex' in atmosModel:
-                        plt.scatter(wavelength_um_rebin, fluxDepth_observed,
-                                    marker='o',s=20, color='None',edgecolor='k',
-                                    zorder=4, label='simulated data')
-                        plt.errorbar(wavelength_um_rebin, fluxDepth_observed,
-                                     yerr=uncertainties_percent,
-                                     linestyle='None',lw=0.2, color='grey', zorder=2)
+                    plt.scatter(wavelength_um_rebin, fluxDepth_observed,
+                                marker='o',s=20, color='None',edgecolor='k',
+                                zorder=4, label='simulated data')
+                    plt.errorbar(wavelength_um_rebin, fluxDepth_observed,
+                                 yerr=uncertainties_percent,
+                                 linestyle='None',lw=0.2, color='grey', zorder=2)
                     plt.ylim(yrange)
                     plt.xlim(0.,8.)
                     plt.legend(loc='center left', bbox_to_anchor=(1.15, 0.48))

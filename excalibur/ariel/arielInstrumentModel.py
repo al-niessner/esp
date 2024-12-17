@@ -76,24 +76,25 @@ def load_ariel_instrument(target, tier):
                         if tier!=2: log.warning('--< Unknown Ariel Tier!: %s >--',tier)
                         nTransitsCH0 = SNRtable['AIRS-CH0-T2-nTransits']['value'][()]
                         nTransitsCH1 = SNRtable['AIRS-CH1-T2-nTransits']['value'][()]
+                    T14 = SNRtable['T14']['value'][()]
                     planetNames = SNRtable['planetName']['value'][()]
                     planetNames = np.array([name.decode('UTF-8') for name in planetNames])
 
                     thisplanetIndex = np.where(target==planetNames)
+                    nVisits = 666
+                    transitDuration = 6666
                     if len(thisplanetIndex)==0:
                         log.warning('--< ArielRad #-of-visits missing: %s >--',target)
-                        nVisits = 666
                     elif len(thisplanetIndex)>1:
                         log.warning('--< ArielRad has multiple target matches?!: %s >--',target)
-                        nVisits = 666
                     elif np.isfinite(nTransitsCH0[thisplanetIndex]) and \
                          np.isfinite(nTransitsCH1[thisplanetIndex]):
                         nVisits = np.min([nTransitsCH0[thisplanetIndex],
                                           nTransitsCH1[thisplanetIndex]])
                         nVisits = int(np.ceil(nVisits))
+                        transitDuration = T14[thisplanetIndex][0]
                     else:
                         log.warning('--< ArielRad has non-finite # of visits: %s >--',target)
-                        nVisits = 666
                     log.warning('--< ArielRad/Tier-%s requires %s visits for %s >--',
                                 str(tier),str(nVisits),target)
 
@@ -102,6 +103,7 @@ def load_ariel_instrument(target, tier):
                     # print('noiseSpectrum options',noiseSpectrum.keys())
                     ariel_instrument = {
                         'nVisits':nVisits,
+                        'transitDuration':transitDuration,
                         'wavelength':noiseSpectrum['Wavelength'].value,
                         'wavelow':noiseSpectrum['LeftBinEdge'].value,
                         'wavehigh':noiseSpectrum['RightBinEdge'].value,

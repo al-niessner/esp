@@ -1457,10 +1457,12 @@ TOI-6008 :
 TOI-5799 :
 TOI-2120 :
 TOI-782 :
+TOI-260 :
     '''
 # these two JWST targets are not yet listed in the Exoplanet Archive composite table:
-# GJ 341 : HIP 45908
-# GJ 1008 : HIP 1532  (TOI-260)
+# GJ 341 : HIP 45908  (12/16/24 still listed as a candidate planet)
+# GJ 1008 : HIP 1532  (12/16/24 OK this one is there now, as TOI-260)
+
     return
 # ----------------- --------------------------------------------------
 # -- TARGET ON DISK -- -----------------------------------------------
@@ -2853,6 +2855,7 @@ TOI-6008 : TOI6008
 TOI-5799 : TOI5799
 TOI-2120 : TOI2120
 TOI-782 : TOI782
+TOI-260 : TOI260
     '''
     return
 # -------------------- -----------------------------------------------

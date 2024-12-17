@@ -463,25 +463,13 @@ def atmos(fin, xsl, spc, runtime_params, out, ext,
         modfam = ['TEC']  # Ariel sims are currently only TEC equilibrium models
         # modparlbl = {'TEC':['XtoH', 'CtoO']}
         modparlbl = {'TEC':['XtoH', 'CtoO', 'NtoO']}
-        # ** select which Ariel model to fit.  there are 8 options **
-        # atmosModels = ['cerberus', 'cerberusNoclouds',
-        #               'cerberuslowmmw', 'cerberuslowmmwNoclouds',
-        #               'taurex', 'taurexNoclouds',
-        #               'taurexlowmmw', 'taurexlowmmwNoclouds']
-        arielModel = 'cerberusNoclouds'
-        # arielModel = 'cerberus'
-        # arielModel = 'taurex'
 
-        # if the ariel sim doesn't have clouds, then don't fit the clouds
-        # fitCloudParameters = 'Noclouds' not in arielModel
-        #  OR
-        # don't fit the 4 cloud parameters, even if the model has clouds
-        # fitCloudParameters = False
-        #  OR
-        # do fit the 4 cloud parameters, even if the model doesn't have cloud
-        # fitCloudParameters = True
-        #
-        # print('fitCloudParameters for retrieved model:',runtime_params.fitCloudParameters)
+        # ** select which Ariel model to fit **
+        #   previously (with taurex) there were 8 options. now 4 options:
+        # atmosModels = ['cerberus', 'cerberusNoclouds',
+        #                'cerberuslowmmw', 'cerberuslowmmwNoclouds']
+        # arielModel = 'cerberusNoclouds'
+        arielModel = 'cerberus'
 
         # option to fix N/O
         if not runtime_params.fitNtoO:

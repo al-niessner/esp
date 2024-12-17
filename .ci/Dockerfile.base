@@ -30,11 +30,13 @@ RUN set -ex && \
 			  astroquery==0.4.6 \
                           dawgie==1.4.4 \
                           dynesty==1.2.2 \
+			  h5py \
                           importlib_metadata==4.11.3 \
                           joblib==1.1.0 \
                           ldtk==1.7.0 \
                           lmfit==1.0.3 \
 			  numba==0.56.4 \
+			  numexpr \
 			  numpy==1.21.6 \
                           photutils==1.4.0 \
                           'pillow>=7.0.0' \
@@ -47,8 +49,6 @@ RUN set -ex && \
                           scikit-learn==1.1.0 \
                           service_identity \
 			  setuptools==70.3.0 \
-                          taurex_ace \
-                          taurex \
 			  torchvision \
 			  'xarray<2023.6.0' \
                           ultranest && \

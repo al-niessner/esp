@@ -49,7 +49,6 @@ class sim_spectrum(dawgie.Algorithm):
 
         else:
             update = False
-            arielcore.init()
 
             system_dict = self.__system_finalize.sv_as_dict()['parameters']
             valid, errstring = arielcore.checksv(system_dict)

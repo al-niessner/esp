@@ -688,7 +688,7 @@ def targetlist_active():
         'WASP-129',
         'WASP-144',
         'Kepler-51',
-        'WD 1856',
+        'WD 1856+534',
         'GJ 4102',
         'HD 80606',
         'GJ 4332',
@@ -902,7 +902,6 @@ def targetlist_active():
         'CoRoT-8',
         'CoRoT-9',
         'CoRoTID 223977153',
-        'EPIC 205950854',
         'EPIC 212297394',
         'EPIC 220674823',
         'EPIC 229004835',
@@ -1441,6 +1440,7 @@ def targetlist_active():
         'LHS 475',
         'TOI-2120',
         'TOI-782',
+        'TOI-260',
     ]
     return targets
 # --------------------------------------------------------------------
@@ -1626,6 +1626,8 @@ def targetlist_G141():
         'TOI-178',   # new Oct.2024
         'TOI-2109',  # new Oct.2024
         'TOI-700',   # new Oct.2024
+        'TOI-199',     # new Dec.2024
+        'Kepler-682',  # new Dec.2024
     ]
 
     return targets
@@ -1689,6 +1691,13 @@ def targetlist_JWST():
         'WASP-94',    # added oct.2024
         'WASP-96',
         'GJ 3090',    # added nov.2024
+        'GJ 1132',      # added Dec.2024
+        'TOI-178',      # added Dec.2024
+        'TOI-421',      # added Dec.2024
+        'HATS-75',      # added Dec.2024
+        'TOI-3757',     # added Dec.2024
+        'TOI-5205',     # added Dec.2024
+        'WD 1856+534',  # added Dec.2024
     ]
 
     return targets
