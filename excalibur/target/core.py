@@ -838,10 +838,14 @@ def mastapi(tfl, out, dbs, download_url=None, hst_url=None, verbose=False):
                       thisobsid.startswith('ldl')):
                     thisobsid = thisobsid.upper()+'Q%2F'+thisobsid+'_ima.fits'
                     # thisobsid = thisobsid.replace('qq_ima','q_ima')
+                    pass
                 # special case for K2-3 and others with a couple weird 's' files
                 elif thisobsid+'s' in thisobsids:
                     thisobsid = thisobsid.upper()+'Q%2F'+thisobsid+'s_ima.fits'
-                else: thisobsid = thisobsid.upper()+'Q%2F'+thisobsid+'q_ima.fits'
+                    pass
+                else:
+                    thisobsid = thisobsid.upper()+'Q%2F'+thisobsid+'q_ima.fits'
+                    pass
             fileout = os.path.join(tempdir, os.path.basename(thisobsid))
             shellcom = "'".join(["curl -s -L -X GET ",
                                  allurl[irow]+"product_name="+thisobsid,
@@ -855,7 +859,9 @@ def mastapi(tfl, out, dbs, download_url=None, hst_url=None, verbose=False):
             payload = {"uri":row['dataURI']}
             resp = requests.get(allurl[irow], params=payload)
             fileout = os.path.join(tempdir, os.path.basename(row['productFilename']))
-            with open(fileout,'wb') as flt: flt.write(resp.content)
+            with open(fileout,'wb') as flt:
+                flt.write(resp.content)
+                pass
             pass
         # SPITZER DO NOTHING FOR NOW DL IS TOO LONG
         else: pass
@@ -871,7 +877,11 @@ def mastapi(tfl, out, dbs, download_url=None, hst_url=None, verbose=False):
         pass
     locations = [tempdir]
     new = dbscp(target, locations, dbs, out)
-    shutil.rmtree(tempdir, True)
+    # Delete local copy /proj/sdp/data/stg
+    # Disabling for now I wanna know what s happening there
+    # --<
+    # shutil.rmtree(tempdir, True)
+    # >--
     return new
 # ---------- ---------------------------------------------------------
 # -- DISK -- ---------------------------------------------------------
@@ -884,7 +894,7 @@ def disk(selfstart, out, diskloc, dbs):
     # that had crazy directory names.
     # Ditch it?
     # Will require standardized directory names, no Kepler but KEPLER
-    # <--
+    # --<
     targets = trgedit.targetondisk.__doc__
     targets = targets.split('\n')
     targets = [t.strip() for t in targets if t.replace(' ', '')]
@@ -902,23 +912,27 @@ def disk(selfstart, out, diskloc, dbs):
     if locations is None:
         log.warning('ADD data subdirectory name to list in target/edit.py!!')
         pass
-    # -->
-
+    # >--
     lookforme = targetID[0]
     # Maybe get rid of this it may work with the original name
-    # <--
+    # --<
     lookforme = lookforme.replace(' ', '')
     lookforme = lookforme.replace('-', '')
     lookforme = lookforme.upper()
-    # -->
+    # >--
     stdlocations = [os.path.join(diskloc, lookforme)]
-    if locations is None: locations = stdlocations
-
+    if locations is None:
+        locations = stdlocations
+        pass
     # make sure that the data storage directory exists for this star
     for loc in locations:
-        if not os.path.exists(loc): os.makedirs(loc)
+        if not os.path.exists(loc):
+            os.makedirs(loc)
+            pass
         pass
-    if locations is not None: merge = dbscp('on disk', locations, dbs, out)
+    if locations is not None:
+        merge = dbscp('on disk', locations, dbs, out, verbose=False)
+        pass
     return merge
 # ---------- ---------------------------------------------------------
 # -- DBS COPY -- -----------------------------------------------------
@@ -1012,13 +1026,15 @@ def dbscp(target, locations, dbs, out, verbose=False):
                     else: filedict['mode'] = mainheader.get('GRATING', '')
                     key = mainheader.get("FILENAME").split('.')[0]
                     out['name'][key] = filedict
-                    if verbose: log.warning('--< %s: %s %s %s %s %s',
-                                            key,
-                                            filedict['observatory'],
-                                            filedict['instrument'],
-                                            filedict['detector'],
-                                            filedict['filter'],
-                                            filedict['mode'])
+                    if verbose:
+                        log.warning('--< %s: %s %s %s %s %s',
+                                    key,
+                                    filedict['observatory'],
+                                    filedict['instrument'],
+                                    filedict['detector'],
+                                    filedict['filter'],
+                                    filedict['mode'])
+                        pass
                     pass
                 pass
             mastout = os.path.join(dbs, md5+'_'+sha)
