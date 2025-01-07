@@ -65,7 +65,7 @@ class alert(dawgie.Analyzer):
 
     def run(self, aspects:dawgie.Aspect):
         '''Top level algorithm call'''
-        c,k,t = trgmonitor.alert (aspects,self.__out['known'],self.__out['table'])
+        c, k, t = trgmonitor.alert (aspects,self.__out['known'],self.__out['table'])
         self.__out['changes'].clear()
         self.__out['known'].clear()
         self.__out['table'].clear()
@@ -219,16 +219,23 @@ class scrape(dawgie.Algorithm):
     def _scrape(tfl, out):
         '''Core code call'''
         dbs = os.path.join(dawgie.context.data_dbs, 'mast')
-        if not os.path.exists(dbs): os.makedirs(dbs)
-
+        if not os.path.exists(dbs):
+            os.makedirs(dbs)
+            pass
         # Download from MAST
-        umast = trgcore.mastapi(tfl, out, dbs, download_url=durl, hst_url=hsturl,
-                                verbose=False)
-
+        umast = trgcore.mastapi(
+            tfl,
+            out,
+            dbs,
+            download_url=durl,
+            hst_url=hsturl,
+            verbose=False,
+        )
         # Data on DISK
         # udisk gets prioritized over umast for duplicates
-        udisk = trgcore.disk(tfl, out, diskloc, dbs)
-
+        # Ditching that. We have no idea what we have on disk right now
+        # udisk = trgcore.disk(tfl, out, diskloc, dbs)
+        udisk = False
         return udisk or umast
 
     @staticmethod

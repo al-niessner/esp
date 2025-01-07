@@ -278,7 +278,9 @@ def autofill(ident, thistarget, out, allowed_filters, searchrad=0.2, ntrymax=4):
             log.warning('--< TARGET AUTOFILL: MAST FAIL (despite mastpoke) %s >--',
                         thistarget)
             pass
-        if not targettable: solved = False
+        if not targettable:
+            solved = False
+            pass
         # Note: If we use data that are not known by MAST but are on disk
         # this will also return False
 
@@ -525,6 +527,7 @@ def autofill(ident, thistarget, out, allowed_filters, searchrad=0.2, ntrymax=4):
                             out['starID'][thistarget][key+'_uperr'].append('')
                             out['starID'][thistarget][key+'_lowerr'].append('')
                             # out['starID'][thistarget][key+'_lim'].append('')
+                            pass
                         pass
                     pass
                 pass
@@ -824,6 +827,7 @@ def mastapi(tfl, out, dbs, download_url=None, hst_url=None, verbose=False):
             # it's coming up as a ima.fits maybe?
             if row['project'] in ['CALSTIS']:
                 thisobsid = thisobsid.upper()+'%2F'+thisobsid+'_flt.fits'
+                pass
             else:
                 # want ida504e9 --> IDA504E9Q%2Fida504e9q_ima.fits
                 # and ida504e9q --> IDA504E9QQ%2Fida504e9q_ima.fits
@@ -832,6 +836,7 @@ def mastapi(tfl, out, dbs, download_url=None, hst_url=None, verbose=False):
                 # special case for K2-3 and others with a couple weird 's' files
                 if len(thisobsid)==9 and thisobsid.endswith('s'):
                     thisobsid = thisobsid[:-1].upper()+'QQ%2F'+thisobsid+'_ima.fits'
+                    pass
                 # remove the second double-q (the lower-case one)
                 elif (len(thisobsid)==9 and
                       thisobsid.endswith('q') and not
@@ -865,7 +870,9 @@ def mastapi(tfl, out, dbs, download_url=None, hst_url=None, verbose=False):
             pass
         # SPITZER DO NOTHING FOR NOW DL IS TOO LONG
         else: pass
-        if verbose: log.warning('>-- %s %s', os.path.getsize(fileout), fileout)
+        if verbose:
+            log.warning('>-- %s %s', os.path.getsize(fileout), fileout)
+            pass
         pass
     if allraw:
         for irow, row in enumerate(allraw):
@@ -880,7 +887,8 @@ def mastapi(tfl, out, dbs, download_url=None, hst_url=None, verbose=False):
     # Delete local copy /proj/sdp/data/stg
     # Disabling for now I wanna know what s happening there
     # --<
-    # shutil.rmtree(tempdir, True)
+    # os.chmod(tempdir, int('0777', 8))
+    shutil.rmtree(tempdir, True)
     # >--
     return new
 # ---------- ---------------------------------------------------------

@@ -211,22 +211,27 @@ class calibration(dawgie.Algorithm):
         fin = self.__fin.sv_as_dict()['parameters']
         vfin, sfin = datcore.checksv(fin)
         svupdate = []
+
         for fltr in self.__rt.sv_as_dict()['status']['allowed_filter_names']:
             if fltr in cll['activefilters']:
                 # stop here if it is not a runtime target
                 self.__rt.proceed(fltr)
-
                 tim = self.__tim.sv_as_dict()[fltr]
                 vtim, etim = datcore.checksv(tim)
                 if vfin and vcll and vtim:
-                    # FIXMEE: this code needs repaired by moving out to config
+                    # This code needs repair by moving out to config
+                    # Dirty secret in repr(self)
                     update = self._calib(fin, cll['activefilters'][fltr], tim,
-                                         repr(self).split('.')[1],  # this is the target name
+                                         repr(self).split('.')[1],
                                          fltr, self.__out[fltrs.index(fltr)], ps)
-                    if update: svupdate.append(self.__out[fltrs.index(fltr)])
+                    if update:
+                        svupdate.append(self.__out[fltrs.index(fltr)])
+                        pass
+                    pass
                 else:
                     message = [m for m in [sfin, ecll, etim] if m is not None]
                     self._failure(message[0])
+                    pass
                 pass
             pass
         self.__out = svupdate

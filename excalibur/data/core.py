@@ -59,9 +59,8 @@ def collect(name, scrape, out):
     G. ROUDIER: Filters data from target.scrape.databases according to active filters
     '''
     collected = False
-    if name.split('-')[1]=='sim':  # for simulated instrument, there is no data to collect
-        pass
-    else:
+    # For simulated instrument, there is no data to collect
+    if not name.split('-')[1]=='sim':
         obs, ins, det, fil, mod = name.split('-')
         for rootname in scrape['name'].keys():
             ok = scrape['name'][rootname]['observatory'] in [obs.strip()]
@@ -592,6 +591,7 @@ def jwstcal(fin, clc, tim, ext, out, ps=None, verbose=False, debug=False):
     reffile = jwstreffiles(ext)
     Tstar = fin['priors']['T*']
     bbfunc = astrobb(Tstar*astropy.units.K)
+
     if 'NIRISS' in ext:
         # NIRISS
         # reffile[0]: images of the 3 orders [296, 2088] +20 on each side
