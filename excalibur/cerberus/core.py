@@ -463,25 +463,13 @@ def atmos(fin, xsl, spc, runtime_params, out, ext,
         modfam = ['TEC']  # Ariel sims are currently only TEC equilibrium models
         # modparlbl = {'TEC':['XtoH', 'CtoO']}
         modparlbl = {'TEC':['XtoH', 'CtoO', 'NtoO']}
-        # ** select which Ariel model to fit.  there are 8 options **
-        # atmosModels = ['cerberus', 'cerberusNoclouds',
-        #               'cerberuslowmmw', 'cerberuslowmmwNoclouds',
-        #               'taurex', 'taurexNoclouds',
-        #               'taurexlowmmw', 'taurexlowmmwNoclouds']
-        arielModel = 'cerberusNoclouds'
-        # arielModel = 'cerberus'
-        # arielModel = 'taurex'
 
-        # if the ariel sim doesn't have clouds, then don't fit the clouds
-        # fitCloudParameters = 'Noclouds' not in arielModel
-        #  OR
-        # don't fit the 4 cloud parameters, even if the model has clouds
-        # fitCloudParameters = False
-        #  OR
-        # do fit the 4 cloud parameters, even if the model doesn't have cloud
-        # fitCloudParameters = True
-        #
-        # print('fitCloudParameters for retrieved model:',runtime_params.fitCloudParameters)
+        # ** select which Ariel model to fit **
+        #   previously (with taurex) there were 8 options. now 4 options:
+        # atmosModels = ['cerberus', 'cerberusNoclouds',
+        #                'cerberuslowmmw', 'cerberuslowmmwNoclouds']
+        # arielModel = 'cerberusNoclouds'
+        arielModel = 'cerberus'
 
         # option to fix N/O
         if not runtime_params.fitNtoO:
@@ -1395,6 +1383,8 @@ def analysis(aspects, filt, out, verbose=False):
 
     # allow for analysis of multiple target lists
     analysistargetlists = []
+    # optionally specify the specific planets within multi-planet systems
+    analysisplanetlist = []
 
     if filt=='Ariel-sim':
         # analysistargetlists.append({
@@ -1415,9 +1405,21 @@ def analysis(aspects, filt, out, verbose=False):
         # analysistargetlists.append({
         #    'targetlistname':'2-year science time; Thorngren mmw (Aug.2024)',
         #    'targets':alltargetlists['ariel_Aug2024_2years']})
+        #
+        #  *** Tier-2 (259 planets) ***
+        # analysistargetlists.append({
+        #   'targetlistname':'2-year science time (Tier-2); Thorngren mmw (Nov.2024)',
+        #   'targets':alltargetlists['ariel_Nov2024_2years']})
+        # analysisplanetlist = {
+        #    'planetlistname':'2-year science time (Tier-2); Thorngren mmw (Nov.2024)',
+        #    'planets':alltargetlists['ariel_Nov2024_2years_withPlanetletters']}
+        #  *** Tier-1 (626 planets) ***
         analysistargetlists.append({
-            'targetlistname':'2-year science time; Thorngren mmw (Nov.2024)',
-            'targets':alltargetlists['ariel_Nov2024_2years']})
+            'targetlistname':'2-year science time (Tier-1); Thorngren mmw (Nov.2024)',
+            'targets':alltargetlists['ariel_Nov2024_2yearsTier1']})
+        analysisplanetlist = {
+            'planetlistname':'2-year science time (Tier-1); Thorngren mmw (Aug.2024)',
+            'planets':alltargetlists['ariel_Nov2024_2yearsTier1_withPlanetletters']}
     else:
         analysistargetlists.append({
             'targetlistname':'All Excalibur targets',
@@ -1471,6 +1473,11 @@ def analysis(aspects, filt, out, verbose=False):
 
                         # print('   keys:',atmosFit['data'][planetLetter].keys())
                         if planetLetter=='stellar_params':  # this is not a planet letter
+                            pass
+
+                        elif analysisplanetlist and \
+                             trgt+' '+planetLetter not in analysisplanetlist['planets']:
+                            # print(' DROP: Ariel doesnt observe this planet',trgt+' '+planetLetter)
                             pass
 
                         elif 'TEC' not in atmosFit['data'][planetLetter]['MODELPARNAMES']:

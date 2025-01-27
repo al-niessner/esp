@@ -58,6 +58,8 @@ class autofill(dawgie.Algorithm):
     def run (self, ds, ps):
         '''isolate target specific information from the global table'''
         if self.__table is None or self.__tn is None:
+            # table = self.__table  # GMR: Hoho
+            # tn = self.__tn  # GMR: Huhu
             raise dawgie.NoValidInputDataError('never should be called except'
                                                'from runtime.create')
         core.isolate (self.__status, self.__table, self.__tn)

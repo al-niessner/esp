@@ -56,23 +56,26 @@ class collect(dawgie.Algorithm):
         # stop here if it is not a runtime target
         if not self.__rt.is_valid():
             log.warning('--< DATA.%s: not a valid target >--', self.name().upper())
-
+            pass
+        # 7/2/24 we want to always collect all filters, so don't use proceed(fltr) here
         else:
             update = False
             create = self.__create.sv_as_dict()
             scrape = self.__scrape.sv_as_dict()['databases']
             valid, errstring = datcore.checksv(scrape)
             if valid:
-                for key in create['filters'].keys(): self.__out[key] = create['filters'][key]
-                # 7/2/24 we want to always collect all filters, so don't use proceed(fltr) here
+                for key in create['filters'].keys():
+                    self.__out[key] = create['filters'][key]
+                    pass
                 # for fltr in self.__rt.sv_as_dict()['status']['allowed_filter_names']:
                 for fltr in fltrs:
                     ok = self._collect(fltr, scrape, self.__out)
                     update = update or ok
-
+                    pass
                 if update: ds.update()
                 else: self._raisenoout(self.name())
             else: self._failure(errstring)
+            pass
         return
 
     @staticmethod
@@ -122,7 +125,6 @@ class timing(dawgie.Algorithm):
 
     def run(self, ds, ps):
         '''Top level algorithm call'''
-
         update = False
         fin = self.__fin.sv_as_dict()['parameters']
         vfin, efin = datcore.checksv(fin)
@@ -130,13 +132,17 @@ class timing(dawgie.Algorithm):
         vcol, ecol = datcore.checksv(col)
         svupdate = []
         if vfin and vcol:
-            for fltr in self.__rt.sv_as_dict()['status']['allowed_filter_names']:
-                if fltr in col['activefilters'].keys():
-                    # stop here if it is not a runtime target
-                    self.__rt.proceed(fltr)
-                    update = self._timing(fin, fltr, col['activefilters'][fltr],
-                                          self.__out[fltrs.index(fltr)])
-                    if update: svupdate.append(self.__out[fltrs.index(fltr)])
+            log.warning('>-- DATA COLLECT: \n\t%s', list(col['activefilters']))
+            letmethrough = self.__rt.sv_as_dict()['status']['allowed_filter_names']
+            log.warning('>-- RUNTIME: \n\t%s', letmethrough)
+            letmethrough = [k for k in letmethrough if k in col['activefilters']]
+            log.warning('>-- DATA TIMING: \n\t%s', letmethrough)
+            for fltr in letmethrough:
+                # stop here if it is not a runtime target
+                self.__rt.proceed(fltr)
+                update = self._timing(fin, fltr, col['activefilters'][fltr],
+                                      self.__out[fltrs.index(fltr)])
+                if update: svupdate.append(self.__out[fltrs.index(fltr)])
                 pass
             pass
         else:
@@ -205,22 +211,27 @@ class calibration(dawgie.Algorithm):
         fin = self.__fin.sv_as_dict()['parameters']
         vfin, sfin = datcore.checksv(fin)
         svupdate = []
+
         for fltr in self.__rt.sv_as_dict()['status']['allowed_filter_names']:
             if fltr in cll['activefilters']:
                 # stop here if it is not a runtime target
                 self.__rt.proceed(fltr)
-
                 tim = self.__tim.sv_as_dict()[fltr]
                 vtim, etim = datcore.checksv(tim)
                 if vfin and vcll and vtim:
-                    # FIXMEE: this code needs repaired by moving out to config
+                    # This code needs repair by moving out to config
+                    # Dirty secret in repr(self)
                     update = self._calib(fin, cll['activefilters'][fltr], tim,
-                                         repr(self).split('.')[1],  # this is the target name
+                                         repr(self).split('.')[1],
                                          fltr, self.__out[fltrs.index(fltr)], ps)
-                    if update: svupdate.append(self.__out[fltrs.index(fltr)])
+                    if update:
+                        svupdate.append(self.__out[fltrs.index(fltr)])
+                        pass
+                    pass
                 else:
                     message = [m for m in [sfin, ecll, etim] if m is not None]
                     self._failure(message[0])
+                    pass
                 pass
             pass
         self.__out = svupdate

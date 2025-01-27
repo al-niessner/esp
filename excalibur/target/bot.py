@@ -31,6 +31,6 @@ class Regress(dawgie.Regress):
         '''list ds'''
         return [
             trgalg.regress()
-            ]
+        ]
     pass
 # --------- ----------------------------------------------------------

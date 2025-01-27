@@ -1,6 +1,6 @@
 '''classifier __init__ ds'''
 
-ignore = False
+dawgie_ignore = True
 
 import excalibur.classifier.bot as clsbot
 

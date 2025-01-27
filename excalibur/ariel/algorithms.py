@@ -49,13 +49,13 @@ class sim_spectrum(dawgie.Algorithm):
 
         else:
             update = False
-            arielcore.init()
 
             system_dict = self.__system_finalize.sv_as_dict()['parameters']
             valid, errstring = arielcore.checksv(system_dict)
             if valid:
                 runtime = self.__rt.sv_as_dict()['status']
                 runtime_params = arielcore.ARIEL_PARAMS(
+                    tier=1,
                     randomSeed=123,
                     randomCloudProperties=True,
                     thorgrenMassMetals=True,

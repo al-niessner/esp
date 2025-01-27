@@ -235,41 +235,55 @@ def autofill(ident, thistarget, out, allowed_filters, searchrad=0.2, ntrymax=4):
                    'pagesize':250000,  # this seems to help HD 209458 (~221K obs)
                    'removenullcolumns':True,
                    'removecache':True}
-        _h, outstr = masttool.mast_query(request)
-        outjson = json.loads(outstr)
-        # 3 - activefilters filtering on TELESCOPE INSTRUMENT FILTER
         targettable = []
         platformlist = []
-        if 'data' not in outjson: outjson['data'] = []  # special case for TOI-1338
-        log.warning('--< TARGET AUTOFILL: %s  #-of-obs %s >--', thistarget, len(outjson['data']))
-        for obs in outjson['data']:
-            for f in allowed_filters:
-                if obs['obs_collection'] is not None:
-                    pfcond = f.split('-')[0].upper() in obs['obs_collection']
-                else: pfcond = False
-                if obs['instrument_name'] is not None:
-                    nscond = f.split('-')[1] in obs['instrument_name']
-                else:
-                    nscond = False
-                if f.split('-')[1]=='sim':  # skip any simulated instruments
-                    flcond = False
-                elif (f.split('-')[0] not in ['Spitzer']) and (obs['filters'] is not None):
-                    flcond = f.split('-')[3] in obs['filters']
-                else:
-                    sptzfl = None
-                    if f.split('-')[3] in ['36']: sptzfl = 'IRAC1'
-                    if f.split('-')[3] in ['45']: sptzfl = 'IRAC2'
-                    if obs['filters'] is not None: flcond = sptzfl in obs['filters']
-                    else: flcond = False
-                if pfcond and nscond and flcond:
-                    targettable.append(obs)
-                    platformlist.append(obs['obs_collection'])
+        # GMR: mastpoke returns outstr only
+        # errors (formerly _h) are logged and handled inside mastpoke
+        outstr = mastpoke(request)
+        if outstr:
+            outjson = json.loads(outstr)  # this line fails without maskpoke loop
+
+            # 3 - activefilters filtering on TELESCOPE INSTRUMENT FILTER
+            if 'data' not in outjson: outjson['data'] = []  # special case for TOI-1338
+            log.warning('--< TARGET AUTOFILL: %s  #-of-obs %s >--',
+                        thistarget, len(outjson['data']))
+            for obs in outjson['data']:
+                for f in allowed_filters:
+                    if obs['obs_collection'] is not None:
+                        pfcond = f.split('-')[0].upper() in obs['obs_collection']
+                    else: pfcond = False
+                    if obs['instrument_name'] is not None:
+                        nscond = f.split('-')[1] in obs['instrument_name']
+                    else:
+                        nscond = False
+                    if f.split('-')[1]=='sim':  # skip any simulated instruments
+                        flcond = False
+                    elif (f.split('-')[0] not in ['Spitzer']) and (obs['filters'] is not None):
+                        flcond = f.split('-')[3] in obs['filters']
+                    else:
+                        sptzfl = None
+                        if f.split('-')[3] in ['36']: sptzfl = 'IRAC1'
+                        if f.split('-')[3] in ['45']: sptzfl = 'IRAC2'
+                        if obs['filters'] is not None: flcond = sptzfl in obs['filters']
+                        else: flcond = False
+                    if pfcond and nscond and flcond:
+                        targettable.append(obs)
+                        platformlist.append(obs['obs_collection'])
+                    pass
                 pass
+            log.warning('--< TARGET AUTOFILL: %s  in targettable %s >--',
+                        thistarget, len(targettable))
             pass
-        log.warning('--< TARGET AUTOFILL: %s  in targettable %s >--',thistarget, len(targettable))
-        if not targettable: solved = False
+        else:
+            log.warning('--< TARGET AUTOFILL: MAST FAIL (despite mastpoke) %s >--',
+                        thistarget)
+            pass
+        if not targettable:
+            solved = False
+            pass
         # Note: If we use data that are not known by MAST but are on disk
         # this will also return False
+
         # 4 - pid filtering
         pidlist = []
         aliaslist = []
@@ -513,6 +527,7 @@ def autofill(ident, thistarget, out, allowed_filters, searchrad=0.2, ntrymax=4):
                             out['starID'][thistarget][key+'_uperr'].append('')
                             out['starID'][thistarget][key+'_lowerr'].append('')
                             # out['starID'][thistarget][key+'_lim'].append('')
+                            pass
                         pass
                     pass
                 pass
@@ -732,15 +747,16 @@ def mastapi(tfl, out, dbs, download_url=None, hst_url=None, verbose=False):
     target = list(tfl['starID'].keys())[0]
     obstable = tfl['starID'][target]['datatable']
     obsids = [o['obsid'] for o in obstable]
-    obsids = set(obsids)  # obsids are generally repeated many times. this will save lots of time
-
+    obsids = set(obsids)
+    # obsids are generally repeated many times. this will save lots of time
     allsci = []
     allurl = []
     allmiss = []
+    allraw = []
     for o in obsids:
         donmast = False
         request = {'service':'Mast.Caom.Products', 'params':{'obsid':o}, 'format':'json'}
-        _h, datastr = masttool.mast_query(request)
+        errmastq, datastr = masttool.mast_query(request)
         data = json.loads(datastr)
         if data['data']: donmast = True
         dtlvl = None
@@ -773,42 +789,68 @@ def mastapi(tfl, out, dbs, download_url=None, hst_url=None, verbose=False):
                        (x.get("dataRights", None) == 'PUBLIC') and
                        (x.get("calib_level", None) == clblvl) and
                        (x.get("productSubGroupDescription", None) == dtlvl)]
-            allsci.extend(scidata)
-            allmiss.extend([obscol]*len(scidata))
-            allurl.extend([thisurl]*len(scidata))
-            if verbose: log.warning('%s: %s', o, len(scidata))
+            # Associated L1b JWST data (UNCAL)
+            if 'JWST' in obscol and scidata:
+                sciids = [x.get('obsID', None) for x in scidata]
+                rawdata = [x for x in data['data'] if
+                           (x.get("productType", None) == 'SCIENCE') and
+                           (x.get("dataRights", None) == 'PUBLIC') and
+                           (x.get("calib_level", None) == 1) and
+                           (x.get("productSubGroupDescription", None) == 'UNCAL') and
+                           (x.get('obsID') in sciids)]
+                allraw.extend(rawdata)
+                # --<
+                # Downloads JWST data only
+                allsci.extend(scidata)
+                allmiss.extend([obscol]*len(scidata))
+                allurl.extend([thisurl]*len(scidata))
+                pass
+            # Downloads all missions
+            # allsci.extend(scidata)
+            # allmiss.extend([obscol]*len(scidata))
+            # allurl.extend([thisurl]*len(scidata))
+            # >--
+            if verbose: log.warning('%s: %s: %s', obscol, o, len(scidata))
             pass
-        else:
-            log.warning('>-- TROUBLE reading the data file. donmast = %s', donmast)
+        else: log.warning('>-- No data in MAST query %s', errmastq)
         pass
     tempdir = tempfile.mkdtemp(dir=dawgie.context.data_stg,
                                prefix=target.replace(' ', '')+'_')
     thisobsids = [row['productFilename'].split('_')[-2] for row in allsci]
+
     for irow, row in enumerate(allsci):
         # HST: mast api hack
         if allmiss[irow] in ['HST']:
             thisobsid = row['productFilename'].split('_')[-2]
             # 6/13/24 note that GJ 1132 STIS is sometimes having trouble here
-            # the MAST downloaded file is ldlm01m0q_flt.fits but it's coming up as a ima.fits maybe?
+            # the MAST downloaded file is ldlm01m0q_flt.fits but
+            # it's coming up as a ima.fits maybe?
             if row['project'] in ['CALSTIS']:
                 thisobsid = thisobsid.upper()+'%2F'+thisobsid+'_flt.fits'
+                pass
             else:
                 # want ida504e9 --> IDA504E9Q%2Fida504e9q_ima.fits
                 # and ida504e9q --> IDA504E9QQ%2Fida504e9q_ima.fits
-                # (currently the second one gets a double 'qq' toward the end, which fails)
-
+                # (currently the second one gets a double 'qq' toward the end,
+                # which fails)
                 # special case for K2-3 and others with a couple weird 's' files
                 if len(thisobsid)==9 and thisobsid.endswith('s'):
                     thisobsid = thisobsid[:-1].upper()+'QQ%2F'+thisobsid+'_ima.fits'
+                    pass
                 # remove the second double-q (the lower-case one)
-                elif len(thisobsid)==9 and thisobsid.endswith('q') and not thisobsid.startswith('ldl'):
+                elif (len(thisobsid)==9 and
+                      thisobsid.endswith('q') and not
+                      thisobsid.startswith('ldl')):
                     thisobsid = thisobsid.upper()+'Q%2F'+thisobsid+'_ima.fits'
                     # thisobsid = thisobsid.replace('qq_ima','q_ima')
+                    pass
                 # special case for K2-3 and others with a couple weird 's' files
                 elif thisobsid+'s' in thisobsids:
                     thisobsid = thisobsid.upper()+'Q%2F'+thisobsid+'s_ima.fits'
+                    pass
                 else:
                     thisobsid = thisobsid.upper()+'Q%2F'+thisobsid+'q_ima.fits'
+                    pass
             fileout = os.path.join(tempdir, os.path.basename(thisobsid))
             shellcom = "'".join(["curl -s -L -X GET ",
                                  allurl[irow]+"product_name="+thisobsid,
@@ -816,19 +858,38 @@ def mastapi(tfl, out, dbs, download_url=None, hst_url=None, verbose=False):
                                  fileout,
                                  ""])
             subprocess.run(shellcom, shell=True, check=False)
+            pass
         # JWST
         elif allmiss[irow] in ['JWST']:
             payload = {"uri":row['dataURI']}
             resp = requests.get(allurl[irow], params=payload)
             fileout = os.path.join(tempdir, os.path.basename(row['productFilename']))
-            with open(fileout,'wb') as flt: flt.write(resp.content)
+            with open(fileout,'wb') as flt:
+                flt.write(resp.content)
+                pass
+            pass
         # SPITZER DO NOTHING FOR NOW DL IS TOO LONG
         else: pass
-        if verbose: log.warning('>-- %s %s', os.path.getsize(fileout), fileout)
+        if verbose:
+            log.warning('>-- %s %s', os.path.getsize(fileout), fileout)
+            pass
+        pass
+    if allraw:
+        for irow, row in enumerate(allraw):
+            payload = {"uri":row['dataURI']}
+            resp = requests.get(allurl[irow], params=payload)
+            fileout = os.path.join(tempdir, os.path.basename(row['productFilename']))
+            with open(fileout,'wb') as flt: flt.write(resp.content)
+            pass
         pass
     locations = [tempdir]
     new = dbscp(target, locations, dbs, out)
+    # Delete local copy /proj/sdp/data/stg
+    # Disabling for now I wanna know what s happening there
+    # --<
+    # os.chmod(tempdir, int('0777', 8))
     shutil.rmtree(tempdir, True)
+    # >--
     return new
 # ---------- ---------------------------------------------------------
 # -- DISK -- ---------------------------------------------------------
@@ -836,6 +897,12 @@ def disk(selfstart, out, diskloc, dbs):
     '''Query on disk data'''
     merge = False
     targetID = list(selfstart['starID'].keys())
+
+    # This was originally designed because we wanted to ingest data from X or Y
+    # that had crazy directory names.
+    # Ditch it?
+    # Will require standardized directory names, no Kepler but KEPLER
+    # --<
     targets = trgedit.targetondisk.__doc__
     targets = targets.split('\n')
     targets = [t.strip() for t in targets if t.replace(' ', '')]
@@ -850,15 +917,30 @@ def disk(selfstart, out, diskloc, dbs):
             locations = [os.path.join(diskloc, fold) for fold in folders]
             pass
         pass
-
     if locations is None:
         log.warning('ADD data subdirectory name to list in target/edit.py!!')
-
+        pass
+    # >--
+    lookforme = targetID[0]
+    # Maybe get rid of this it may work with the original name
+    # --<
+    lookforme = lookforme.replace(' ', '')
+    lookforme = lookforme.replace('-', '')
+    lookforme = lookforme.upper()
+    # >--
+    stdlocations = [os.path.join(diskloc, lookforme)]
+    if locations is None:
+        locations = stdlocations
+        pass
     # make sure that the data storage directory exists for this star
     for loc in locations:
-        if not os.path.exists(loc): os.makedirs(loc)
-
-    if locations is not None: merge = dbscp('on disk', locations, dbs, out)
+        if not os.path.exists(loc):
+            os.makedirs(loc)
+            pass
+        pass
+    if locations is not None:
+        merge = dbscp('on disk', locations, dbs, out, verbose=False)
+        pass
     return merge
 # ---------- ---------------------------------------------------------
 # -- DBS COPY -- -----------------------------------------------------
@@ -883,11 +965,15 @@ def dbscp(target, locations, dbs, out, verbose=False):
         try:
             pyfits.open(fitsfile)
             okfiles.append(True)
+            pass
         except OSError:
-            # print('Failed file read:',fitsfile)
+            log.warning('--< !!! Failed to read: %s ', fitsfile)
             okfiles.append(False)
             Nfails += 1
-    log.warning('--< %s: %i out of %i MAST files are unreadable >--',target,Nfails,len(imalist))
+            pass
+        pass
+    log.warning('--< %s: %i out of %i MAST files are unreadable >--',
+                target, Nfails, len(imalist))
 
     if Nfails==0:
         for fitsfile in imalist:
@@ -948,13 +1034,15 @@ def dbscp(target, locations, dbs, out, verbose=False):
                     else: filedict['mode'] = mainheader.get('GRATING', '')
                     key = mainheader.get("FILENAME").split('.')[0]
                     out['name'][key] = filedict
-                    if verbose: log.warning('--< %s: %s %s %s %s %s',
-                                            key,
-                                            filedict['observatory'],
-                                            filedict['instrument'],
-                                            filedict['detector'],
-                                            filedict['filter'],
-                                            filedict['mode'])
+                    if verbose:
+                        log.warning('--< %s: %s %s %s %s %s',
+                                    key,
+                                    filedict['observatory'],
+                                    filedict['instrument'],
+                                    filedict['detector'],
+                                    filedict['filter'],
+                                    filedict['mode'])
+                        pass
                     pass
                 pass
             mastout = os.path.join(dbs, md5+'_'+sha)
@@ -962,10 +1050,11 @@ def dbscp(target, locations, dbs, out, verbose=False):
             if not onmast:
                 shutil.copyfile(fitsfile, mastout)
                 os.chmod(mastout, int('0664', 8))
+                pass
             pass
         copied = True
-    else:
-        copied = False
+        pass
+    else: copied = False
     out['STATUS'].append(copied)
     return copied
 # -------------- -----------------------------------------------------

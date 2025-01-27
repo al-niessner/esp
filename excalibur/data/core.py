@@ -59,9 +59,8 @@ def collect(name, scrape, out):
     G. ROUDIER: Filters data from target.scrape.databases according to active filters
     '''
     collected = False
-    if name.split('-')[1]=='sim':  # for simulated instrument, there is no data to collect
-        pass
-    else:
+    # For simulated instrument, there is no data to collect
+    if not name.split('-')[1]=='sim':
         obs, ins, det, fil, mod = name.split('-')
         for rootname in scrape['name'].keys():
             ok = scrape['name'][rootname]['observatory'] in [obs.strip()]
@@ -82,9 +81,11 @@ def collect(name, scrape, out):
         log.warning('--< DATA COLLECT: %s in %s >--',
                     str(int(np.sum(out['activefilters'][name]['TOTAL']))), name)
         out['STATUS'].append(True)
+        pass
     else:
         log.warning('--< DATA COLLECT: NO DATA in %s >--', name)
         out['activefilters'].pop(name, None)
+        pass
     return collected
 # ------------------ -------------------------------------------------
 # -- TIMING -- -------------------------------------------------------
@@ -326,12 +327,12 @@ def timing(force, ext, clc, out, verbose=False):
                     # (ephase < (e-1) + (offset+2*pdur))  # eclipse at prior orbit
                     # tmask2 = (tphase > (e+1) + (offset-2*pdur)) &
                     # (tphase < (e+1) + (offset+2*pdur) )  # transit at next orbit
-                    if tmask.sum() > min_images:
-                        out['data'][p]['transit'].append(e)
-                    if emask.sum() > min_images:
-                        out['data'][p]['eclipse'].append(e)
+                    if tmask.sum() > min_images: out['data'][p]['transit'].append(e)
+                    if emask.sum() > min_images: out['data'][p]['eclipse'].append(e)
                     if ((tmask.sum() > min_images) and (emask.sum() > min_images) and (mmask.sum() > min_images)):
                         out['data'][p]['phasecurve'].append(e)
+                        pass
+                    pass
                 visto = np.floor(tphase)
                 out['STATUS'].append(True)
                 pass
@@ -530,6 +531,9 @@ def jwstcal(fin, clc, tim, ext, out, ps=None, verbose=False, debug=False):
     allwaves = []
     alldet = []
     alldintimes = []
+    allunits = []
+    allerr = []
+    alldq = []
     for loc in sorted(clc['LOC']):
         fullloc = os.path.join(dbs, loc)
         with pyfits.open(fullloc) as hdulist:
@@ -539,26 +543,44 @@ def jwstcal(fin, clc, tim, ext, out, ps=None, verbose=False, debug=False):
                     nints = hdu.header['NINTS']
                     alldet.extend(nints*[hdu.header['DETECTOR']])
                     pass
+                elif 'SCI' in hdu.name:
+                    alldexp.extend(hdu.data)
+                    allunits.extend([hdu.header['BUNIT']]*len(hdu.data))
+                    pass
+                # <-- L2b data only
+                elif 'ERR' in hdu.name: allerr.extend(hdu.data)
+                elif 'DQ' in hdu.name: alldq.extend(hdu.data)
                 elif ('WAVELENGTH' in hdu.name) and nints:
                     allwaves.extend(nints*[hdu.data])
                     pass
+                # -->
                 elif 'INT_TIMES' in hdu.name:
                     alldinm.extend(hdu.data['integration_number'])
                     alldintimes.extend(hdu.data['int_mid_MJD_UTC'])
                     pass
-                elif 'SCI' in hdu.name:
-                    alldexp.extend(hdu.data)
-                    pass
                 pass
             pass
         pass
-    # Time ordered data
-    isort = np.argsort(alldintimes)
 
+    alldinm = np.array(alldinm)
     alldexp = np.array(alldexp)
     allwaves = np.array(allwaves)
-    alldintimes = np.array(alldintimes)
     alldet = np.array(alldet)
+    alldintimes = np.array(alldintimes)
+    allunits = np.array(allunits)
+    allerr = np.array(allerr)
+    alldq = np.array(alldq)
+
+    # Split L1 and L2 calib levels
+    selraw = allunits == 'DN'
+    _allraw = alldexp[selraw]
+    alldinm = alldinm[~selraw]
+    alldexp = alldexp[~selraw]
+    alldet = alldet[~selraw]
+    alldintimes = alldintimes[~selraw]
+
+    # Time ordered data
+    isort = np.argsort(alldintimes)
 
     alldexp = alldexp[isort]
     allwaves = allwaves[isort]
@@ -569,6 +591,7 @@ def jwstcal(fin, clc, tim, ext, out, ps=None, verbose=False, debug=False):
     reffile = jwstreffiles(ext)
     Tstar = fin['priors']['T*']
     bbfunc = astrobb(Tstar*astropy.units.K)
+
     if 'NIRISS' in ext:
         # NIRISS
         # reffile[0]: images of the 3 orders [296, 2088] +20 on each side
