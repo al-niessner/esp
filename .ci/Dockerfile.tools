@@ -10,4 +10,4 @@ ENV DAWGIE_DOCKERIZED_AE_GIT_REVISION irrelevant
 ENV GNUPGHOME /proj/gnupg
 ENV HOME /proj/src
 ENV PYTHONPATH /proj/src/ae
-ENTRYPOINT ["python3", "-m"]
+ENTRYPOINT ["python", "-m"]
