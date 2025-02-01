@@ -28,7 +28,7 @@ RUN set -ex && \
     /usr/bin/pip3 install arviz==0.12.0 \
                           astropy==5.2.2 \
 			  astroquery==0.4.6 \
-                          dawgie==1.4.5-rc04  \
+                          dawgie==1.4.5-rc05 \
                           dynesty==1.2.2 \
 			  h5py \
                           importlib_metadata==4.11.3 \
