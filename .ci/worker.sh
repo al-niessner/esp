@@ -7,6 +7,7 @@ docker run \
        -e DAWGIE_SSL_PEM_MYNAME=excalibur.jpl.nasa.gov \
        -e DAWGIE_SSL_PEM_MYSELF=/proj/mycerts/ops.pem \
        -e USER=$USER -e USERNAME=$USERNAME \
+       -e DAWGIE_SSL_PEM_FILE=/etc/ssl/server.pem \
        --name ops_worker_$1 \
        --network host \
        -u $UID:$GROUPS \
