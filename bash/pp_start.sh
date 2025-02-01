@@ -20,7 +20,7 @@ docker run --detach \
        -u ${UID}:1512 \
        -v /etc/ssl:/etc/ssl:ro \
        -v /usr/local/share/ca-certificates:/usr/local/share/ca-certificates:ro \
-       -v /usr/share/ca-certificates:/usr/share/ca-certificates:ro 
+       -v /usr/share/ca-certificates:/usr/share/ca-certificates:ro \
        -v /proj/sdp/data:/proj/data \
        -v ${HOME}/.theano:/proj/data/.theano \
        -v /proj/sdp/data/logs:/proj/logs \
