@@ -42,7 +42,8 @@ else:
                                (os.path.expanduser
                                 (dawgie.context.guest_public_keys)),
                                myname=dawgie.context.ssl_pem_myname,
-                               myself=dawgie.context.ssl_pem_myself)
+                               myself=dawgie.context.ssl_pem_myself,
+                               system=dawgie.context.ssl_pem_file)
     dawgie.db.reopen()
 
     if tn in ['', '__all__']:

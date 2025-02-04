@@ -16,9 +16,12 @@ then
     exit -1
 fi
 
+declare -i dbport=${DAWGIE_FE_PORT:-9990}
+dbport=$dbport+3
 myname="${DAWGIE_SSL_PEM_MYNAME:-excalibur.jpl.nasa.gov}"
 myself="${DAWGIE_SSL_PEM_MYSELF:-/proj/data/certs/excalibur_identity.pem}"
 docker exec \
+       -e DAWGIE_DB_PORT=$dbport \
        -e DAWGIE_SSL_PEM_MYNAME="$myname"\
        -e DAWGIE_SSL_PEM_MYSELF="$myself" \
        -e DISPLAY=${DISPLAY} \
