@@ -1,0 +1,10 @@
+bandit
+black
+coverage
+docformatter
+flake8
+pylint
+pyroma
+pytest
+pytest-cov
+scipy

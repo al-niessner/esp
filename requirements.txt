@@ -1,0 +1,16 @@
+astropy
+astroquery
+dawgie
+h5py
+joblib
+ldtk
+lmfit
+numexpr
+numpy
+photutils
+pymc
+pyvo
+PyXB-CTC
+scipy
+torch
+ultranest
