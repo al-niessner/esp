@@ -1,0 +1,33 @@
+services:
+  base:
+    build:
+      context: ..
+      dockerfile: .docker/Dockerfile.base
+    image: esp/base:${ESP_VERSION}
+  pipeline:
+    build:
+      args:
+        BASE_VER: ${ESP_VERSION}
+      context: ..
+      dockerfile: .docker/Dockerfile.server
+    depends_on:
+      - base
+    image: esp/server:${ESP_VERSION}
+  tools:
+    build:
+      args:
+        BASE_VER: ${ESP_VERSION}
+      context: ..
+      dockerfile: .docker/Dockerfile.tools
+    depends_on:
+      - base
+    image: esp/tools:${ESP_VERSION}
+  worker:
+    build:
+      args:
+        BASE_VER: ${ESP_VERSION}
+      context: ..
+      dockerfile: .docker/Dockerfile.worker
+    depends_on:
+      - base
+    image: esp/worker:latest
