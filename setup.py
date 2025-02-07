@@ -9,7 +9,8 @@ deps = ['astropy==3.0.4',
         'matplotlib==2.2.3',
         'pymc3==3.5',
         'scipy==1.1.0',
-        ]excalibur = os.path.join ('excalibur', '__init__.py')
+        ]
+excalibur = os.path.join ('excalibur', '__init__.py')
 version = 'esp-git-rev'
 with open (os.path.join (os.path.dirname (__file__), excalibur)) as f: t = f.read()
 t = t.replace ('${UNDEFINED}', version)
