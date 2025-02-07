@@ -26,15 +26,9 @@ with open ('.ci/Dockerfile.1', 'tw') as f: f.write (text.replace ("ghrVersion", 
 with open ('setup.py', 'rt') as f: text = f.read()
 with open ('setup.py', 'tw') as f: f.write (text.replace ('esp-git-rev', "${esp_git_rev}"))
 EOF
-    rm -f .ci/Dockerfile.1.dcp
-    .ci/dcp.py --server .ci/Dockerfile.1 &
-    while [ ! -f .ci/Dockerfile.1.dcp ]
-    do
-        sleep 3
-    done
-    docker build --network=host -t esp_worker:latest - < .ci/Dockerfile.1.dcp
+    docker build --network=host -t esp_worker:latest -f .ci/Dockerfile.1 .
     git checkout setup.py
-    rm .ci/Dockerfile.1 .ci/Dockerfile.1.dcp
+    rm .ci/Dockerfile.1 .ci/Dockerfile.1
     state=`get_state`
 fi
 

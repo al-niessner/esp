@@ -3,12 +3,12 @@
 import os
 import setuptools
 
-deps = ['astropy==3.0.4',
-        'ldtk==1.0',
-        'lmfit==0.9.11',
-        'matplotlib==2.2.3',
-        'pymc3==3.5',
-        'scipy==1.1.0',
+deps = ['astropy',
+        'ldtk',
+        'lmfit',
+        'matplotlib',
+        'pymc3',
+        'scipy',
         ]
 excalibur = os.path.join ('excalibur', '__init__.py')
 version = 'esp-git-rev'

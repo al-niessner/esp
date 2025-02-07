@@ -1,4 +1,5 @@
 FROM esp_base:ghrVersion
+COPY . /tmp/esp/
 ENV DAWGIE_DOCKERIZED_AE_GIT_REVISION esp-git-rev
 ENV GNUPGHOME /proj/gnupg
 ENV HOME /tmp
@@ -7,9 +8,7 @@ ENV NUMEXPR_MAX_THREADS 1
 ENV OMP_NUM_THREADS 1
 ENV PYTHONPATH /proj/src/ae:/usr/local/lib/python
 RUN set -ex && \
-    mkdir /tmp/esp && \
-    /bin/dcp.py --port DCP_PORT_NUMBER -r setup.py excalibur /tmp/esp/ && \
-    cd /tmp/esp && \
+    cd /tmp/esp && ls -al && \
     mkdir -p /usr/local/lib/python && \
     python3 setup.py sdist bdist_wheel && \
     python3 -m pip install dist/*.whl && \
