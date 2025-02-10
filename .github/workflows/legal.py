@@ -35,8 +35,8 @@ formatters = {'.hamlbars':_format, '.hbs':_format, '.html':_format,
 legal = True
 for p,dns,fns in os.walk ('.'):
     if any ([p.startswith ('./.{}'.format (d))
-             for d in ['cache', 'git']]) : continue
-    
+             for d in ['cache', 'git']]): continue
+
     for fn in filter (lambda s:any ([s.endswith (suffix) for suffix in
                                      ('.py', '.sh', '.hbs',
                                       '.hamlbars', '.html', '.dot')] +
