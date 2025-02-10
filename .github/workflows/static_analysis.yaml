@@ -1,0 +1,102 @@
+name: Static Analysis
+run-name: ${{ github.actor }} is checking code quality/style for merge compliance
+on: [push]
+jobs:
+  Style:
+    name: Coding Style
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          architecture: 'x64'
+          python-version: '3.12'
+      - name: Prepare Python
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r .github/workflows/requirements.txt
+      - name: black
+        run: black --check --diff -l 80 --skip-string-normalization .
+  Linters:
+    name: Code Quality
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          architecture: 'x64'
+          python-version: '3.12'
+      - name: Prepare Python
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r .github/workflows/requirements.txt
+      - name: pylint
+        run: pylint --rcfile .github/workflows/pylint.rc excalibur
+      - name: flake8
+        run: flake8 --ignore E501,E203,W503 excalibur
+  Security:
+    name: Code Security
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          architecture: 'x64'
+          python-version: '3.12'
+      - name: Prepare Python
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r .github/workflows/requirements.txt
+      - name: bandit
+        run: bandit -b .github/workflows/bandit_baseline.json -r excalibur
+  Delivery:
+    name: Deployment (pypi) Compliance
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          architecture: 'x64'
+          python-version: '3.12'
+      - name: Prepare Python
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r .github/workflows/requirements.txt
+      - name: pyroma
+        run: pyroma --min 10 Python
+  Compliance:
+    name: DAWGIE Compliance
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          architecture: 'x64'
+          python-version: '3.12'
+      - name: Prepare Python
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r .github/workflows/requirements.txt
+      - name: Compliance
+        run: |
+          python -m dawgie.tools.compliant --ae-dir=excalibur --ae-pkg=excalibur
+  Legal:
+    name: Licensing
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          architecture: 'x64'
+          python-version: '3.12'
+      - name: Prepare Python
+        run: |
+          python -m pip install --upgrade pip
+      - name: Check File License 
+        run: |
+          python .github/workflows/legal.py
