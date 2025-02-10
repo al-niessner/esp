@@ -1,0 +1,7 @@
+ARG BASE_VER
+FROM esp/base:$BASE_VER
+ENV HOME=/proj/src
+ENV PYTHONPATH=/proj/src/ae
+ENTRYPOINT python -m dawgie.pl \
+    --context=excalibur.context \
+    -l "${EXCALIBUR_USER}.log" -L "${EXCALIBUR_LOG_LEVEL}" -p 9090
