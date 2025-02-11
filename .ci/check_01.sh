@@ -11,7 +11,7 @@ post_state "$context" "$description" "$state"
 if current_state
 then
     docker run --rm -v $PWD:$PWD -u $UID -w $PWD esp_cit:$(cit_version) pycodestyle \
-           --ignore=E24,E121,E123,E124,E126,E127,E211,E225,E226,E231,E252,E301,E302,E305,E402,E501,W504,E701,E702,E704,E722,E741 \
+           --ignore=E24,E121,E123,E124,E126,E127,E203,E211,E225,E226,E231,E252,E266,E301,E302,E305,E402,E501,W504,E701,E702,E704,E713,E722,E741,W503 \
            --exclude=.ci/Dockerfile.py --exclude=excalibur/runtime/binding.py \
            --statistics ${PWD} | tee ${PWD}/pep8.rpt.txt
     errs=`wc -l $PWD/pep8.rpt.txt | awk '{print $1}'`

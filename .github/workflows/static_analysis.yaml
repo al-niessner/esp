@@ -33,7 +33,7 @@ jobs:
           pip install -r requirements.txt
           pip install -r .github/workflows/requirements.txt
       - name: pylint
-        run: pylint --rcfile .github/workflows/pylint.rc excalibur
+        run: pylint --rcfile .github/workflows/pylint.rc -ry -sy excalibur
       - name: flake8
         run: flake8 --ignore E501,E203,W503 excalibur
   Security:
@@ -67,7 +67,7 @@ jobs:
           pip install -r requirements.txt
           pip install -r .github/workflows/requirements.txt
       - name: pyroma
-        run: pyroma --min 10 Python
+        run: pyroma --min 10 .
   Compliance:
     name: DAWGIE Compliance
     runs-on: ubuntu-24.04
