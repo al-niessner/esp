@@ -5,16 +5,17 @@ import scipy.constants as cst
 from scipy.interpolate import interp1d as itp
 import logging; log = logging.getLogger(__name__)
 
+import pytensor
+from pytensor import tensor
+from pytensor.ifelse import ifelse
+
 import excalibur
 # pylint: disable=import-self
 import excalibur.cerberus.forwardModel  # is this needed for the context updater?
 import excalibur.system.core as syscore
 from excalibur.util.cerberus import crbce,getmmw
 
-import theano.tensor as tt
-import theano.compile.ops as tco
-
-# -- GLOBAL CONTEXT FOR PYMC3 DETERMINISTICS ---------------------------------------------
+# -- GLOBAL CONTEXT FOR PYMC DETERMINISTICS ---------------------------------------------
 from collections import namedtuple
 CONTEXT = namedtuple('CONTEXT', ['cleanup', 'model', 'p', 'solidr', 'orbp', 'tspectrum',
                                  'xsl', 'spc', 'modparlbl', 'hzlib', 'fixedParams'])
@@ -39,7 +40,8 @@ def crbmodel(mixratio, rayleigh, cloudtp, rp0, orbp, xsecs, qtgrid,
              xmollist=['TIO', 'CH4', 'H2O', 'H2CO', 'HCN', 'CO', 'CO2', 'NH3'].copy(),
              # nlevels=100, Hsmax=15., solrad=10.,
              # increase the number of scale heights from 15 to 20, to match the Ariel forward model
-             nlevels=100, Hsmax=20., solrad=10.,
+#             nlevels=100, Hsmax=20., solrad=10.,
+             nlevels=7, Hsmax=20., solrad=10.,
              hzlib=None, hzp=None, hzslope=-4., hztop=None, hzwscale=1e0,
              cheq=None, logx=False, pnet='b',
              break_down_by_molecule=False,
@@ -52,31 +54,79 @@ def crbmodel(mixratio, rayleigh, cloudtp, rp0, orbp, xsecs, qtgrid,
     ssc = syscore.ssconstants(mks=True)
     pgrid = np.arange(np.log(solrad)-Hsmax, np.log(solrad)+Hsmax/nlevels,
                       Hsmax/(nlevels-1))
+    # print('pgrid before exponential',pgrid)
     pgrid = np.exp(pgrid)
-    dp = np.diff(pgrid[::-1])
+    # dp = np.diff(pgrid[::-1])
     p = pgrid[::-1]
-    z = [0e0]
-    dz = []
-    addz = []
+    print('pressure',len(p),p)
+    # print('delta-pressure',len(dp),dp)
+    dPoverP = (p[1] - p[0]) / p[0]
+
+    print()
     if not mixratio:
+        # print('SHOULD BE HERE')
         if cheq is None: log.warning('neither mixratio nor cheq are defined')
         mixratio, fH2, fHe = crbce(p, temp,
                                    C2Or=cheq['CtoO'], X2Hr=cheq['XtoH'],
                                    N2Or=cheq['NtoO'])
-        # mixratio['CO2'] = mixratio['NH3']
         mmw, fH2, fHe = getmmw(mixratio, protosolar=False, fH2=fH2, fHe=fHe)
-        pass
-    else: mmw, fH2, fHe = getmmw(mixratio)
+    else:
+        # print('SHOULD NOT BE HERE')
+        mmw, fH2, fHe = getmmw(mixratio)
     mmw = mmw*cst.m_p  # [kg]
+    print('mmw',mmw.eval() * 6.022e26)
+
     Hs = cst.Boltzmann*temp/(mmw*1e-2*(10.**float(orbp[pnet]['logg'])))  # [m]
-    for press, dpress in zip(p[:-1], dp):
-        rdz = abs(Hs/2.*np.log(1. + dpress/press))
-        if addz: dz.append(addz[-1]/2. + rdz)
-        else: dz.append(2.*rdz)
-        addz.append(2.*rdz)
-        z.append(z[-1]+addz[-1])
-        pass
-    dz.append(addz[-1])
+
+    # when the Pressure grid is log-spaced, rdz is a constant
+    #  drop dz[] and dzprime[] arrays and just use this constant instead
+    rdz = abs(Hs/2.*np.log(1. + dPoverP))
+
+    z = [0]
+    ## dz = []
+    ## addz = []
+    # for press, dpress in zip(p[:-1], dp):
+        # print('dp/p',dpress/press,np.log(1. + dpress/press),dPoverP)
+    for press in p[:-1]:
+        # rdz = abs(Hs/2.*np.log(1. + dpress/press))
+        # rdz = abs(Hs/2.*np.log(1. + dPoverP))
+        # print('press,rdz',press,rdz.eval())
+        ## if addz:
+            ## dz.append(addz[-1]/2. + rdz)
+        ## else:
+            # tem = tensor.dscalar()
+            # print('tem',tem)
+            # tem = 2.*rdz
+            # print('tem',tem)
+            # dz.append(tem)
+            ## dz.append(2.*rdz)
+            # print('temp',dz[-1])
+        ## addz.append(2.*rdz)
+        ## z.append(z[-1]+addz[-1])
+        z.append(z[-1] + 2.*rdz)
+    ## dz.append(addz[-1])
+    # print()
+    # print('len check on z',len(z))
+    # print('len check on dz',len(dz))
+    # print()
+    # print('z going into gettau',z)
+    # print('z going into gettau',[zlist.eval() for zlist in z[1:]])
+    # print('dz going into gettau',dz)
+    # print('dz going into gettau',[zlist.eval() for zlist in dz])
+    # print()
+
+    z = np.linspace(0, len(p)-1, len(p))
+    z = 2 * rdz * z
+    print('z',z.eval())
+    # print('z redo',[zlist.eval() for zlist in z[1:]])
+
+    # simplify dz.  will help tremendously below, where tensor keeps crashing
+    # dz = np.array([dz[0].eval()]*len(dz))
+    # print('new dz',dz)
+    # print(' rdz',rdz.eval()*2)
+    dz = 2 * rdz
+    print('new dz',dz.eval())
+
     rho = p*1e5/(cst.Boltzmann*temp)
     tau, tau_by_molecule, wtau = gettau(
         xsecs, qtgrid, temp, mixratio, z, dz, rho, rp0, p, wgrid,
@@ -166,24 +216,193 @@ def gettau(xsecs, qtgrid, temp, mixratio,
     '''
     # SPHERICAL SHELL (PLANE-PARALLEL REMOVED) -------------------------------------------
     # MATRICES INIT ------------------------------------------------------------------
-    tau = np.zeros((len(z), wgrid.size))
+    Nzones = len(p)
+    # print('z (at start of gettau)',[zz.eval() for zz in z])
+    print('z (at start of gettau)',z.eval())
+    # tau = np.zeros((len(z), wgrid.size))
+    tau = np.zeros((Nzones, wgrid.size))
     tau_by_molecule = {}
     # DL ARRAY, Z VERSUS ZPRIME ------------------------------------------------------
     dlarray = []
-    zprime = np.array(z)
-    dzprime = np.array(dz)
+    # these are coming in as lists created with append loops.  want arrays
+    zprime = z
+    # zprime = np.array(z)
+    # dzprime = np.array(dz)
+    # zprime = z
+    # dzprime = dz
     for iz, thisz in enumerate(z):
-        dl = np.sqrt((rp0 + zprime + dzprime)**2 - (rp0 + thisz)**2)
-        dl[:iz] = 0e0
+        print()
+        print('LOOP iz,thisz',iz,thisz.eval())
+        # dltemp = (rp0 + zprime + dzprime)**2 - (rp0 + thisz)**2
+        # print('rp0',rp0)
+        # print('zprime',zprime)  # messed up.  first element (zero) is diff
+        # print('dzprime',dzprime) # messed up. first and last are diff (mul vs add)
+        # print('dzprime',[dzp.eval() for dzp in dzprime]) # ok
+        # print('dltemp',dltemp)
+        # print('dltemp',[dlt.eval()for dlt in dltemp]) # ok
+        # print('dltemp',dltemp.eval())  # fails.  no attribute eval for a numpy array. huh? oh i see it's an array of tensors ig
+        # dl = tensor.sqrt((rp0))
+        # print('dl sqrt works1?',dl.eval()) # ok
+        # pytensor.dprint(zprime)   # same as a regular print; doesn't show chart
+        # pytensor.dprint(dzprime)  # same as a regular print; doesn't show chart
+        # dl = tensor.sqrt((dzprime))    # <--- *** THIS FAILS ***
+        # dl = [tensor.sqrt(dzp) for dzp in dzprime]
+        # print('dl sqrt works1b?',[ddd.eval() for ddd in dl])  # ok
+        # dl = [tensor.sqrt(dzp) for dzp in zprime] 
+        # print('dl sqrt works1c?',dl) # ok
+
+        # dl11 = np.sqrt((rp0 + zprime + dzprime)**2)
+        # print('dl sqrt works first half?',dl11)
+        # dl22 = np.sqrt((rp0 + thisz)**2)
+        # print('dl sqrt works second part?',dl22)
+        # print('   failing?  loop it')
+        # testt = []
+        # for dl11element in dl11:
+        #    testt.append(dl11element - dl22)
+        # print('   schould work',testt)
+        # print('   worked',[t.eval() for t in testt])
+        # print('   failing?')
+        # testt = dl11 - dl22  # fails
+        # print('   schould fail')
+
+        # dl = tensor.sqrt((rp0 + zprime + dzprime)**2 - (rp0 + thisz)**2) # fails
+
+        #  hmm weird.  this works on first pass of the loop, but not second
+        # dl = np.sqrt((rp0 + zprime + dzprime)**2 - (rp0 + thisz)**2)  # second iteration trouble
+        # dl = np.sqrt((rp0 + zprime + dzprime)**2) - np.sqrt((rp0 + thisz)**2)  # fails
+        #  try making the list (first half) into an array first
+        # dl = np.sqrt(np.array((rp0 + zprime + dzprime))**2) - np.sqrt((rp0 + thisz)**2) # fails
+        # it's as if it's treating first part as a list.  so loop through it
+        # dl = []
+        # for zpr,dzpr in zip(zprime,dzprime):
+        # dl = np.zeros(len(zprime))
+        #dl = np.zeros(Nzones)
+        print(' zprime',zprime.eval())
+        print(' dz',dz.eval())
+        #print('dl',dl)
+        # WHAT ABOUT THIS NOW? Yes!
+        dl = np.sqrt((rp0 + zprime + dz)**2)  # works!
+        dl = np.sqrt((rp0 + zprime + dz)**2 - (rp0 + thisz)**2)
+        # exit('GOOD!!!')
+        #for izz in range(Nzones):
+        #    print(' subloop',izz,dl)
+        #    dl[izz] = rp0
+        #    print('  zprime!!!!',zprime)
+        #    print('  zprime!!!!',zprime[0])
+        #    print('  zprime!!!!',zprime[0])
+        #    print('  zprime!!!!',zprime[1])
+        #    dl[izz] = zprime[izz]
+        #    # print('  dzprime!!!!',dz)
+        #    # print('  dzprime!!!!',dz[0])
+        #    # print('  dzprime!!!!',dzprime[0].eval())
+        #    # print('  dzprime!!!!',dzprime[1])
+        #    # print('  dzprime!!!!',dzprime[1].eval())
+        #    print('  dz',dz.eval())
+        #    print('   izz',izz)
+        #    dl[izz] = dz
+        #    print('   izz',izz)
+        #    dl[izz] = rp0 + zprime[izz] + dz
+        #    dl[izz] = np.sqrt((rp0 + zprime[izz] + dz)**2)
+        #    dl[izz] = np.sqrt((rp0 + zprime[izz] + dz)**2 - (rp0 + thisz)**2)
+        # print('dl sqrt works subtract both',dl)
+        # print('dl sqrt works subtract both',[d.eval() for d in dl])
+        print('dl sqrt works subtract both',dl.eval())
+
+        #for d in dl: print('loop check1',d.eval())
+        # for id,d in enumerate(dl): print('loop check2',id,d.eval())
+
+        # dl =(rp0 + zprime + dzprime)**2 - (rp0 + thisz)**2
+        # print('dl sqrt works subtract sqrs?',dl)
+
+        # print('dl works py?',[d.eval() for d in dl])
+        # dl[:iz] = tensor.dscalar(0e0)  # fails.  must be a string
+        #  oh! it expects a string because it's the name.  how to put in a value?
+        #print('iz,len(dl)',iz,len(dl))
+        #print('dl1',dl)
+        #dl[:iz] = tensor.dscalar()  # I think you can leave the name blank
+        #print('dl2',dl)
+        # dl[:iz] = 0.
+        ## dl[:iz+1] = 0.  # FAILS NOW (with dz/z update)
+        ## print('dl after zeros at start',dl)
+        ## print('dl just the zeros check',dl[:iz+1])
+        #dl = tensor.sqrt((rp0 + zprime + dzprime)**2 - (rp0 + thisz)**2)
+        #dl[:iz] *= 0.
+        #print('dl4',dl)
         # oof nasty bug here!
         #  sometimes equal terms are off by the instrument precision
         #  so sqrt(1e15 - 1e15) = sqrt(-1) = NaN
         # take absolute value, just to be sure there's no problem
         # dl[iz:] = dl[iz:] - np.sqrt((rp0 + zprime[iz:])**2 - (rp0 + thisz)**2)
-        dl[iz:] = dl[iz:] - np.sqrt(np.abs((rp0 + zprime[iz:])**2 - (rp0 + thisz)**2))
+        #  convert this previous line to a tensor form
+        #   uh hold on, what's a tensor here?
+        # print('dl',dl)  # array of tensors
+        # print('zprime',zprime)  # array of tensors, except the first one is zero!
+        # print('thisz',thisz)  # float
+        # print('rp0',rp0)  # float
+        # print()
+        # dl = np.sqrt((rp0 + zprime + dzprime)**2 - (rp0 + thisz)**2)
+        # print('dl works?',[d.eval() for d in dl])
+        # test = (rp0 + thisz)**2
+        # print('test works1?',test)
+        # print('test works1?',[d.eval() for d in test]) # fails. it's a float not a list
+
+        # test = (rp0 + zprime[iz:])**2
+        # print('test works2?',test)
+        # print('test works2?',[d.eval() for d in test[1:]])  # no work for first cell
+        # test = (rp0 + zprime[iz:])**2 - (rp0 + thisz)**2
+        # print('test works3?',test)
+        # print('test works3?',[d.eval() for d in test])
+
+        ## print(' *** thisz vs zprime check! ***',zprime[iz],thisz)
+        # test = (np.abs((rp0 + zprime[iz+1:])**2 - (rp0 + thisz)**2))
+        # print('test works4?',test)
+        # test = (np.abs((rp0 + zprime[iz:])**2 - (rp0 + thisz)**2))
+        # print('test works5?',test)
+        # test = np.sqrt(np.abs((rp0 + zprime[iz+1:])**2 - (rp0 + thisz)**2))
+        # print('test works6?',test)
+        #print('test works4?',[d.eval() for d in test])
+
+        # print()
+        # dl[iz:] = dl[iz:] - np.sqrt(np.abs((rp0 + zprime[iz:])**2 - (rp0 + thisz)**2))
+        if 0:
+          for id,d in enumerate(dl):
+            print('loop check2',id,d.eval())
+            if id < iz+1:
+                dl[id] = dl[id] * 0.
+                print('hup',dl[id].eval())
+            else:
+                dl[id] = dl[id] - np.sqrt(np.abs((rp0 + zprime[id])**2 - (rp0 + thisz)**2))
+                print('dop',dl[id].eval())
+
+        dl = dl - np.sqrt(np.abs((rp0 + zprime)**2 - (rp0 + thisz)**2))
+        # print('dl with negative still',[dd.eval() for dd in dl])
+        print('dl with negative still',dl.eval())
+
+        dl0 = np.sqrt(np.abs((rp0 + zprime)**2 - (rp0 + thisz)**2))
+        print(' dl0 old',dl0.eval())
+        # dl0 = np.sqrt(np.max([zprime*0,(rp0 + zprime)**2 - (rp0 + thisz)**2])) # fails
+        dl0 = np.sqrt(tensor.max([zprime*0,(rp0 + zprime)**2 - (rp0 + thisz)**2],axis=0))
+        print(' dl0 new',dl0.eval())
+        # asdfasdf
+
+        # dl = ifelse(zprime > thisz, dl - dl0, dl * 0)  # fails
+        # print('dl with nan fixed?',dl.eval())
+
+        #if zprime > thisz:  # fails
+        #    dl = dl - dl0
+        #else:
+        #    dl = dl * 0
+        # print(' dl old part',iz,dl[:iz+1])
+        # print(' dl new part',iz,[d.eval() for d in dl[iz+1:]])
         dlarray.append(dl)
-        pass
+    print('MADE IT!!!')
+    # print('dlarray',[d.eval() for d in dlarray])
+    #print('dlarray',dlarray.eval())  # fails.  it's a list
+    #print()
     dlarray = np.array(dlarray)
+    print('dlarray',[d.eval() for d in dlarray])
+    # print('dlarray',dlarray.eval()) still fails even after change list to array
+
     # GAS ARRAY, ZPRIME VERSUS WAVELENGTH  -------------------------------------------
     for elem in mixratio:
         # tau_by_molecule[elem] = np.zeros((len(z), wgrid.size))
@@ -195,18 +414,19 @@ def gettau(xsecs, qtgrid, temp, mixratio,
             # HITEMP/HITRAN ROTHMAN ET AL. 2010 --------------------------------------
             sigma, lsig = absorb(xsecs[elem], qtgrid[elem], temp, p, mmr,
                                  lbroadening, lshifting, wgrid, debug=False)
-            sigma = np.array(sigma)  # cm^2/mol
+            # sigma = np.array(sigma)  # cm^2/mol
             if True in sigma < 0: sigma[sigma < 0] = 0e0
             if True in ~np.isfinite(sigma): sigma[~np.isfinite(sigma)] = 0e0
-            sigma = sigma*1e-4  # m^2/mol
+            sigma = sigma * 1e-4  # m^2/mol
             pass
         else:
             # EXOMOL HILL ET AL. 2013 ------------------------------------------------
             sigma, lsig = getxmolxs(temp, xsecs[elem])
-            sigma = np.array(sigma)   # cm^2/mol
+            # sigma = np.array(sigma)   # cm^2/mol
             if True in sigma < 0: sigma[sigma < 0] = 0e0
             if True in ~np.isfinite(sigma): sigma[~np.isfinite(sigma)] = 0e0
-            sigma = np.array(sigma)*1e-4  # m^2/mol
+            # sigma = np.array(sigma)*1e-4  # m^2/mol
+            sigma = sigma * 1e-4  # m^2/mol
             pass
         if isothermal:
             tau = tau + mmr*sigma*np.array([rho]).T
@@ -396,13 +616,31 @@ G. ROUDIER: HITRAN HITEMP database parser
 # -- EXOMOL -- -------------------------------------------------------
 def getxmolxs(temp, xsecs):
     '''
-G. ROUDIER: Wrapper around EXOMOL Cerberus library
+    G. ROUDIER: Wrapper around EXOMOL Cerberus library
     '''
+    print('--getxmolxs start--')
+    #print('xsecs',xsecs['SPL'])
+    sigma = np.array([thisspl for thisspl in xsecs['SPL']])
+    #print('sigma',sigma)
+    print('sigma3',sigma[3])
+    print('sigma3',xsecs['SPL'][3])
+    print('nu',xsecs['SPLNU'])
+    print('nu3',xsecs['SPLNU'][3])
+    print('ackack')
+    print('temperature',temp.eval())
+    print('ackack')
+    for thisspl in xsecs['SPL']:
+        print('does this single call work?',thisspl(temp.eval()))   # ?? didn't try yet
+        print('does this single call work?',thisspl(temp))  # <-- FAILS!!
+    print('ackack')
     sigma = np.array([thisspl(temp) for thisspl in xsecs['SPL']])
+    print('nu?')
     nu = np.array(xsecs['SPLNU'])
+    print('nu!')
     select = np.argsort(nu)
     nu = nu[select]
     sigma = sigma[select]
+    print('--getxmolxs end--')
     return sigma, nu
 # ------------------------- ------------------------------------------
 # -- CIA -- ----------------------------------------------------------
@@ -426,16 +664,17 @@ G. ROUDIER: Pressure Broadening
                    np.arctan((wave-dwave - nu)/gamma))
     return f
 # -------------------------- -----------------------------------------
-# -- PYMC3 DETERMINISTIC FUNCTIONS -- --------------------------------
-@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
-                   tt.dvector],
-           otypes=[tt.dvector])
+# -- PYMC DETERMINISTIC FUNCTIONS -- ---------------------------------
+# @tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
+#                   tt.dvector],
+#           otypes=[tt.dvector])
 def cloudyfmcerberus(*crbinputs):
     '''
     G. ROUDIER: Wrapper around Cerberus forward model, spherical shell symmetry
     '''
     ctp, hza, hzloc, hzthick, tpr, mdp = crbinputs
-    # print(' not-fixed cloud parameters (cloudy):',ctp,hza,hzloc,hzthick)
+    print(' not-fixed cloud parameters (cloudy):',tpr.eval(),
+          ctp.eval(),hza.eval(),hzloc.eval(),hzthick.eval())
     fmc = np.zeros(ctxt.tspectrum.size)
     if ctxt.model == 'TEC':
         tceqdict = {}
@@ -443,48 +682,59 @@ def cloudyfmcerberus(*crbinputs):
         if 'XtoH' in ctxt.fixedParams:
             tceqdict['XtoH'] = ctxt.fixedParams['XtoH']
         else:
-            tceqdict['XtoH'] = float(mdp[mdpindex])
+            tceqdict['XtoH'] = mdp[mdpindex].eval()
+            # tceqdict['XtoH'] = mdp[mdpindex]     make sure to fix/test this next!!!
+        # asdf
             mdpindex += 1
 
         if 'CtoO' in ctxt.fixedParams:
             tceqdict['CtoO'] = ctxt.fixedParams['CtoO']
         else:
-            tceqdict['CtoO'] = float(mdp[mdpindex])
+            tceqdict['CtoO'] = mdp[mdpindex].eval()
+            # tceqdict['CtoO'] = mdp[mdpindex]
             mdpindex += 1
 
         if 'NtoO' in ctxt.fixedParams:
             tceqdict['NtoO'] = ctxt.fixedParams['NtoO']
         else:
-            tceqdict['NtoO'] = float(mdp[mdpindex])
+            tceqdict['NtoO'] = mdp[mdpindex].eval()
+            # tceqdict['NtoO'] = mdp[mdpindex]
         # print('XtoH,CtoO,NtoO =',tceqdict['XtoH'],tceqdict['CtoO'],tceqdict['NtoO'])
 
-        fmc = crbmodel(None, float(hza), float(ctp), ctxt.solidr, ctxt.orbp,
+#        fmc = crbmodel(None, hza.eval(), ctp.eval(), ctxt.solidr, ctxt.orbp,
+#                       ctxt.xsl['data'][ctxt.p]['XSECS'],
+#                       ctxt.xsl['data'][ctxt.p]['QTGRID'],
+#                       tpr.eval(), np.array(ctxt.spc['data'][ctxt.p]['WB']),
+#                       hzlib=ctxt.hzlib,  hzp='AVERAGE', hztop=hzloc.eval(),
+#                       hzwscale=hzthick.eval(), cheq=tceqdict, pnet=ctxt.p,
+#                       verbose=False, debug=False)
+        fmc = crbmodel(None, hza, ctp, ctxt.solidr, ctxt.orbp,
                        ctxt.xsl['data'][ctxt.p]['XSECS'],
                        ctxt.xsl['data'][ctxt.p]['QTGRID'],
-                       float(tpr), np.array(ctxt.spc['data'][ctxt.p]['WB']),
-                       hzlib=ctxt.hzlib,  hzp='AVERAGE', hztop=float(hzloc),
-                       hzwscale=float(hzthick), cheq=tceqdict, pnet=ctxt.p,
+                       tpr, np.array(ctxt.spc['data'][ctxt.p]['WB']),
+                       hzlib=ctxt.hzlib,  hzp='AVERAGE', hztop=hzloc,
+                       hzwscale=hzthick, cheq=tceqdict, pnet=ctxt.p,
                        verbose=False, debug=False)
-        pass
     else:
+        exit('not this guy yet')
         mixratio = {}
         for index, key in enumerate(ctxt.modparlbl[ctxt.model]):
-            mixratio[key] = float(mdp[index])
-            pass
-        fmc = crbmodel(mixratio, float(hza), float(ctp), ctxt.solidr, ctxt.orbp,
+            mixratio[key] = mdp[index].eval()
+
+        fmc = crbmodel(mixratio, hza.eval(), ctp.eval(), ctxt.solidr, ctxt.orbp,
                        ctxt.xsl['data'][ctxt.p]['XSECS'],
                        ctxt.xsl['data'][ctxt.p]['QTGRID'],
-                       float(tpr), np.array(ctxt.spc['data'][ctxt.p]['WB']),
-                       hzlib=ctxt.hzlib,  hzp='AVERAGE', hztop=float(hzloc),
-                       hzwscale=float(hzthick), cheq=None, pnet=ctxt.p,
+                       tpr.eval(), np.array(ctxt.spc['data'][ctxt.p]['WB']),
+                       hzlib=ctxt.hzlib,  hzp='AVERAGE', hztop=hzloc.eval(),
+                       hzwscale=hzthick.eval(), cheq=None, pnet=ctxt.p,
                        verbose=False, debug=False)
-        pass
+
     fmc = fmc[ctxt.cleanup] - np.nanmean(fmc[ctxt.cleanup])
     fmc = fmc + np.nanmean(ctxt.tspectrum[ctxt.cleanup])
     return fmc
 
-@tco.as_op(itypes=[tt.dscalar, tt.dvector],
-           otypes=[tt.dvector])
+# @tco.as_op(itypes=[tt.dscalar, tt.dvector],
+#           otypes=[tt.dvector])
 def clearfmcerberus(*crbinputs):
     '''
     Wrapper around Cerberus forward model - NO CLOUDS!
@@ -557,9 +807,9 @@ def clearfmcerberus(*crbinputs):
     fmc = fmc + np.nanmean(ctxt.tspectrum[ctxt.cleanup])
     return fmc
 
-@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
-                   tt.dscalar, tt.dscalar, tt.dscalar, tt.dvector],
-           otypes=[tt.dvector])
+# @tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
+#                   tt.dscalar, tt.dscalar, tt.dscalar, tt.dvector],
+#           otypes=[tt.dvector])
 def offcerberus(*crbinputs):
     '''
 R.ESTRELA: ADD offsets between STIS filters and STIS and WFC3 filters
@@ -618,9 +868,9 @@ R.ESTRELA: ADD offsets between STIS filters and STIS and WFC3 filters
     fmc[cond_G102] = fmc[cond_G102] - 1e-2*float(off2)
     return fmc
 
-@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
-                   tt.dscalar, tt.dscalar, tt.dvector],
-           otypes=[tt.dvector])
+# @tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
+#                   tt.dscalar, tt.dscalar, tt.dvector],
+#           otypes=[tt.dvector])
 def offcerberus1(*crbinputs):
     '''
 R.ESTRELA: ADD offsets between STIS filters and STIS and WFC3 filters
@@ -665,9 +915,9 @@ R.ESTRELA: ADD offsets between STIS filters and STIS and WFC3 filters
     fmc[cond_G750] = fmc[cond_G750] + 1e-2*float(off1)
     return fmc
 
-@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
-                   tt.dscalar, tt.dscalar, tt.dvector],
-           otypes=[tt.dvector])
+# @tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
+#                   tt.dscalar, tt.dscalar, tt.dvector],
+#           otypes=[tt.dvector])
 def offcerberus2(*crbinputs):
     '''
 R.ESTRELA: ADD offsets between STIS filters and STIS and WFC3 filters
@@ -712,9 +962,9 @@ R.ESTRELA: ADD offsets between STIS filters and STIS and WFC3 filters
     fmc[cond_G750] = fmc[cond_G750] + 1e-2*float(off1)
     return fmc
 
-@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
-                   tt.dscalar, tt.dscalar, tt.dvector],
-           otypes=[tt.dvector])
+# @tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
+#                   tt.dscalar, tt.dscalar, tt.dvector],
+#           otypes=[tt.dvector])
 def offcerberus3(*crbinputs):
     '''
 R.ESTRELA: ADD offsets between STIS filters and STIS and WFC3 filters
@@ -759,9 +1009,9 @@ R.ESTRELA: ADD offsets between STIS filters and STIS and WFC3 filters
     fmc[cond_G102] = fmc[cond_G102] + 1e-2*float(off1)
     return fmc
 
-@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
-                   tt.dvector],
-           otypes=[tt.dvector])
+# @tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
+#                   tt.dvector],
+#           otypes=[tt.dvector])
 def offcerberus4(*crbinputs):
     '''
 R.ESTRELA: ADD offsets between STIS filters and STIS and WFC3 filters
@@ -804,9 +1054,9 @@ R.ESTRELA: ADD offsets between STIS filters and STIS and WFC3 filters
     fmc[cond_G430] = fmc[cond_G430] + 1e-2*float(off0)
     return fmc
 
-@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
-                   tt.dscalar, tt.dscalar, tt.dvector],
-           otypes=[tt.dvector])
+# @tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
+#                   tt.dscalar, tt.dscalar, tt.dvector],
+#           otypes=[tt.dvector])
 def offcerberus5(*crbinputs):
     '''
 R.ESTRELA: ADD offsets between STIS filters and STIS and WFC3 filters
@@ -851,9 +1101,9 @@ R.ESTRELA: ADD offsets between STIS filters and STIS and WFC3 filters
     fmc[cond_G102] = fmc[cond_G102] + 1e-2*float(off1)
     return fmc
 
-@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
-                   tt.dvector],
-           otypes=[tt.dvector])
+# @tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
+#                   tt.dvector],
+#           otypes=[tt.dvector])
 def offcerberus6(*crbinputs):
     '''
 R.ESTRELA: ADD offsets between STIS filters and STIS and WFC3 filters
@@ -896,9 +1146,9 @@ R.ESTRELA: ADD offsets between STIS filters and STIS and WFC3 filters
     fmc[cond_G750] = fmc[cond_G750] + 1e-2*float(off0)
     return fmc
 
-@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
-                   tt.dvector],
-           otypes=[tt.dvector])
+# @tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
+#                   tt.dvector],
+#           otypes=[tt.dvector])
 def offcerberus7(*crbinputs):
     '''
 R.ESTRELA: ADD offsets between STIS filters and WFC3 filters
@@ -941,9 +1191,9 @@ R.ESTRELA: ADD offsets between STIS filters and WFC3 filters
     fmc[cond_G750] = fmc[cond_G750] + 1e-2*float(off0)
     return fmc
 
-@tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
-                   tt.dscalar, tt.dscalar, tt.dvector],
-           otypes=[tt.dvector])
+# @tco.as_op(itypes=[tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar, tt.dscalar,
+#                   tt.dscalar, tt.dscalar, tt.dvector],
+#           otypes=[tt.dvector])
 def offcerberus8(*crbinputs):
     '''
 R.ESTRELA: ADD offsets between WFC3 filters

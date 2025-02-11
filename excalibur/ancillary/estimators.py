@@ -7,7 +7,8 @@ import scipy
 import math
 
 from astropy.modeling.models import BlackBody
-from astropy import units as u
+# from astropy import units as u  # CI problem. strange
+import astropy.units
 
 from excalibur.ariel.metallicity import massMetalRelation
 
@@ -709,9 +710,17 @@ def pl_ESM(priors, _ests, pl):
 
     scaleFactor = 4.29e6
 
-    BBplanet = BlackBody(temperature=Tday*u.K)
-    BBstar = BlackBody(temperature=Tstar*u.K)
-    ESM = scaleFactor * BBplanet(7.5*u.micron) / BBstar(7.5*u.micron) \
+    # BBplanet = BlackBody(temperature=Tday*u.K)
+    # BBstar = BlackBody(temperature=Tstar*u.K)
+    BBplanet = BlackBody(temperature=Tday*astropy.units.K)
+    BBstar = BlackBody(temperature=Tstar*astropy.units.K)
+
+    # using u for units doesn't work because CI is dumb I guess
+    #  it doesn't think that there is such a thing as micron.  strange
+    # ESM = scaleFactor * BBplanet(7.5*u.micron) / BBstar(7.5*u.micron) \
+    #    * (Rp_cgs / Rstar_cgs)**2 \
+    #    / 10**(Kmag/5)
+    ESM = scaleFactor * BBplanet(7.5*astropy.units.micron) / BBstar(7.5*astropy.units.micron) \
         * (Rp_cgs / Rstar_cgs)**2 \
         / 10**(Kmag/5)
     # print('ESM factor1',scaleFactor)

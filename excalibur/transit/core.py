@@ -2,14 +2,12 @@
 # -- IMPORTS -- ------------------------------------------------------
 import dawgie
 
-import excalibur
 import excalibur.data.core as datcore
 import excalibur.system.core as syscore
 import excalibur.util.cerberus as crbutil
 from excalibur.util import elca
 from excalibur.cerberus.plotting import rebinData
 
-import os
 import io
 import copy
 import logging
@@ -20,19 +18,16 @@ import matplotlib.pyplot as plt
 import sys
 from ultranest import ReactiveNestedSampler
 
-import pymc3 as pm
+import pymc
 log = logging.getLogger(__name__)
-pymc3log = logging.getLogger('pymc3')
-pymc3log.setLevel(logging.ERROR)
+pymclog = logging.getLogger('pymc')
+pymclog.setLevel(logging.ERROR)
 
 from scipy.optimize import least_squares, brentq
 import scipy.constants as cst
 from scipy.signal import savgol_filter
 from scipy.stats import gaussian_kde, skew, kurtosis
 from numpy.fft import fft, fftfreq
-
-import theano.tensor as tt
-import theano.compile.ops as tco
 
 import numpy as np
 
@@ -61,7 +56,7 @@ def ctxtupdt(alt=None, ald=None, allz=None, orbp=None, commonoim=None, ecc=None,
              tmjd=None, ttv=None, valid=None, visits=None, aos=None, avi=None,
              ginc=None, gttv=None):
     '''
-G. ROUDIER: Update global context for pymc3 deterministics
+G. ROUDIER: Update global context for pymc deterministics
     '''
     sys.modules[__name__].ctxt = CONTEXT(alt=alt, ald=ald, allz=allz, orbp=orbp,
                                          commonoim=commonoim, ecc=ecc, g1=g1, g2=g2,
@@ -854,8 +849,9 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
             plt.ylabel('Normalized Flux')
             plt.xlabel('Orbital Phase')
 
-            saveDir = os.path.join(excalibur.context['data_dir'], 'bryden/')
-            plt.savefig(saveDir + 'norm_'+ext+' visit'+str(v)+'.png')
+            # (need to import excalibur and os for this)
+            # saveDir = os.path.join(excalibur.context['data_dir'], 'bryden/')
+            # plt.savefig(saveDir + 'norm_'+ext+' visit'+str(v)+'.png')
             # REDUNDANT SAVE - above saves to disk; below saves as state vector
             buf = io.BytesIO()
             myfig.savefig(buf, format='png')
@@ -1149,52 +1145,51 @@ def hstwhitelight(allnrm, fin, out, allext, selftype, chainlen=int(1e4), verbose
                  orbits=orbits, period=period,
                  selectfit=selectfit, smaors=smaors,
                  time=time, tmjd=tmjd, ttv=ttv, visits=visits)
-        # PYMC3 --------------------------------------------------------------------------
-        with pm.Model():
-            rprs = pm.TruncatedNormal('rprs', mu=rpors, tau=taurprs,
-                                      lower=rpors/2e0, upper=2e0*rpors)
+        # PYMC --------------------------------------------------------------------------
+        with pymc.Model():
+            rprs = pymc.TruncatedNormal('rprs', mu=rpors, tau=taurprs,
+                                        lower=rpors/2e0, upper=2e0*rpors)
             nodes.append(rprs)
             if 'WFC3' in ext:
-                alltknot = pm.TruncatedNormal('dtk', mu=tmjd, tau=tautknot,
-                                              lower=tknotmin, upper=tknotmax,
-                                              shape=shapettv)
+                alltknot = pymc.TruncatedNormal('dtk', mu=tmjd, tau=tautknot,
+                                                lower=tknotmin, upper=tknotmax,
+                                                shape=shapettv)
                 nodes.append(alltknot)
                 if fixedinc: inc = priors[p]['inc']
                 else:
-                    inc = pm.TruncatedNormal('inc', mu=priors[p]['inc'], tau=tauinc,
-                                             lower=lowinc, upper=upinc)
+                    inc = pymc.TruncatedNormal('inc', mu=priors[p]['inc'], tau=tauinc,
+                                               lower=lowinc, upper=upinc)
                     nodes.append(inc)
-                    pass
                 pass
-            allvslope = pm.TruncatedNormal('vslope', mu=0e0, tau=tauvs,
-                                           lower=-3e-2/trdura,
-                                           upper=3e-2/trdura, shape=shapevis)
-            alloslope = pm.Normal('oslope', mu=0e0, tau=tauvs, shape=shapevis)
-            alloitcp = pm.Normal('oitcp', mu=1e0, tau=tauvi, shape=shapevis)
+            allvslope = pymc.TruncatedNormal('vslope', mu=0e0, tau=tauvs,
+                                             lower=-3e-2/trdura,
+                                             upper=3e-2/trdura, shape=shapevis)
+            alloslope = pymc.Normal('oslope', mu=0e0, tau=tauvs, shape=shapevis)
+            alloitcp = pymc.Normal('oitcp', mu=1e0, tau=tauvi, shape=shapevis)
             nodes.append(allvslope)
             nodes.append(alloslope)
             nodes.append(alloitcp)
             if 'WFC3' in ext:
                 # TTV + FIXED OR VARIABLE INC
                 if fixedinc:
-                    _whitedata = pm.Normal('whitedata', mu=fiorbital(*nodes),
-                                           tau=tauwhite, observed=flatwhite[selectfit])
+                    _whitedata = pymc.Normal('whitedata', mu=fiorbital(*nodes),
+                                             tau=tauwhite, observed=flatwhite[selectfit])
                     pass
                 else:
-                    _whitedata = pm.Normal('whitedata', mu=orbital(*nodes),
-                                           tau=tauwhite, observed=flatwhite[selectfit])
+                    _whitedata = pymc.Normal('whitedata', mu=orbital(*nodes),
+                                             tau=tauwhite, observed=flatwhite[selectfit])
                     pass
                 pass
             else:
                 # NO TTV, FIXED INC
-                _whitedata = pm.Normal('whitedata', mu=nottvfiorbital(*nodes),
-                                       tau=tauwhite, observed=flatwhite[selectfit])
+                _whitedata = pymc.Normal('whitedata', mu=nottvfiorbital(*nodes),
+                                         tau=tauwhite, observed=flatwhite[selectfit])
                 pass
             log.warning('>-- MCMC nodes: %s', str([n.name for n in nodes]))
-            trace = pm.sample(chainlen, cores=4, tune=int(chainlen/2),
-                              compute_convergence_checks=False, step=pm.Metropolis(),
-                              progressbar=verbose)
-            mcpost = pm.stats.summary(trace)  # dynamic attr so, pylint: disable=no-member
+            trace = pymc.sample(chainlen, cores=4, tune=int(chainlen/2),
+                                compute_convergence_checks=False, step=pymc.Metropolis(),
+                                progressbar=verbose)
+            mcpost = pymc.stats.summary(trace)  # dynamic attr so, pylint: disable=no-member
             pass
         mctrace = {}
         for key in mcpost['mean'].keys():
@@ -1478,36 +1473,36 @@ def whitelight(nrm, fin, out, ext, selftype, multiwl, chainlen=int(1e4),
             oslope_beta = (1/tauvs)**0.5
             oitcp_alpha = 1e0
             oitcp_beta = (1/tauvi)**0.5
-        # PYMC3 --------------------------------------------------------------------------
-        with pm.Model():
-            rprs = pm.TruncatedNormal('rprs', mu=rpors, tau=taurprs,
-                                      lower=rpors/2e0, upper=2e0*rpors)
+        # PYMC --------------------------------------------------------------------------
+        with pymc.Model():
+            rprs = pymc.TruncatedNormal('rprs', mu=rpors, tau=taurprs,
+                                        lower=rpors/2e0, upper=2e0*rpors)
             nodes.append(rprs)
             if parentprior:
                 # use parent distr fitted Lorentzians (also called Cauchy)
-                allvslope = pm.Cauchy('vslope', alpha=vslope_alpha,
-                                      beta=vslope_beta, shape=shapevis)
-                alloslope = pm.Cauchy('oslope', alpha=oslope_alpha,
-                                      beta=oslope_beta, shape=shapevis)
-                alloitcp = pm.Cauchy('oitcp', alpha=oitcp_alpha,
-                                     beta=oitcp_beta, shape=shapevis)
+                allvslope = pymc.Cauchy('vslope', alpha=vslope_alpha,
+                                        beta=vslope_beta, shape=shapevis)
+                alloslope = pymc.Cauchy('oslope', alpha=oslope_alpha,
+                                        beta=oslope_beta, shape=shapevis)
+                alloitcp = pymc.Cauchy('oitcp', alpha=oitcp_alpha,
+                                       beta=oitcp_beta, shape=shapevis)
             else:
-                allvslope = pm.TruncatedNormal('vslope', mu=0e0, tau=tauvs,
-                                               lower=-3e-2/trdura,
-                                               upper=3e-2/trdura, shape=shapevis)
-                alloslope = pm.Normal('oslope', mu=0e0, tau=tauvs, shape=shapevis)
-                alloitcp = pm.Normal('oitcp', mu=1e0, tau=tauvi, shape=shapevis)
+                allvslope = pymc.TruncatedNormal('vslope', mu=0e0, tau=tauvs,
+                                                 lower=-3e-2/trdura,
+                                                 upper=3e-2/trdura, shape=shapevis)
+                alloslope = pymc.Normal('oslope', mu=0e0, tau=tauvs, shape=shapevis)
+                alloitcp = pymc.Normal('oitcp', mu=1e0, tau=tauvi, shape=shapevis)
             nodes.append(allvslope)
             nodes.append(alloslope)
             nodes.append(alloitcp)
             # FIXED ORBITAL SOLUTION
-            _whitedata = pm.Normal('whitedata', mu=nottvfiorbital(*nodes),
-                                   tau=tauwhite, observed=flatwhite[selectfit])
+            _whitedata = pymc.Normal('whitedata', mu=nottvfiorbital(*nodes),
+                                     tau=tauwhite, observed=flatwhite[selectfit])
             log.warning('>-- MCMC nodes: %s', str([n.name for n in nodes]))
-            trace = pm.sample(chainlen, cores=4, tune=int(chainlen/2),
-                              compute_convergence_checks=False, step=pm.Metropolis(),
-                              progressbar=verbose)
-            mcpost = pm.stats.summary(trace)  # dynamic attr so, pylint: disable=no-member
+            trace = pymc.sample(chainlen, cores=4, tune=int(chainlen/2),
+                                compute_convergence_checks=False, step=pymc.Metropolis(),
+                                progressbar=verbose)
+            mcpost = pymc.stats.summary(trace)  # dynamic attr so, pylint: disable=no-member
             pass
         mctrace = {}
         for key in mcpost['mean'].keys():
@@ -2134,37 +2129,37 @@ def spectrum(fin, nrm, wht, out, ext, selftype,
             if shapevis < len(visits): shapevis = len(visits)
             ctxtupdt(allz=allz, g1=g1, g2=g2, g3=g3, g4=g4,
                      orbits=orbits, smaors=smaors, time=time, valid=valid, visits=visits)
-            # PYMC3 ----------------------------------------------------------------------
-            with pm.Model():
+            # PYMC ----------------------------------------------------------------------
+            with pymc.Model():
                 if startflag:
                     lowstart = whiterprs - 5e0*Hs
                     lowstart = max(lowstart, 0)
                     upstart = whiterprs + 5e0*Hs
-                    rprs = pm.Uniform('rprs', lower=lowstart, upper=upstart)
+                    rprs = pymc.Uniform('rprs', lower=lowstart, upper=upstart)
                     pass
                 else:
-                    rprs = pm.Normal('rprs', mu=prcenter, tau=1e0/(prwidth**2))
+                    rprs = pymc.Normal('rprs', mu=prcenter, tau=1e0/(prwidth**2))
 #                     lowstart = whiterprs - 5e0*Hs
 #                     if lowstart < 0: lowstart = 0
 #                     upstart = whiterprs + 5e0*Hs
-#                     rprs = pm.Uniform('rprs', lower=lowstart, upper=upstart)
+#                     rprs = pymc.Uniform('rprs', lower=lowstart, upper=upstart)
 #                     pass
-                allvslope = pm.TruncatedNormal('vslope', mu=0e0, tau=tauvs,
-                                               lower=-3e-2/trdura,
-                                               upper=3e-2/trdura, shape=shapevis)
-                alloslope = pm.Normal('oslope', mu=0, tau=tauvs, shape=shapevis)
-                alloitcp = pm.Normal('oitcp', mu=1e0, tau=tauvi, shape=shapevis)
+                allvslope = pymc.TruncatedNormal('vslope', mu=0e0, tau=tauvs,
+                                                 lower=-3e-2/trdura,
+                                                 upper=3e-2/trdura, shape=shapevis)
+                alloslope = pymc.Normal('oslope', mu=0, tau=tauvs, shape=shapevis)
+                alloitcp = pymc.Normal('oitcp', mu=1e0, tau=tauvi, shape=shapevis)
                 nodes.append(rprs)
                 nodes.append(allvslope)
                 nodes.append(alloslope)
                 nodes.append(alloitcp)
-                _wbdata = pm.Normal('wbdata', mu=lcmodel(*nodes),
-                                    tau=np.nanmedian(tauwbdata[valid]),
-                                    observed=data[valid])
-                trace = pm.sample(chainlen, cores=4, tune=int(chainlen/2),
-                                  compute_convergence_checks=False, step=pm.Metropolis(),
-                                  progressbar=verbose)
-                mcpost = pm.stats.summary(trace)  # dynamic attr so, pylint: disable=no-member
+                _wbdata = pymc.Normal('wbdata', mu=lcmodel(*nodes),
+                                      tau=np.nanmedian(tauwbdata[valid]),
+                                      observed=data[valid])
+                trace = pymc.sample(chainlen, cores=4, tune=int(chainlen/2),
+                                    compute_convergence_checks=False, step=pymc.Metropolis(),
+                                    progressbar=verbose)
+                mcpost = pymc.stats.summary(trace)  # dynamic attr so, pylint: disable=no-member
                 pass
             # Exclude first channel with Uniform prior
             if not startflag:
@@ -2303,9 +2298,9 @@ def spectrum(fin, nrm, wht, out, ext, selftype,
         pass
     return exospec
 # -------------- -----------------------------------------------------
-# -- PYMC3 DETERMINISTIC FUNCTIONS -- --------------------------------
-@tco.as_op(itypes=[tt.dscalar, tt.dvector, tt.dscalar,
-                   tt.dvector, tt.dvector, tt.dvector], otypes=[tt.dvector])
+# -- PYMC DETERMINISTIC FUNCTIONS -- ---------------------------------
+# @tco.as_op(itypes=[tt.dscalar, tt.dvector, tt.dscalar,
+#                   tt.dvector, tt.dvector, tt.dvector], otypes=[tt.dvector])
 def orbital(*whiteparams):
     '''
     G. ROUDIER: Orbital model
@@ -2329,8 +2324,8 @@ def orbital(*whiteparams):
         pass
     return np.array(out)[ctxt.selectfit]
 
-@tco.as_op(itypes=[tt.dscalar,
-                   tt.dvector, tt.dvector, tt.dvector], otypes=[tt.dvector])
+# @tco.as_op(itypes=[tt.dscalar,
+#                   tt.dvector, tt.dvector, tt.dvector], otypes=[tt.dvector])
 def nottvfiorbital(*whiteparams):
     '''
     R. ESTRELA: Fixed orbital solution
@@ -2360,8 +2355,8 @@ def nottvfiorbital(*whiteparams):
         pass
     return np.array(out)[ctxt.selectfit]
 
-@tco.as_op(itypes=[tt.dscalar, tt.dvector,
-                   tt.dvector, tt.dvector, tt.dvector], otypes=[tt.dvector])
+# @tco.as_op(itypes=[tt.dscalar, tt.dvector,
+#                   tt.dvector, tt.dvector, tt.dvector], otypes=[tt.dvector])
 def fiorbital(*whiteparams):
     '''
     G. ROUDIER: Orbital model with fixed inclination
@@ -2384,8 +2379,8 @@ def fiorbital(*whiteparams):
         pass
     return np.array(out)[ctxt.selectfit]
 
-@tco.as_op(itypes=[tt.dscalar, tt.dvector, tt.dvector, tt.dvector],
-           otypes=[tt.dvector])
+# @tco.as_op(itypes=[tt.dscalar, tt.dvector, tt.dvector, tt.dvector],
+#           otypes=[tt.dvector])
 def lcmodel(*specparams):
     '''
     G. ROUDIER: Spectral light curve model
@@ -2547,27 +2542,27 @@ def fastspec(fin, nrm, wht, ext, selftype,
         if shapevis < len(visits): shapevis = len(visits)
         ctxtupdt(allz=allz, g1=g1, g2=g2, g3=g3, g4=g4,
                  orbits=orbits, smaors=smaors, time=time, valid=valid, visits=visits)
-        # PYMC3 --------------------------------------------------------------------------
-        with pm.Model():
+        # PYMC --------------------------------------------------------------------------
+        with pymc.Model():
             lowstart = whiterprs - 5e0*Hs
             lowstart = max(lowstart, 0)
             upstart = whiterprs + 5e0*Hs
-            rprs = pm.Uniform('rprs', lower=lowstart, upper=upstart)
-            allvslope = pm.TruncatedNormal('vslope', mu=0e0, tau=tauvs,
-                                           lower=-3e-2/trdura,
-                                           upper=3e-2/trdura, shape=shapevis)
-            alloslope = pm.Normal('oslope', mu=0, tau=tauvs, shape=shapevis)
-            alloitcp = pm.Normal('oitcp', mu=1e0, tau=tauvi, shape=shapevis)
+            rprs = pymc.Uniform('rprs', lower=lowstart, upper=upstart)
+            allvslope = pymc.TruncatedNormal('vslope', mu=0e0, tau=tauvs,
+                                             lower=-3e-2/trdura,
+                                             upper=3e-2/trdura, shape=shapevis)
+            alloslope = pymc.Normal('oslope', mu=0, tau=tauvs, shape=shapevis)
+            alloitcp = pymc.Normal('oitcp', mu=1e0, tau=tauvi, shape=shapevis)
             nodes.append(rprs)
             nodes.append(allvslope)
             nodes.append(alloslope)
             nodes.append(alloitcp)
-            _wbdata = pm.Normal('wbdata', mu=lcmodel(*nodes),
-                                tau=np.nanmedian(tauwbdata[valid]),
-                                observed=data[valid])
-            trace = pm.sample(chainlen, cores=4, tune=int(chainlen/3),
-                              compute_convergence_checks=False, step=pm.Metropolis(),
-                              progressbar=verbose)
+            _wbdata = pymc.Normal('wbdata', mu=lcmodel(*nodes),
+                                  tau=np.nanmedian(tauwbdata[valid]),
+                                  observed=data[valid])
+            trace = pymc.sample(chainlen, cores=4, tune=int(chainlen/3),
+                                compute_convergence_checks=False, step=pymc.Metropolis(),
+                                progressbar=verbose)
             pass
         ES.append(np.nanmedian(trace['rprs']))
         ESerr.append(np.nanstd(trace['rprs']))

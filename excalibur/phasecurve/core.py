@@ -25,7 +25,7 @@ def ctxtupdt(alt=None, ald=None, allz=None, orbp=None, commonoim=None, ecc=None,
              orbits=None, period=None, selectfit=None, smaors=None, time=None,
              tmjd=None, ttv=None, valid=None, visits=None, aos=None, avi=None):
     '''
-    G. ROUDIER: Update global context for pymc3 deterministics
+    G. ROUDIER: Update global context for pymc deterministics
     '''
     trncore.ctxt = CONTEXT(alt=alt, ald=ald, allz=allz, orbp=orbp,
                            commonoim=commonoim, ecc=ecc, g1=g1, g2=g2,
