@@ -3,30 +3,33 @@
 import os
 import setuptools
 
-deps = ['astropy',
-        'ldtk',
-        'lmfit',
-        'matplotlib',
-        'pymc3',
-        'scipy',
-        ]
-excalibur = os.path.join ('excalibur', '__init__.py')
+deps = [
+    'astropy',
+    'ldtk',
+    'lmfit',
+    'matplotlib',
+    'pymc3',
+    'scipy',
+]
+excalibur = os.path.join('excalibur', '__init__.py')
 version = 'esp-git-rev'
-with open (os.path.join (os.path.dirname (__file__), excalibur)) as f: t = f.read()
-t = t.replace ('${UNDEFINED}', version)
-with open (os.path.join (os.path.dirname (__file__), excalibur), 'tw') as f:\
-     f.write (t)
-setuptools.setup (name='excalibur',
-                  version='0.0.0',
-                  packages=setuptools.find_packages(),
-                  setup_requires=deps,
-                  src_root=os.path.abspath (os.path.dirname (__file__)),
-                  install_requires=deps,
-                  package_data={},
-                  author='Gael Roudier',
-                  author_email='Gael.Roudier@jpl.caltech.edu',
-                  description='',
-                  license='''*******************************************************************************
+with open(os.path.join(os.path.dirname(__file__), excalibur)) as f:
+    t = f.read()
+t = t.replace('${UNDEFINED}', version)
+with open(os.path.join(os.path.dirname(__file__), excalibur), 'tw') as f:
+    f.write(t)
+setuptools.setup(
+    name='excalibur',
+    version='0.0.0',
+    packages=setuptools.find_packages(),
+    setup_requires=deps,
+    src_root=os.path.abspath(os.path.dirname(__file__)),
+    install_requires=deps,
+    package_data={},
+    author='Gael Roudier',
+    author_email='Gael.Roudier@jpl.caltech.edu',
+    description='',
+    license='''*******************************************************************************
  **
  **           Copyright 2018, by the California Institute of Technology
  **    ALL RIGHTS RESERVED. United States Government Sponsorship acknowledged.
@@ -41,6 +44,7 @@ setuptools.setup (name='excalibur',
  **                countries or providing access to foreign persons.
  ******************************************************************************
  ** NTR: 50482''',
-                  keywords='baysian mcmc',
-                  url='https://github-fn.jpl.nasa.gov/EXCALIBUR/esp',
-                  zip_safe=False)
+    keywords='baysian mcmc',
+    url='https://github-fn.jpl.nasa.gov/EXCALIBUR/esp',
+    zip_safe=False,
+)

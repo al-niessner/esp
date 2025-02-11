@@ -15,35 +15,49 @@ if 'EXCALIBUR_PRIVATE_PIPELINE_INDEPENDENT' in os.environ:
     class FakeDawgie:
         def __init__(self):
             self.__name = 'runtime'
-        def _bot(self): return self
-        def _runid(self): return self
-        def name(self): return self.__name
-        def ds(self): return self
-        def update(self): return self
+
+        def _bot(self):
+            return self
+
+        def _runid(self):
+            return self
+
+        def name(self):
+            return self.__name
+
+        def ds(self):
+            return self
+
+        def update(self):
+            return self
 
     def connect(_alg, _bit, _tn):
         return FakeDawgie()
 
     def targets():
-        return ['a','b','c', 'GJ 3193', 'GJ 3193 (taurex sim @TS)']
+        return ['a', 'b', 'c', 'GJ 3193', 'GJ 3193 (taurex sim @TS)']
+
     # pylint: enable=missing-class-docstring,missing-function-docstring
-    setattr (dawgie.db, 'connect', connect)
-    setattr (dawgie.db, 'targets', targets)
+    setattr(dawgie.db, 'connect', connect)
+    setattr(dawgie.db, 'targets', targets)
     test = excalibur.runtime.algorithms.create()
-    test.run (FakeDawgie())
+    test.run(FakeDawgie())
 else:
     fep = os.environ.get('FE_PORT', None)
     rid = int(os.environ.get('RUNID', None))
     tn = os.environ.get('TARGET_NAME', None)
 
-    if fep: dawgie.util.set_ports(int(fep))
+    if fep:
+        dawgie.util.set_ports(int(fep))
 
-    dawgie.security.initialize(os.path.expandvars
-                               (os.path.expanduser
-                                (dawgie.context.guest_public_keys)),
-                               myname=dawgie.context.ssl_pem_myname,
-                               myself=dawgie.context.ssl_pem_myself,
-                               system=dawgie.context.ssl_pem_file)
+    dawgie.security.initialize(
+        os.path.expandvars(
+            os.path.expanduser(dawgie.context.guest_public_keys)
+        ),
+        myname=dawgie.context.ssl_pem_myname,
+        myself=dawgie.context.ssl_pem_myself,
+        system=dawgie.context.ssl_pem_file,
+    )
     dawgie.db.reopen()
 
     if tn in ['', '__all__']:

@@ -1,6 +1,9 @@
 '''ariel planet_clouds ds'''
+
 # -- IMPORTS -- ------------------------------------------------------
-import logging; log = logging.getLogger(__name__)
+import logging
+
+log = logging.getLogger(__name__)
 
 import numpy as np
 import csv
@@ -9,13 +12,15 @@ import csv
 
 # ______________________________________________________
 
-def readCloudTable(dataDir='/proj/data/ariel/',
-                   filename='estrela22_cloudFits.csv'):
+
+def readCloudTable(
+    dataDir='/proj/data/ariel/', filename='estrela22_cloudFits.csv'
+):
     '''
     Read in the best-fit cloud parameters from Estrela 2022
     '''
 
-    with open(dataDir+filename,'r',encoding='ascii') as file:
+    with open(dataDir + filename, 'r', encoding='ascii') as file:
         csvFile = csv.DictReader(file)
 
         cloudParamList = []
@@ -31,7 +36,10 @@ def readCloudTable(dataDir='/proj/data/ariel/',
         cloudParams['HThick'] = np.log10(float(cloudParams['HThick']))
 
     return cloudParamList
+
+
 # ______________________________________________________
+
 
 def randomCloudParameters():
     '''
@@ -66,17 +74,22 @@ def randomCloudParameters():
     #        print('HThick is outside prior range',cloudParams['HThick'],priorbounds['HThick'])
 
     return randomCloudParams
+
+
 # ______________________________________________________
+
 
 def fixedCloudParameters():
     '''
     All planets are assigned the same median cloud parameters (from Estrela 2022)
     '''
     medianCloudParams = {}
-    medianCloudParams['CTP'] = -1.52     # 0.03 bar
+    medianCloudParams['CTP'] = -1.52  # 0.03 bar
     medianCloudParams['HScale'] = -2.10  # 0.008
-    medianCloudParams['HLoc'] = -2.30    # 0.005 bar location (meaningless)
-    medianCloudParams['HThick'] = 9.76   # very wide vertical thickness
+    medianCloudParams['HLoc'] = -2.30  # 0.005 bar location (meaningless)
+    medianCloudParams['HThick'] = 9.76  # very wide vertical thickness
 
     return medianCloudParams
+
+
 # ______________________________________________________

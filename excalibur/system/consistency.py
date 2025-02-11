@@ -1,12 +1,16 @@
 '''system consistency ds'''
+
 # -- IMPORTS -- -----------------------------------------------------
 import numpy
 import excalibur.system.core as syscore
-import logging; log = logging.getLogger(__name__)
+import logging
+
+log = logging.getLogger(__name__)
 
 # ----------------- -------------------------------------------------
 # --       Consistency checks between related parameters           --
 # -------------------------------------------------------------------
+
 
 def consistency_checks(priors, ignoredPlanets):
     '''
@@ -16,32 +20,41 @@ def consistency_checks(priors, ignoredPlanets):
     inconsistencies = []
 
     ok = consistency_check_M_R_LOGG_star(priors)
-    if not ok: inconsistencies.append('LOGG*')
+    if not ok:
+        inconsistencies.append('LOGG*')
 
     ok = consistency_check_M_R_RHO_star(priors)
-    if not ok: inconsistencies.append('RHO*')
+    if not ok:
+        inconsistencies.append('RHO*')
 
     ok = consistency_check_R_T_Lstar(priors)
-    if not ok: inconsistencies.append('L*')
+    if not ok:
+        inconsistencies.append('L*')
 
     for planetLetter in priors['planets']:
         # special check needed for HAT-P-11 c
         #  (it's a non-transiting RV planet that shouldn't be here, but there's an Archive bug)
         if planetLetter in ignoredPlanets:
-            log.warning('SKIPPING consistency check for ignored planets: %s',planetLetter)
+            log.warning(
+                'SKIPPING consistency check for ignored planets: %s',
+                planetLetter,
+            )
         else:
             ok = consistency_check_sma_P_Mstar(priors, planetLetter)
-            if not ok: inconsistencies.append(planetLetter+':semi-major axis')
+            if not ok:
+                inconsistencies.append(planetLetter + ':semi-major axis')
 
             # planet density does not exist (so no need to check it)
             # ok = consistency_check_M_R_RHO_planet(priors, planetLetter)
             # if not ok: inconsistencies.append(planetLetter+':rho')
 
             ok = consistency_check_M_R_LOGG_planet(priors, planetLetter)
-            if not ok: inconsistencies.append(planetLetter+':logg')
+            if not ok:
+                inconsistencies.append(planetLetter + ':logg')
 
             ok = consistency_check_Teq_sma_Lstar(priors, planetLetter)
-            if not ok: inconsistencies.append(planetLetter+':Teq')
+            if not ok:
+                inconsistencies.append(planetLetter + ':Teq')
 
             # impact and inclination should be consistent
             # but impact doesn't exist here; not saved by target
@@ -50,21 +63,23 @@ def consistency_checks(priors, ignoredPlanets):
 
     return inconsistencies
 
+
 # -------------------------------------------------------------------
-def close_to(A, B, eps=1.e-1):
+def close_to(A, B, eps=1.0e-1):
     '''
     Check whether two values are more or less equal
     (within fractional 'eps' of each other)
     '''
     # print('ccheck  close enough?',A,B,numpy.abs((A-B)/(A+B)*2))
 
-    if A==0 and B==0:
+    if A == 0 and B == 0:
         close_enough = True
-    elif numpy.abs((A-B)/(A+B)*2) > eps:
+    elif numpy.abs((A - B) / (A + B) * 2) > eps:
         close_enough = False
     else:
         close_enough = True
     return close_enough
+
 
 # -------------------------------------------------------------------
 def consistency_check_M_R_RHO_star(starInfo):
@@ -81,19 +96,23 @@ def consistency_check_M_R_RHO_star(starInfo):
     # print('ccheck R,M,RHO',R,M,RHO)
 
     consistent = True
-    if RHO=='' or R=='' or M=='':
+    if RHO == '' or R == '' or M == '':
         print('ccheck PASS: one of the M/R/RHO* fields is missing')
     else:
-        RHOcheck = float(M)*sscmks['Msun'] / \
-            (4.*numpy.pi/3. * (float(R)*sscmks['Rsun'])**3)
+        RHOcheck = (
+            float(M)
+            * sscmks['Msun']
+            / (4.0 * numpy.pi / 3.0 * (float(R) * sscmks['Rsun']) ** 3)
+        )
         # print('ccheck RHOcheck',RHOcheck)
-        if not close_to(float(RHO),RHOcheck):
+        if not close_to(float(RHO), RHOcheck):
             consistent = False
 
     return consistent
 
+
 # -------------------------------------------------------------------
-def consistency_check_M_R_RHO_planet(starInfo,planetLetter):
+def consistency_check_M_R_RHO_planet(starInfo, planetLetter):
     '''
     Verify that the stellar density is consistent with the stellar mass,radius
     '''
@@ -107,16 +126,20 @@ def consistency_check_M_R_RHO_planet(starInfo,planetLetter):
     # print('ccheck R,M,RHO planet',R,M,RHO)
 
     consistent = True
-    if RHO=='' or R=='' or M=='':
+    if RHO == '' or R == '' or M == '':
         print('ccheck PASS: one of the M/R/RHO planet fields is missing')
     else:
-        RHOcheck = float(M)*sscmks['Mjup'] / \
-            (4.*numpy.pi/3. * (float(R)*sscmks['Rjup'])**3)
+        RHOcheck = (
+            float(M)
+            * sscmks['Mjup']
+            / (4.0 * numpy.pi / 3.0 * (float(R) * sscmks['Rjup']) ** 3)
+        )
         # print('ccheck RHOcheck',RHOcheck)
-        if not close_to(float(RHO),RHOcheck):
+        if not close_to(float(RHO), RHOcheck):
             consistent = False
 
     return consistent
+
 
 # -------------------------------------------------------------------
 def consistency_check_M_R_LOGG_star(starInfo):
@@ -133,19 +156,25 @@ def consistency_check_M_R_LOGG_star(starInfo):
     # print('ccheck R,M,LOGG',R,M,LOGG)
 
     consistent = True
-    if LOGG=='' or R=='' or M=='':
+    if LOGG == '' or R == '' or M == '':
         print('ccheck PASS: one of the M/R/LOGG* fields is missing')
     else:
-        g = sscmks['G'] * float(M)*sscmks['Msun'] / (float(R)*sscmks['Rsun'])**2
+        g = (
+            sscmks['G']
+            * float(M)
+            * sscmks['Msun']
+            / (float(R) * sscmks['Rsun']) ** 2
+        )
         LOGGcheck = numpy.log10(g)
         # print('ccheck  LOGGcheck',LOGGcheck)
-        if not close_to(float(LOGG),LOGGcheck):
+        if not close_to(float(LOGG), LOGGcheck):
             consistent = False
 
     return consistent
 
+
 # -------------------------------------------------------------------
-def consistency_check_M_R_LOGG_planet(starInfo,planetLetter):
+def consistency_check_M_R_LOGG_planet(starInfo, planetLetter):
     '''
     Verify that the planetary log(g) is consistent with the planet mass,radius
     '''
@@ -159,16 +188,22 @@ def consistency_check_M_R_LOGG_planet(starInfo,planetLetter):
     # print('ccheck R,M,LOGG planet',R,M,LOGG)
 
     consistent = True
-    if LOGG=='' or R=='' or M=='':
+    if LOGG == '' or R == '' or M == '':
         print('ccheck PASS: one of the M/R/LOGG planet fields is missing')
     else:
-        g = sscmks['G'] * float(M)*sscmks['Mjup'] / (float(R)*sscmks['Rjup'])**2
+        g = (
+            sscmks['G']
+            * float(M)
+            * sscmks['Mjup']
+            / (float(R) * sscmks['Rjup']) ** 2
+        )
         LOGGcheck = numpy.log10(g)
         # print('ccheck  LOGGcheck',LOGGcheck)
-        if not close_to(float(LOGG),LOGGcheck):
+        if not close_to(float(LOGG), LOGGcheck):
             consistent = False
 
     return consistent
+
 
 # -------------------------------------------------------------------
 def consistency_check_sma_P_Mstar(starInfo, planetLetter):
@@ -185,17 +220,20 @@ def consistency_check_sma_P_Mstar(starInfo, planetLetter):
     # print('ccheck M P sma',M,P,sma)
 
     consistent = True
-    if M=='' or P=='' or sma=='':
+    if M == '' or P == '' or sma == '':
         print('ccheck PASS: one of the M/P/sma fields is missing')
     else:
-        GM = sscmks['G'] * float(M)*sscmks['Msun']
-        smaCheck = (GM * (float(P)*sscmks['day'] /2./numpy.pi)**2)**(1./3.)
+        GM = sscmks['G'] * float(M) * sscmks['Msun']
+        smaCheck = (GM * (float(P) * sscmks['day'] / 2.0 / numpy.pi) ** 2) ** (
+            1.0 / 3.0
+        )
         smaCheck /= sscmks['AU']
         # print('ccheck  smaCheck',smaCheck)
-        if not close_to(float(sma),smaCheck):
+        if not close_to(float(sma), smaCheck):
             consistent = False
 
     return consistent
+
 
 # -------------------------------------------------------------------
 def consistency_check_R_T_Lstar(starInfo):
@@ -212,15 +250,17 @@ def consistency_check_R_T_Lstar(starInfo):
     # print('ccheck R T log-L',R,T,L)
 
     consistent = True
-    if R=='' or T=='' or L=='':
+    if R == '' or T == '' or L == '':
         print('ccheck PASS: one of the R/T/Lstar fields is missing')
     else:
-        Lcheck = R**2 * (T/sscmks['Tsun'])**4   # (solar units)
+        Lcheck = R**2 * (T / sscmks['Tsun']) ** 4  # (solar units)
         # print('ccheck  L,Lcheck',float(L),Lcheck)
-        if not close_to(float(L),Lcheck):
+        if not close_to(float(L), Lcheck):
             consistent = False
 
     return consistent
+
+
 # -------------------------------------------------------------------
 def consistency_check_Teq_sma_Lstar(starInfo, planetLetter):
     '''
@@ -233,12 +273,12 @@ def consistency_check_Teq_sma_Lstar(starInfo, planetLetter):
     # print('ccheck M P sma',M,P,sma)
 
     consistent = True
-    if L=='' or Teq=='' or sma=='':
+    if L == '' or Teq == '' or sma == '':
         print('ccheck PASS: one of the Teq/L/sma fields is missing')
     else:
-        TeqCheck = 278.3 * float(L)**0.25 / float(sma)**0.5
+        TeqCheck = 278.3 * float(L) ** 0.25 / float(sma) ** 0.5
         # print('ccheck  Teq',Teq,TeqCheck)
-        if not close_to(float(Teq),TeqCheck):
+        if not close_to(float(Teq), TeqCheck):
             consistent = False
 
     return consistent

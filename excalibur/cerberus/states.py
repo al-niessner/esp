@@ -1,4 +1,5 @@
 '''Cerberus Database Products View'''
+
 # -- IMPORTS -- ------------------------------------------------------
 import io
 
@@ -10,13 +11,16 @@ import matplotlib.image as img
 import matplotlib.pyplot as plt
 
 import os
+
+
 # ------------- ------------------------------------------------------
 # -- SV -- -----------------------------------------------------------
 class xslibSV(dawgie.StateVector):
     '''cerberus.xslib view'''
+
     def __init__(self, name):
         '''__init__ ds'''
-        self._version_ = dawgie.VERSION(1,2,0)
+        self._version_ = dawgie.VERSION(1, 2, 0)
         self.__name = name
         self['STATUS'] = excalibur.ValuesList()
         self['data'] = excalibur.ValuesDict()
@@ -27,12 +31,15 @@ class xslibSV(dawgie.StateVector):
         '''name ds'''
         return self.__name
 
-    def view(self, caller:excalibur.identity, visitor:dawgie.Visitor)->None:
+    def view(self, caller: excalibur.identity, visitor: dawgie.Visitor) -> None:
         '''view ds'''
         if self['STATUS'][-1]:
             myfig = plt.figure()
-            crblogo = img.imread(os.path.join (excalibur.context['data_dir'],
-                                               'CERBERUS/cerberus.png'))
+            crblogo = img.imread(
+                os.path.join(
+                    excalibur.context['data_dir'], 'CERBERUS/cerberus.png'
+                )
+            )
             plt.imshow(crblogo)
             plt.axis('off')
             buf = io.BytesIO()
@@ -41,7 +48,9 @@ class xslibSV(dawgie.StateVector):
             plt.close(myfig)
             pass
         return
+
     pass
+
 
 class rlsSV(dawgie.StateVector):
     """
@@ -78,9 +87,10 @@ class rlsSV(dawgie.StateVector):
     CONTENT - numpy array
     Model + Data plot
     """
+
     def __init__(self, name):
         '''1.1.1: GMR - Fixed view for low model selection preference'''
-        self._version_ = dawgie.VERSION(1,1,1)
+        self._version_ = dawgie.VERSION(1, 1, 1)
         self.__name = name
         self['STATUS'] = excalibur.ValuesList()
         self['data'] = excalibur.ValuesDict()
@@ -91,7 +101,7 @@ class rlsSV(dawgie.StateVector):
         '''dataset name'''
         return self.__name
 
-    def view(self, caller:excalibur.identity, visitor:dawgie.Visitor)->None:
+    def view(self, caller: excalibur.identity, visitor: dawgie.Visitor) -> None:
         '''view ds'''
         if self['STATUS'][-1]:
             for p in self['data']:
@@ -101,7 +111,9 @@ class rlsSV(dawgie.StateVector):
                     plt.axis('off')
                     buf = io.BytesIO()
                     myfig.savefig(buf, format='png')
-                    visitor.add_image('...', p+': Atmos results', buf.getvalue())
+                    visitor.add_image(
+                        '...', p + ': Atmos results', buf.getvalue()
+                    )
                     plt.close(myfig)
 
                     myfig = plt.figure(figsize=(20, 15))
@@ -109,19 +121,27 @@ class rlsSV(dawgie.StateVector):
                     plt.axis('off')
                     buf = io.BytesIO()
                     myfig.savefig(buf, format='png')
-                    visitor.add_image('...', p+': Profiled best model chains',
-                                      buf.getvalue())
+                    visitor.add_image(
+                        '...',
+                        p + ': Profiled best model chains',
+                        buf.getvalue(),
+                    )
                     plt.close(myfig)
                     pass
                 else:
-                    visitor.add_declaration(p+': No/Low Evidence for Model Selection')
+                    visitor.add_declaration(
+                        p + ': No/Low Evidence for Model Selection'
+                    )
                     pass
                 pass
             pass
         else:
             myfig = plt.figure(figsize=(10, 6))
-            crblogo = img.imread(os.path.join (excalibur.context['data_dir'],
-                                               'CERBERUS/cerberus.png'))
+            crblogo = img.imread(
+                os.path.join(
+                    excalibur.context['data_dir'], 'CERBERUS/cerberus.png'
+                )
+            )
             plt.imshow(crblogo)
             plt.axis('off')
             buf = io.BytesIO()
@@ -130,13 +150,16 @@ class rlsSV(dawgie.StateVector):
             plt.close(myfig)
             pass
         return
+
     pass
+
 
 class atmosSV(dawgie.StateVector):
     '''cerberus.atmos view'''
+
     def __init__(self, name):
         '''__init__ ds'''
-        self._version_ = dawgie.VERSION(1,1,0)
+        self._version_ = dawgie.VERSION(1, 1, 0)
         self.__name = name
         self['STATUS'] = excalibur.ValuesList()
         self['data'] = excalibur.ValuesDict()
@@ -147,12 +170,15 @@ class atmosSV(dawgie.StateVector):
         '''name ds'''
         return self.__name
 
-    def view(self, caller:excalibur.identity, visitor:dawgie.Visitor)->None:
+    def view(self, caller: excalibur.identity, visitor: dawgie.Visitor) -> None:
         '''view ds'''
         if self['STATUS'][-1]:
             myfig = plt.figure()
-            crblogo = img.imread(os.path.join (excalibur.context['data_dir'],
-                                               'CERBERUS/cerberus.png'))
+            crblogo = img.imread(
+                os.path.join(
+                    excalibur.context['data_dir'], 'CERBERUS/cerberus.png'
+                )
+            )
             plt.imshow(crblogo)
             plt.axis('off')
             buf = io.BytesIO()
@@ -161,13 +187,17 @@ class atmosSV(dawgie.StateVector):
             plt.close(myfig)
             pass
         return
+
     pass
+
+
 # -------- -----------------------------------------------------------
 class resSV(dawgie.StateVector):
     '''cerberus.results view'''
+
     def __init__(self, name):
         '''__init__ ds'''
-        self._version_ = dawgie.VERSION(1,0,0)
+        self._version_ = dawgie.VERSION(1, 0, 0)
         self.__name = name
         self['STATUS'] = excalibur.ValuesList()
         self['target'] = excalibur.ValuesList()
@@ -180,10 +210,10 @@ class resSV(dawgie.StateVector):
         '''name ds'''
         return self.__name
 
-    def view(self, caller:excalibur.identity, visitor:dawgie.Visitor)->None:
+    def view(self, caller: excalibur.identity, visitor: dawgie.Visitor) -> None:
         '''view ds'''
         if self['STATUS'][-1]:
-            for target,planetLetter in zip(self['target'],self['planets']):
+            for target, planetLetter in zip(self['target'], self['planets']):
                 for savedresult in self['data'][planetLetter].keys():
                     if 'plot' in savedresult:
                         if savedresult.startswith('plot_spectrum'):
@@ -200,17 +230,29 @@ class resSV(dawgie.StateVector):
                             plotlabel = plotlabel + ' : DISEQ MODEL'
                         else:
                             plotlabel = plotlabel + ' : TEQ MODEL'
-                        textlabel = '--------- ' + plotlabel + \
-                            ' for '+target+' '+planetLetter + ' ---------'
-                        visitor.add_image('...', textlabel,
-                                          self['data'][planetLetter][savedresult])
+                        textlabel = (
+                            '--------- '
+                            + plotlabel
+                            + ' for '
+                            + target
+                            + ' '
+                            + planetLetter
+                            + ' ---------'
+                        )
+                        visitor.add_image(
+                            '...',
+                            textlabel,
+                            self['data'][planetLetter][savedresult],
+                        )
         return
+
 
 # -------- -----------------------------------------------------------
 class analysisSV(dawgie.StateVector):
     '''PopulationSV ds'''
+
     def __init__(self, name):
-        self._version_ = dawgie.VERSION(1,0,0)
+        self._version_ = dawgie.VERSION(1, 0, 0)
         self.__name = name
         self['STATUS'] = excalibur.ValuesList()
         self['data'] = excalibur.ValuesDict()
@@ -221,33 +263,46 @@ class analysisSV(dawgie.StateVector):
         '''name ds'''
         return self.__name
 
-    def view(self, caller:excalibur.identity, visitor:dawgie.Visitor)->None:
+    def view(self, caller: excalibur.identity, visitor: dawgie.Visitor) -> None:
         '''view ds'''
         if self['STATUS'][-1]:
             for savedresult in self['data'].keys():
                 if 'plot' in savedresult:
-                    if savedresult=='plot_massVmetals':
+                    if savedresult == 'plot_massVmetals':
                         plotlabel = 'Planet Mass vs Metallicity'
-                    elif savedresult=='plot_fitT':
+                    elif savedresult == 'plot_fitT':
                         plotlabel = 'T_eff'
-                    elif savedresult=='plot_fitMetal':
+                    elif savedresult == 'plot_fitMetal':
                         plotlabel = 'Metallicity'
-                    elif savedresult=='plot_fitCO':
+                    elif savedresult == 'plot_fitCO':
                         plotlabel = 'C/O'
-                    elif savedresult=='plot_fitNO':
+                    elif savedresult == 'plot_fitNO':
                         plotlabel = 'N/O'
                     else:
                         plotlabel = 'unknown plottype plot'
                     # the plot titles are different for real data vs simulated
                     # use __name to decide it it's a comparison against truth
-                    if savedresult in ['plot_fitT','plot_fitMetal','plot_fitCO','plot_fitNO']:
+                    if savedresult in [
+                        'plot_fitT',
+                        'plot_fitMetal',
+                        'plot_fitCO',
+                        'plot_fitNO',
+                    ]:
                         if 'sim' in self.__name:
-                            plotlabel = plotlabel + ' : retrieved vs input values'
+                            plotlabel = (
+                                plotlabel + ' : retrieved vs input values'
+                            )
                         else:
-                            plotlabel = plotlabel + ' : retrieved values and uncertainties'
+                            plotlabel = (
+                                plotlabel
+                                + ' : retrieved values and uncertainties'
+                            )
 
                     textlabel = '--------- ' + plotlabel + ' ---------'
-                    visitor.add_image('...', textlabel, self['data'][savedresult])
+                    visitor.add_image(
+                        '...', textlabel, self['data'][savedresult]
+                    )
         return
+
 
 # -------------------------------------------------------------------

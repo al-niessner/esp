@@ -1,4 +1,5 @@
 '''classifier core ds'''
+
 # -- IMPORTS -- ------------------------------------------------------
 import os
 import dawgie
@@ -7,14 +8,19 @@ import math
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 import torch
-import logging; log = logging.getLogger(__name__)
+import logging
+
+log = logging.getLogger(__name__)
 
 import excalibur
 import excalibur.system.core as syscore
+
+
 # -------------------------------------------------------------------
 def lc_resid_classification_version():
     '''lc_resid_classification_version ds'''
-    return dawgie.VERSION(1,0,0)
+    return dawgie.VERSION(1, 0, 0)
+
 
 def lc_resid_classification(transit_whitelight, ext, out):
     '''
@@ -26,8 +32,8 @@ def lc_resid_classification(transit_whitelight, ext, out):
         '''
         Returns image representation of scatter plot
         '''
-        px = 1/plt.rcParams['figure.dpi']  # pixel in inches
-        plt.subplots(figsize=(350*px, 270*px))
+        px = 1 / plt.rcParams['figure.dpi']  # pixel in inches
+        plt.subplots(figsize=(350 * px, 270 * px))
         plt.plot(x, y, '.', color='black')
         y_lim = max(max(y), abs(min(y)))
         x_lim = max(max(x), abs(min(x)))
@@ -46,8 +52,10 @@ def lc_resid_classification(transit_whitelight, ext, out):
         canvas = FigureCanvas(fig)
         canvas.draw()
         width, height = fig.get_size_inches() * fig.get_dpi()
-        img = np.frombuffer(canvas.tostring_rgb(), dtype='uint8').reshape(int(height), int(width), 3)
-        return img/255
+        img = np.frombuffer(canvas.tostring_rgb(), dtype='uint8').reshape(
+            int(height), int(width), 3
+        )
+        return img / 255
 
     for planet in transit_whitelight['data']:
         if 'Spitzer' in ext:
@@ -75,11 +83,17 @@ def lc_resid_classification(transit_whitelight, ext, out):
                 pass
             pass
 
-        wl_flat = np.concatenate(whitelight).ravel() if 'Spitzer' not in ext else whitelight
+        wl_flat = (
+            np.concatenate(whitelight).ravel()
+            if 'Spitzer' not in ext
+            else whitelight
+        )
         magicdir = excalibur.context['data_dir']
 
         if 'Spitzer' in ext:
-            mdl = torch.load(magicdir + '/classifier_models/spitzer_lc_model.pt')
+            mdl = torch.load(
+                magicdir + '/classifier_models/spitzer_lc_model.pt'
+            )
         else:
             mdl = torch.load(magicdir + '/classifier_models/hubble_lc_model.pt')
         mdl.eval()
@@ -91,8 +105,8 @@ def lc_resid_classification(transit_whitelight, ext, out):
         pred = torch.max(output.data, 1)[1].tolist()[0]
 
         flags = {
-          0: 'yellow',
-          1: 'green',
+            0: 'yellow',
+            1: 'green',
         }
 
         flag_color = flags[pred]
@@ -120,9 +134,11 @@ def lc_resid_classification(transit_whitelight, ext, out):
     out['STATUS'].append(True)
     return True
 
+
 def cpwlversion():
     '''cpwlversion ds'''
-    return dawgie.VERSION(1,0,0)
+    return dawgie.VERSION(1, 0, 0)
+
 
 # cpwl stands for count points whitelight.
 def cpwl(transit_whitelight, priors, ext, out):
@@ -140,8 +156,10 @@ def cpwl(transit_whitelight, priors, ext, out):
 
         try:
             # test = transit_whitelight['data'][planet].keys()
-            sep = (initial_dict['postsep'])  # alternatively, could use orbital phase
-            whitelight = (np.array(initial_dict['allwhite']))
+            sep = initial_dict[
+                'postsep'
+            ]  # alternatively, could use orbital phase
+            whitelight = np.array(initial_dict['allwhite'])
             pass
         except AttributeError:
             sep = []
@@ -152,7 +170,11 @@ def cpwl(transit_whitelight, priors, ext, out):
                 pass
             pass
 
-        wl_flat = np.concatenate(whitelight).ravel().tolist() if 'Spitzer' not in ext else whitelight
+        wl_flat = (
+            np.concatenate(whitelight).ravel().tolist()
+            if 'Spitzer' not in ext
+            else whitelight
+        )
 
         # each point is in [sep, wl] format.
         points = np.column_stack((np.array(sep), np.array(wl_flat)))
@@ -164,18 +186,26 @@ def cpwl(transit_whitelight, priors, ext, out):
         r_s = priors['R*']  # star radius (solar radii)
 
         sma = priors[planet]['sma']  # semi major axis (in AU) of planet's orbit
-        inc = priors[planet]['inc']  # inclination (in degrees) of planet's orbit
+        inc = priors[planet][
+            'inc'
+        ]  # inclination (in degrees) of planet's orbit
 
         # get constants for unit conversions
         ssc = syscore.ssconstants()
-        b = (((math.cos(math.radians(inc)))*sma)/r_s)*ssc['Rsun/AU']  # impact parameter
-        radius_ratio = r_p/r_s*ssc['Rjup/Rsun']
+        b = (((math.cos(math.radians(inc))) * sma) / r_s) * ssc[
+            'Rsun/AU'
+        ]  # impact parameter
+        radius_ratio = r_p / r_s * ssc['Rjup/Rsun']
 
         # use z equations to find postsep vals at the 4 contact points:
         # Note that z_1 = -1 * z_3, and z_2 = -1 * z_4.
         # Therefore, we can use abs(t) to find if a value t is between contact points 1 and 4 or between 2 and 3.
-        z_3 = math.sqrt(((1 - radius_ratio)**2) - (b ** 2))  # postsep val at 3rd contact point
-        z_4 = math.sqrt(((1 + radius_ratio)**2) - (b ** 2))  # postsep val at 4th contact point
+        z_3 = math.sqrt(
+            ((1 - radius_ratio) ** 2) - (b**2)
+        )  # postsep val at 3rd contact point
+        z_4 = math.sqrt(
+            ((1 + radius_ratio) ** 2) - (b**2)
+        )  # postsep val at 4th contact point
 
         # count the number of points inside the transit
         for p in points:
@@ -191,11 +221,7 @@ def cpwl(transit_whitelight, priors, ext, out):
         # flag depending on number of transit points
 
         # color key
-        flags = {
-          0: 'green',
-          1: 'yellow',
-          2: 'red'
-        }
+        flags = {0: 'green', 1: 'yellow', 2: 'red'}
 
         flag_val = 0
         flag_descrip = ""
@@ -203,15 +229,21 @@ def cpwl(transit_whitelight, priors, ext, out):
         # No points between 1st and 4th contact.
         if len(transit_points_tot) == 0:
             flag_val = max(flag_val, 2)
-            flag_descrip += "Insufficient points between 1st and 4th contact points."
+            flag_descrip += (
+                "Insufficient points between 1st and 4th contact points."
+            )
 
         # Not many points between 1st and 4th contact.
         elif len(transit_points_tot) < 6:
             flag_val = max(flag_val, 1)
-            flag_descrip += "Insufficient points between 1st and 4th contact points."
+            flag_descrip += (
+                "Insufficient points between 1st and 4th contact points."
+            )
 
         else:
-            flag_descrip += "Sufficient points between 1st and 4th contact points."
+            flag_descrip += (
+                "Sufficient points between 1st and 4th contact points."
+            )
 
         # No points between 2nd and 3rd contact.
         if len(transit_points_full) == 0:
@@ -229,10 +261,14 @@ def cpwl(transit_whitelight, priors, ext, out):
         # Not many points between 2nd and 3rd contact.
         elif len(transit_points_full) < 5:
             flag_val = max(flag_val, 1)
-            flag_descrip += " Insufficient points between 2nd and 3rd contact points."
+            flag_descrip += (
+                " Insufficient points between 2nd and 3rd contact points."
+            )
 
         else:
-            flag_descrip += " Sufficient points between 2nd and 3rd contact points."
+            flag_descrip += (
+                " Sufficient points between 2nd and 3rd contact points."
+            )
 
         flag_color = flags[flag_val]
 
@@ -245,16 +281,22 @@ def cpwl(transit_whitelight, priors, ext, out):
 
         out['data'][planet]['count_points_wl']['flag_color'] = flag_color
         out['data'][planet]['count_points_wl']['flag_descrip'] = flag_descrip
-        out['data'][planet]['count_points_wl']['total'] = len(transit_points_tot)
-        out['data'][planet]['count_points_wl']['full'] = len(transit_points_full)
+        out['data'][planet]['count_points_wl']['total'] = len(
+            transit_points_tot
+        )
+        out['data'][planet]['count_points_wl']['full'] = len(
+            transit_points_full
+        )
 
         pass
     out['STATUS'].append(True)
     return True
 
+
 def symwlversion():
     '''symwlversion ds'''
-    return dawgie.VERSION(1,0,0)
+    return dawgie.VERSION(1, 0, 0)
+
 
 # symwl stands for symmetry whitelight.
 def symwl(transit_whitelight, priors, ext, out):
@@ -271,8 +313,10 @@ def symwl(transit_whitelight, priors, ext, out):
             initial_dict = transit_whitelight['data'][planet]
 
         try:
-            sep = (initial_dict['postsep'])  # (alternatively, could use orbital phase)
-            whitelight = (np.array(initial_dict['allwhite']))
+            sep = initial_dict[
+                'postsep'
+            ]  # (alternatively, could use orbital phase)
+            whitelight = np.array(initial_dict['allwhite'])
             pass
         except AttributeError:
             sep = []
@@ -283,7 +327,11 @@ def symwl(transit_whitelight, priors, ext, out):
                 pass
             pass
 
-        wl_flat = np.concatenate(whitelight).ravel().tolist() if 'Spitzer' not in ext else whitelight
+        wl_flat = (
+            np.concatenate(whitelight).ravel().tolist()
+            if 'Spitzer' not in ext
+            else whitelight
+        )
 
         # each point is in [sep, wl] format.
         points = np.column_stack((np.array(sep), np.array(wl_flat)))
@@ -295,17 +343,23 @@ def symwl(transit_whitelight, priors, ext, out):
         r_s = priors['R*']  # star radius (solar radii)
 
         sma = priors[planet]['sma']  # semi major axis (in AU) of planet's orbit
-        inc = priors[planet]['inc']  # inclination (in degrees) of planet's orbit
+        inc = priors[planet][
+            'inc'
+        ]  # inclination (in degrees) of planet's orbit
 
         # get constants for unit conversions
         ssc = syscore.ssconstants()
-        b = (((math.cos(math.radians(inc)))*sma)/r_s)*ssc['Rsun/AU']  # impact parameter
-        radius_ratio = r_p/r_s*ssc['Rjup/Rsun']
+        b = (((math.cos(math.radians(inc))) * sma) / r_s) * ssc[
+            'Rsun/AU'
+        ]  # impact parameter
+        radius_ratio = r_p / r_s * ssc['Rjup/Rsun']
 
         # use z equations to find postsep vals at the 4 contact points:
         # Note that z_1 = -1 * z_3, and z_2 = -1 * z_4.
         # Therefore, we can use abs(t) to find if a value t is between contact points 1 and 4 or between 2 and 3.
-        z_4 = math.sqrt(((1 + radius_ratio)**2) - (b ** 2))  # postsep val at 4th contact point
+        z_4 = math.sqrt(
+            ((1 + radius_ratio) ** 2) - (b**2)
+        )  # postsep val at 4th contact point
         z_1 = -1 * z_4
 
         # count the number of points outside of the transit on both sides
@@ -319,16 +373,15 @@ def symwl(transit_whitelight, priors, ext, out):
         # flag depending on number of pre- and post-transit points
 
         # color key
-        flags = {
-          0: 'green',
-          1: 'yellow',
-          2: 'red'
-        }
+        flags = {0: 'green', 1: 'yellow', 2: 'red'}
 
         flag_val = 0
         flag_descrip = ""
 
-        if len(transit_points_before_1) == 0 and len(transit_points_after_4) == 0:
+        if (
+            len(transit_points_before_1) == 0
+            and len(transit_points_after_4) == 0
+        ):
             flag_val = max(flag_val, 2)
             flag_descrip = "Insufficient points before 1st contact point and insufficient points after 4th contact point."
         elif len(transit_points_before_1) == 0:
@@ -352,17 +405,23 @@ def symwl(transit_whitelight, priors, ext, out):
 
         out['data'][planet]['symmetry_wl']['flag_color'] = flag_color
         out['data'][planet]['symmetry_wl']['flag_descrip'] = flag_descrip
-        out['data'][planet]['symmetry_wl']['left'] = len(transit_points_before_1)
-        out['data'][planet]['symmetry_wl']['right'] = len(transit_points_after_4)
+        out['data'][planet]['symmetry_wl']['left'] = len(
+            transit_points_before_1
+        )
+        out['data'][planet]['symmetry_wl']['right'] = len(
+            transit_points_after_4
+        )
 
         pass
 
     out['STATUS'].append(True)
     return True
 
+
 def rsdmversion():
     '''RSDMversion ds'''
-    return dawgie.VERSION(1,0,0)
+    return dawgie.VERSION(1, 0, 0)
+
 
 def rsdm(transit_spectrum, out):
     '''
@@ -380,17 +439,15 @@ def rsdm(transit_spectrum, out):
             pass
 
         if 'LCFIT' in spectrum_data:
-            spec_rsdpn = [np.nanstd(i['residuals'])/i['dnoise']
-                              for i in spectrum_data['LCFIT']]
+            spec_rsdpn = [
+                np.nanstd(i['residuals']) / i['dnoise']
+                for i in spectrum_data['LCFIT']
+            ]
             avg_rsdpn = np.nanmean(spec_rsdpn)
 
             # flag depending on mean RSDM
             # color key
-            flags = {
-              0: 'green',
-              1: 'yellow',
-              2: 'red'
-            }
+            flags = {0: 'green', 1: 'yellow', 2: 'red'}
 
             flag_val = 0
             flag_descrip = ""
@@ -424,9 +481,11 @@ def rsdm(transit_spectrum, out):
     out['STATUS'].append(True)
     return True
 
+
 def perc_rejected_version():
     '''perc_rejected_version ds'''
-    return dawgie.VERSION(1,0,0)
+    return dawgie.VERSION(1, 0, 0)
+
 
 def perc_rejected(transit_spectrum, out):
     '''
@@ -447,15 +506,13 @@ def perc_rejected(transit_spectrum, out):
         planet_spectrum = np.array(spectrum_data['ES'])
         vspectrum = np.array(planet_spectrum)
         vspectrum = vspectrum**2
-        perc_rejected_value = len([i for i in vspectrum if np.isnan(i)])/len(vspectrum)*100
+        perc_rejected_value = (
+            len([i for i in vspectrum if np.isnan(i)]) / len(vspectrum) * 100
+        )
 
         # flag depending on percent rejected
         # color key
-        flags = {
-          0: 'green',
-          1: 'yellow',
-          2: 'red'
-        }
+        flags = {0: 'green', 1: 'yellow', 2: 'red'}
 
         flag_val = 0
         flag_descrip = ""
@@ -468,7 +525,9 @@ def perc_rejected(transit_spectrum, out):
             flag_descrip = "Percent Rejected in Cumulative Spectrum Distribution is very high."
         elif perc_rejected_value >= green_upper_bound:
             flag_val = 1
-            flag_descrip = "Percent Rejected in Cumulative Spectrum Distribution is high."
+            flag_descrip = (
+                "Percent Rejected in Cumulative Spectrum Distribution is high."
+            )
         else:
             flag_val = 0
             flag_descrip = "Percent Rejected in Cumulative Spectrum Distribution is below threshold."
@@ -482,16 +541,20 @@ def perc_rejected(transit_spectrum, out):
             out['data'][planet] = {}
             out['data'][planet]['perc_rejected'] = {}
 
-        out['data'][planet]['perc_rejected']['percent_rejected_value'] = perc_rejected_value
+        out['data'][planet]['perc_rejected'][
+            'percent_rejected_value'
+        ] = perc_rejected_value
         out['data'][planet]['perc_rejected']['flag_color'] = flag_color
         out['data'][planet]['perc_rejected']['flag_descrip'] = flag_descrip
 
     out['STATUS'].append(True)
     return True
 
+
 def median_error_version():
     '''median_error_version ds'''
-    return dawgie.VERSION(1,0,0)
+    return dawgie.VERSION(1, 0, 0)
+
 
 def median_error(data_calibration, out):
     '''
@@ -502,14 +565,20 @@ def median_error(data_calibration, out):
     try:
         # get error distribution (adapted from esp/excalibur/data/core.py)
         data = data_calibration['data']
-        spec = np.array([d for d,i in zip(data['SPECTRUM'], data['IGNORED']) if not i])
-        wave = np.array([d for d,i in zip(data['WAVE'], data['IGNORED']) if not i])
-        errspec = np.array([d for d,i in zip(data['SPECERR'], data['IGNORED']) if not i])
+        spec = np.array(
+            [d for d, i in zip(data['SPECTRUM'], data['IGNORED']) if not i]
+        )
+        wave = np.array(
+            [d for d, i in zip(data['WAVE'], data['IGNORED']) if not i]
+        )
+        errspec = np.array(
+            [d for d, i in zip(data['SPECERR'], data['IGNORED']) if not i]
+        )
         vrange = data['VRANGE']
         allerr = []
         for s, e, w in zip(spec, errspec, wave):
             select = (w > vrange[0]) & (w < vrange[1])
-            allerr.extend(e[select]/np.sqrt(s[select]))
+            allerr.extend(e[select] / np.sqrt(s[select]))
             pass
         allerr = np.array(allerr)
         select = np.isfinite(allerr)
@@ -520,11 +589,7 @@ def median_error(data_calibration, out):
 
         # flag depending on error distribution
         # color key
-        flags = {
-          0: 'green',
-          1: 'yellow',
-          2: 'red'
-        }
+        flags = {0: 'green', 1: 'yellow', 2: 'red'}
 
         flag_val = 0
         flag_descrip = ""
@@ -533,10 +598,14 @@ def median_error(data_calibration, out):
 
         if median_err >= green_upper_bound:
             flag_val = 1
-            flag_descrip = "Median error in data.calibration is above threshold."
+            flag_descrip = (
+                "Median error in data.calibration is above threshold."
+            )
         else:
             flag_val = 0
-            flag_descrip = "Median error in data.calibration is below threshold."
+            flag_descrip = (
+                "Median error in data.calibration is below threshold."
+            )
 
         flag_color = flags[flag_val]
 
@@ -550,6 +619,8 @@ def median_error(data_calibration, out):
 
     out['STATUS'].append(True)
     return True
+
+
 # ---------------------------- ---------------------------------------
 def savesv(aspects, fltrs):
     '''
@@ -564,18 +635,25 @@ def savesv(aspects, fltrs):
         RID = '666'
 
     # directory where the results are saved
-    saveDir = excalibur.context['data_dir'] + \
-        '/spreadsheets/RID' + RID + '/'
+    saveDir = excalibur.context['data_dir'] + '/spreadsheets/RID' + RID + '/'
     # print('saveDir:',saveDir)
-    if not os.path.exists(saveDir): os.mkdir(saveDir)
+    if not os.path.exists(saveDir):
+        os.mkdir(saveDir)
 
-    flag_types = ['count_points_wl','symmetry_wl','rsdm','perc_rejected',
-                  'median_error','residual_shape','overall_flag']
+    flag_types = [
+        'count_points_wl',
+        'symmetry_wl',
+        'rsdm',
+        'perc_rejected',
+        'median_error',
+        'residual_shape',
+        'overall_flag',
+    ]
 
     # file name where the results are saved
-    outfileName = svname.replace('.','_') + '_RID' + RID + '.csv'
+    outfileName = svname.replace('.', '_') + '_RID' + RID + '.csv'
 
-    with open(saveDir + outfileName,'w',encoding='ascii') as outfile:
+    with open(saveDir + outfileName, 'w', encoding='ascii') as outfile:
 
         # write the header row
         outfile.write('star,planet,filter,')
@@ -595,7 +673,9 @@ def savesv(aspects, fltrs):
                     alg_flag_data = aspects[trgt][transit_alg_fltr_name]
 
                     if alg_flag_data['STATUS'][-1]:
-                        for k in alg_flag_data['data'].keys():  # k is either planet letter or median_error
+                        for k in alg_flag_data[
+                            'data'
+                        ].keys():  # k is either planet letter or median_error
                             if k == 'median_error':
                                 # skip the weirdo one that's not associated with a specific planet
                                 pass
@@ -605,19 +685,31 @@ def savesv(aspects, fltrs):
                                 colors = {}
                                 for flag_type in flag_types:
                                     colors[flag_type] = '-'
-                                if 'median_error' in alg_flag_data['data'].keys():
+                                if (
+                                    'median_error'
+                                    in alg_flag_data['data'].keys()
+                                ):
                                     # add in the weirdo one that's not associated with a specific planet
-                                    colors['median_error'] = alg_flag_data['data']['median_error']['flag_color']
+                                    colors['median_error'] = alg_flag_data[
+                                        'data'
+                                    ]['median_error']['flag_color']
                                 for alg_flag in alg_flag_data['data'][k]:
                                     if alg_flag == 'overall_flag':
-                                        alg_flag_color = alg_flag_data['data'][k][alg_flag]
+                                        alg_flag_color = alg_flag_data['data'][
+                                            k
+                                        ][alg_flag]
                                     else:
-                                        alg_flag_color = alg_flag_data['data'][k][alg_flag]['flag_color']
+                                        alg_flag_color = alg_flag_data['data'][
+                                            k
+                                        ][alg_flag]['flag_color']
 
                                     colors[alg_flag] = alg_flag_color
 
                                     if alg_flag not in flag_types:
-                                        log.warning('--< UNEXPECTED FLAG TYPE >-- %s', alg_flag)
+                                        log.warning(
+                                            '--< UNEXPECTED FLAG TYPE >-- %s',
+                                            alg_flag,
+                                        )
 
                                 outfile.write(trgt + ',')
                                 outfile.write(planet_letter + ',')

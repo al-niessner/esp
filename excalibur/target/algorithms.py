@@ -1,7 +1,10 @@
 '''target algorithms ds'''
+
 # -- IMPORTS -- ------------------------------------------------------
 import os
-import logging; log = logging.getLogger(__name__)
+import logging
+
+log = logging.getLogger(__name__)
 
 import dawgie
 import dawgie.context
@@ -35,60 +38,76 @@ mirror2 = 'http://archives.esac.esa.int/ehst-sl-server/servlet/data-action?ARTIF
 # MAST API
 durl = 'https://mast.stsci.edu/api/v0.1/Download/file?'
 hsturl = 'https://mast.stsci.edu/search/hst/api/v0.1/retrieve_product?'
+
+
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class alert(dawgie.Analyzer):
     '''alert ds'''
+
     def __init__(self):
         '''version 1.2.0 has new 'web' url for Exoplanet Archive queries'''
-        self._version_ = dawgie.VERSION(1,2,0)
+        self._version_ = dawgie.VERSION(1, 2, 0)
         self.__out = trgstates.AlertSV()
         return
 
     def feedback(self):
         '''feedback ds'''
-        return [dawgie.V_REF(trg.analysis, self, self.__out, 'known'),
-                dawgie.V_REF(trg.analysis, self, self.__out, 'table')]
+        return [
+            dawgie.V_REF(trg.analysis, self, self.__out, 'known'),
+            dawgie.V_REF(trg.analysis, self, self.__out, 'table'),
+        ]
 
     def name(self):
         '''Database name for subtask extension'''
         return 'alert_from_variations_of'
 
-    def traits(self)->[dawgie.SV_REF, dawgie.V_REF]:
+    def traits(self) -> [dawgie.SV_REF, dawgie.V_REF]:
         '''traits ds'''
-        return [dawgie.V_REF(trg.regress, regress(),
-                             regress().state_vectors()[0], 'last')]
+        return [
+            dawgie.V_REF(
+                trg.regress, regress(), regress().state_vectors()[0], 'last'
+            )
+        ]
 
     def state_vectors(self):
         '''Output State Vectors: target.alert_from_variations_of'''
         return [self.__out]
 
-    def run(self, aspects:dawgie.Aspect):
+    def run(self, aspects: dawgie.Aspect):
         '''Top level algorithm call'''
-        c, k, t = trgmonitor.alert (aspects,self.__out['known'],self.__out['table'])
+        c, k, t = trgmonitor.alert(
+            aspects, self.__out['known'], self.__out['table']
+        )
         self.__out['changes'].clear()
         self.__out['known'].clear()
         self.__out['table'].clear()
-        self.__out['changes'].extend (c)
-        self.__out['known'].extend (k)
-        self.__out['table'].extend (t)
+        self.__out['changes'].extend(c)
+        self.__out['known'].extend(k)
+        self.__out['table'].extend(t)
         aspects.ds().update()
         return
+
     pass
+
 
 class create(dawgie.Analyzer):
     '''Creates a list of targets from edit.py'''
+
     def __init__(self):
         '''__init__ ds'''
         self._version_ = trgedit.createversion()
-        self.__out = [trgstates.TargetSV('starIDs'), trgstates.FilterSV('filters')]
+        self.__out = [
+            trgstates.TargetSV('starIDs'),
+            trgstates.FilterSV('filters'),
+        ]
         return
 
     def name(self):
         '''Database name for subtask extension'''
         return 'create'
 
-    def traits(self)->[dawgie.SV_REF, dawgie.V_REF]:
+    def traits(self) -> [dawgie.SV_REF, dawgie.V_REF]:
         '''Aspect Input: None (it s the clutch)'''
         return []
 
@@ -96,18 +115,24 @@ class create(dawgie.Analyzer):
         '''Output State Vectors: target.create'''
         return self.__out
 
-    def run(self, aspects:dawgie.Aspect):
+    def run(self, aspects: dawgie.Aspect):
         '''Top level algorithm call'''
         trgcore.scrapeids(aspects.ds(), self.__out[0], web, genIDs=genIDs)
         update = trgcore.createfltrs(self.__out[1])
-        if update: aspects.ds().update()
-        else: raise dawgie.NoValidOutputDataError(
-                f'No output created for TARGET.{self.name()}')
+        if update:
+            aspects.ds().update()
+        else:
+            raise dawgie.NoValidOutputDataError(
+                f'No output created for TARGET.{self.name()}'
+            )
         return
+
     pass
+
 
 class autofill(dawgie.Algorithm):
     '''Fills mandatory info to get the ball rolling'''
+
     def __init__(self):
         '''__init__ ds'''
         self._version_ = trgcore.autofillversion()
@@ -122,8 +147,15 @@ class autofill(dawgie.Algorithm):
 
     def previous(self):
         '''Input State Vectors: target.create'''
-        return [dawgie.ALG_REF(trg.analysis, self.__create),
-                dawgie.V_REF(rtime.task, self.__rt, self.__rt.sv_as_dict()['status'], 'isValidTarget')]
+        return [
+            dawgie.ALG_REF(trg.analysis, self.__create),
+            dawgie.V_REF(
+                rtime.task,
+                self.__rt,
+                self.__rt.sv_as_dict()['status'],
+                'isValidTarget',
+            ),
+        ]
 
     def state_vectors(self):
         '''Output State Vectors: target.autofill'''
@@ -138,8 +170,11 @@ class autofill(dawgie.Algorithm):
 
         # stop here if it is not a runtime target
         if not self.__rt.is_valid():
-            log.warning('--< TARGET.%s: %s not a valid target >--',
-                        target, self.name().upper())
+            log.warning(
+                '--< TARGET.%s: %s not a valid target >--',
+                target,
+                self.name().upper(),
+            )
             pass
         else:
             crt = self.__create.sv_as_dict()
@@ -147,11 +182,15 @@ class autofill(dawgie.Algorithm):
             if valid and (target in crt['starIDs']['starID']):
                 log.warning('--< TARGET AUTOFILL: %s >--', target)
                 update = self._autofill(crt, target)
-            else: self._failure(errstring)
+            else:
+                self._failure(errstring)
 
-            if update: ds.update()
-            else: raise dawgie.NoValidOutputDataError(
-                    f'No output created for TARGET.{self.name()}')
+            if update:
+                ds.update()
+            else:
+                raise dawgie.NoValidOutputDataError(
+                    f'No output created for TARGET.{self.name()}'
+                )
             pass
         return
 
@@ -164,15 +203,19 @@ class autofill(dawgie.Algorithm):
     @staticmethod
     def _failure(errstr):
         '''Failure log'''
-        if errstr is None: errstr = 'TARGET NOT EXPECTED'
+        if errstr is None:
+            errstr = 'TARGET NOT EXPECTED'
         log.warning('--< TARGET AUTOFILL: %s >--', errstr)
         return
+
     pass
+
 
 class scrape(dawgie.Algorithm):
     '''
     Download data or ingest data from disk
     '''
+
     def __init__(self):
         '''__init__ ds'''
         self._version_ = trgcore.scrapeversion()
@@ -187,9 +230,15 @@ class scrape(dawgie.Algorithm):
 
     def previous(self):
         '''Input State Vectors: target.autofill'''
-        return [dawgie.ALG_REF(trg.task, self.__autofill),
-                dawgie.V_REF(rtime.task, self.__rt, self.__rt.sv_as_dict()['status'],
-                             'isValidTarget')]
+        return [
+            dawgie.ALG_REF(trg.task, self.__autofill),
+            dawgie.V_REF(
+                rtime.task,
+                self.__rt,
+                self.__rt.sv_as_dict()['status'],
+                'isValidTarget',
+            ),
+        ]
 
     def state_vectors(self):
         '''Output State Vectors: target.scrape'''
@@ -200,13 +249,17 @@ class scrape(dawgie.Algorithm):
 
         # stop here if it is not a runtime target
         if not self.__rt.is_valid():
-            log.warning('--< TARGET.%s: not a valid target >--', self.name().upper())
+            log.warning(
+                '--< TARGET.%s: not a valid target >--', self.name().upper()
+            )
         else:
             var_autofill = self.__autofill.sv_as_dict()['parameters']
             valid, errstring = trgcore.checksv(var_autofill)
             if valid:
                 # FIXMEE: this code needs repaired by moving out to config (Geoff added)
-                log.warning('--< TARGET SCRAPE: %s >--', repr(self).split('.')[1])
+                log.warning(
+                    '--< TARGET SCRAPE: %s >--', repr(self).split('.')[1]
+                )
                 self._scrape(var_autofill, self.__out)
             else:
                 self._failure(errstring)
@@ -243,34 +296,39 @@ class scrape(dawgie.Algorithm):
         '''Failure log'''
         log.warning('--< TARGET SCRAPE: %s >--', errstr)
         return
+
     pass
+
 
 class regress(dawgie.Regression):
     '''regress ds'''
+
     def __init__(self):
         '''__init__ ds'''
-        self._version_ = dawgie.VERSION(1,0,2)
+        self._version_ = dawgie.VERSION(1, 0, 2)
         self.__out = trgstates.MonitorSV()
         return
 
     def feedback(self):
         '''feedback ds'''
-        return [dawgie.V_REF(trg.regress, self, self.__out, 'planet'),
-                dawgie.V_REF(trg.regress, self, self.__out, 'runid')]
+        return [
+            dawgie.V_REF(trg.regress, self, self.__out, 'planet'),
+            dawgie.V_REF(trg.regress, self, self.__out, 'runid'),
+        ]
 
     def name(self):
         '''Database name for subtask extension'''
         return 'variations_of'
 
-    def run(self, ps:int, timeline:dawgie.Timeline):
+    def run(self, ps: int, timeline: dawgie.Timeline):
         '''Top level algorithm call'''
-        last, outlier = trgmonitor.regress (self.__out['planet'],
-                                            self.__out['runid'],
-                                            timeline)
+        last, outlier = trgmonitor.regress(
+            self.__out['planet'], self.__out['runid'], timeline
+        )
         self.__out['last'].clear()
-        self.__out['last'].update (last)
+        self.__out['last'].update(last)
         self.__out['outlier'].clear()
-        self.__out['outlier'].extend (outlier)
+        self.__out['outlier'].extend(outlier)
         timeline.ds().update()
         return
 
@@ -278,8 +336,13 @@ class regress(dawgie.Regression):
         '''Output State Vectors: target.variations_of'''
         return [self.__out]
 
-    def variables(self)->[dawgie.SV_REF, dawgie.V_REF]:
+    def variables(self) -> [dawgie.SV_REF, dawgie.V_REF]:
         '''variables ds'''
-        return [dawgie.SV_REF(trg.task,autofill(), autofill().state_vectors()[0])]
+        return [
+            dawgie.SV_REF(trg.task, autofill(), autofill().state_vectors()[0])
+        ]
+
     pass
+
+
 # -------------------------------------------------------------------

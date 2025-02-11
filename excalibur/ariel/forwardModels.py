@@ -1,13 +1,22 @@
 '''ariel forwardModels ds'''
+
 # import os
 # import excalibur
 import excalibur.system.core as syscore
 from excalibur.cerberus.core import hazelib
 from excalibur.cerberus.forwardModel import crbmodel
 
+
 # ----------------------------------------------------------------------------------------------
-def makeCerberusAtmos(wavelength_um, model_params, xslib, planetLetter, mixratios=None,
-                      Hsmax=15., solrad=10.):
+def makeCerberusAtmos(
+    wavelength_um,
+    model_params,
+    xslib,
+    planetLetter,
+    mixratios=None,
+    Hsmax=15.0,
+    solrad=10.0,
+):
     '''
     Create a simulated spectrum using the code that's better than the other ones
     '''
@@ -36,15 +45,17 @@ def makeCerberusAtmos(wavelength_um, model_params, xslib, planetLetter, mixratio
         # print('cloudfree forward model input chem =',tceqdict)
 
     ssc = syscore.ssconstants(mks=True)
-    solidr = model_params['Rp']*ssc['Rjup']  # MK
+    solidr = model_params['Rp'] * ssc['Rjup']  # MK
     # orbp = fin['priors'].copy()
     # orbp = model_params   # just hope this covers it ig
     # orbp = {'sma':model_params['sma']}
     # planetLetter = 'placeholder'
-    orbp = {'R*':model_params['R*'],
-            planetLetter:{'logg':model_params['logg']}}
+    orbp = {
+        'R*': model_params['R*'],
+        planetLetter: {'logg': model_params['logg']},
+    }
 
-    crbhzlib = {'PROFILE':[]}
+    crbhzlib = {'PROFILE': []}
     # hazedir = os.path.join(excalibur.context['data_dir'], 'CERBERUS/HAZE')
     # print('hazedir: ',hazedir)
     hazelib(crbhzlib)
@@ -54,16 +65,28 @@ def makeCerberusAtmos(wavelength_um, model_params, xslib, planetLetter, mixratio
 
     # CERBERUS FORWARD MODEL
     # fmc, fmc_by_molecule = crbmodel(None, float(hza), float(ctp), solidr, orbp,
-    fmc, fmc_by_molecule = crbmodel(mixratios, float(hza), float(ctp), solidr, orbp,
-                                    xslib['data'][planetLetter]['XSECS'],
-                                    xslib['data'][planetLetter]['QTGRID'],
-                                    float(Teq), wavelength_um,
-                                    Hsmax=Hsmax, solrad=solrad,
-                                    # np.array(ctxt.spc['data'][ctxt.p]['WB']),
-                                    hzlib=crbhzlib,  hzp='AVERAGE',
-                                    hztop=float(hzloc), hzwscale=float(hzthick),
-                                    cheq=tceqdict, pnet=planetLetter,
-                                    verbose=False, debug=False,
-                                    break_down_by_molecule=True)
+    fmc, fmc_by_molecule = crbmodel(
+        mixratios,
+        float(hza),
+        float(ctp),
+        solidr,
+        orbp,
+        xslib['data'][planetLetter]['XSECS'],
+        xslib['data'][planetLetter]['QTGRID'],
+        float(Teq),
+        wavelength_um,
+        Hsmax=Hsmax,
+        solrad=solrad,
+        # np.array(ctxt.spc['data'][ctxt.p]['WB']),
+        hzlib=crbhzlib,
+        hzp='AVERAGE',
+        hztop=float(hzloc),
+        hzwscale=float(hzthick),
+        cheq=tceqdict,
+        pnet=planetLetter,
+        verbose=False,
+        debug=False,
+        break_down_by_molecule=True,
+    )
 
     return fmc, fmc_by_molecule
