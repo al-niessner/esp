@@ -140,7 +140,7 @@ class finalize(dawgie.Algorithm):
                     log.warning('>-- ADD KEY TO SYSTEM/OVERWRITER --<')
 
                 # consistency checks
-                inconsistencies = consistency_checks(self.__out['priors'])
+                inconsistencies = consistency_checks(self.__out['priors'], self.__out['ignore'])
                 for inconsistency in inconsistencies:
                     self.__out['autofill'].append('inconsistent:'+inconsistency)
 

@@ -2,12 +2,13 @@
 # -- IMPORTS -- -----------------------------------------------------
 import numpy
 import excalibur.system.core as syscore
+import logging; log = logging.getLogger(__name__)
 
 # ----------------- -------------------------------------------------
 # --       Consistency checks between related parameters           --
 # -------------------------------------------------------------------
 
-def consistency_checks(priors):
+def consistency_checks(priors, ignoredPlanets):
     '''
     Run through a series of data validation checks, for internal self-consistency
     '''
@@ -24,23 +25,28 @@ def consistency_checks(priors):
     if not ok: inconsistencies.append('L*')
 
     for planetLetter in priors['planets']:
-        ok = consistency_check_sma_P_Mstar(priors, planetLetter)
-        if not ok: inconsistencies.append(planetLetter+':semi-major axis')
+        # special check needed for HAT-P-11 c
+        #  (it's a non-transiting RV planet that shouldn't be here, but there's an Archive bug)
+        if planetLetter in ignoredPlanets:
+            log.warning('SKIPPING consistency check for ignored planets: %s',planetLetter)
+        else:
+            ok = consistency_check_sma_P_Mstar(priors, planetLetter)
+            if not ok: inconsistencies.append(planetLetter+':semi-major axis')
 
-        # planet density does not exist (so no need to check it)
-        # ok = consistency_check_M_R_RHO_planet(priors, planetLetter)
-        # if not ok: inconsistencies.append(planetLetter+':rho')
+            # planet density does not exist (so no need to check it)
+            # ok = consistency_check_M_R_RHO_planet(priors, planetLetter)
+            # if not ok: inconsistencies.append(planetLetter+':rho')
 
-        ok = consistency_check_M_R_LOGG_planet(priors, planetLetter)
-        if not ok: inconsistencies.append(planetLetter+':logg')
+            ok = consistency_check_M_R_LOGG_planet(priors, planetLetter)
+            if not ok: inconsistencies.append(planetLetter+':logg')
 
-        ok = consistency_check_Teq_sma_Lstar(priors, planetLetter)
-        if not ok: inconsistencies.append(planetLetter+':Teq')
+            ok = consistency_check_Teq_sma_Lstar(priors, planetLetter)
+            if not ok: inconsistencies.append(planetLetter+':Teq')
 
-# impact and inclination should be consistent
-# but impact doesn't exist here; not saved by target
-#        ok = consistency_check_inc_impact(priors, planetLetter)
-#        if not ok: inconsistencies.append(planetLetter+':impact')
+            # impact and inclination should be consistent
+            # but impact doesn't exist here; not saved by target
+            # ok = consistency_check_inc_impact(priors, planetLetter)
+            # if not ok: inconsistencies.append(planetLetter+':impact')
 
     return inconsistencies
 

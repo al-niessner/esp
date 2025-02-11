@@ -95,22 +95,15 @@ def buildsp(autofill, runtime_params, out, verbose=False):
     out['planetkeys'].extend(autofill['planetkeys'])
     out['exts'].extend(autofill['exts'])
     # MANDATORY STELLAR PARAMETERS
-    # out['starmdt'].extend(['R*', 'T*', 'FEH*', 'LOGG*', 'M*', 'RHO*', 'Hmag'])
-    # out['starmdt'].extend(['R*', 'M*', 'LOGG*', 'RHO*', 'FEH*', 'Hmag', 'T*'])
-    # out['starmdt'].extend(['R*', 'M*', 'LOGG*', 'RHO*', 'FEH*', 'Hmag', 'T*', 'L*'])
     out['starmdt'].extend(['R*', 'M*', 'LOGG*', 'T*', 'L*', 'RHO*', 'FEH*', 'Jmag','Hmag','Kmag'])
     # NEW CATEGORY: PARAMS TO PASS THROUGH TO ANCILLARY, BUT THEY"RE NOT MANDATORY
-    # out['starnonmdt'].extend(['spTyp', 'L*', 'AGE*'])
     # change L* to mandatory (needed for planet T_eq)
-    # out['starnonmdt'].extend(['spTyp', 'AGE*'])
     # 3 additional parameters needed for Ariel-RAD - distance, impact parameter, and transit duration
     # also add in transit depth. may be useful for tracking down depth differences vs taurex
-    out['starnonmdt'].extend(['spTyp', 'AGE*', 'dist'])
+    out['starnonmdt'].extend(['spTyp', 'AGE*', 'dist', 'TESSmag'])
     # AWKWARD: non-mandatory has to be included in 'starmdt' or it won't display
     out['starmdt'].extend(out['starnonmdt'])
     # MANDATORY PLANET PARAMETERS
-    # out['planetmdt'].extend(['inc', 'period', 'ecc', 'rp', 't0', 'sma', 'mass', 'logg'])
-    # out['planetmdt'].extend(['rp', 'mass', 'logg', 'sma', 'period', 't0', 'inc', 'ecc', 'omega'])
     out['planetmdt'].extend(['rp', 'mass', 'logg', 'teq', 'sma', 'period', 't0',
                              'inc', 'ecc', 'omega', 'impact'])
     out['planetnonmdt'].extend(['trandur', 'trandepth'])
@@ -339,7 +332,7 @@ def buildsp(autofill, runtime_params, out, verbose=False):
                         pass
                     elif lim!='0':  # skip regular measurements (not upper/lower limits)
                         print('  there is a limit flag in the dataset!',lbl,val,lim,ref)
-        elif lbl in ['Jmag','Hmag','Kmag','dist','spTyp']:
+        elif lbl in ['Jmag','Hmag','Kmag','TESSmag','dist','spTyp']:
             pass  # these parameters don't have limit flags
         else:
             print('  ERROR: no limit flag for ',lbl)

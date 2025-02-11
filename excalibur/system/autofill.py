@@ -1,6 +1,7 @@
 '''system autofill ds'''
 # -- IMPORTS -- ------------------------------------------------------
 import numpy
+import copy
 import excalibur.system.core as syscore
 import logging; log = logging.getLogger(__name__)
 # ----------------- --------------------------------------------------
@@ -121,7 +122,7 @@ def fillUncertainty(param,param_value,param_uncertainty,error_type):
     return fillvalue,autofilled
 # ----------------- --------------------------------------------------
 # -- SELECT THE BEST PARAMETER VALUE FROM VARIOUS ARCHIVE VALUES -----
-def bestValue(values,uperrs,lowerrs,refs,lbl,bestref,bestpubIndex,
+def bestValue(valuesorig,uperrsorig,lowerrsorig,refsorig,lbl,bestref,bestpubIndex,
               maximizeSelfConsistency=True,
               selectMostRecent=False,
               verbose=False):
@@ -132,6 +133,11 @@ def bestValue(values,uperrs,lowerrs,refs,lbl,bestref,bestpubIndex,
     2) use the most recent publication (for a selected list of parameters, e.g. t0)
     3) use the publication that can fill in needed params self-consistently
     '''
+
+    values = copy.deepcopy(valuesorig)
+    uperrs = copy.deepcopy(uperrsorig)
+    lowerrs = copy.deepcopy(lowerrsorig)
+    refs = copy.deepcopy(refsorig)
 
     # option to select the most recent publication for period and T0
     if selectMostRecent: selectMostRecent = lbl in ('period', 't0')
@@ -376,7 +382,6 @@ def calculate_selfConsistency_metric(data, setRefByHand=False,
             if data[planet]['rp_ref'][ipub]==bestref:
                 bestpubIndices[planet] = ipub
     if verbose:
-        print('bestpubIndices',bestpubIndices)
         if bestpubIndices['star']==-1: print('ERROR!: no matching star pub?!?')
         for planet in data['planets']:
             if bestpubIndices[planet]==-1: print('OH NO!: no matching planet pub!',planet)
@@ -502,7 +507,7 @@ def derive_SMA_from_P_and_Mstar(starInfo, planetLetter):
     sma_uperr_derived = []
     sma_ref_derived = []
 
-    for M,Merr1,Merr2, P,Perr1,Perr2, sma,sma_err1,sma_err2,sma_ref in zip(
+    for Mold,Molderr1,Molderr2, P,Perr1,Perr2, sma,sma_err1,sma_err2,sma_ref in zip(
             starInfo['M*'],starInfo['M*_lowerr'],starInfo['M*_uperr'],
             starInfo[planetLetter]['period'],
             starInfo[planetLetter]['period_lowerr'],
@@ -511,6 +516,23 @@ def derive_SMA_from_P_and_Mstar(starInfo, planetLetter):
             starInfo[planetLetter]['sma_lowerr'],
             starInfo[planetLetter]['sma_uperr'],
             starInfo[planetLetter]['sma_ref']):
+
+        # careful: for multi-planet systems,
+        #  these stellar and planetary parameters are misaligned.
+        # we have to match stellar and planetary params by their reference
+        if sma_ref in starInfo['M*_ref']:
+            imass = starInfo['M*_ref'].index(sma_ref)
+            M = starInfo['M*'][imass]
+            Merr1 = starInfo['M*_lowerr'][imass]
+            Merr2 = starInfo['M*_uperr'][imass]
+            # NOTE: didn't finish testing this completely before python3.12/pymc/etc upgrade
+            # if M != Mold: print('new stellar mass',planetLetter, M,'old stellar mass',Mold)
+        else:
+            # print('STRANGE: this planet ref doesnt exist in star refs:',sma_ref)
+            # log.warning('STRANGE: this planet ref doesnt exist in star refs: %s',sma_ref)
+            M = Mold
+            Merr1 = Molderr1
+            Merr2 = Molderr2
 
         # check for blank stellar density
         #  (but only update it if M* and P are both defined)
@@ -523,9 +545,6 @@ def derive_SMA_from_P_and_Mstar(starInfo, planetLetter):
             newsma /= sscmks['AU']
             # sma_derived.append(str('%6.4f' %newsma))
             sma_derived.append(f'{newsma:6.4f}')
-            # print('P M',P,M)
-            # print('derived sma',newsma)
-            # exit('test')
             sma_ref_derived.append('derived from period,M*')
 
             # also fill in the uncertainty on sma, based on R,M uncertainties
