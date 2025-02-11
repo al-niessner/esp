@@ -18,11 +18,11 @@ from excalibur.cerberus.bounds import setPriorBound, addPriors, \
 
 import logging
 log = logging.getLogger(__name__)
-pymc3log = logging.getLogger('pymc3')
-pymc3log.setLevel(logging.ERROR)
+pymclog = logging.getLogger('pymc')
+pymclog.setLevel(logging.ERROR)
 
 import os
-import pymc3 as pm
+import pymc
 import numpy as np
 import matplotlib.pyplot as plt
 from collections import defaultdict
@@ -31,7 +31,7 @@ from collections import namedtuple
 from scipy.interpolate import interp1d as itp
 
 CERB_PARAMS = namedtuple('cerberus_params_from_runtime',[
-    'MCMC_chain_length',
+    'MCMC_chain_length', 'MCMC_sampler',
     'fitCloudParameters', 'fitT', 'fitCtoO', 'fitNtoO'])
 
 # ------------- ------------------------------------------------------
@@ -602,7 +602,7 @@ def atmos(fin, xsl, spc, runtime_params, out, ext,
                 # keep track of the bounds put on each parameter
                 # this will be helpful for later plotting and analysis
                 nodes = []
-                with pm.Model():
+                with pymc.Model():
 
                     # set the fixed parameters (the ones that are not being fit this time)
                     fixedParams = {}
@@ -638,59 +638,59 @@ def atmos(fin, xsl, spc, runtime_params, out, ext,
                                                      np.nanmedian(1e2*tspectrum[cond_off1]))
                                     off2_value = abs(np.nanmedian(1e2*tspectrum[cond_off3]) -
                                                      np.nanmedian(1e2*tspectrum[cond_off2]))
-                                    nodes.append(pm.Uniform('OFF0', -off0_value, off0_value))
-                                    nodes.append(pm.Uniform('OFF1', -off1_value, off1_value))
-                                    nodes.append(pm.Uniform('OFF2', -off2_value, off2_value))
+                                    nodes.append(pymc.Uniform('OFF0', -off0_value, off0_value))
+                                    nodes.append(pymc.Uniform('OFF1', -off1_value, off1_value))
+                                    nodes.append(pymc.Uniform('OFF2', -off2_value, off2_value))
                                 elif valid1 and valid2 and not valid3:
                                     off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off2]) -
                                                      np.nanmedian(1e2*tspectrum[cond_off0]))
                                     off1_value = abs(np.nanmedian(1e2*tspectrum[cond_off2]) -
                                                      np.nanmedian(1e2*tspectrum[cond_off1]))
-                                    nodes.append(pm.Uniform('OFF0', -off0_value, off0_value))
-                                    nodes.append(pm.Uniform('OFF1', -off1_value, off1_value))
+                                    nodes.append(pymc.Uniform('OFF0', -off0_value, off0_value))
+                                    nodes.append(pymc.Uniform('OFF1', -off1_value, off1_value))
                                 elif valid1 and valid3 and not valid2:
                                     off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3]) -
                                                      np.nanmedian(1e2*tspectrum[cond_off0]))
                                     off1_value = abs(np.nanmedian(1e2*tspectrum[cond_off3]) -
                                                      np.nanmedian(1e2*tspectrum[cond_off1]))
-                                    nodes.append(pm.Uniform('OFF0', -off0_value, off0_value))
-                                    nodes.append(pm.Uniform('OFF1', -off1_value, off1_value))
+                                    nodes.append(pymc.Uniform('OFF0', -off0_value, off0_value))
+                                    nodes.append(pymc.Uniform('OFF1', -off1_value, off1_value))
                                 elif valid2 and valid3 and not valid1:
                                     off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3]) -
                                                      np.nanmedian(1e2*tspectrum[cond_off0]))
                                     off1_value = abs(np.nanmedian(1e2*tspectrum[cond_off3]) -
                                                      np.nanmedian(1e2*tspectrum[cond_off2]))
-                                    nodes.append(pm.Uniform('OFF0', -off0_value, off0_value))
-                                    nodes.append(pm.Uniform('OFF1', -off1_value, off1_value))
+                                    nodes.append(pymc.Uniform('OFF0', -off0_value, off0_value))
+                                    nodes.append(pymc.Uniform('OFF1', -off1_value, off1_value))
                                 elif valid3 and not valid1 and not valid2:
                                     off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3]) -
                                                      np.nanmedian(1e2*tspectrum[cond_off0]))
-                                    nodes.append(pm.Uniform('OFF0', -off0_value, off0_value))
+                                    nodes.append(pymc.Uniform('OFF0', -off0_value, off0_value))
                             else:
                                 if valid1 and valid2 and valid3:
                                     off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3]) -
                                                      np.nanmedian(1e2*tspectrum[cond_off1]))
                                     off1_value = abs(np.nanmedian(1e2*tspectrum[cond_off3]) -
                                                      np.nanmedian(1e2*tspectrum[cond_off2]))
-                                    nodes.append(pm.Uniform('OFF0', -off0_value, off0_value))
-                                    nodes.append(pm.Uniform('OFF1', -off1_value, off1_value))
+                                    nodes.append(pymc.Uniform('OFF0', -off0_value, off0_value))
+                                    nodes.append(pymc.Uniform('OFF1', -off1_value, off1_value))
                                 if valid1 and valid3 and not valid2:
                                     off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3]) -
                                                      np.nanmedian(1e2*tspectrum[cond_off1]))
-                                    nodes.append(pm.Uniform('OFF0', -off0_value, off0_value))
+                                    nodes.append(pymc.Uniform('OFF0', -off0_value, off0_value))
                                 if valid1 and valid2 and not valid3:
                                     off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off2]) -
                                                      np.nanmedian(1e2*tspectrum[cond_off1]))
-                                    nodes.append(pm.Uniform('OFF0', -off0_value, off0_value))
+                                    nodes.append(pymc.Uniform('OFF0', -off0_value, off0_value))
                                 if valid1 and valid2 and not valid3:
                                     off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off2]) -
                                                      np.nanmedian(1e2*tspectrum[cond_off1]))
-                                    nodes.append(pm.Uniform('OFF0', -off0_value, off0_value))
+                                    nodes.append(pymc.Uniform('OFF0', -off0_value, off0_value))
                         if 'WFC3' in filters[0]:
                             if valid2 and valid3:
                                 off0_value = abs(np.nanmedian(1e2*tspectrum[cond_off3]) -
                                                  np.nanmedian(1e2*tspectrum[cond_off2]))
-                                nodes.append(pm.Uniform('OFF0', -off0_value, off0_value))
+                                nodes.append(pymc.Uniform('OFF0', -off0_value, off0_value))
 
                     # new cleaned-up version of adding on the prior bounds as pymc nodes
                     nodes, prior_ranges = addPriors(priorRangeTable, runtime_params,
@@ -704,87 +704,108 @@ def atmos(fin, xsl, spc, runtime_params, out, ext,
                     # CERBERUS MCMC
                     if not runtime_params.fitCloudParameters:
                         log.warning('--< RUNNING MCMC - NO CLOUDS! >--')
-                        _mcdata = pm.Normal('mcdata', mu=clearfmcerberus(*nodes),
-                                            tau=1e0/(np.nanmedian(tspecerr[cleanup])**2),
-                                            observed=tspectrum[cleanup])
+                        _mcdata = pymc.Normal('mcdata', mu=clearfmcerberus(*nodes),
+                                              tau=1e0/(np.nanmedian(tspecerr[cleanup])**2),
+                                              observed=tspectrum[cleanup])
                         pass
-
                     else:
                         if 'STIS-WFC3' in ext:
                             if 'STIS' in filters[0]:
                                 if valid0:  # G430
                                     if valid1 and valid2 and valid3:  # G430-G750-G102-G141
-                                        _mcdata = pm.Normal('mcdata', mu=offcerberus(*nodes),
-                                                            tau=1e0/tspecerr[cleanup]**2,
-                                                            observed=tspectrum[cleanup])
+                                        _mcdata = pymc.Normal('mcdata', mu=offcerberus(*nodes),
+                                                              tau=1e0/tspecerr[cleanup]**2,
+                                                              observed=tspectrum[cleanup])
                                     elif valid1 and valid2 and not valid3:
-                                        _mcdata = pm.Normal('mcdata', mu=offcerberus1(*nodes),
-                                                            tau=1e0/tspecerr[cleanup]**2,
-                                                            observed=tspectrum[cleanup])
+                                        _mcdata = pymc.Normal('mcdata', mu=offcerberus1(*nodes),
+                                                              tau=1e0/tspecerr[cleanup]**2,
+                                                              observed=tspectrum[cleanup])
                                     elif valid1 and valid3 and not valid2:
-                                        _mcdata = pm.Normal('mcdata', mu=offcerberus2(*nodes),
-                                                            tau=1e0/tspecerr[cleanup]**2,
-                                                            observed=tspectrum[cleanup])
+                                        _mcdata = pymc.Normal('mcdata', mu=offcerberus2(*nodes),
+                                                              tau=1e0/tspecerr[cleanup]**2,
+                                                              observed=tspectrum[cleanup])
                                     elif valid2 and valid3 and not valid1:
-                                        _mcdata = pm.Normal('mcdata', mu=offcerberus3(*nodes),
-                                                            tau=1e0/tspecerr[cleanup]**2,
-                                                            observed=tspectrum[cleanup])
+                                        _mcdata = pymc.Normal('mcdata', mu=offcerberus3(*nodes),
+                                                              tau=1e0/tspecerr[cleanup]**2,
+                                                              observed=tspectrum[cleanup])
                                     elif valid3 and not valid1 and not valid2:
-                                        _mcdata = pm.Normal('mcdata', mu=offcerberus4(*nodes),
-                                                            tau=1e0/tspecerr[cleanup]**2,
-                                                            observed=tspectrum[cleanup])
+                                        _mcdata = pymc.Normal('mcdata', mu=offcerberus4(*nodes),
+                                                              tau=1e0/tspecerr[cleanup]**2,
+                                                              observed=tspectrum[cleanup])
                                 else:
                                     if valid1 and valid2 and valid3:
-                                        _mcdata = pm.Normal('mcdata', mu=offcerberus5(*nodes),
-                                                            tau=1e0/tspecerr[cleanup]**2,
-                                                            observed=tspectrum[cleanup])
+                                        _mcdata = pymc.Normal('mcdata', mu=offcerberus5(*nodes),
+                                                              tau=1e0/tspecerr[cleanup]**2,
+                                                              observed=tspectrum[cleanup])
                                     elif valid1 and valid3 and not valid2:
-                                        _mcdata = pm.Normal('mcdata', mu=offcerberus6(*nodes),
-                                                            tau=1e0/tspecerr[cleanup]**2,
-                                                            observed=tspectrum[cleanup])
+                                        _mcdata = pymc.Normal('mcdata', mu=offcerberus6(*nodes),
+                                                              tau=1e0/tspecerr[cleanup]**2,
+                                                              observed=tspectrum[cleanup])
                                     elif valid1 and valid2 and not valid3:
-                                        _mcdata = pm.Normal('mcdata', mu=offcerberus7(*nodes),
-                                                            tau=1e0/tspecerr[cleanup]**2,
-                                                            observed=tspectrum[cleanup])
+                                        _mcdata = pymc.Normal('mcdata', mu=offcerberus7(*nodes),
+                                                              tau=1e0/tspecerr[cleanup]**2,
+                                                              observed=tspectrum[cleanup])
                             if 'WFC3' in filters[0]:
                                 if valid2 and valid3:
-                                    _mcdata = pm.Normal('mcdata', mu=offcerberus8(*nodes),
-                                                        tau=1e0/tspecerr[cleanup]**2,
-                                                        observed=tspectrum[cleanup])
+                                    _mcdata = pymc.Normal('mcdata', mu=offcerberus8(*nodes),
+                                                          tau=1e0/tspecerr[cleanup]**2,
+                                                          observed=tspectrum[cleanup])
                                 elif not valid2:
-                                    _mcdata = pm.Normal('mcdata', mu=cloudyfmcerberus(*nodes),
-                                                        tau=1e0/(np.nanmedian(tspecerr[cleanup])**2),
-                                                        observed=tspectrum[cleanup])
+                                    _mcdata = pymc.Normal('mcdata', mu=cloudyfmcerberus(*nodes),
+                                                          tau=1e0/(np.nanmedian(tspecerr[cleanup])**2),
+                                                          observed=tspectrum[cleanup])
                                 elif not valid3:
-                                    _mcdata = pm.Normal('mcdata', mu=cloudyfmcerberus(*nodes),
-                                                        tau=1e0/(np.nanmedian(tspecerr[cleanup])**2),
-                                                        observed=tspectrum[cleanup])
+                                    _mcdata = pymc.Normal('mcdata', mu=cloudyfmcerberus(*nodes),
+                                                          tau=1e0/(np.nanmedian(tspecerr[cleanup])**2),
+                                                          observed=tspectrum[cleanup])
                                     pass
                                 pass
                         if 'STIS-WFC3' not in ext:
                             log.warning('--< STANDARD MCMC (WITH CLOUDS) >--')
-                            _mcdata = pm.Normal('mcdata', mu=cloudyfmcerberus(*nodes),
-                                                tau=1e0/(np.nanmedian(tspecerr[cleanup])**2),
-                                                observed=tspectrum[cleanup])
-                            pass
+                            _mcdata = pymc.Normal('mcdata', mu=cloudyfmcerberus(*nodes),
+                                                  sigma=tspecerr[cleanup],
+                                                  observed=tspectrum[cleanup])
+                            # tau=1e0/tspecerr[cleanup]**2,
+                            # tau=1e0/(np.nanmedian(tspecerr[cleanup])**2),
+                            # this (_mcdata) is similar to the input spectrum.
+                            #   maybe it's the final forward model?  (there's only one)
+                            #   oh right, this is just the definition; there's no sampling yet
+                            #   so why does it bother making one call.  what param values?
+                            # print('_mcdata (what is this?!)',_mcdata.eval())
                         pass
 
-                    log.warning('>-- MCMC nodes: %s', str([n.name for n in nodes]))
-                    trace = pm.sample(mclen, cores=4, tune=int(mclen/4),
-                                      compute_convergence_checks=False, step=pm.Metropolis(),
-                                      progressbar=verbose)
-                    # GMR: Should be able to find it... Joker
-                    # pylint: disable=no-member
-                    mcpost = pm.stats.summary(trace)
-                mctrace = {}
-                for key in mcpost['mean'].keys():
-                    tracekeys = key.split('[')
-                    if tracekeys.__len__() > 1:
-                        indtrace = int(tracekeys[1].split(']')[0])
-                        mctrace[key] = trace[tracekeys[0]][:, indtrace]
+                    if runtime_params.MCMC_sampler=='slice':
+                        log.warning('>-- SLICE SAMPLER: ON  --<')
+                        sampler = pymc.Slice()
                     else:
-                        mctrace[key] = trace[tracekeys[0]]
-                    pass
+                        log.warning('>-- SLICE SAMPLER: OFF --<')
+                        sampler = pymc.Metropolis()
+
+                    log.warning('>-- MCMC nodes: %s', str([n.name for n in nodes]))
+                    trace = pymc.sample(mclen, cores=4, tune=int(mclen/4),
+                                        step=sampler,
+                                        compute_convergence_checks=False,
+                                        progressbar=verbose)
+                    # pylint: disable=no-member
+                    stats_summary = pymc.stats.summary(trace)
+
+                # N_TEC = len(trace.posterior.TEC_dim_0)
+                # print('# of TEC parameters',N_TEC)
+
+                mctrace = {}
+                for key in stats_summary['mean'].keys():
+                    tracekeys = key.split('[')
+                    keyname = tracekeys[0]
+                    if tracekeys.__len__() > 1:
+                        paramIndex = int(tracekeys[1][:-1])
+                        mctrace[key] = trace.posterior[keyname][:,:,paramIndex]
+                    else:
+                        mctrace[key] = trace.posterior[keyname]
+                    # convert Nchain x Nstep 2-D posteriors to a single chain
+                    # mctrace[key] = np.ravel(mctrace[key])
+                    # original ravel is the correct one?  it's hard to tell with 30 steps
+                    # seems better when reversed ('F' reverses the indices)
+                    mctrace[key] = np.ravel(mctrace[key], order='F')
                 out['data'][p][model]['MCTRACE'] = mctrace
 
                 out['data'][p][model]['prior_ranges'] = prior_ranges
@@ -1014,7 +1035,7 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                 allTraces = []
                 allKeys = []
                 for key in atm[p][modelName]['MCTRACE']:
-                    # print('fillin tru the keys again?',key)
+                    # print('going through keys in MCTRACE',key)
                     allTraces.append(atm[p][modelName]['MCTRACE'][key])
                     if modelName=='TEC':
                         if key=='TEC[0]': allKeys.append('[X/H]')
@@ -1376,6 +1397,7 @@ def analysis(aspects, filt, out, verbose=False):
 
     aspecttargets = []
     for a in aspects: aspecttargets.append(a)
+    log.warning('--< CERBERUS ANALYSIS: NUMBER OF TARGETS IN ASPECT %s >--',len(aspecttargets))
 
     svname = 'cerberus.atmos'
 

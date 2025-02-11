@@ -69,7 +69,7 @@ def targetlist_active():
         'GJ 1214',
         'GJ 1252',
         'GJ 3053',
-        # 'GJ 3193',
+        # 'GJ 3193',  # doesn't exist in the Exoplanet Archive
         'GJ 3470',
         'GJ 3473',
         'GJ 357',
@@ -204,11 +204,11 @@ def targetlist_active():
         'HD 15337',
         'HD 17156',
         'HD 183579',
-        # 'HD 185603',
+        # 'HD 185603',  # alias for KELT-20
         'HD 189733',
         'HD 191939',
-        # 'HD 195689',
-        # 'HD 197481',
+        # 'HD 195689',  # alias for KELT-9'
+        # 'HD 197481',  # alias for AU Mic
         'HD 202772 A',
         'HD 207897',
         'HD 209458',
@@ -226,7 +226,7 @@ def targetlist_active():
         'HD 86226',
         'HD 89345',
         'HD 97658',
-        # 'HIP 41378',
+        # 'HIP 41378',  # alias for K2-93
         'HIP 65 A',
         'HIP 67522',
         'HR 858',
@@ -315,7 +315,7 @@ def targetlist_active():
         'KELT-7',
         'KELT-8',
         'KELT-9',
-        # 'KIC 12266812',
+        # 'KIC 12266812',  # has an Archive page, but not in the table
         'KOI-13',
         'KOI-94',
         'KPS-1',
@@ -426,7 +426,7 @@ def targetlist_active():
         'Qatar-7',
         'Qatar-8',
         'Qatar-9',
-        # 'TIC 184892124',
+        # 'TIC 184892124',  # doesn't exist in Exoplanet Archive
         'TIC 257060897',
         'TOI-1064',
         'TOI-1075',
@@ -458,7 +458,7 @@ def targetlist_active():
         'TOI-1693',
         'TOI-172',
         'TOI-1728',
-        # 'TOI-175',
+        # 'TOI-175',  # alias for L 98-59
         'TOI-1759',
         'TOI-178',
         'TOI-1789',
@@ -466,7 +466,7 @@ def targetlist_active():
         'TOI-1842',
         'TOI-1860',
         'TOI-1899',
-        # 'TOI-193',
+        # 'TOI-193',  # alias for LTT 9779
         'TOI-201',
         'TOI-2076',
         'TOI-2109',
@@ -1437,7 +1437,7 @@ def targetlist_active():
         'TOI-771',
         'TOI-6008',
         'TOI-5799',
-        'LHS 475',
+        # 'LHS 475',  # this is GJ 4102
         'TOI-2120',
         'TOI-782',
         'TOI-260',
@@ -1796,7 +1796,7 @@ def targetlist_Spitzer():
         'Kepler-68',
         'Kepler-9',
         'Kepler-93',
-        'LHS 1140',
+        # 'LHS 1140',  # alias for 'GJ 3470'
         'LHS 3844',
         'LP 791-18',
         'MASCARA-1',
@@ -3129,7 +3129,7 @@ def planetlist_arielROSESmasses():
         'HD 109833 b',
         'TOI-833 b',
         'K2-403 b',
-        'LHS 475 b',
+        'GJ 4102 b'  # converted to our alias for LHS 475 b
         'K2-266 d',
         'HD 110082 b',
         'TOI-2120 b',

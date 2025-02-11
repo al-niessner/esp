@@ -1339,15 +1339,23 @@ overwrite[starID] =
         # 'R*_ref':'Default to solar radius',
         'M*':1.0, 'M*_uperr':0.25, 'M*_lowerr':-0.25,
         'M*_ref':'Default to solar mass',
+        # 1/22/25 There is a LOGG* value now, so no need to fill in M* or RHO*
         # RHO* derivation (from R* and M*) comes before this, so we have to set it here
-        'RHO*':1.4, 'RHO*_uperr':0.25, 'RHO*_lowerr':-0.25,
-        'RHO*_ref':'Default to solar density',
+        # 'RHO*':1.4, 'RHO*_uperr':0.25, 'RHO*_lowerr':-0.25,
+        # 'RHO*_ref':'Default to solar density',
+        #  older density above gives an inconsistency flag (doesn't match current radius)
+        # redo density for R* = 0.864 RSun  (solar density is 1.41)
+        'RHO*':2.2, 'RHO*_uperr':0.25, 'RHO*_lowerr':-0.25,
+        'RHO*_ref':'Assumes solar mass',
         # L* needed for teq (actually it's set below)
         # L* is derived from R*,T*, now that R* has a default value
         # 'L*':1.0, 'L*_uperr':0.25, 'L*_lowerr':-0.25,
         # 'L*_ref':'Default to solar luminosity',
         # 'LOGG*':4.3, 'LOGG*_uperr':0.1, 'LOGG*_lowerr':-0.1,
-        # 'LOGG*_ref':'Default to solar log(g)'}
+        # 'LOGG*_ref':'Default to solar log(g)',
+        # make sure LOGG* matches M* above (and R*=0.86 now)
+        'LOGG*':4.57, 'LOGG*_uperr':0.1, 'LOGG*_lowerr':-0.1,
+        'LOGG*_ref':'derived from M*,R*',
         # Period is 3.87 days
         # teq derivation (from L* and sma) comes before this, so we have to set it here
         'b':{'sma':0.05, 'sma_uperr':0.01, 'sma_lowerr':-0.01,

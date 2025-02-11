@@ -17,7 +17,8 @@ from scipy.signal import savgol_filter
 from scipy.interpolate import griddata
 from scipy import spatial
 from ultranest import ReactiveNestedSampler
-from astropy import units
+# from astropy import units  # CI problem.  strange
+import astropy.units
 from astropy.time import Time
 
 try:
@@ -681,14 +682,14 @@ class lc_fitter():
 def brightnessTemp(priors,f='IRAC 3.6um'):
     '''Solve for Tb using Fp/Fs, Ts and a filter bandpass'''
     if '3.6' in f or '36' in f:
-        waveset = np.linspace(3.15, 3.9, 1000) * units.micron
+        waveset = np.linspace(3.15, 3.9, 1000) * astropy.units.micron
     else:
-        waveset = np.linspace(4,5,1000) * units.micron
+        waveset = np.linspace(4,5,1000) * astropy.units.micron
 
     def f2min(T, *args):
         fpfs,tstar,waveset = args
-        fstar = BlackBody(waveset, tstar * units.K)
-        fplanet = BlackBody(waveset, T * units.K)
+        fstar = BlackBody(waveset, tstar * astropy.units.K)
+        fplanet = BlackBody(waveset, T * astropy.units.K)
         fp = np.trapz(fplanet, waveset)
         fs = np.trapz(fstar, waveset)
         return (fp/fs) - fpfs

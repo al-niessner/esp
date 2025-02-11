@@ -21,6 +21,7 @@ import scipy.signal
 import scipy.optimize as opt
 from scipy.ndimage.measurements import label
 from scipy.ndimage.morphology import binary_dilation, binary_closing, binary_erosion, binary_fill_holes
+# pylint: disable=no-name-in-module
 from photutils import aperture_photometry, CircularAperture
 import pyvo as vo
 
@@ -607,7 +608,7 @@ def jwstcal(fin, clc, tim, ext, out, ps=None, verbose=False, debug=False):
             refX.append(reffile[1][order]['X'] - 20.)
             refY.append(reffile[1][order]['Y'] - 20.)
             refT.append(reffile[1][order]['THROUGHPUT'])
-            bbstar = bbfunc(refwave[-1]*astropy.units.um)
+            bbstar = bbfunc(refwave[-1]*astropy.units.micron)
             refB.append(bbstar)
             refS.append(refT[-1]*refB[-1]/np.nansum(refB[-1]))
             pass
