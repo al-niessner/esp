@@ -8,12 +8,11 @@ import logging
 
 log = logging.getLogger(__name__)
 
-import excalibur.eclipse as ecl
-
 import excalibur.system as sys
 import excalibur.transit.algorithms as trnalg
 import excalibur.transit.core as trncore
 
+from importlib import import_module as fetch  # avoid cicular dependencies
 
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
@@ -44,7 +43,7 @@ class whitelight(trnalg.whitelight):
     def previous(self):
         '''Input State Vectors: eclipse.normalization, system.finalize'''
         return [
-            dawgie.ALG_REF(ecl.task, self._nrm),
+            dawgie.ALG_REF(fetch('excalibur.eclipse').task, self._nrm),
             dawgie.ALG_REF(sys.task, self.__fin),
         ]
 
@@ -66,8 +65,8 @@ class spectrum(trnalg.spectrum):
         eclipse.whitelight'''
         return [
             dawgie.ALG_REF(sys.task, self.__fin),
-            dawgie.ALG_REF(ecl.task, self._nrm),
-            dawgie.ALG_REF(ecl.task, self._wht),
+            dawgie.ALG_REF(fetch('excalibur.eclipse').task, self._nrm),
+            dawgie.ALG_REF(fetch('excalibur.eclipse').task, self._wht),
         ]
 
     pass

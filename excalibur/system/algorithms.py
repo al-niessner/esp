@@ -11,7 +11,6 @@ from collections import defaultdict
 
 import excalibur.runtime.algorithms as rtalg
 
-import excalibur.system as sys
 import excalibur.system.core as syscore
 import excalibur.system.states as sysstates
 import excalibur.system.overwriter as sysoverwriter
@@ -22,6 +21,8 @@ import excalibur.target.algorithms as trgalg
 from excalibur.system.consistency import consistency_checks
 from excalibur.target.targetlists import get_target_lists
 from excalibur.system.core import savesv
+
+from importlib import import_module as fetch  # avoid cicular dependencies
 
 
 # ------------- ------------------------------------------------------
@@ -120,7 +121,7 @@ class finalize(dawgie.Algorithm):
     def previous(self):
         '''Input State Vectors: system.validate'''
         return [
-            dawgie.ALG_REF(sys.task, self.__val)
+            dawgie.ALG_REF(fetch('excalibur.system').task, self.__val)
         ] + self.__rt.refs_for_validity()
 
     def state_vectors(self):
@@ -241,7 +242,7 @@ class population(dawgie.Analyzer):
 
     def previous(self):
         '''Input State Vectors: system.finalize'''
-        return [dawgie.ALG_REF(sys.task, self.__fin)]
+        return [dawgie.ALG_REF(fetch('excalibur.system').task, self.__fin)]
 
     def feedback(self):
         '''feedback ds'''
@@ -254,7 +255,11 @@ class population(dawgie.Analyzer):
     def traits(self) -> [dawgie.SV_REF, dawgie.V_REF]:
         '''traits ds'''
         return [
-            dawgie.SV_REF(sys.task, finalize(), finalize().state_vectors()[0])
+            dawgie.SV_REF(
+                fetch('excalibur.system').task,
+                finalize(),
+                finalize().state_vectors()[0],
+            )
         ]
 
     def state_vectors(self):

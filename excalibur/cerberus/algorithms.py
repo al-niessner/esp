@@ -23,9 +23,10 @@ import excalibur.transit as trn
 import excalibur.transit.algorithms as trnalg
 from excalibur import ariel
 import excalibur.ariel.algorithms as arielalg
-import excalibur.cerberus as crb
 import excalibur.cerberus.core as crbcore
 import excalibur.cerberus.states as crbstates
+
+from importlib import import_module as fetch  # avoid cicular dependencies
 
 fltrs = [str(fn) for fn in rtbind.filter_names.values()]
 
@@ -136,7 +137,7 @@ class atmos(dawgie.Algorithm):
         return [
             dawgie.ALG_REF(trn.task, self.__spc),
             dawgie.ALG_REF(sys.task, self.__fin),
-            dawgie.ALG_REF(crb.task, self.__xsl),
+            dawgie.ALG_REF(fetch('excalibur.cerberus').task, self.__xsl),
             dawgie.ALG_REF(ariel.task, self.__arielsim),
             dawgie.V_REF(
                 rtime.task,
@@ -303,8 +304,8 @@ class results(dawgie.Algorithm):
         return [
             dawgie.ALG_REF(sys.task, self.__fin),
             dawgie.ALG_REF(anc.task, self.__anc),
-            dawgie.ALG_REF(crb.task, self.__xsl),
-            dawgie.ALG_REF(crb.task, self.__atm),
+            dawgie.ALG_REF(fetch('excalibur.cerberus').task, self.__xsl),
+            dawgie.ALG_REF(fetch('excalibur.cerberus').task, self.__atm),
         ] + self.__rt.refs_for_proceed()
 
     def state_vectors(self):
@@ -413,7 +414,7 @@ class analysis(dawgie.Analyzer):
     def traits(self) -> [dawgie.SV_REF, dawgie.V_REF]:
         '''traits ds'''
         return [
-            dawgie.SV_REF(crb.task, atmos(), sv)
+            dawgie.SV_REF(fetch('excalibur.cerberus').task, atmos(), sv)
             for sv in atmos().state_vectors()
         ]
 

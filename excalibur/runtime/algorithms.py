@@ -12,6 +12,7 @@ import os
 
 from . import core
 from . import states
+from importlib import import_module as fetch  # avoid cyclic-import
 
 
 class autofill(dawgie.Algorithm):
@@ -39,12 +40,9 @@ class autofill(dawgie.Algorithm):
         The pipeline never really runs this task. Instead, it is called from
         runtime.create where the table and target name are given
         '''
-        # avoid circular dependency
-        import excalibur.runtime  # pylint: disable=import-outside-toplevel
-
         return [
             dawgie.SV_REF(
-                excalibur.runtime.analysis,
+                fetch('excalibur.runtime').analysis,
                 self.__parent,
                 self.__parent.sv_as_dict()['composite'],
             )
@@ -56,12 +54,9 @@ class autofill(dawgie.Algorithm):
 
     def refs_for_proceed(self) -> [dawgie.V_REF]:
         '''return minimum list for StatusSV.proceed() to work'''
-        # avoid circular dependency
-        import excalibur.runtime  # pylint: disable=import-outside-toplevel
-
         return [
             dawgie.V_REF(
-                excalibur.runtime.task,
+                fetch('excalibur.runtime').task,
                 self,
                 self.__status,
                 'allowed_filter_names',
@@ -76,12 +71,12 @@ class autofill(dawgie.Algorithm):
 
     def refs_for_validity(self) -> [dawgie.V_REF]:
         '''return minimum list for StatusSV to determine if target is valid'''
-        # avoid circular dependency
-        import excalibur.runtime  # pylint: disable=import-outside-toplevel
-
         return [
             dawgie.V_REF(
-                excalibur.runtime.task, self, self.__status, 'isValidTarget'
+                fetch('excalibur.runtime').task,
+                self,
+                self.__status,
+                'isValidTarget',
             )
         ]
 
@@ -121,11 +116,7 @@ class create(dawgie.Analyzer):
 
     @staticmethod
     def _do(arg):
-        # break circular dependencies with
-        # pylint: disable=import-outside-toplevel
-        import excalibur.runtime.bot as erb
-
-        erb.TaskTeam(*arg[0], **arg[1]).do()
+        fetch('excalibur.runtime.bot').TaskTeam(*arg[0], **arg[1]).do()
 
     def name(self) -> str:
         '''database name'''

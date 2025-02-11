@@ -10,7 +10,6 @@ import logging
 
 log = logging.getLogger(__name__)
 
-import excalibur.ancillary as anc
 import excalibur.ancillary.core as anccore
 import excalibur.ancillary.states as ancstates
 
@@ -22,6 +21,8 @@ import excalibur.system.algorithms as sysalg
 from excalibur.target.targetlists import get_target_lists
 
 from excalibur.ancillary.core import savesv
+
+from importlib import import_module as fetch  # avoid cicular dependencies
 
 
 # ---------------------- ---------------------------------------------
@@ -103,7 +104,11 @@ class population(dawgie.Analyzer):
     def traits(self) -> [dawgie.SV_REF, dawgie.V_REF]:
         '''traits ds'''
         return [
-            dawgie.SV_REF(anc.task, estimate(), estimate().state_vectors()[0])
+            dawgie.SV_REF(
+                fetch('excalibur.ancillary').task,
+                estimate(),
+                estimate().state_vectors()[0],
+            )
         ]
 
     def state_vectors(self):

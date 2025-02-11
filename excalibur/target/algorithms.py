@@ -15,11 +15,12 @@ import excalibur.runtime as rtime
 import excalibur.runtime.algorithms as rtalg
 import excalibur.runtime.binding as rtbind
 
-import excalibur.target as trg
 import excalibur.target.core as trgcore
 import excalibur.target.edit as trgedit
 import excalibur.target.monitor as trgmonitor
 import excalibur.target.states as trgstates
+
+from importlib import import_module as fetch  # avoid cicular dependencies
 
 fltrs = [str(fn) for fn in rtbind.filter_names.values()]
 
@@ -54,8 +55,12 @@ class alert(dawgie.Analyzer):
     def feedback(self):
         '''feedback ds'''
         return [
-            dawgie.V_REF(trg.analysis, self, self.__out, 'known'),
-            dawgie.V_REF(trg.analysis, self, self.__out, 'table'),
+            dawgie.V_REF(
+                fetch('excalibur.target').analysis, self, self.__out, 'known'
+            ),
+            dawgie.V_REF(
+                fetch('excalibur.target').analysis, self, self.__out, 'table'
+            ),
         ]
 
     def name(self):
@@ -66,7 +71,10 @@ class alert(dawgie.Analyzer):
         '''traits ds'''
         return [
             dawgie.V_REF(
-                trg.regress, regress(), regress().state_vectors()[0], 'last'
+                fetch('excalibur.target').regress,
+                regress(),
+                regress().state_vectors()[0],
+                'last',
             )
         ]
 
@@ -148,7 +156,7 @@ class autofill(dawgie.Algorithm):
     def previous(self):
         '''Input State Vectors: target.create'''
         return [
-            dawgie.ALG_REF(trg.analysis, self.__create),
+            dawgie.ALG_REF(fetch('excalibur.target').analysis, self.__create),
             dawgie.V_REF(
                 rtime.task,
                 self.__rt,
@@ -231,7 +239,7 @@ class scrape(dawgie.Algorithm):
     def previous(self):
         '''Input State Vectors: target.autofill'''
         return [
-            dawgie.ALG_REF(trg.task, self.__autofill),
+            dawgie.ALG_REF(fetch('excalibur.target').task, self.__autofill),
             dawgie.V_REF(
                 rtime.task,
                 self.__rt,
@@ -312,8 +320,12 @@ class regress(dawgie.Regression):
     def feedback(self):
         '''feedback ds'''
         return [
-            dawgie.V_REF(trg.regress, self, self.__out, 'planet'),
-            dawgie.V_REF(trg.regress, self, self.__out, 'runid'),
+            dawgie.V_REF(
+                fetch('excalibur.target').regress, self, self.__out, 'planet'
+            ),
+            dawgie.V_REF(
+                fetch('excalibur.target').regress, self, self.__out, 'runid'
+            ),
         ]
 
     def name(self):
@@ -339,7 +351,11 @@ class regress(dawgie.Regression):
     def variables(self) -> [dawgie.SV_REF, dawgie.V_REF]:
         '''variables ds'''
         return [
-            dawgie.SV_REF(trg.task, autofill(), autofill().state_vectors()[0])
+            dawgie.SV_REF(
+                fetch('excalibur.target').task,
+                autofill(),
+                autofill().state_vectors()[0],
+            )
         ]
 
     pass

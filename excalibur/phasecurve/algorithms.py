@@ -8,7 +8,6 @@ import logging
 
 log = logging.getLogger(__name__)
 
-import excalibur.phasecurve as phc
 import excalibur.phasecurve.states as phcstates
 import excalibur.phasecurve.core as phccore
 
@@ -138,7 +137,7 @@ class pcwhitelight(dawgie.Algorithm):
 
     def previous(self):
         return [
-            dawgie.ALG_REF(phc.task, self._nrm),
+            dawgie.ALG_REF(fetch('excalibur.phasecurve').task, self._nrm),
             dawgie.ALG_REF(sys.task, self.__fin),
         ] + self.__rt.refs_for_proceed()
 
