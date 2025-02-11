@@ -9,6 +9,7 @@ import logging
 log = logging.getLogger(__name__)
 
 import pytensor
+import sys
 from pytensor import tensor
 from pytensor.ifelse import ifelse
 
@@ -508,16 +509,16 @@ def gettau(
         # print()
         # dl[iz:] = dl[iz:] - np.sqrt(np.abs((rp0 + zprime[iz:])**2 - (rp0 + thisz)**2))
         if 0:
-            for id, d in enumerate(dl):
+            for did, d in enumerate(dl):
                 print('loop check2', id, d.eval())
-                if id < iz + 1:
-                    dl[id] = dl[id] * 0.0
-                    print('hup', dl[id].eval())
+                if did < iz + 1:
+                    dl[did] = dl[did] * 0.0
+                    print('hup', dl[did].eval())
                 else:
-                    dl[id] = dl[id] - np.sqrt(
-                        np.abs((rp0 + zprime[id]) ** 2 - (rp0 + thisz) ** 2)
+                    dl[did] = dl[did] - np.sqrt(
+                        np.abs((rp0 + zprime[did]) ** 2 - (rp0 + thisz) ** 2)
                     )
-                    print('dop', dl[id].eval())
+                    print('dop', dl[did].eval())
 
         dl = dl - np.sqrt(np.abs((rp0 + zprime) ** 2 - (rp0 + thisz) ** 2))
         # print('dl with negative still',[dd.eval() for dd in dl])
@@ -969,7 +970,7 @@ def cloudyfmcerberus(*crbinputs):
             debug=False,
         )
     else:
-        exit('not this guy yet')
+        sys.exit('not this guy yet')
         mixratio = {}
         for index, key in enumerate(ctxt.modparlbl[ctxt.model]):
             mixratio[key] = mdp[index].eval()
