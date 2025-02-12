@@ -104,9 +104,6 @@ def myxsecs(
     tips=os.path.join(excalibur.context['data_dir'], 'CERBERUS/TIPS'),
     ciadir=os.path.join(excalibur.context['data_dir'], 'CERBERUS/HITRAN/CIA'),
     exomoldir=os.path.join(excalibur.context['data_dir'], 'CERBERUS/EXOMOL'),
-    knownspecies=['NO', 'OH', 'C2H2', 'N2', 'N2O', 'O3', 'O2'].copy(),
-    cialist=['H2-H', 'H2-H2', 'H2-He', 'He-H'].copy(),
-    xmspecies=['TIO', 'H2O', 'H2CO', 'HCN', 'CO', 'CO2', 'NH3', 'CH4'].copy(),
     verbose=False,
 ):
     '''
@@ -114,6 +111,12 @@ def myxsecs(
     '''
     # logarithmicOpacitySumming = True
     logarithmicOpacitySumming = False
+
+    # these used to be default parameters above, but are dangerous-default-values
+    knownspecies = ['NO', 'OH', 'C2H2', 'N2', 'N2O', 'O3', 'O2']
+    cialist = ['H2-H', 'H2-H2', 'H2-He', 'He-H']
+    xmollist = ['TIO', 'H2O', 'H2CO', 'HCN', 'CO', 'CO2', 'NH3', 'CH4']
+
     cs = False
     planetLetters = []
     for p in spc['data'].keys():
@@ -149,7 +152,7 @@ def myxsecs(
 
         nugrid = (1e4 / np.copy(wgrid))[::-1]
         dwnu = np.concatenate((np.array([np.diff(nugrid)[0]]), np.diff(nugrid)))
-        for myexomol in xmspecies:
+        for myexomol in xmollist:
             # log.warning('>-- %s', str(myexomol))
             library[myexomol] = {
                 'I': [],

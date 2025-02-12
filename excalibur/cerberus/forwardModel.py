@@ -99,12 +99,10 @@ def crbmodel(
     wgrid,
     lbroadening=False,
     lshifting=False,
-    cialist=['H2-H', 'H2-H2', 'H2-He', 'He-H'].copy(),
-    xmollist=['TIO', 'CH4', 'H2O', 'H2CO', 'HCN', 'CO', 'CO2', 'NH3'].copy(),
-    # nlevels=100, Hsmax=15., solrad=10.,
-    # increase the number of scale heights from 15 to 20, to match the Ariel forward model
-    #             nlevels=100, Hsmax=20., solrad=10.,
+    # nlevels=100,
+    # TEMPORARY REDUCTION IN ATMOS RESOLUTION WHILE DEBUGGING PYMC
     nlevels=7,
+    # increase the number of scale heights from 15 to 20, to match the Ariel forward model
     Hsmax=20.0,
     solrad=10.0,
     hzlib=None,
@@ -123,6 +121,12 @@ def crbmodel(
     G. ROUDIER: Cerberus forward model probing up to 'Hsmax' scale heights from solid
     radius solrad evenly log divided amongst nlevels steps
     '''
+
+    # these used to be default parameters above, but are dangerous-default-values
+    # note that these are also defined in cerberus/core/myxsecs()
+    #  maybe put them inside runtime/ops.xml to ensure consistency?
+    cialist = ['H2-H', 'H2-H2', 'H2-He', 'He-H']
+    xmollist = ['TIO', 'H2O', 'H2CO', 'HCN', 'CO', 'CO2', 'NH3', 'CH4']
 
     ssc = syscore.ssconstants(mks=True)
     pgrid = np.arange(
