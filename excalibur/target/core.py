@@ -1295,7 +1295,7 @@ def mastapi(tfl, out, dbs, download_url=None, hst_url=None, verbose=False):
         # JWST
         elif allmiss[irow] in ['JWST']:
             payload = {"uri": row['dataURI']}
-            resp = requests.get(allurl[irow], params=payload)
+            resp = requests.get(allurl[irow], params=payload, timeout=42)
             fileout = os.path.join(
                 tempdir, os.path.basename(row['productFilename'])
             )
@@ -1313,7 +1313,7 @@ def mastapi(tfl, out, dbs, download_url=None, hst_url=None, verbose=False):
     if allraw:
         for irow, row in enumerate(allraw):
             payload = {"uri": row['dataURI']}
-            resp = requests.get(allurl[irow], params=payload)
+            resp = requests.get(allurl[irow], params=payload, timeout=42)
             fileout = os.path.join(
                 tempdir, os.path.basename(row['productFilename'])
             )

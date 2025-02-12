@@ -33,7 +33,7 @@ def mast_query(request):
     req_string = urlencode(req_string)
     # Perform the HTTP request
     resp = requests.post(
-        request_url, data="request=" + req_string, headers=headers
+        request_url, data="request=" + req_string, headers=headers, timeout=42
     )
     # Pull out the headers and response content
     head = resp.headers
