@@ -8,6 +8,7 @@ import pymc
 
 log = logging.getLogger(__name__)
 
+
 # -------------------------------------------------------------------
 def setPriorBound(eqtemp):
     '''

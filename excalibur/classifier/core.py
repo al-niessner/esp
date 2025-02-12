@@ -15,6 +15,7 @@ import excalibur.system.core as syscore
 
 log = logging.getLogger(__name__)
 
+
 # -------------------------------------------------------------------
 def lc_resid_classification_version():
     '''lc_resid_classification_version ds'''

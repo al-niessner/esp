@@ -14,6 +14,7 @@ import excalibur.system.algorithms as sysalg
 
 log = logging.getLogger(__name__)
 
+
 # ------------- ------------------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class sim_spectrum(dawgie.Algorithm):
