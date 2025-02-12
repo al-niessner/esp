@@ -1749,7 +1749,7 @@ def corner(
     if plot_range is None:
         if "extents" in hist2d_kwargs:
             print(
-                "Deprecated keyword argument 'extents'. " "Use 'range' instead."
+                "Deprecated keyword argument 'extents'. Use 'range' instead."
             )
             plot_range = hist2d_kwargs.pop("extents")
         else:
@@ -1796,7 +1796,7 @@ def corner(
     except TypeError:
         if len(hist_bin_factor) != len(plot_range):
             raise ValueError(
-                "Dimension mismatch between hist_bin_factor and " "plot_range"
+                "Dimension mismatch between hist_bin_factor and plot_range"
             ) from None
 
     # Some magic numbers for pretty axis layout.
