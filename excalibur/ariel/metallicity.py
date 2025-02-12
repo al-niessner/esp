@@ -1,11 +1,10 @@
 '''ariel planet_metallicity ds'''
 
 # -- IMPORTS -- ------------------------------------------------------
+import numpy as np
 import logging
 
 log = logging.getLogger(__name__)
-
-import numpy as np
 
 # np.random.seed(123)
 

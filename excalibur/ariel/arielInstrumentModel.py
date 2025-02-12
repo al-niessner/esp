@@ -1,18 +1,16 @@
 '''ariel ariel ds'''
 
 # -- IMPORTS -- ------------------------------------------------------
-import logging
-
-log = logging.getLogger(__name__)
-
 import os
 import numpy as np
+import logging
 
 import excalibur
 
 import h5py
 from astropy.io.misc.hdf5 import read_table_hdf5
 
+log = logging.getLogger(__name__)
 
 # ---------------------------- ---------------------------------------
 def load_ariel_instrument(target, tier):

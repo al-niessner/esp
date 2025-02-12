@@ -42,10 +42,6 @@ from excalibur.cerberus.bounds import (
 
 import logging
 
-log = logging.getLogger(__name__)
-pymclog = logging.getLogger('pymc')
-pymclog.setLevel(logging.ERROR)
-
 import os
 import pymc
 import numpy as np
@@ -54,6 +50,10 @@ from collections import defaultdict
 from collections import namedtuple
 
 from scipy.interpolate import interp1d as itp
+
+log = logging.getLogger(__name__)
+pymclog = logging.getLogger('pymc')
+pymclog.setLevel(logging.ERROR)
 
 CERB_PARAMS = namedtuple(
     'cerberus_params_from_runtime',

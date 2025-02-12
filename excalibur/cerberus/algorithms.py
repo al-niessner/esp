@@ -6,11 +6,7 @@ import dawgie.context
 
 import numexpr
 
-numexpr.ncores = 1  # this is actually a performance enhancer!
-
 import logging
-
-log = logging.getLogger(__name__)
 
 import excalibur.system as sys
 import excalibur.system.algorithms as sysalg
@@ -27,6 +23,10 @@ import excalibur.cerberus.core as crbcore
 import excalibur.cerberus.states as crbstates
 
 from importlib import import_module as fetch  # avoid cicular dependencies
+
+log = logging.getLogger(__name__)
+
+numexpr.ncores = 1  # this is actually a performance enhancer!
 
 fltrs = [str(fn) for fn in rtbind.filter_names.values()]
 

@@ -3,7 +3,6 @@
 # -- IMPORTS -- ------------------------------------------------------
 import logging
 
-log = logging.getLogger(__name__)
 from collections import namedtuple
 
 import excalibur
@@ -28,6 +27,8 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.constants as cst
+
+log = logging.getLogger(__name__)
 
 # does this really go here? CIcheck needs it back in algorithms
 ARIEL_PARAMS = namedtuple(

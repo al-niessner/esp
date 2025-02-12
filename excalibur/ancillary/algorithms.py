@@ -8,8 +8,6 @@ from collections import defaultdict
 
 import logging
 
-log = logging.getLogger(__name__)
-
 import excalibur.ancillary.core as anccore
 import excalibur.ancillary.states as ancstates
 
@@ -23,6 +21,8 @@ from excalibur.target.targetlists import get_target_lists
 from excalibur.ancillary.core import savesv
 
 from importlib import import_module as fetch  # avoid cicular dependencies
+
+log = logging.getLogger(__name__)
 
 
 # ---------------------- ---------------------------------------------

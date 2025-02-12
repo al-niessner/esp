@@ -10,11 +10,10 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 import torch
 import logging
 
-log = logging.getLogger(__name__)
-
 import excalibur
 import excalibur.system.core as syscore
 
+log = logging.getLogger(__name__)
 
 # -------------------------------------------------------------------
 def lc_resid_classification_version():

@@ -38,6 +38,10 @@ except ImportError:
 
 from collections import namedtuple
 
+import ldtk
+from ldtk import LDPSetCreator, BoxcarFilter
+from ldtk.ldmodel import LinearModel, QuadraticModel, NonlinearModel
+
 log = logging.getLogger(__name__)
 pymclog = logging.getLogger('pymc')
 pymclog.setLevel(logging.ERROR)
@@ -159,11 +163,6 @@ def ctxtupdt(
         gttv=gttv,
     )
     return
-
-
-import ldtk
-from ldtk import LDPSetCreator, BoxcarFilter
-from ldtk.ldmodel import LinearModel, QuadraticModel, NonlinearModel
 
 
 class LDPSet(ldtk.LDPSet):

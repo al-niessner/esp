@@ -1,12 +1,11 @@
 '''ariel planet_clouds ds'''
 
 # -- IMPORTS -- ------------------------------------------------------
+import numpy as np
+import csv
 import logging
 
 log = logging.getLogger(__name__)
-
-import numpy as np
-import csv
 
 # from excalibur.cerberus.bounds import setPriorBound
 

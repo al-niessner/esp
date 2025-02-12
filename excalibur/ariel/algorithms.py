@@ -3,8 +3,6 @@
 # -- IMPORTS -- ------------------------------------------------------
 import logging
 
-log = logging.getLogger(__name__)
-
 import dawgie
 
 import excalibur.ariel.core as arielcore
@@ -14,6 +12,7 @@ import excalibur.runtime.algorithms as rtalg
 import excalibur.system as sys
 import excalibur.system.algorithms as sysalg
 
+log = logging.getLogger(__name__)
 
 # ------------- ------------------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
