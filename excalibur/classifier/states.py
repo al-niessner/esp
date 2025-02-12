@@ -278,7 +278,7 @@ class Flag_Summary_SV(dawgie.StateVector):
             # go through all the classifier algorithms
             for a, vlabel in enumerate(vlabels):
 
-                alg_data = self['data']['classifier_flags'][vlabels[a]]
+                alg_data = self['data']['classifier_flags'][vlabel]
 
                 # to work around pylint "unused-variable" warning and "enumerate" requirement
                 if vlabel:
