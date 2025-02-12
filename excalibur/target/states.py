@@ -82,10 +82,10 @@ class TargetSV(dawgie.StateVector):
                 table = visitor.add_table(clabels=labels, rows=len(allstar))
                 for starlabels in allstar:
                     i = allstar.index(starlabels)
-                    for l in starlabels:
-                        j = starlabels.index(l)
-                        table.get_cell(i, j).add_primitive(l)
-                        elem = starinfo[l][0]
+                    for starlabel in starlabels:
+                        j = starlabels.index(starlabel)
+                        table.get_cell(i, j).add_primitive(starlabel)
+                        elem = starinfo[starlabel][0]
                         if elem:
                             table.get_cell(i, j).add_primitive(elem)
                             pass
@@ -107,10 +107,10 @@ class TargetSV(dawgie.StateVector):
                     )
                     for starlabels in allplanet:
                         i = allplanet.index(starlabels)
-                        for l in starlabels:
-                            j = starlabels.index(l)
-                            table.get_cell(i, j).add_primitive(l)
-                            elem = starinfo[c][l][0]
+                        for starlabel in starlabels:
+                            j = starlabels.index(starlabel)
+                            table.get_cell(i, j).add_primitive(starlabel)
+                            elem = starinfo[c][starlabel][0]
                             if elem:
                                 table.get_cell(i, j).add_primitive(elem)
                                 pass

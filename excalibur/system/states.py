@@ -82,10 +82,10 @@ class PriorsSV(dawgie.StateVector):
             table = visitor.add_table(clabels=labels, rows=len(allstar))
             for starlabels in allstar:
                 i = allstar.index(starlabels)
-                for l in starlabels:
-                    table.get_cell(i, starlabels.index(l)).add_primitive(l)
-                    table.get_cell(i, starlabels.index(l)).add_primitive(
-                        self['priors'][l]
+                for starlabel in starlabels:
+                    table.get_cell(i, starlabels.index(starlabel)).add_primitive(starlabel)
+                    table.get_cell(i, starlabels.index(starlabel)).add_primitive(
+                        self['priors'][starlabel]
                     )
                     pass
                 pass
@@ -100,10 +100,10 @@ class PriorsSV(dawgie.StateVector):
                 table = visitor.add_table(clabels=labels, rows=len(allplanet))
                 for starlabels in allplanet:
                     i = allplanet.index(starlabels)
-                    for l in starlabels:
-                        table.get_cell(i, starlabels.index(l)).add_primitive(l)
-                        table.get_cell(i, starlabels.index(l)).add_primitive(
-                            self['priors'][c][l]
+                    for starlabel in starlabels:
+                        table.get_cell(i, starlabels.index(starlabel)).add_primitive(starlabel)
+                        table.get_cell(i, starlabels.index(starlabel)).add_primitive(
+                            self['priors'][c][starlabel]
                         )
                         pass
                     pass
