@@ -6,8 +6,6 @@ import scipy.constants as cst
 from scipy.interpolate import interp1d as itp
 import logging
 
-log = logging.getLogger(__name__)
-
 # import pytensor
 # import sys
 from pytensor import tensor
@@ -23,6 +21,8 @@ from excalibur.util.cerberus import crbce, getmmw
 
 # -- GLOBAL CONTEXT FOR PYMC DETERMINISTICS ---------------------------------------------
 from collections import namedtuple
+
+log = logging.getLogger(__name__)
 
 CONTEXT = namedtuple(
     'CONTEXT',
@@ -170,29 +170,29 @@ def crbmodel(
     rdz = abs(Hs / 2.0 * np.log(1.0 + dPoverP))
 
     z = [0]
-    ## dz = []
-    ## addz = []
+    # dz = []
+    # addz = []
     # for press, dpress in zip(p[:-1], dp):
     # print('dp/p',dpress/press,np.log(1. + dpress/press),dPoverP)
     # for press in p[:-1]:
     # rdz = abs(Hs/2.*np.log(1. + dpress/press))
     # rdz = abs(Hs/2.*np.log(1. + dPoverP))
     # print('press,rdz',press,rdz.eval())
-    ## if addz:
-    ## dz.append(addz[-1]/2. + rdz)
-    ## else:
+    # if addz:
+    # dz.append(addz[-1]/2. + rdz)
+    # else:
     # tem = tensor.dscalar()
     # print('tem',tem)
     # tem = 2.*rdz
     # print('tem',tem)
     # dz.append(tem)
-    ## dz.append(2.*rdz)
+    # dz.append(2.*rdz)
     # print('temp',dz[-1])
-    ## addz.append(2.*rdz)
-    ## z.append(z[-1]+addz[-1])
+    # addz.append(2.*rdz)
+    # z.append(z[-1]+addz[-1])
     for _ in p[:-1]:
         z.append(z[-1] + 2.0 * rdz)
-    ## dz.append(addz[-1])
+    # dz.append(addz[-1])
     # print()
     # print('len check on z',len(z))
     # print('len check on dz',len(dz))
@@ -472,9 +472,9 @@ def gettau(
         # dl[:iz] = tensor.dscalar()  # I think you can leave the name blank
         # print('dl2',dl)
         # dl[:iz] = 0.
-        ## dl[:iz+1] = 0.  # FAILS NOW (with dz/z update)
-        ## print('dl after zeros at start',dl)
-        ## print('dl just the zeros check',dl[:iz+1])
+        # dl[:iz+1] = 0.  # FAILS NOW (with dz/z update)
+        # print('dl after zeros at start',dl)
+        # print('dl just the zeros check',dl[:iz+1])
         # dl = tensor.sqrt((rp0 + zprime + dzprime)**2 - (rp0 + thisz)**2)
         # dl[:iz] *= 0.
         # print('dl4',dl)
@@ -503,7 +503,7 @@ def gettau(
         # print('test works3?',test)
         # print('test works3?',[d.eval() for d in test])
 
-        ## print(' *** thisz vs zprime check! ***',zprime[iz],thisz)
+        # print(' *** thisz vs zprime check! ***',zprime[iz],thisz)
         # test = (np.abs((rp0 + zprime[iz+1:])**2 - (rp0 + thisz)**2))
         # print('test works4?',test)
         # test = (np.abs((rp0 + zprime[iz:])**2 - (rp0 + thisz)**2))
