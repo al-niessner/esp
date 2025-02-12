@@ -24,6 +24,7 @@ from importlib import import_module as fetch  # avoid cicular dependencies
 
 log = logging.getLogger(__name__)
 
+
 # ------------- ------------------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 class validate(dawgie.Algorithm):

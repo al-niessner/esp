@@ -15,6 +15,7 @@ log = logging.getLogger(__name__)
 
 ssc = ssconstants(mks=True)
 
+
 # --------------------------------------------------------------------
 def rebinData(transitdata, binsize=4):
     '''

@@ -46,6 +46,7 @@ from multiprocessing import Pool
 
 log = logging.getLogger(__name__)
 
+
 # ------------- ------------------------------------------------------
 # -- SV VALIDITY -- --------------------------------------------------
 def checksv(sv):
