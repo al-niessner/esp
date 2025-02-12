@@ -35,8 +35,8 @@ def lc_resid_classification(transit_whitelight, ext, out):
         px = 1 / plt.rcParams['figure.dpi']  # pixel in inches
         plt.subplots(figsize=(350 * px, 270 * px))
         plt.plot(x, y, '.', color='black')
-        y_lim = max(max(y), abs(min(y)))
-        x_lim = max(max(x), abs(min(x)))
+        y_lim = max(y, abs(min(y)))
+        x_lim = max(x, abs(min(x)))
         if 'Spitzer' in ext:
             plt.ylim(-2 * y_lim, 2 * y_lim)
             plt.xlim(-x_lim, x_lim)

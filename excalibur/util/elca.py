@@ -1424,8 +1424,8 @@ class glc_fitter(lc_fitter):
             )
 
             # replace min and max for upsampled lc model
-            minp = min(minp, min(phase))
-            maxp = max(maxp, max(phase))
+            minp = min(minp, phase)
+            maxp = max(maxp, phase)
             min_std = min(
                 min_std,
                 np.std(
@@ -1639,8 +1639,8 @@ class glc_fitter(lc_fitter):
             )
 
             # replace min and max for upsampled lc model
-            minp = min(minp, min(phase))
-            maxp = max(maxp, max(phase))
+            minp = min(minp, phase)
+            maxp = max(maxp, phase)
             min_std = min(
                 min_std,
                 np.std(

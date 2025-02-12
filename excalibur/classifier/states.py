@@ -171,9 +171,9 @@ class Flags_SV(dawgie.StateVector):
                                 ax[1].set_xlabel(str('z'))
                                 ax[1].set_ylabel(str('data - model'))
                                 y_lim = max(
-                                    max(data - model), abs(min(data - model))
+                                    data - model, abs(min(data - model))
                                 )
-                                x_lim = max(max(z), abs(min(z)))
+                                x_lim = max(z, abs(min(z)))
                                 ax[1].set_ylim(y_lim * -1.5, y_lim * 1.5)
                                 ax[1].set_xlim(x_lim * -1.25, x_lim * 1.25)
                                 plt.tight_layout(pad=3.0)
