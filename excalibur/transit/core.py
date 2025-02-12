@@ -4134,7 +4134,9 @@ def norm_jwst_niriss(cal, tme, fin, out, selftype, _debug=False):
             )
             phase = (out['data'][p]['TIME'] - tme) / fin['priors'][p]['period']
         else:
-            log.warning('TRANSIT norm_jwst_niriss: UNKNOWN DATA TYPE (%s)',selftype)
+            log.warning(
+                'TRANSIT norm_jwst_niriss: UNKNOWN DATA TYPE (%s)', selftype
+            )
             phase = []
 
         badmask = np.zeros(out['data'][p]['TIME'].shape).astype(bool)
@@ -4167,6 +4169,7 @@ def norm_jwst_niriss(cal, tme, fin, out, selftype, _debug=False):
             out['STATUS'].append(True)
 
     return normed
+
 
 def norm_spitzer(cal, tme, fin, out, selftype, debug=False):
     '''
@@ -4455,7 +4458,10 @@ def lightcurve_jwst_niriss(
             )
             phase = (nrm['data'][p]['TIME'] - tme) / fin['priors'][p]['period']
         else:
-            log.warning('TRANSIT lightcurve_jwst_niriss: UNKNOWN DATA TYPE (%s)',selftype)
+            log.warning(
+                'TRANSIT lightcurve_jwst_niriss: UNKNOWN DATA TYPE (%s)',
+                selftype,
+            )
             phase = []
 
         # loop through epochs
@@ -4571,7 +4577,10 @@ def lightcurve_jwst_niriss(
                     'a0': [min(aper), max(aper)],
                 }
             else:
-                log.warning('TRANSIT lightcurve_jwst_niriss: UNKNOWN DATA TYPE (%s)',selftype)
+                log.warning(
+                    'TRANSIT lightcurve_jwst_niriss: UNKNOWN DATA TYPE (%s)',
+                    selftype,
+                )
                 mybounds = {}
 
             # switch later
@@ -4641,7 +4650,9 @@ def jwst_niriss_spectrum(nrm, fin, out, selftype, wht, method='lm'):
             )
             phase = (nrm['data'][p]['TIME'] - tme) / fin['priors'][p]['period']
         else:
-            log.warning('TRANSIT jwst_niriss_spectrum: UNKNOWN DATA TYPE (%s)',selftype)
+            log.warning(
+                'TRANSIT jwst_niriss_spectrum: UNKNOWN DATA TYPE (%s)', selftype
+            )
             phase = []
 
         # loop through epochs
@@ -4777,7 +4788,10 @@ def jwst_niriss_spectrum(nrm, fin, out, selftype, wht, method='lm'):
                         'a0': [min(aper), max(aper)],
                     }
                 else:
-                    log.warning('TRANSIT jwst_niriss_spectrum: UNKNOWN DATA TYPE (%s)',selftype)
+                    log.warning(
+                        'TRANSIT jwst_niriss_spectrum: UNKNOWN DATA TYPE (%s)',
+                        selftype,
+                    )
                     mybounds = {}
 
                 myfit = pc_fitter(
@@ -4878,7 +4892,10 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                         phase > event - 2.5 * tdur / priors[p]['period']
                     ) & (phase < event + 2.5 * tdur / priors[p]['period'])
                 else:
-                    log.warning('TRANSIT lightcurve_spitzer: UNKNOWN DATA TYPE (%s)',selftype)
+                    log.warning(
+                        'TRANSIT lightcurve_spitzer: UNKNOWN DATA TYPE (%s)',
+                        selftype,
+                    )
                     pmask = False
 
                 # extract aperture photometry data
@@ -4895,7 +4912,10 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                 elif '45' in fltr:
                     pkey = 'Spitzer_IRAC2_subarray'
                 else:
-                    log.warning('TRANSIT lightcurve_spitzer: UNKNOWN IRAC FILTER (%s)',fltr)
+                    log.warning(
+                        'TRANSIT lightcurve_spitzer: UNKNOWN IRAC FILTER (%s)',
+                        fltr,
+                    )
                     pkey = None
 
                 if pkey in priors[p].keys():
@@ -5064,7 +5084,10 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                         verbose=False,
                     )
                 else:
-                    log.warning('TRANSIT lightcurve_spitzer: UNKNOWN DATA TYPE (%s)',selftype)
+                    log.warning(
+                        'TRANSIT lightcurve_spitzer: UNKNOWN DATA TYPE (%s)',
+                        selftype,
+                    )
                     myfit = None  # this will crash. hopefully never gets here
 
                 # copy best fit parameters and uncertainties

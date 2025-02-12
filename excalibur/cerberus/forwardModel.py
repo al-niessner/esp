@@ -616,7 +616,9 @@ def gettau(
             f1 = fHe
             f2 = fH2 * 2.0
         else:
-            log.warning('--< CERBERUS gettau(): UNEXPECTED MOLECULE %s >--', cia)
+            log.warning(
+                '--< CERBERUS gettau(): UNEXPECTED MOLECULE %s >--', cia
+            )
             f1 = 0
             f2 = 0
         # HITRAN RICHARD ET AL. 2012
