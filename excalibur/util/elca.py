@@ -1904,15 +1904,15 @@ def corner(
         if i < K - 1:
             if top_ticks:
                 ax.xaxis.set_ticks_position("top")
-                for l in ax.get_xticklabels():
-                    l.set_rotation(45)
+                for ticklabel in ax.get_xticklabels():
+                    ticklabel.set_rotation(45)
             else:
                 ax.set_xticklabels([])
         else:
             if reverse:
                 ax.xaxis.tick_top()
-            for l in ax.get_xticklabels():
-                l.set_rotation(45)
+            for ticklabel in ax.get_xticklabels():
+                ticklabel.set_rotation(45)
             if labels is not None:
                 if reverse:
                     ax.set_title(labels[i], y=1.25, **label_kwargs)
@@ -1977,8 +1977,8 @@ def corner(
             else:
                 if reverse:
                     ax.xaxis.tick_top()
-                for l in ax.get_xticklabels():
-                    l.set_rotation(45)
+                for ticklabel in ax.get_xticklabels():
+                    ticklabel.set_rotation(45)
                 if labels is not None:
                     ax.set_xlabel(labels[j], **label_kwargs)
                     if reverse:
@@ -1996,8 +1996,8 @@ def corner(
             else:
                 if reverse:
                     ax.yaxis.tick_right()
-                for l in ax.get_yticklabels():
-                    l.set_rotation(45)
+                for ticklabel in ax.get_yticklabels():
+                    ticklabel.set_rotation(45)
                 if labels is not None:
                     if reverse:
                         ax.set_ylabel(labels[i], rotation=-90, **label_kwargs)

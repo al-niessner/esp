@@ -689,7 +689,7 @@ def jwstcal(fin, clc, tim, ext, out, ps=None, verbose=False, debug=False):
 
     # Split L1 and L2 calib levels
     selraw = allunits == 'DN'
-    _allraw = alldexp[selraw]
+    # _allraw = alldexp[selraw]
     alldinm = alldinm[~selraw]
     alldexp = alldexp[~selraw]
     alldet = alldet[~selraw]
@@ -760,10 +760,10 @@ def jwstcal(fin, clc, tim, ext, out, ps=None, verbose=False, debug=False):
         sel2 = np.array(['2' in test for test in alldet])
         timeorder1 = np.argsort(alldintimes[sel1])
         timeorder2 = np.argsort(alldintimes[sel2])
-        _NRS1 = alldexp[sel1][timeorder1]
-        _NRS1w = allwaves[sel1][timeorder1]
-        _NRS2 = alldexp[sel2][timeorder2]
-        _NRS2w = allwaves[sel2][timeorder2]
+        # _NRS1 = alldexp[sel1][timeorder1]
+        # _NRS1w = allwaves[sel1][timeorder1]
+        # _NRS2 = alldexp[sel2][timeorder2]
+        # _NRS2w = allwaves[sel2][timeorder2]
         if ps > 1:
             with Pool(ps) as pool:
                 multiout = pool.map(
