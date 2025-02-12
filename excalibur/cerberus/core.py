@@ -284,6 +284,7 @@ def myxsecs(
                 data = fp.readlines()
                 fp.close()
                 # Richard et Al. 2012
+                tmprtr = 666  # otherwise possibly-used-before-assignment flag
                 for line in data:
                     line = np.array(line.split(' '))
                     line = line[line != '']
@@ -2164,6 +2165,13 @@ def analysis(aspects, filt, out, verbose=False):
     svname = 'cerberus.atmos'
 
     alltargetlists = get_target_lists()
+
+    # set prior_ranges to avoid possible used-before-assignment problem
+    # (ideally it is read in, but possibly not if there's mistake/old formatting)
+    # the normal call doesn't work well here actually. and it creates nodes
+    # darn.  have to just set something arbitrary
+    # _, prior_ranges = addPriors(priorRangeTable, runtime_params, model, modparlbl[model])
+    prior_ranges = None
 
     # allow for analysis of multiple target lists
     analysistargetlists = []
