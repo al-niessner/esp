@@ -282,7 +282,7 @@ def phasecurve_spitzer(nrm, fin, out, selftype, fltr):
                 1 + priors[p]['ecc'] * (4.0 / np.pi) * np.cos(np.deg2rad(w))
             )
             phase = (nrm['data'][p]['TIME'] - tme) / fin['priors'][p]['period']
-        if selftype == 'phasecurve':
+        elif selftype == 'phasecurve':
             phase = (nrm['data'][p]['TIME'] - fin['priors'][p]['t0']) / fin[
                 'priors'
             ][p]['period']

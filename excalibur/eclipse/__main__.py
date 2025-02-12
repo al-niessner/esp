@@ -33,8 +33,8 @@ else:
         -1
     ]  # -1 to run them all
     subtasks = excalibur.eclipse.bot.Actor('eclipse', 4, rid, tn)
-    pass
 
-subtasks.do(name)
+    subtasks.do(name)
+
 dawgie.db.close()
 dawgie.security.finalize()

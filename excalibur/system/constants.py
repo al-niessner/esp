@@ -9,13 +9,8 @@ def ssconstants(mks=False, cgs=False):
     '''
     if mks and cgs:
         ssc = {'Idiot': True}
-    if not (mks or cgs):
-        ssc = {
-            'Rjup/Rsun': 1.0276268506540176e-1,
-            'Rsun/AU': 4.650467260962158e-3,
-        }
         pass
-    if mks:
+    elif mks:
         ssc = {
             'Rsun': 6.957e8,
             'Msun': 1.9884158605722263e30,
@@ -33,7 +28,7 @@ def ssconstants(mks=False, cgs=False):
             'Tsun': 5772,
         }
         pass
-    if cgs:
+    elif cgs:
         ssc = {
             'Rsun': 6.957e10,
             'Msun': 1.9884158605722263e33,
@@ -51,5 +46,13 @@ def ssconstants(mks=False, cgs=False):
             'Tsun': 5772,
         }
         pass
+    else:
+        # hopefully never gets here (mks or cgs should be specified)
+        ssc = {
+            'Rjup/Rsun': 1.0276268506540176e-1,
+            'Rsun/AU': 4.650467260962158e-3,
+        }
+        pass
+
     ssc['day'] = 24.0 * 60.0 * 60.0
     return ssc
