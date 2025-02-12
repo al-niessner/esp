@@ -11,6 +11,7 @@ log = logging.getLogger(__name__)
 # import pytensor
 # import sys
 from pytensor import tensor
+
 # from pytensor.ifelse import ifelse
 
 import excalibur
@@ -847,7 +848,9 @@ def getxmolxs(temp, xsecs):
     '''
     print('--getxmolxs start--')
     # print('xsecs',xsecs['SPL'])
-    sigma = np.array([thisspl for thisspl in xsecs['SPL']])
+    # sigma = np.array([thisspl for thisspl in xsecs['SPL']])
+    # unneccessary-comprehension error here.  but itk maybe needed for tensor version?
+    sigma = np.array(list(xsecs['SPL']))
     # print('sigma',sigma)
     print('sigma3', sigma[3])
     print('sigma3', xsecs['SPL'][3])
