@@ -13,7 +13,7 @@ import pyxb.binding.saxer
 import io
 import pyxb.utils.utility
 import pyxb.utils.domutils
-import sys
+# import sys
 import pyxb.utils.sal as _six
 
 # Unique identifier for bindings created at the same time
