@@ -13,6 +13,7 @@ import pyxb.binding.saxer
 import io
 import pyxb.utils.utility
 import pyxb.utils.domutils
+
 # import sys
 import pyxb.utils.sal as _six
 

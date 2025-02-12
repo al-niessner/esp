@@ -1748,9 +1748,7 @@ def corner(
     # Parse the parameter ranges.
     if plot_range is None:
         if "extents" in hist2d_kwargs:
-            print(
-                "Deprecated keyword argument 'extents'. Use 'range' instead."
-            )
+            print("Deprecated keyword argument 'extents'. Use 'range' instead.")
             plot_range = hist2d_kwargs.pop("extents")
         else:
             plot_range = [[x.min(), x.max()] for x in xs]
