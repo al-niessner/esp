@@ -173,22 +173,23 @@ def crbmodel(
     ## addz = []
     # for press, dpress in zip(p[:-1], dp):
     # print('dp/p',dpress/press,np.log(1. + dpress/press),dPoverP)
-    for press in p[:-1]:
-        # rdz = abs(Hs/2.*np.log(1. + dpress/press))
-        # rdz = abs(Hs/2.*np.log(1. + dPoverP))
-        # print('press,rdz',press,rdz.eval())
-        ## if addz:
-        ## dz.append(addz[-1]/2. + rdz)
-        ## else:
-        # tem = tensor.dscalar()
-        # print('tem',tem)
-        # tem = 2.*rdz
-        # print('tem',tem)
-        # dz.append(tem)
-        ## dz.append(2.*rdz)
-        # print('temp',dz[-1])
-        ## addz.append(2.*rdz)
-        ## z.append(z[-1]+addz[-1])
+    # for press in p[:-1]:
+    # rdz = abs(Hs/2.*np.log(1. + dpress/press))
+    # rdz = abs(Hs/2.*np.log(1. + dPoverP))
+    # print('press,rdz',press,rdz.eval())
+    ## if addz:
+    ## dz.append(addz[-1]/2. + rdz)
+    ## else:
+    # tem = tensor.dscalar()
+    # print('tem',tem)
+    # tem = 2.*rdz
+    # print('tem',tem)
+    # dz.append(tem)
+    ## dz.append(2.*rdz)
+    # print('temp',dz[-1])
+    ## addz.append(2.*rdz)
+    ## z.append(z[-1]+addz[-1])
+    for _ in p[:-1]:
         z.append(z[-1] + 2.0 * rdz)
     ## dz.append(addz[-1])
     # print()
@@ -512,17 +513,17 @@ def gettau(
 
         # print()
         # dl[iz:] = dl[iz:] - np.sqrt(np.abs((rp0 + zprime[iz:])**2 - (rp0 + thisz)**2))
-        if 0:
-            for did, d in enumerate(dl):
-                print('loop check2', id, d.eval())
-                if did < iz + 1:
-                    dl[did] = dl[did] * 0.0
-                    print('hup', dl[did].eval())
-                else:
-                    dl[did] = dl[did] - np.sqrt(
-                        np.abs((rp0 + zprime[did]) ** 2 - (rp0 + thisz) ** 2)
-                    )
-                    print('dop', dl[did].eval())
+        # if 0:
+        #    for did, d in enumerate(dl):
+        #        print('loop check2', id, d.eval())
+        #        if did < iz + 1:
+        #            dl[did] = dl[did] * 0.0
+        #            print('hup', dl[did].eval())
+        #        else:
+        #            dl[did] = dl[did] - np.sqrt(
+        #                np.abs((rp0 + zprime[did]) ** 2 - (rp0 + thisz) ** 2)
+        #            )
+        #            print('dop', dl[did].eval())
 
         dl = dl - np.sqrt(np.abs((rp0 + zprime) ** 2 - (rp0 + thisz) ** 2))
         # print('dl with negative still',[dd.eval() for dd in dl])
@@ -578,7 +579,7 @@ def gettau(
                 debug=False,
             )
             # sigma = np.array(sigma)  # cm^2/mol
-            if True in sigma < 0:
+            if True in (sigma < 0):
                 sigma[sigma < 0] = 0e0
             if True in ~np.isfinite(sigma):
                 sigma[~np.isfinite(sigma)] = 0e0
@@ -588,7 +589,7 @@ def gettau(
             # EXOMOL HILL ET AL. 2013 ------------------------------------------------
             sigma, lsig = getxmolxs(temp, xsecs[elem])
             # sigma = np.array(sigma)   # cm^2/mol
-            if True in sigma < 0:
+            if True in (sigma < 0):
                 sigma[sigma < 0] = 0e0
             if True in ~np.isfinite(sigma):
                 sigma[~np.isfinite(sigma)] = 0e0
@@ -620,7 +621,7 @@ def gettau(
         # HITRAN RICHARD ET AL. 2012
         sigma, lsig = getciaxs(temp, xsecs[cia])  # cm^5/mol^2
         sigma = np.array(sigma) * 1e-10  # m^5/mol^2
-        if True in sigma < 0:
+        if True in (sigma < 0):
             sigma[sigma < 0] = 0e0
         if True in ~np.isfinite(sigma):
             sigma[~np.isfinite(sigma)] = 0e0

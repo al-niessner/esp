@@ -14,6 +14,7 @@ import excalibur.transit.core as trncore
 
 from importlib import import_module as fetch  # avoid cicular dependencies
 
+
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 # ECLIPSE CLASSES INHERIT FROM TRANSIT CLASSES
