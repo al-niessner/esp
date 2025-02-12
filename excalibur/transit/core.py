@@ -1436,6 +1436,8 @@ def hstwhitelight(
         tautknot = 1e0 / (3e0 * np.nanmin(mintscale)) ** 2
         tknotmin = tmjd - np.nanmax(maxtscale) / 2e0
         tknotmax = tmjd + np.nanmax(maxtscale) / 2e0
+        lowinc = 0e0
+        upinc = 9e1
         if priors[p]['inc'] != 9e1:
             if priors[p]['inc'] > 9e1:
                 lowinc = 9e1
@@ -1445,10 +1447,6 @@ def hstwhitelight(
                 lowinc = 9e1 - 18e1 * np.arcsin(1e0 / smaors) / np.pi
                 upinc = 9e1
                 pass
-            pass
-        else:
-            lowinc = 0e0
-            upinc = 9e1
             pass
         tauinc = 1e0 / (priors[p]['inc'] * 1e-2) ** 2
         # INSTRUMENT MODEL PRIORS --------------------------------------------------------
@@ -2628,6 +2626,7 @@ def hstramp(params, rtime, data=None):
         -(ramptime + (1e1) ** params['ologdelay'].value)
         / ((1e1) ** params['ologtau'].value)
     )
+    out = None
     if data is None:
         out = ramp * lout
     else:
@@ -3338,7 +3337,8 @@ def fastspec(
         hwavec = wavec + disp / 2e0
         pass
     # MULTI VISITS COMMON WAVELENGTH GRID ------------------------------------------------
-    if 'WFC3' in ext:
+    # if 'WFC3' in ext:  # it has to be either WFC3 or STIS, or wavec etc undefined
+    else:
         wavec, _t = tplbuild(
             allspec, allwave, vrange, alldisp * 1e-4, medest=True
         )
@@ -4100,7 +4100,7 @@ def norm_jwst_niriss(cal, tme, fin, out, selftype, _debug=False):
         normalize each ramp
         remove nans, remove zeros, 3 sigma clip time series
     '''
-
+    normed = False
     priors = fin['priors'].copy()
 
     planetloop = [
@@ -4133,6 +4133,9 @@ def norm_jwst_niriss(cal, tme, fin, out, selftype, _debug=False):
                 1 + priors[p]['ecc'] * (4.0 / np.pi) * np.cos(np.deg2rad(w))
             )
             phase = (out['data'][p]['TIME'] - tme) / fin['priors'][p]['period']
+        else:
+            log.warning('TRANSIT norm_jwst_niriss: UNKNOWN DATA TYPE (%s)',selftype)
+            phase = []
 
         badmask = np.zeros(out['data'][p]['TIME'].shape).astype(bool)
         for i in np.unique(tme['data'][p][selftype]):
@@ -4164,7 +4167,6 @@ def norm_jwst_niriss(cal, tme, fin, out, selftype, _debug=False):
             out['STATUS'].append(True)
 
     return normed
-
 
 def norm_spitzer(cal, tme, fin, out, selftype, debug=False):
     '''
@@ -4452,6 +4454,9 @@ def lightcurve_jwst_niriss(
                 1 + priors[p]['ecc'] * (4.0 / np.pi) * np.cos(np.deg2rad(w))
             )
             phase = (nrm['data'][p]['TIME'] - tme) / fin['priors'][p]['period']
+        else:
+            log.warning('TRANSIT lightcurve_jwst_niriss: UNKNOWN DATA TYPE (%s)',selftype)
+            phase = []
 
         # loop through epochs
         ec = 0  # event counter
@@ -4565,6 +4570,9 @@ def lightcurve_jwst_niriss(
                     'ars': [tpars['ars_lowerr'], tpars['ars_uperr']],
                     'a0': [min(aper), max(aper)],
                 }
+            else:
+                log.warning('TRANSIT lightcurve_jwst_niriss: UNKNOWN DATA TYPE (%s)',selftype)
+                mybounds = {}
 
             # switch later
             myfit = pc_fitter(
@@ -4632,6 +4640,9 @@ def jwst_niriss_spectrum(nrm, fin, out, selftype, wht, method='lm'):
                 1 + priors[p]['ecc'] * (4.0 / np.pi) * np.cos(np.deg2rad(w))
             )
             phase = (nrm['data'][p]['TIME'] - tme) / fin['priors'][p]['period']
+        else:
+            log.warning('TRANSIT jwst_niriss_spectrum: UNKNOWN DATA TYPE (%s)',selftype)
+            phase = []
 
         # loop through epochs
         ec = 0  # event counter
@@ -4765,6 +4776,9 @@ def jwst_niriss_spectrum(nrm, fin, out, selftype, wht, method='lm'):
                         ],
                         'a0': [min(aper), max(aper)],
                     }
+                else:
+                    log.warning('TRANSIT jwst_niriss_spectrum: UNKNOWN DATA TYPE (%s)',selftype)
+                    mybounds = {}
 
                 myfit = pc_fitter(
                     subtt, aper, aper_err, tpars, mybounds, [], mode=method
@@ -4863,6 +4877,9 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                     pmask = (
                         phase > event - 2.5 * tdur / priors[p]['period']
                     ) & (phase < event + 2.5 * tdur / priors[p]['period'])
+                else:
+                    log.warning('TRANSIT lightcurve_spitzer: UNKNOWN DATA TYPE (%s)',selftype)
+                    pmask = False
 
                 # extract aperture photometry data
                 subt = nrm['data'][p]['TIME'][pmask]
@@ -4877,6 +4894,9 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                     pkey = 'Spitzer_IRAC1_subarray'
                 elif '45' in fltr:
                     pkey = 'Spitzer_IRAC2_subarray'
+                else:
+                    log.warning('TRANSIT lightcurve_spitzer: UNKNOWN IRAC FILTER (%s)',fltr)
+                    pkey = None
 
                 if pkey in priors[p].keys():
                     u0 = priors[p][pkey][0]
@@ -5043,6 +5063,9 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                         max_ncalls=2e5,
                         verbose=False,
                     )
+                else:
+                    log.warning('TRANSIT lightcurve_spitzer: UNKNOWN DATA TYPE (%s)',selftype)
+                    myfit = None  # this will crash. hopefully never gets here
 
                 # copy best fit parameters and uncertainties
                 for k in myfit.bounds.keys():
