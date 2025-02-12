@@ -1,5 +1,4 @@
 '''runtime binding ds'''
-
 # ./excalibur/runtime/binding.py
 # -*- coding: utf-8 -*-
 # PyXB bindings for NM:e92452c8d3e28a9e27abfc9994d2007779e7f4c9
@@ -892,7 +891,7 @@ def _BuildAutomaton():
     # Remove this helper function from the namespace after it is invoked
     global _BuildAutomaton
     del _BuildAutomaton
-    import pyxb.utils.fac as fac
+    from pyxb.utils import fac
 
     counters = set()
     cc_0 = fac.CounterCondition(
@@ -1021,7 +1020,7 @@ def _BuildAutomaton_2():
     # Remove this helper function from the namespace after it is invoked
     global _BuildAutomaton_2
     del _BuildAutomaton_2
-    import pyxb.utils.fac as fac
+    from pyxb.utils import fac
 
     counters = set()
     states = []
@@ -1048,7 +1047,7 @@ def _BuildAutomaton_3():
     # Remove this helper function from the namespace after it is invoked
     global _BuildAutomaton_3
     del _BuildAutomaton_3
-    import pyxb.utils.fac as fac
+    from pyxb.utils import fac
 
     counters = set()
     states = []
@@ -1075,7 +1074,7 @@ def _BuildAutomaton_4():
     # Remove this helper function from the namespace after it is invoked
     global _BuildAutomaton_4
     del _BuildAutomaton_4
-    import pyxb.utils.fac as fac
+    from pyxb.utils import fac
 
     counters = set()
     states = []
@@ -1102,7 +1101,7 @@ def _BuildAutomaton_5():
     # Remove this helper function from the namespace after it is invoked
     global _BuildAutomaton_5
     del _BuildAutomaton_5
-    import pyxb.utils.fac as fac
+    from pyxb.utils import fac
 
     counters = set()
     states = []
@@ -1129,7 +1128,7 @@ def _BuildAutomaton_6():
     # Remove this helper function from the namespace after it is invoked
     global _BuildAutomaton_6
     del _BuildAutomaton_6
-    import pyxb.utils.fac as fac
+    from pyxb.utils import fac
 
     counters = set()
     states = []
@@ -1156,7 +1155,7 @@ def _BuildAutomaton_():
     # Remove this helper function from the namespace after it is invoked
     global _BuildAutomaton_
     del _BuildAutomaton_
-    import pyxb.utils.fac as fac
+    from pyxb.utils import fac
 
     counters = set()
     states = []
@@ -1202,7 +1201,7 @@ def _BuildAutomaton_7():
     # Remove this helper function from the namespace after it is invoked
     global _BuildAutomaton_7
     del _BuildAutomaton_7
-    import pyxb.utils.fac as fac
+    from pyxb.utils import fac
 
     counters = set()
     cc_0 = fac.CounterCondition(
@@ -1267,7 +1266,7 @@ def _BuildAutomaton_9():
     # Remove this helper function from the namespace after it is invoked
     global _BuildAutomaton_9
     del _BuildAutomaton_9
-    import pyxb.utils.fac as fac
+    from pyxb.utils import fac
 
     counters = set()
     states = []
@@ -1294,7 +1293,7 @@ def _BuildAutomaton_10():
     # Remove this helper function from the namespace after it is invoked
     global _BuildAutomaton_10
     del _BuildAutomaton_10
-    import pyxb.utils.fac as fac
+    from pyxb.utils import fac
 
     counters = set()
     states = []
@@ -1321,7 +1320,7 @@ def _BuildAutomaton_8():
     # Remove this helper function from the namespace after it is invoked
     global _BuildAutomaton_8
     del _BuildAutomaton_8
-    import pyxb.utils.fac as fac
+    from pyxb.utils import fac
 
     counters = set()
     states = []
@@ -1364,7 +1363,7 @@ def _BuildAutomaton_11():
     # Remove this helper function from the namespace after it is invoked
     global _BuildAutomaton_11
     del _BuildAutomaton_11
-    import pyxb.utils.fac as fac
+    from pyxb.utils import fac
 
     counters = set()
     cc_0 = fac.CounterCondition(
@@ -1406,7 +1405,7 @@ def _BuildAutomaton_13():
     # Remove this helper function from the namespace after it is invoked
     global _BuildAutomaton_13
     del _BuildAutomaton_13
-    import pyxb.utils.fac as fac
+    from pyxb.utils import fac
 
     counters = set()
     states = []
@@ -1433,7 +1432,7 @@ def _BuildAutomaton_14():
     # Remove this helper function from the namespace after it is invoked
     global _BuildAutomaton_14
     del _BuildAutomaton_14
-    import pyxb.utils.fac as fac
+    from pyxb.utils import fac
 
     counters = set()
     states = []
@@ -1460,7 +1459,7 @@ def _BuildAutomaton_15():
     # Remove this helper function from the namespace after it is invoked
     global _BuildAutomaton_15
     del _BuildAutomaton_15
-    import pyxb.utils.fac as fac
+    from pyxb.utils import fac
 
     counters = set()
     states = []
@@ -1487,7 +1486,7 @@ def _BuildAutomaton_16():
     # Remove this helper function from the namespace after it is invoked
     global _BuildAutomaton_16
     del _BuildAutomaton_16
-    import pyxb.utils.fac as fac
+    from pyxb.utils import fac
 
     counters = set()
     states = []
@@ -1514,7 +1513,7 @@ def _BuildAutomaton_17():
     # Remove this helper function from the namespace after it is invoked
     global _BuildAutomaton_17
     del _BuildAutomaton_17
-    import pyxb.utils.fac as fac
+    from pyxb.utils import fac
 
     counters = set()
     states = []
@@ -1541,7 +1540,7 @@ def _BuildAutomaton_12():
     # Remove this helper function from the namespace after it is invoked
     global _BuildAutomaton_12
     del _BuildAutomaton_12
-    import pyxb.utils.fac as fac
+    from pyxb.utils import fac
 
     counters = set()
     states = []
