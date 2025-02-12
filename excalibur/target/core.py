@@ -28,6 +28,7 @@ import urllib.request as urlrequest
 
 from importlib import import_module as fetch  # avoid cicular dependencies
 
+
 # ------------- ------------------------------------------------------
 # -- URLTRICK -- -----------------------------------------------------
 class urltrick:
@@ -128,7 +129,9 @@ def scrapeids(ds: dawgie.Dataset, out, web, genIDs=True):
         if genIDs:
             # necessary retargeting, pylint: disable=protected-access
             dawgie.db.connect(
-                fetch('excalibur.target').algorithms.create(), ds._bot(), parsedstr[0]
+                fetch('excalibur.target').algorithms.create(),
+                ds._bot(),
+                parsedstr[0],
             ).load()
             pass
         pass

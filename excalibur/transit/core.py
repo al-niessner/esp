@@ -3518,7 +3518,7 @@ def fastspec(
     priorspec = ES
     # alpha > 1: Increase width, alpha < 1: Decrease width
     # decrease width by half if no modulation detected
-    alphanum = max (np.nanmedian(np.diff(ES)), np.nanmedian(ESerr) / 2e0)
+    alphanum = max(np.nanmedian(np.diff(ES)), np.nanmedian(ESerr) / 2e0)
     alpha = alphanum / np.nanmedian(ESerr)
     return priorspec, alpha
 

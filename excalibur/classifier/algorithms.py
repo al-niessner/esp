@@ -68,7 +68,11 @@ class summarize_flags(dawgie.Analyzer):
 
         return [
             *[
-                dawgie.SV_REF(fetch('excalibur.classifier').task, flags(), flags().state_vectors()[i])
+                dawgie.SV_REF(
+                    fetch('excalibur.classifier').task,
+                    flags(),
+                    flags().state_vectors()[i],
+                )
                 for i in range(len(flags().state_vectors()))
             ]
         ]
