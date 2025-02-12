@@ -606,19 +606,19 @@ def gettau(
         if cia == 'H2-H2':
             f1 = fH2
             f2 = fH2
-            pass
-        if cia == 'H2-He':
+        elif cia == 'H2-He':
             f1 = fH2
             f2 = fHe
-            pass
-        if cia == 'H2-H':
+        elif cia == 'H2-H':
             f1 = fH2
             f2 = fH2 * 2.0
-            pass
-        if cia == 'He-H':
+        elif cia == 'He-H':
             f1 = fHe
             f2 = fH2 * 2.0
-            pass
+        else:
+            log.warning('--< CERBERUS gettau(): UNEXPECTED MOLECULE %s >--', cia)
+            f1 = 0
+            f2 = 0
         # HITRAN RICHARD ET AL. 2012
         sigma, lsig = getciaxs(temp, xsecs[cia])  # cm^5/mol^2
         sigma = np.array(sigma) * 1e-10  # m^5/mol^2
