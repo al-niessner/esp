@@ -286,6 +286,12 @@ def phasecurve_spitzer(nrm, fin, out, selftype, fltr):
             phase = (nrm['data'][p]['TIME'] - fin['priors'][p]['t0']) / fin[
                 'priors'
             ][p]['period']
+        else:
+            log.warning(
+                'PHASECURVE phasecurve_spitzer: UNKNOWN DATA TYPE (%s)',
+                selftype,
+            )
+            phase = []
 
         # loop through epochs
         ec = 0  # event counter
