@@ -19,7 +19,6 @@ import dawgie.db
 
 import excalibur.runtime.binding as rtbind
 
-import excalibur.target as trg
 import excalibur.target.edit as trgedit
 import excalibur.target.mast_api_utils as masttool
 
@@ -27,6 +26,7 @@ import numpy as np
 import astropy.io.fits as pyfits
 import urllib.request as urlrequest
 
+from importlib import import_module as fetch  # avoid cicular dependencies
 
 # ------------- ------------------------------------------------------
 # -- URLTRICK -- -----------------------------------------------------
@@ -128,7 +128,7 @@ def scrapeids(ds: dawgie.Dataset, out, web, genIDs=True):
         if genIDs:
             # necessary retargeting, pylint: disable=protected-access
             dawgie.db.connect(
-                trg.algorithms.create(), ds._bot(), parsedstr[0]
+                fetch('excalibur.target').algorithms.create(), ds._bot(), parsedstr[0]
             ).load()
             pass
         pass

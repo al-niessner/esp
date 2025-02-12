@@ -1178,8 +1178,7 @@ def scancal(
                 if (tid in ['HAT-P-41']) and ((maxl - minl) > 15):
                     minl = maxl - 15
                 minl = max(minl, 10)
-                if maxl > (psdiff[0].shape[0] - 10):
-                    maxl = psdiff[0].shape[0] - 10
+                maxl = min(psdiff[0].shape[0] - 10, maxl)
                 pass
             else:
                 minl = np.nan

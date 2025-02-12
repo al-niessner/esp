@@ -3,6 +3,7 @@
 import os
 import setuptools
 
+
 def read_requirements():
     requirements = []
     with open('./requirements.txt', 'rt', encoding='utf-8') as file:
@@ -14,6 +15,7 @@ def read_requirements():
             if line:
                 requirements.append(line)
     return requirements
+
 
 data_files_names = ["README.md", "LICENSE.txt"]
 data_files_locations = [

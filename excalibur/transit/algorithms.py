@@ -15,7 +15,6 @@ log = logging.getLogger(__name__)
 from collections import defaultdict
 import numpy as np
 
-import excalibur.transit as trn
 import excalibur.transit.core as trncore
 import excalibur.transit.states as trnstates
 
@@ -26,6 +25,8 @@ import excalibur.runtime.algorithms as rtalg
 import excalibur.runtime.binding as rtbind
 import excalibur.system as sys
 import excalibur.system.algorithms as sysalg
+
+from importlib import import_module as fetch  # avoid cicular dependencies
 
 # ------------- ------------------------------------------------------
 # -- ALGO RUN OPTIONS -- ---------------------------------------------
@@ -175,7 +176,7 @@ class whitelight(dawgie.Algorithm):
     def previous(self):
         '''Input State Vectors: transit.normalization, system.finalize'''
         return [
-            dawgie.ALG_REF(trn.task, self._nrm),
+            dawgie.ALG_REF(fetch('excalibur.transit').task, self._nrm),
             dawgie.ALG_REF(sys.task, self.__fin),
             dawgie.V_REF(
                 rtime.task,
@@ -360,8 +361,8 @@ class spectrum(dawgie.Algorithm):
         transit.whitelight'''
         return [
             dawgie.ALG_REF(sys.task, self.__fin),
-            dawgie.ALG_REF(trn.task, self._nrm),
-            dawgie.ALG_REF(trn.task, self._wht),
+            dawgie.ALG_REF(fetch('excalibur.transit').task, self._nrm),
+            dawgie.ALG_REF(fetch('excalibur.transit').task, self._wht),
             dawgie.V_REF(
                 rtime.task,
                 self.__rt,
@@ -477,8 +478,8 @@ class starspots(dawgie.Algorithm):
         transit.whitelight'''
         return [
             dawgie.ALG_REF(sys.task, self.__fin),
-            dawgie.ALG_REF(trn.task, self._wht),
-            dawgie.ALG_REF(trn.task, self._spc),
+            dawgie.ALG_REF(fetch('excalibur.transit').task, self._wht),
+            dawgie.ALG_REF(fetch('excalibur.transit').task, self._spc),
         ] + self.__rt.refs_for_proceed()
 
     def state_vectors(self):
@@ -560,13 +561,17 @@ class population(dawgie.Analyzer):
         return [
             *[
                 dawgie.SV_REF(
-                    trn.task, spectrum(), spectrum().state_vectors()[i]
+                    fetch('excalibur.transit').task,
+                    spectrum(),
+                    spectrum().state_vectors()[i],
                 )
                 for i in range(len(spectrum().state_vectors()))
             ],
             *[
                 dawgie.SV_REF(
-                    trn.task, whitelight(), whitelight().state_vectors()[i]
+                    fetch('excalibur.transit').task,
+                    whitelight(),
+                    whitelight().state_vectors()[i],
                 )
                 for i in range(len(whitelight().state_vectors()))
             ],

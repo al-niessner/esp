@@ -8,7 +8,6 @@ log = logging.getLogger(__name__)
 import dawgie
 import dawgie.context
 
-import excalibur.data as dat
 import excalibur.data.core as datcore
 import excalibur.data.states as datstates
 
@@ -21,6 +20,8 @@ import excalibur.system.algorithms as sysalg
 
 import excalibur.runtime.algorithms as rtalg
 import excalibur.runtime.binding as rtbind
+
+from importlib import import_module as fetch  # avoid cicular dependencies
 
 # ------------- ------------------------------------------------------
 # -- ALGO RUN OPTIONS -- ---------------------------------------------
@@ -135,7 +136,7 @@ class timing(dawgie.Algorithm):
         '''Input State Vectors: system.finalize, data.collect'''
         return [
             dawgie.ALG_REF(sys.task, self.__fin),
-            dawgie.ALG_REF(dat.task, self.__col),
+            dawgie.ALG_REF(fetch('excalibur.data').task, self.__col),
         ] + self.__rt.refs_for_proceed()
 
     def state_vectors(self):
@@ -230,8 +231,8 @@ class calibration(dawgie.Algorithm):
         '''Input State Vectors: system.finalize, data.collect, data.timing'''
         return [
             dawgie.ALG_REF(sys.task, self.__fin),
-            dawgie.ALG_REF(dat.task, self.__col),
-            dawgie.ALG_REF(dat.task, self.__tim),
+            dawgie.ALG_REF(fetch('excalibur.data').task, self.__col),
+            dawgie.ALG_REF(fetch('excalibur.data').task, self.__tim),
         ] + self.__rt.refs_for_proceed()
 
     def state_vectors(self):

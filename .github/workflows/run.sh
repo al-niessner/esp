@@ -85,7 +85,7 @@ rm -f $root/*.rpt.txt
 trap "rm -rf $wdir $root/Python/build $root/Python/dawgie.egg-info $root/Python/dawgie/fe/requirements.txt" EXIT
 for yaml in $(ls $this/*.yaml)
 do
-    echo "yaml: $yaml"
+    echo "yaml: $(basename $yaml)"
     for job in $(python <<EOF
 import sys
 import yaml

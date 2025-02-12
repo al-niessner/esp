@@ -3,7 +3,7 @@
 # -- IMPORTS -- ------------------------------------------------------
 import numpy
 import copy
-import excalibur.system.core as syscore
+import excalibur.system.constants as syscons
 import logging
 
 log = logging.getLogger(__name__)
@@ -477,7 +477,7 @@ def estimate_mass_from_radius(radius_Jup):
     Use an assumed mass-radius relationship to guess the planet mass
     '''
 
-    sscmks = syscore.ssconstants(cgs=True)
+    sscmks = syscons.ssconstants(cgs=True)
 
     radius_Earth = radius_Jup * sscmks['Rjup'] / sscmks['Rearth']
 
@@ -534,7 +534,7 @@ def derive_RHOstar_from_M_and_R(starInfo):
     '''
 
     # get Msun and Rsun definitions, for calculating stellar density from M*,R*
-    sscmks = syscore.ssconstants(cgs=True)
+    sscmks = syscons.ssconstants(cgs=True)
 
     RHO_derived = []
     RHO_lowerr_derived = []
@@ -605,7 +605,7 @@ def derive_SMA_from_P_and_Mstar(starInfo, planetLetter):
     '''
 
     # get G, Msun, AU definitions
-    sscmks = syscore.ssconstants(cgs=True)
+    sscmks = syscons.ssconstants(cgs=True)
 
     sma_derived = []
     sma_lowerr_derived = []
@@ -707,7 +707,7 @@ def derive_LOGGstar_from_R_and_M(starInfo):
     '''
 
     # get Msun and Rsun definitions
-    sscmks = syscore.ssconstants(cgs=True)
+    sscmks = syscons.ssconstants(cgs=True)
 
     LOGG_derived = []
     LOGG_lowerr_derived = []
@@ -796,7 +796,7 @@ def derive_LOGGplanet_from_R_and_M(starInfo, planetLetter, verbose=False):
     '''
 
     # get MJup and RJup definitions
-    sscmks = syscore.ssconstants(cgs=True)
+    sscmks = syscons.ssconstants(cgs=True)
 
     logg_derived = []
     logg_lowerr_derived = []
@@ -919,7 +919,7 @@ def derive_Lstar_from_R_and_T(starInfo):
     '''
 
     # get Tsun definition
-    sscmks = syscore.ssconstants(cgs=True)
+    sscmks = syscons.ssconstants(cgs=True)
 
     Lstar_derived = []
     Lstar_lowerr_derived = []
@@ -1025,7 +1025,7 @@ def derive_Teqplanet_from_Lstar_and_sma(starInfo, planetLetter, verbose=False):
     '''
 
     # get Lsun definition.  (not needed if we scale to solar)
-    # sscmks = syscore.ssconstants(cgs=True)
+    # sscmks = syscons.ssconstants(cgs=True)
     # F_1AU = sscmks['Lsun'] / 4./numpy.pi / sscmks['AU']**2
     # sigrad = 5.6704e-5  # cgs
     # T_1AU = (F_1AU / 4. / sigrad)**0.25
@@ -1128,7 +1128,7 @@ def derive_inclination_from_impactParam(starInfo, planetLetter):
     '''
 
     # get Rsun definition
-    sscmks = syscore.ssconstants(cgs=True)
+    sscmks = syscons.ssconstants(cgs=True)
 
     inc_derived = []
     inc_lowerr_derived = []
@@ -1222,7 +1222,7 @@ def derive_impactParam_from_inclination(starInfo, planetLetter):
     '''
 
     # get Rsun definition
-    sscmks = syscore.ssconstants(cgs=True)
+    sscmks = syscons.ssconstants(cgs=True)
 
     imp_derived = []
     imp_lowerr_derived = []
@@ -1316,7 +1316,7 @@ def derive_sma_from_ars(starInfo, planetLetter):
     '''
 
     # get Rsun definition
-    sscmks = syscore.ssconstants(cgs=True)
+    sscmks = syscons.ssconstants(cgs=True)
 
     sma_derived = []
     sma_lowerr_derived = []

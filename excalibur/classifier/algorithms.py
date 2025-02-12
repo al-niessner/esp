@@ -21,7 +21,6 @@ import excalibur.system.algorithms as sysalg
 
 # import excalibur.system.core as syscore
 
-import excalibur.classifier as cls
 import excalibur.classifier.core as clscore
 import excalibur.classifier.states as clsstates
 
@@ -33,6 +32,7 @@ import excalibur.runtime.algorithms as rtalg
 import excalibur.runtime.binding as rtbind
 
 from excalibur.classifier.core import savesv
+from importlib import import_module as fetch  # avoid cicular dependencies
 
 # -------------------------------------------------------------------
 # -- ALGO RUN OPTIONS -----------------------------------------------
@@ -68,7 +68,7 @@ class summarize_flags(dawgie.Analyzer):
 
         return [
             *[
-                dawgie.SV_REF(cls.task, flags(), flags().state_vectors()[i])
+                dawgie.SV_REF(fetch('excalibur.classifier').task, flags(), flags().state_vectors()[i])
                 for i in range(len(flags().state_vectors()))
             ]
         ]

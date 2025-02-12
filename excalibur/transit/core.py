@@ -1460,12 +1460,8 @@ def hstwhitelight(
         tauwhite = 1e0 / ((np.nanmedian(flaterrwhite)) ** 2)
         if tauwhite == 0:
             tauwhite = 1e0 / (ootstd**2)
-        shapettv = 2
-        if shapettv < len(ttv):
-            shapettv = len(ttv)
-        shapevis = 2
-        if shapevis < len(visits):
-            shapevis = len(visits)
+        shapettv = max(2, len(ttv))
+        shapevis = max(2, len(visits))
         if priors[p]['inc'] != 9e1:
             fixedinc = False
         else:
@@ -1919,12 +1915,8 @@ def whitelight(
         tauwhite = 1e0 / ((np.nanmedian(flaterrwhite)) ** 2)
         if tauwhite == 0:
             tauwhite = 1e0 / (ootstd**2)
-        shapettv = 2
-        if shapettv < len(ttv):
-            shapettv = len(ttv)
-        shapevis = 2
-        if shapevis < len(visits):
-            shapevis = len(visits)
+        shapettv = max(2, len(ttv))
+        shapevis = max(2, len(visits))
         if p in multiwl['data'].keys():
             if 'inc' in multiwl['data'][p]['mctrace']:
                 inc = np.median(multiwl['data'][p]['mctrace']['inc'])
@@ -2878,9 +2870,7 @@ def spectrum(
             # PRIOR CENTER ---------------------------------------------------------------
             prcenter = whiterprs
             # UPDATE GLOBALS -------------------------------------------------------------
-            shapevis = 2
-            if shapevis < len(visits):
-                shapevis = len(visits)
+            shapevis = max(2, len(visits))
             ctxtupdt(
                 allz=allz,
                 g1=g1,
@@ -3443,9 +3433,7 @@ def fastspec(
         nodes = []
         tauwbdata = 1e0 / dnoise**2
         # UPDATE GLOBALS -----------------------------------------------------------------
-        shapevis = 2
-        if shapevis < len(visits):
-            shapevis = len(visits)
+        shapevis = max(2, len(visits))
         ctxtupdt(
             allz=allz,
             g1=g1,
@@ -3530,9 +3518,7 @@ def fastspec(
     priorspec = ES
     # alpha > 1: Increase width, alpha < 1: Decrease width
     # decrease width by half if no modulation detected
-    alphanum = np.nanmedian(np.diff(ES))
-    if alphanum < np.nanmedian(ESerr) / 2e0:
-        alphanum = np.nanmedian(ESerr) / 2e0
+    alphanum = max (np.nanmedian(np.diff(ES)), np.nanmedian(ESerr) / 2e0)
     alpha = alphanum / np.nanmedian(ESerr)
     return priorspec, alpha
 
