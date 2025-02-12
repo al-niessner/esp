@@ -974,7 +974,6 @@ def cloudyfmcerberus(*crbinputs):
             debug=False,
         )
     else:
-        sys.exit('not this guy yet')
         mixratio = {}
         for index, key in enumerate(ctxt.modparlbl[ctxt.model]):
             mixratio[key] = mdp[index].eval()
