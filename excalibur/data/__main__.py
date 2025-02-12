@@ -31,8 +31,8 @@ if tn in ['', '__all__']:
 else:
     name = ['calibration', 'collect', 'timing', None][-1]  # -1 to run them all
     subtasks = excalibur.data.bot.Actor('data', 4, rid, tn)
-    pass
 
-subtasks.do(name)
+    subtasks.do(name)
+
 dawgie.db.close()
 dawgie.security.finalize()

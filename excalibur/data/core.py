@@ -882,6 +882,7 @@ def jwstreffiles(thisext):
     Local: /proj/sdp/data/cal/
     '''
     thisdir = None
+    thistrace = None
     if 'NIRISS' in thisext:
         # Note: do something smarter to get latest files
         # --< DATA CALIBRATION: JWST-NIRISS-NIS-CLEAR-GR700XD >--
@@ -1761,6 +1762,8 @@ def fng(flttype):
     fltr = flttype.split('-')[3]
     wvrng = None
     disp = None
+    llim = None
+    ulim = None
     if fltr == 'G141':
         wvrng = [1085e1, 17e3]  # Angstroms
         disp = 46.5  # Angstroms/Pixel
@@ -3536,6 +3539,7 @@ def stiscal_G430L(fin, clc, tim, tid, flttype, out, verbose=False, debug=False):
     def chisqfunc(args):
         '''chisqfunc ds'''
         avar, bvar = args
+        # 2/12/25 Geoff: errors here since this stuff is not defined
         chisq = np.sum(
             (
                 (g_wav * bin_spec_norm[cond_mid])
@@ -4289,6 +4293,7 @@ def stiscal_unified(
 
     def chisqfunc(args):
         avar, bvar, scvar = args
+        # 2/12/25 Geoff: errors here since this stuff is not defined (same as above)
         chisq = np.sum(
             (
                 (g_wav * bin_spec_norm[cond_mid]) * scvar
@@ -4828,6 +4833,10 @@ def jwstcal_NIRISS(fin, clc, tim, tid, flttype, out, verbose=False):
         'FAILED': [],
     }
 
+    nframe = None
+    dtframe = None
+    ngroups = None
+
     for loc in sorted(clc['LOC']):
         fullloc = os.path.join(dbs, loc)
         with pyfits.open(fullloc) as hdulist:
@@ -4915,6 +4924,9 @@ def jwstcal_NIRISS(fin, clc, tim, tid, flttype, out, verbose=False):
         out['STATUS'].append(True)
 
     # GMR: Fake use of inputs to satisfy pylint
+    # 2/12/25 Geoff: nframe,dtframe,ngroups initializations added above
+    #   to satisfy used-before-assignment error.
+    #  if this part here is removed, then those three lines above can be removed too
     if verbose:
         _x = fin
         _x = tim
