@@ -347,7 +347,7 @@ class spectrum(dawgie.Algorithm):
         self.__rt = rtalg.autofill()
         self._wht = wht
         self.__out = [trnstates.SpectrumSV(fltr) for fltr in fltrs]
-        if sum(['HST' in fltr for fltr in fltrs]) > 1:
+        if sum('HST' in fltr for fltr in fltrs) > 1:
             self.__out.append(trnstates.SpectrumSV('STIS-WFC3'))
             pass
         return

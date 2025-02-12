@@ -1051,7 +1051,7 @@ class glc_fitter(lc_fitter):
                 self.lc_data[i]['res_stdev'] = myfit.res_stdev
                 self.lc_data[i]['quality'] = myfit.quality
 
-                ti = sum([len(self.local_bounds[k]) for k in range(i)])
+                ti = sum(len(self.local_bounds[k]) for k in range(i))
 
                 # update local priors
                 for j, key in enumerate(self.local_bounds[i].keys()):
@@ -1106,7 +1106,7 @@ class glc_fitter(lc_fitter):
                     self.lc_data[i]['priors'][key] = pars[j]
 
                 # local keys
-                ti = sum([len(self.local_bounds[k]) for k in range(i)])
+                ti = sum(len(self.local_bounds[k]) for k in range(i))
                 for j, key in enumerate(lfreekeys[i]):
                     self.lc_data[i]['priors'][key] = pars[
                         j + ti + len(gfreekeys)
