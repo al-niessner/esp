@@ -3,8 +3,6 @@
 # -- IMPORTS -- ------------------------------------------------------
 import logging
 
-log = logging.getLogger(__name__)
-
 import dawgie
 import dawgie.context
 
@@ -22,6 +20,8 @@ import excalibur.runtime.algorithms as rtalg
 import excalibur.runtime.binding as rtbind
 
 from importlib import import_module as fetch  # avoid cicular dependencies
+
+log = logging.getLogger(__name__)
 
 # ------------- ------------------------------------------------------
 # -- ALGO RUN OPTIONS -- ---------------------------------------------

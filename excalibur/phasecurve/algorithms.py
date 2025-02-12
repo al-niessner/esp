@@ -6,8 +6,6 @@ import dawgie.context
 
 import logging
 
-log = logging.getLogger(__name__)
-
 import excalibur.phasecurve.states as phcstates
 import excalibur.phasecurve.core as phccore
 
@@ -22,6 +20,8 @@ import excalibur.runtime.algorithms as rtalg
 import excalibur.runtime.binding as rtbind
 import excalibur.system as sys
 import excalibur.system.algorithms as sysalg
+
+log = logging.getLogger(__name__)
 
 # ------------- ------------------------------------------------------
 # -- ALGO RUN OPTIONS -- ---------------------------------------------

@@ -2,11 +2,12 @@
 
 import logging
 
-log = logging.getLogger(__name__)
 import os
 import re
 
 from . import binding
+
+log = logging.getLogger(__name__)
 
 ENV_NAME = 'EXCALIBUR_LEVER_AND_KNOB_SETTINGS'
 

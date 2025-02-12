@@ -21,10 +21,6 @@ from ultranest import ReactiveNestedSampler
 
 import pymc
 
-log = logging.getLogger(__name__)
-pymclog = logging.getLogger('pymc')
-pymclog.setLevel(logging.ERROR)
-
 from scipy.optimize import least_squares, brentq
 import scipy.constants as cst
 from scipy.signal import savgol_filter
@@ -40,8 +36,11 @@ try:
 except ImportError:
     from astropy.modeling.blackbody import blackbody_lambda as BlackBody
 
-
 from collections import namedtuple
+
+log = logging.getLogger(__name__)
+pymclog = logging.getLogger('pymc')
+pymclog.setLevel(logging.ERROR)
 
 CONTEXT = namedtuple(
     'CONTEXT',

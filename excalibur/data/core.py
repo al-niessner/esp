@@ -5,8 +5,6 @@ import os
 import glob
 import logging
 
-log = logging.getLogger(__name__)
-
 import dawgie
 import dawgie.context
 
@@ -46,6 +44,7 @@ from astropy.wcs import WCS
 
 from multiprocessing import Pool
 
+log = logging.getLogger(__name__)
 
 # ------------- ------------------------------------------------------
 # -- SV VALIDITY -- --------------------------------------------------

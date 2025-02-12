@@ -6,14 +6,13 @@ import dawgie.context
 
 import logging
 
-log = logging.getLogger(__name__)
-
 import excalibur.system as sys
 import excalibur.transit.algorithms as trnalg
 import excalibur.transit.core as trncore
 
 from importlib import import_module as fetch  # avoid cicular dependencies
 
+log = logging.getLogger(__name__)
 
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------

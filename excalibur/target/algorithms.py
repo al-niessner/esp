@@ -4,8 +4,6 @@
 import os
 import logging
 
-log = logging.getLogger(__name__)
-
 import dawgie
 import dawgie.context
 
@@ -21,6 +19,8 @@ import excalibur.target.monitor as trgmonitor
 import excalibur.target.states as trgstates
 
 from importlib import import_module as fetch  # avoid cicular dependencies
+
+log = logging.getLogger(__name__)
 
 fltrs = [str(fn) for fn in rtbind.filter_names.values()]
 

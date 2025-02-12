@@ -12,8 +12,6 @@ import tempfile
 import subprocess
 import logging
 
-log = logging.getLogger(__name__)
-
 import dawgie
 import dawgie.db
 
@@ -28,6 +26,7 @@ import urllib.request as urlrequest
 
 from importlib import import_module as fetch  # avoid cicular dependencies
 
+log = logging.getLogger(__name__)
 
 # ------------- ------------------------------------------------------
 # -- URLTRICK -- -----------------------------------------------------

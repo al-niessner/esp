@@ -5,8 +5,6 @@ import os
 import numpy as np
 import logging
 
-log = logging.getLogger(__name__)
-
 import excalibur
 
 from excalibur.system.autofill import (
@@ -32,6 +30,8 @@ from excalibur.system.constants import ssconstants
 from excalibur.system.overwriter import fix_default_reference
 
 from collections import namedtuple
+
+log = logging.getLogger(__name__)
 
 SYSTEM_PARAMS = namedtuple(
     'system_params_from_runtime',

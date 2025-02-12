@@ -3,8 +3,6 @@
 # -- IMPORTS -- ------------------------------------------------------
 import logging
 
-log = logging.getLogger(__name__)
-
 import dawgie
 
 from collections import defaultdict
@@ -24,6 +22,7 @@ from excalibur.system.core import savesv
 
 from importlib import import_module as fetch  # avoid cicular dependencies
 
+log = logging.getLogger(__name__)
 
 # ------------- ------------------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------

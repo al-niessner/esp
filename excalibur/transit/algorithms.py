@@ -6,11 +6,7 @@ import dawgie.context
 
 import numexpr
 
-numexpr.ncores = 1  # this is actually a performance enhancer!
-
 import logging
-
-log = logging.getLogger(__name__)
 
 from collections import defaultdict
 import numpy as np
@@ -27,6 +23,10 @@ import excalibur.system as sys
 import excalibur.system.algorithms as sysalg
 
 from importlib import import_module as fetch  # avoid cicular dependencies
+
+log = logging.getLogger(__name__)
+
+numexpr.ncores = 1  # this is actually a performance enhancer!
 
 # ------------- ------------------------------------------------------
 # -- ALGO RUN OPTIONS -- ---------------------------------------------

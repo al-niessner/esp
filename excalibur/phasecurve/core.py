@@ -13,6 +13,8 @@ from scipy.stats import skew, kurtosis
 # from scipy.fft import fft, fftfreq
 from numpy.fft import fft, fftfreq
 
+import ldtk
+
 from collections import namedtuple
 
 CONTEXT = namedtuple(
@@ -124,9 +126,6 @@ def ctxtupdt(
         avi=avi,
     )
     return
-
-
-import ldtk
 
 
 # from ldtk import LDPSetCreator, BoxcarFilter

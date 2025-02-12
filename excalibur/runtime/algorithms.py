@@ -2,8 +2,6 @@
 
 import logging
 
-log = logging.getLogger(__name__)
-
 import dawgie
 import dawgie.context
 import dawgie.db
@@ -14,6 +12,7 @@ from . import core
 from . import states
 from importlib import import_module as fetch  # avoid cyclic-import
 
+log = logging.getLogger(__name__)
 
 class autofill(dawgie.Algorithm):
     '''Breaks the levers and knobs global table to target specific'''

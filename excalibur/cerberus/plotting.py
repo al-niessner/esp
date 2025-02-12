@@ -2,9 +2,6 @@
 
 # -- IMPORTS -- ------------------------------------------------------
 import logging
-
-log = logging.getLogger(__name__)
-
 import io
 import corner
 import numpy as np
@@ -14,8 +11,9 @@ import matplotlib.pyplot as plt
 from excalibur.ariel.metallicity import massMetalRelation
 from excalibur.system.core import ssconstants
 
-ssc = ssconstants(mks=True)
+log = logging.getLogger(__name__)
 
+ssc = ssconstants(mks=True)
 
 # --------------------------------------------------------------------
 def rebinData(transitdata, binsize=4):

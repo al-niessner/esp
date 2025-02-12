@@ -3,7 +3,6 @@
 # -- IMPORTS -- ------------------------------------------------------
 import logging
 
-log = logging.getLogger(__name__)
 from collections import OrderedDict
 
 import dawgie
@@ -33,6 +32,8 @@ import excalibur.runtime.binding as rtbind
 
 from excalibur.classifier.core import savesv
 from importlib import import_module as fetch  # avoid cicular dependencies
+
+log = logging.getLogger(__name__)
 
 # -------------------------------------------------------------------
 # -- ALGO RUN OPTIONS -----------------------------------------------

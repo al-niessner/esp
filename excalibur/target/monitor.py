@@ -4,10 +4,11 @@
 import email.message
 import logging
 
-log = logging.getLogger(__name__)
 import numpy
 import smtplib
 import math
+
+log = logging.getLogger(__name__)
 
 # ------------- ------------------------------------------------------
 
