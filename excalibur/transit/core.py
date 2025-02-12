@@ -1915,7 +1915,7 @@ def whitelight(
         tauwhite = 1e0 / ((np.nanmedian(flaterrwhite)) ** 2)
         if tauwhite == 0:
             tauwhite = 1e0 / (ootstd**2)
-        shapettv = max(2, len(ttv))
+        # shapettv = max(2, len(ttv))  # unused variable
         shapevis = max(2, len(visits))
         if p in multiwl['data'].keys():
             if 'inc' in multiwl['data'][p]['mctrace']:
