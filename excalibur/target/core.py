@@ -268,7 +268,12 @@ def autofill(ident, thistarget, out, allowed_filters, searchrad=0.2, ntrymax=4):
             solved = True
             pass
         pass
-
+    else:
+        # assigning junk value to ra/dec avoids used-before-assignment error
+        # but it would be better to just put the whole 'solved' part inside this if block
+        ra = 123
+        dec = 45
+    
     # 2 - searches for observations
     # Cant say I dont comment my code anymore
     if solved:
