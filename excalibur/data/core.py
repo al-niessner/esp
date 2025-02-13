@@ -3536,10 +3536,10 @@ def stiscal_G430L(fin, clc, tim, tid, flttype, out, verbose=False, debug=False):
         bin_spec = scipy.signal.medfilt(bin_spec, 5)
         return mid, bin_spec
 
-    def chisqfunc(args):
-        '''chisqfunc ds'''
+    def chisqfunc(args, g_wav, bin_spec_norm, cond_mid, f, mid_ang):
         avar, bvar = args
-        # 2/12/25 Geoff: errors here since this stuff is not defined
+        # 2/13/25 Geoff: the missing parameters are now passed in as an arg() for scipy.optimize
+        #  but I'm not sure if the above syntax is correct.  try running this later..
         chisq = np.sum(
             (
                 (g_wav * bin_spec_norm[cond_mid])
@@ -4294,9 +4294,10 @@ def stiscal_unified(
         bin_spec = scipy.signal.medfilt(bin_spec, window)
         return mid, bin_spec
 
-    def chisqfunc(args):
+    def chisqfunc(args, g_wav, bin_spec_norm, cond_mid, f, mid_ang):
         avar, bvar, scvar = args
-        # 2/12/25 Geoff: errors here since this stuff is not defined (same as above)
+        # 2/13/25 Geoff: the missing parameters are now passed in as an arg() for scipy.optimize
+        #  but I'm not sure if the above syntax is correct.  try running this later..
         chisq = np.sum(
             (
                 (g_wav * bin_spec_norm[cond_mid]) * scvar
@@ -4377,7 +4378,9 @@ def stiscal_unified(
                     x0 = (1.0 / 4.72, -1000, 1.0)
                 else:
                     x0 = (1.0 / 2.72, -1000, 1.0)
-                result = opt.minimize(chisqfunc, x0, method='Nelder-Mead')
+                result = opt.minimize(chisqfunc, x0,
+                                      args=(g_wav, bin_spec_norm, cond_mid, f, mid_ang),
+                                      method='Nelder-Mead')
                 d_frc = result.x[0]
                 d = 1.0 / result.x[0]
                 dispersion_list.append(d)
