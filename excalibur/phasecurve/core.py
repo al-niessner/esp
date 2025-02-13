@@ -6,6 +6,8 @@ import copy
 import numpy as np
 import matplotlib.pyplot as plt
 
+import logging
+
 import excalibur.system.core as syscore
 import excalibur.transit.core as trncore
 from scipy.stats import skew, kurtosis
