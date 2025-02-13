@@ -65,7 +65,7 @@ def ctxtupdt(
     spc=None,
     modparlbl=None,
     hzlib=None,
-    fixedParams=None,
+    fixed_params=None,
 ):
     '''
     G. ROUDIER: Update context
@@ -79,7 +79,7 @@ def ctxtupdt(
         tspectrum=tspectrum,
         xsl=xsl,
         spc=spc,
-        fixedParams=fixedParams,
+        fixedParams=fixed_params,
         modparlbl=modparlbl,
         hzlib=hzlib,
     )
