@@ -4208,8 +4208,14 @@ def stiscal_unified(
 
     if 'G430' in flttype:
         set_wav = np.array([290, 570])
-    if 'G750' in flttype:
+    elif 'G750' in flttype: 
         set_wav = np.array([524, 1027])
+    else:
+        log.warning(
+            'DATA stiscal_unified: UNKNOWN HST FILTER %s',
+            flttype
+        )
+        set_wav = np.array([666, -666])
 
     def phoenix(set_wav):
         # PHOENIX MODELS
