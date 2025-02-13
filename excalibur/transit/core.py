@@ -5150,7 +5150,13 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                 print(f"raw photon noise:{nf_timeseries_raw}")
                 print(f"photon noise: {nf_timeseries}")
 
-                out['data'][p][ec]['plot_residual_fft'] = plot_residual_fft(raw_residual, rel_residuals, subt, nf_timeseries, nf_timeseries_raw)
+                out['data'][p][ec]['plot_residual_fft'] = plot_residual_fft(
+                    raw_residual,
+                    rel_residuals,
+                    subt,
+                    nf_timeseries,
+                    nf_timeseries_raw,
+                )
 
                 z, _phase = datcore.time2z(
                     subt,
