@@ -14,11 +14,11 @@ The algorithm engine has N goals:
 '''
 
 # -- IMPORTS -- ------------------------------------------------------
-import builtins
+# import builtins
 import collections
 import dawgie
-import numpy
-import scipy.stats
+# import numpy
+# import scipy.stats
 
 import os
 
