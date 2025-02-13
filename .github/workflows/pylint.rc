@@ -46,7 +46,7 @@ fail-under=10
 #from-stdin=
 
 # Files or directories to be skipped. They should be base names, not paths.
-ignore=CVS,Coda,binding.py
+ignore=CVS,Coda,binding.py,.git,local,elca.py
 
 # Add files or directories matching the regular expressions patterns to the
 # ignore-list. The regex matches against paths and can be in Posix or Windows
@@ -583,17 +583,17 @@ contextmanager-decorators=contextlib.contextmanager
 # List of members which are set dynamically and missed by pylint inference
 # system, and so shouldn't trigger E1101 when accessed. Python regular
 # expressions are accepted.
-generated-members=dawgie.context.fsm,
-                  logging.handlers.StreamHandler,
-                  self.archiving_trigger,
-                  self.running_trigger,
-                  self.state,
-                  self.update_trigger,
-                  twisted.internet.reactor.callLater,
-                  twisted.internet.reactor.listenSSL,
-                  twisted.internet.reactor.listenTCP,
-                  twisted.internet.reactor.run,
-                  twisted.internet.reactor.spawnProcess
+generated-members=astropy.constants.R_jup,
+                  astropy.constants.R_sun,
+                  astropy.units.deg,
+                  astropy.units.mas,
+                  astropy.units.micron,
+                  astropy.units.pc,
+                  astropy.units.yr,
+                  astropy.units.micron,
+                  matplotlib.cm,
+                  pymc.stats.summary
+
 
 # Tells whether to warn about missing members when the owner of the attribute
 # is inferred to be None.
@@ -616,7 +616,12 @@ ignored-checks-for-mixins=no-member,
 # List of class names for which member attributes should not be checked (useful
 # for classes with dynamically set attributes). This supports the use of
 # qualified names.
-ignored-classes=optparse.Values,thread._local,_thread._local,argparse.Namespace
+ignored-classes=optparse.Values,
+                thread._local,
+                _thread._local,
+                argparse.Namespace,
+                HDUList,
+                LDPSet
 
 # Show a hint with possible names when a member name was not found. The aspect
 # of finding the hint is based on edit distance.

@@ -52,7 +52,7 @@ def lc_resid_classification(transit_whitelight, ext, out):
         canvas = FigureCanvas(fig)
         canvas.draw()
         width, height = fig.get_size_inches() * fig.get_dpi()
-        img = np.frombuffer(canvas.tostring_rgb(), dtype='uint8').reshape(
+        img = np.frombuffer(canvas.tostring_argb(), dtype='uint8').reshape(
             int(height), int(width), 3
         )
         return img / 255
