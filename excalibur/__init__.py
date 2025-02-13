@@ -17,6 +17,7 @@ The algorithm engine has N goals:
 # import builtins
 import collections
 import dawgie
+
 # import numpy
 # import scipy.stats
 
