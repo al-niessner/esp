@@ -756,10 +756,11 @@ def jwstcal(fin, clc, tim, ext, out, ps=None, verbose=False, debug=False):
         all1d = []
         all1dwave = []
         excld = []
-        sel1 = np.array(['1' in test for test in alldet])
-        sel2 = np.array(['2' in test for test in alldet])
-        timeorder1 = np.argsort(alldintimes[sel1])
-        timeorder2 = np.argsort(alldintimes[sel2])
+        # 2/12/25 Geoff: commented these out (were flagged as unused-variable)
+        # sel1 = np.array(['1' in test for test in alldet])
+        # sel2 = np.array(['2' in test for test in alldet])
+        # timeorder1 = np.argsort(alldintimes[sel1])
+        # timeorder2 = np.argsort(alldintimes[sel2])
         # _NRS1 = alldexp[sel1][timeorder1]
         # _NRS1w = allwaves[sel1][timeorder1]
         # _NRS2 = alldexp[sel2][timeorder2]
