@@ -28,7 +28,7 @@ from scipy.ndimage.morphology import (
     binary_fill_holes,
 )
 
-from photutils import aperture_photometry, CircularAperture
+from photutils.aperture import aperture_photometry, CircularAperture
 import pyvo as vo
 
 import numpy as np
