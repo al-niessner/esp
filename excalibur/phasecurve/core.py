@@ -19,6 +19,8 @@ import ldtk
 
 from collections import namedtuple
 
+log = logging.getLogger(__name__)
+
 CONTEXT = namedtuple(
     'CONTEXT',
     [
