@@ -57,6 +57,9 @@ def crbce(p, temp, C2Or=0.0, X2Hr=0.0, N2Or=0.0):
 
     # print('temp in crbce',temp.eval())
     solvec = np.array([metal[xx] for xx in metal])
+    # 2/12/25 Geoff: here is a possible replacement consider-using-dict-items
+    #  this does not seem like an improvement though
+    # solvec = np.array([vals for xx,vals in metal.items()])
     if X2Hr >= np.log10(1.0 / np.sum(solvec)):
         nH = 1e-16
         nH2 = 1e-16
