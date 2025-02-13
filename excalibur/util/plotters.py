@@ -6,9 +6,11 @@ import numpy as np
 from scipy.stats import skew, kurtosis
 from numpy.fft import fft, fftfreq
 
-def plot_residual_fft(raw_residual, rel_residuals, subt,
-                      nf_timeseries, nf_timeseries_raw):
-    
+
+def plot_residual_fft(
+    raw_residual, rel_residuals, subt, nf_timeseries, nf_timeseries_raw
+):
+
     # create plot for residual statistics
     fig, ax = plt.subplots(3, figsize=(10, 10))
     binspace = np.linspace(-0.02, 0.02, 201)
@@ -62,14 +64,14 @@ def plot_residual_fft(raw_residual, rel_residuals, subt,
     ax[1].set_xlabel('Time [BJD]')
     ax[0].set_title(f'Residual Statistics: {p} {selftype} {fltr}')
     ax[1].set_ylabel("Relative Flux")
-    
+
     # compute fourier transform of raw_residual
     N = len(raw_residual)
     fft_raw = fft(raw_residual)
     fft_res = fft(rel_residuals)
-    xf = fftfreq(
-        len(raw_residual), d=np.diff(subt).mean() * 24 * 60 * 60
-    )[: N // 2]
+    xf = fftfreq(len(raw_residual), d=np.diff(subt).mean() * 24 * 60 * 60)[
+        : N // 2
+    ]
     # fftraw = 2.0/N * np.abs(fft_raw[0:N//2])
     # future: square + integrate under the curve and normalize such that it equals time series variance
     ax[2].loglog(
@@ -92,10 +94,9 @@ def plot_residual_fft(raw_residual, rel_residuals, subt,
     ax[2].legend()
     ax[2].grid(True, ls='--')
     plt.tight_layout()
-    
+
     # save plot to state vector
     buf = io.BytesIO()
     fig.savefig(buf, format='png')
     plt.close(fig)
     return buf.getvalue()
-
