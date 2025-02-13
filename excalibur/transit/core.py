@@ -8,7 +8,7 @@ import excalibur.system.core as syscore
 import excalibur.util.cerberus as crbutil
 from excalibur.util import elca
 from excalibur.cerberus.plotting import rebin_data
-from excalibur.util.plotters import plot_residual_fft
+from excalibur.util.plotters import save_plot, plot_residual_fft
 
 import io
 import copy
@@ -5108,14 +5108,6 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                 )
                 out['data'][p][ec]['final_errs'] = copy.deepcopy(myfit.errors)
 
-                # extract plot data for states.py
-                def save_plot(plotfn):
-                    fig, _ = plotfn()
-                    buf = io.BytesIO()
-                    fig.savefig(buf, format='png')
-                    plt.close(fig)
-                    return buf.getvalue()
-
                 out['data'][p][ec]['plot_bestfit'] = save_plot(
                     myfit.plot_bestfit
                 )
@@ -5151,11 +5143,15 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                 print(f"photon noise: {nf_timeseries}")
 
                 out['data'][p][ec]['plot_residual_fft'] = plot_residual_fft(
+                    selftype,
+                    fltr,
+                    p,
                     raw_residual,
                     rel_residuals,
                     subt,
                     nf_timeseries,
                     nf_timeseries_raw,
+                    tdur_freq=tdur_freq,
                 )
 
                 z, _phase = datcore.time2z(

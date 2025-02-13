@@ -3,12 +3,31 @@ various plotting routines to serve multiple tasks
 """
 
 import numpy as np
+import matplotlib.pyplot as plt
+import io
 from scipy.stats import skew, kurtosis
 from numpy.fft import fft, fftfreq
 
 
+def save_plot(plotfn):
+    # extract plot data for states.py
+    fig, _ = plotfn()
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png')
+    plt.close(fig)
+    return buf.getvalue()
+
+
 def plot_residual_fft(
-    raw_residual, rel_residuals, subt, nf_timeseries, nf_timeseries_raw
+    selftype,
+    fltr,
+    p,
+    raw_residual,
+    rel_residuals,
+    subt,
+    nf_timeseries,
+    nf_timeseries_raw,
+    tdur_freq=None,
 ):
 
     # create plot for residual statistics
@@ -88,7 +107,8 @@ def plot_residual_fft(
         label='Detrended',
         color=plt.cm.jet(0.75),
     )
-    ax[2].axvline(tdur_freq, ls='--', color='black', alpha=0.5)
+    if tdur_freq:
+        ax[2].axvline(tdur_freq, ls='--', color='black', alpha=0.5)
     ax[2].set_ylabel('Power')
     ax[2].set_xlabel('Frequency [Hz]')
     ax[2].legend()
