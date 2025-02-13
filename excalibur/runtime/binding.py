@@ -67,7 +67,8 @@ def CreateFromDocument(
     only for absent namespaces.
     """
 
-    if pyxb.XMLStyle_saxer != pyxb._XMLStyle:
+    # GMR: Divine rights apply
+    if pyxb.XMLStyle_saxer != pyxb._XMLStyle:  # pylint: disable=W0212
         dom = pyxb.utils.domutils.StringToDOM(xml_text)
         return CreateFromDOM(dom.documentElement)
     if fallback_namespace is None:
@@ -79,7 +80,7 @@ def CreateFromDocument(
     )
     handler = saxer.getContentHandler()
     xmld = xml_text
-    if isinstance(xmld, _six.text_type):
+    if isinstance(xmld, _six.text_type):  # pylint: disable=W0212
         xmld = xmld.encode(pyxb._InputEncoding)
     saxer.parse(io.BytesIO(xmld))
     instance = handler.rootObject()
@@ -101,11 +102,10 @@ def CreateFromDOM(node, fallback_namespace=None, default_namespace=None):
 
 # Atomic simple type: filter_names
 # This is despotic code so we can do this
-# noqa: R0901
 class filter_names(
     pyxb.binding.datatypes.normalizedString,
     pyxb.binding.basis.enumeration_mixin,
-):
+):  # pylint: disable=R0901
     """An atomic simple type."""
 
     _ExpandedName = pyxb.namespace.ExpandedName(Namespace, 'filter_names')

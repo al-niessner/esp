@@ -1767,13 +1767,18 @@ def corner(
         # Also make sure it's a normal list.
         plot_range = list(plot_range)
         # GMR: No comment
-        for i, _ in enumerate(plot_range):  # noqa: R1736
+        # pylint: disable=R1736
+        for i, _ in enumerate(plot_range):
             try:
                 # pylint: disable=unused-variable
-                emin, emax = plot_range[i]  # noqa: R1736
+                emin, emax = plot_range[i]
             except TypeError:
                 q = [0.5 - 0.5 * plot_range[i], 0.5 + 0.5 * plot_range[i]]
                 plot_range[i] = quantile(xs[i], q, weights=weights)
+                pass
+            pass
+        # pylint: enable=R1736
+        pass
 
     if len(plot_range) != xs.shape[0]:
         raise ValueError(
