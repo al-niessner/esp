@@ -420,7 +420,7 @@ def buildsp(autofill, runtime_params, out, verbose=False):
             uperr = ''
             lowerr = ''
             ref = ''
-        if str(value).__len__() > 0:
+        if str(value):
             if lbl == 'spTyp':
                 out['priors'][lbl] = value
                 out['priors'][lbl + '_uperr'] = ''
@@ -468,7 +468,7 @@ def buildsp(autofill, runtime_params, out, verbose=False):
     # if star luminosity is missing, assume M^4
     #   5/29/23 note that this conditional is never true.  could delete this
     if 'L*' in out['needed']:
-        if out['priors']['M*'].__len__() > 0:
+        if out['priors']['M*']:
             Lstar = float(out['priors']['M*']) ** 4
             print('Note: setting L* = ', Lstar)
             out['priors']['L*'] = f"{Lstar:6.2f}"
@@ -553,7 +553,7 @@ def buildsp(autofill, runtime_params, out, verbose=False):
             # print(lbl)
             # print(value)
             # print(values)
-            if value.__len__() > 0:
+            if value:
                 out['priors'][p][lbl] = float(value)
                 out['priors'][p][lbl + '_ref'] = ref
                 err, autofilled = fillUncertainty(lbl, value, uperr, 'uperr')

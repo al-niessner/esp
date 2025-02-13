@@ -1273,7 +1273,7 @@ class glc_fitter(lc_fitter):
                 ax[ri, ci].set_xlabel("Time[BJD]", fontsize=14)
                 ax[ri, ci].set_ylabel("Relative Flux", fontsize=14)
                 ax[ri, ci].set_title(
-                    f"{self.lc_data[i].get('name','')}", fontsize=16
+                    f"{self.lc_data[i].get('name', '')}", fontsize=16
                 )
 
         plt.tight_layout()
@@ -1766,10 +1766,11 @@ def corner(
         # If any of the extents are percentiles, convert them to ranges.
         # Also make sure it's a normal list.
         plot_range = list(plot_range)
-        for i, _ in enumerate(plot_range):
+        # GMR: No comment
+        for i, _ in enumerate(plot_range):  # noqa: R1736
             try:
                 # pylint: disable=unused-variable
-                emin, emax = plot_range[i]
+                emin, emax = plot_range[i]  # noqa: R1736
             except TypeError:
                 q = [0.5 - 0.5 * plot_range[i], 0.5 + 0.5 * plot_range[i]]
                 plot_range[i] = quantile(xs[i], q, weights=weights)
@@ -1814,7 +1815,9 @@ def corner(
     else:
         try:
             axes = np.array(fig.axes).reshape((K, K))
-        except:
+        # GMR: This is not our code. I dont know what this thing is doing here
+        # I m not gonna sweat this bare except
+        except:  # noqa: E722
             # pylint: disable=consider-using-f-string
             raise ValueError(
                 "Provided figure has {0} axes, but data has "

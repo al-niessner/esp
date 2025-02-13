@@ -33,7 +33,7 @@ fltrs = [str(fn) for fn in rtbind.filter_names.values()]
 
 # ----------------------- --------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
-class xslib(dawgie.Algorithm):
+class XSLib(dawgie.Algorithm):
     '''Cross Section Library'''
 
     def __init__(self):
@@ -113,7 +113,7 @@ class xslib(dawgie.Algorithm):
     pass
 
 
-class atmos(dawgie.Algorithm):
+class Atmos(dawgie.Algorithm):
     '''Atmospheric retrievial'''
 
     # need lots of state info; pylint: disable=too-many-instance-attributes
@@ -122,7 +122,7 @@ class atmos(dawgie.Algorithm):
         self._version_ = crbcore.atmosversion()
         self.__spc = trnalg.spectrum()
         self.__fin = sysalg.finalize()
-        self.__xsl = xslib()
+        self.__xsl = XSLib()
         self.__arielsim = arielalg.sim_spectrum()
         self.__rt = rtalg.autofill()
         self.__out = [crbstates.atmosSV(fltr) for fltr in fltrs]
@@ -211,7 +211,7 @@ class atmos(dawgie.Algorithm):
                 runtime = self.__rt.sv_as_dict()['status']
 
                 runtime_params = crbcore.CERB_PARAMS(
-                    MCMC_chain_length=runtime['cerberus_steps'],
+                    mcmc_chain_length=runtime['cerberus_steps'],
                     fitCloudParameters=runtime[
                         'cerberus_atmos_fitCloudParameters'
                     ],
@@ -235,8 +235,9 @@ class atmos(dawgie.Algorithm):
             if update:
                 svupdate.append(self.__out[fltrs.index(fltr)])
         self.__out = svupdate
-        if self.__out.__len__() > 0:
+        if self.__out:
             ds.update()
+            pass
         else:
             raise dawgie.NoValidOutputDataError(
                 f'No output created for CERBERUS.{self.name()}'
@@ -246,13 +247,13 @@ class atmos(dawgie.Algorithm):
     def _atmos(self, fin, xsl, spc, runtime_params, index, fltr):
         '''Core code call'''
 
-        MCMC_chain_length = runtime_params.MCMC_chain_length.value()
+        mcmc_chain_length = runtime_params.MCMC_chain_length.value()
         # MCMC_chain_length = 30
         # print('MCMC_chain_length',MCMC_chain_length)
 
         log.info(
             ' calling atmos from cerb-alg-atmos  chain len=%d',
-            MCMC_chain_length,
+            mcmc_chain_length,
         )
         am = crbcore.atmos(
             fin,
@@ -261,7 +262,7 @@ class atmos(dawgie.Algorithm):
             runtime_params,
             self.__out[index],
             fltr,
-            mclen=MCMC_chain_length,
+            mclen=mcmc_chain_length,
             verbose=False,
         )  # singlemod='TEC' after mclen
         return am
@@ -278,7 +279,7 @@ class atmos(dawgie.Algorithm):
 # ---------------- ---------------------------------------------------
 
 
-class results(dawgie.Algorithm):
+class Results(dawgie.Algorithm):
     '''
     Plot the best-fit spectrum, to see how well it fits the data
     Plot the corner plot, to see how well each parameter is constrained
@@ -289,8 +290,8 @@ class results(dawgie.Algorithm):
         self._version_ = crbcore.resultsversion()
         self.__fin = sysalg.finalize()
         self.__anc = ancillaryalg.estimate()
-        self.__xsl = xslib()
-        self.__atm = atmos()
+        self.__xsl = XSLib()
+        self.__atm = Atmos()
         self.__rt = rtalg.autofill()
         self.__out = [crbstates.resSV(fltr) for fltr in fltrs]
         return
@@ -357,7 +358,7 @@ class results(dawgie.Algorithm):
             self._failure(errstr[0])
 
         self.__out = svupdate
-        if self.__out.__len__() > 0:
+        if self.__out:
             ds.update()
         else:
             raise dawgie.NoValidOutputDataError(
@@ -384,7 +385,7 @@ class results(dawgie.Algorithm):
 # ---------------- ---------------------------------------------------
 
 
-class analysis(dawgie.Analyzer):
+class Analysis(dawgie.Analyzer):
     '''analysis ds'''
 
     def __init__(self):
@@ -414,8 +415,8 @@ class analysis(dawgie.Analyzer):
     def traits(self) -> [dawgie.SV_REF, dawgie.V_REF]:
         '''traits ds'''
         return [
-            dawgie.SV_REF(fetch('excalibur.cerberus').task, atmos(), sv)
-            for sv in atmos().state_vectors()
+            dawgie.SV_REF(fetch('excalibur.cerberus').task, Atmos(), sv)
+            for sv in Atmos().state_vectors()
         ]
 
     def state_vectors(self):
@@ -431,15 +432,13 @@ class analysis(dawgie.Analyzer):
         else:
             # determine which filters have results from cerb.atmos (in aspects)
             #  (you have to loop through all targets, since filters vary by target)
-            filtersWithResults = []
+            fwr = []
             for trgt in aspects:
                 for fltr in fltrs:
-                    if (fltr not in filtersWithResults) and (
-                        'cerberus.atmos.' + fltr in aspects[trgt]
-                    ):
+                    if (fltr not in fwr) and ('cerberus.atmos.' + fltr in aspects[trgt]):
                         # print('This filter exists in the cerb.atmos aspect:',fltr,trgt)
-                        filtersWithResults.append(fltr)
-            if not filtersWithResults:
+                        fwr.append(fltr)
+            if not fwr:
                 log.warning(
                     '--< CERBERUS ANALYSIS: NO FILTERS WITH ATMOS DATA!!!>--'
                 )
@@ -448,7 +447,7 @@ class analysis(dawgie.Analyzer):
             # filtersWithResults=['HST-WFC3-IR-G141-SCAN']  # just one filter, while debugging
 
             # only consider filters that have cerb.atmos results loaded in as an aspect
-            for fltr in filtersWithResults:
+            for fltr in fwr:
                 # if 'cerberus.atmos.'+fltr not in aspects[trgt]:
                 #    log.warning('--< CERBERUS ANALYSIS: %s not found IMPOSSIBLE!!!!>--', fltr)
                 # else:
@@ -457,7 +456,7 @@ class analysis(dawgie.Analyzer):
                 if update:
                     svupdate.append(self.__out[fltrs.index(fltr)])
         self.__out = svupdate
-        if self.__out.__len__() > 0:
+        if self.__out:
             aspects.ds().update()
         else:
             raise dawgie.NoValidOutputDataError(

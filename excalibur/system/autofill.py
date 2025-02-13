@@ -1445,8 +1445,8 @@ def fixZeroUncertainties(starInfo, starParam, planetParam):
         if param != 'spTyp':
             for i in range(len(starInfo[param + '_uperr'])):
                 if (
-                    str(starInfo[param + '_uperr'][i]).__len__() > 0
-                    and str(starInfo[param + '_lowerr'][i]).__len__() > 0
+                    str(starInfo[param + '_uperr'][i])
+                    and str(starInfo[param + '_lowerr'][i])
                 ):
                     if (
                         float(starInfo[param + '_uperr'][i]) == 0
@@ -1465,11 +1465,8 @@ def fixZeroUncertainties(starInfo, starParam, planetParam):
             for planet in starInfo['planets']:
                 for i in range(len(starInfo[planet][param + '_uperr'])):
                     if (
-                        str(starInfo[planet][param + '_uperr'][i]).__len__() > 0
-                        and str(
-                            starInfo[planet][param + '_lowerr'][i]
-                        ).__len__()
-                        > 0
+                        str(starInfo[planet][param + '_uperr'][i])
+                        and str(starInfo[planet][param + '_lowerr'][i])
                     ):
                         # print(float(starInfo[planet][param+'_uperr'][i]),
                         #       float(starInfo[planet][param+'_lowerr'][i]))

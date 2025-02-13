@@ -1,11 +1,10 @@
 '''ancillary __init__ ds'''
 
-ignore = False
-
 # -- IMPORTS -- ------------------------------------------------------
 import excalibur.ancillary.bot as ancbot
-
 # ------------- ------------------------------------------------------
+
+ignore = False
 
 
 def analysis(prefix: str, ps_hint: int = 0, runid: int = -1):

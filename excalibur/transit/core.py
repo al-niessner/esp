@@ -7,7 +7,7 @@ import excalibur.data.core as datcore
 import excalibur.system.core as syscore
 import excalibur.util.cerberus as crbutil
 from excalibur.util import elca
-from excalibur.cerberus.plotting import rebinData
+from excalibur.cerberus.plotting import rebin_data
 
 import io
 import copy
@@ -415,7 +415,7 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
 
         singlevisit = False
         svnkey = 'svn' + selftype
-        if tme['data'][p][svnkey].__len__() == 1:
+        if len(tme['data'][p][svnkey]) == 1:
             singlevisit = True
             log.warning('--< Single Visit Observation')
             pass
@@ -721,7 +721,7 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
                             pass
                         elif hstbreath:
                             choice = [int(key) for key in hstbreath]
-                            if (firstorb in choice) and (choice.__len__() > 1):
+                            if (firstorb in choice) and (len(choice) > 1):
                                 choice.pop(choice.index(firstorb))
                                 pass
                             diff = list(abs(np.array(choice) - orb))
@@ -743,7 +743,7 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
                     phnoise /= np.sqrt(scanlen[selv])
                 # DOUBLE SCAN CORRECTION -------------------------------------------------
                 vlincorr = visits[selv]
-                if set(dvisits[selv]).__len__() > 1:
+                if len(set(dvisits[selv])) > 1:
                     vlincorr = dvisits[selv]
                 ordsetds = np.sort(list(set(vlincorr))).astype(int)
                 ootinv = abs(zoot[selv]) > (1e0 + rpors)
@@ -965,7 +965,7 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
 
         # VARIANCE EXCESS FROM LOST GUIDANCE ---------------------------------------------
         kickout = []
-        if out['data'][p]['stdns'].__len__() > 2:
+        if len(out['data'][p]['stdns']) > 2:
             stdns = np.array(out['data'][p]['stdns'])
             vthr = np.nanpercentile(stdns, 66, interpolation='nearest')
             ref = np.nanmean(stdns[stdns <= vthr])
@@ -1162,7 +1162,7 @@ def tplbuild(
                 cloud = [selspec[seldist.index(min(seldist))]]
                 selwave.pop(seldist.index(min(seldist)))
                 selspec.pop(seldist.index(min(seldist)))
-                while (cluster.__len__() < disp.size) and selwave:
+                while (len(cluster) < disp.size) and selwave:
                     seldist = abs(np.array(selwave) - np.median(cluster))
                     if np.min(seldist) < (vdisp / 2e0):
                         seldist = list(seldist)
@@ -1372,7 +1372,7 @@ def hstwhitelight(
                     phase[index], allwhite[index], 'o', label=allfltrs[index]
                 )
                 pass
-            if visits.__len__() > 14:
+            if len(visits) > 14:
                 ncol = 2
             else:
                 ncol = 1
@@ -1531,7 +1531,7 @@ def hstwhitelight(
             if 'WFC3' in ext:
                 # TTV + FIXED OR VARIABLE INC
                 if fixedinc:
-                    _whitedata = pymc.Normal(
+                    _ = pymc.Normal(
                         'whitedata',
                         mu=fiorbital(*nodes),
                         tau=tauwhite,
@@ -1539,7 +1539,7 @@ def hstwhitelight(
                     )
                     pass
                 else:
-                    _whitedata = pymc.Normal(
+                    _ = pymc.Normal(
                         'whitedata',
                         mu=orbital(*nodes),
                         tau=tauwhite,
@@ -1549,7 +1549,7 @@ def hstwhitelight(
                 pass
             else:
                 # NO TTV, FIXED INC
-                _whitedata = pymc.Normal(
+                _ = pymc.Normal(
                     'whitedata',
                     mu=nottvfiorbital(*nodes),
                     tau=tauwhite,
@@ -1575,7 +1575,7 @@ def hstwhitelight(
                 pieces = key.split('[')
                 key = f"{pieces[0]}__{pieces[1].strip(']')}"
             tracekeys = key.split('__')
-            if tracekeys.__len__() > 1:
+            if len(tracekeys) > 1:
                 mctrace[key] = trace[tracekeys[0]][:, int(tracekeys[1])]
                 pass
             else:
@@ -1710,7 +1710,7 @@ def hstwhitelight(
                     postphase[iv], allwhite[iv] / postim[iv], 'o', label=vlabel
                 )
                 pass
-            if visits.__len__() > 14:
+            if len(visits) > 14:
                 ncol = 2
             else:
                 ncol = 1
@@ -1839,7 +1839,7 @@ def whitelight(
                 index = visits.index(v)
                 plt.plot(phase[index], allwhite[index], 'o', label=str(v))
                 pass
-            if visits.__len__() > 14:
+            if len(visits) > 14:
                 ncol = 2
             else:
                 ncol = 1
@@ -2017,7 +2017,7 @@ def whitelight(
             nodes.append(alloslope)
             nodes.append(alloitcp)
             # FIXED ORBITAL SOLUTION
-            _whitedata = pymc.Normal(
+            _ = pymc.Normal(
                 'whitedata',
                 mu=nottvfiorbital(*nodes),
                 tau=tauwhite,
@@ -2042,7 +2042,7 @@ def whitelight(
                 pieces = key.split('[')
                 key = f"{pieces[0]}__{pieces[1].strip(']')}"
             tracekeys = key.split('__')
-            if tracekeys.__len__() > 1:
+            if len(tracekeys) > 1:
                 mctrace[key] = trace[tracekeys[0]][:, int(tracekeys[1])]
                 pass
             else:
@@ -2169,7 +2169,7 @@ def whitelight(
                     postphase[iv], allwhite[iv] / postim[iv], 'o', label=str(v)
                 )
                 pass
-            if visits.__len__() > 14:
+            if len(visits) > 14:
                 ncol = 2
             else:
                 ncol = 1
@@ -2915,7 +2915,7 @@ def spectrum(
                 nodes.append(allvslope)
                 nodes.append(alloslope)
                 nodes.append(alloitcp)
-                _wbdata = pymc.Normal(
+                _ = pymc.Normal(
                     'wbdata',
                     mu=lcmodel(*nodes),
                     tau=np.nanmedian(tauwbdata[valid]),
@@ -2945,7 +2945,7 @@ def spectrum(
                         pieces = key.split('[')
                         key = f"{pieces[0]}__{pieces[1].strip(']')}"
                     tracekeys = key.split('__')
-                    if tracekeys.__len__() > 1:
+                    if len(tracekeys) > 1:
                         mctrace[key] = trace[tracekeys[0]][:, int(tracekeys[1])]
                         mcests[key] = np.nanmedian(mctrace[key])
                         pass
@@ -3464,7 +3464,7 @@ def fastspec(
             nodes.append(allvslope)
             nodes.append(alloslope)
             nodes.append(alloitcp)
-            _wbdata = pymc.Normal(
+            _ = pymc.Normal(
                 'wbdata',
                 mu=lcmodel(*nodes),
                 tau=np.nanmedian(tauwbdata[valid]),
@@ -4474,7 +4474,8 @@ def lightcurve_jwst_niriss(
             # smaors_up = (priors[p]['sma']+3*priors[p]['sma_uperr'])/(priors['R*']-abs(priors['R*_lowerr']))/ssc['Rsun/AU']
             # smaors_lo = (priors[p]['sma']-abs(3*priors[p]['sma_lowerr']))/(priors['R*']+priors['R*_uperr'])/ssc['Rsun/AU']
 
-            _tmid = priors[p]['t0'] + event * priors[p]['period']
+            # GMR: F841 local variable '_tmid' is assigned to but never used
+            # _tmid = priors[p]['t0'] + event * priors[p]['period']
 
             # to do: update duration for eccentric orbits
             # https://arxiv.org/pdf/1001.2010.pdf eq 16
@@ -5576,7 +5577,7 @@ def starspots(fin, wht, spc, out):
         #        print('len check on spc',key,len(spc['data'][planetletter][key]))
 
         # bins the data (for plotting only, not for science analysis)
-        transitdata = rebinData(transitdata)
+        transitdata = rebin_data(transitdata)
 
         # 2) save whatever inputs might be helpful later
         out['data'][planetletter] = {}

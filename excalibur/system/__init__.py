@@ -4,12 +4,11 @@ SYSTEM manages the astrophysical parameters of the target observed
 - FINALIZE parameters using overwriter.py function ppar()
 '''
 
-ignore = False
-
 # -- IMPORTS -- ------------------------------------------------------
 import excalibur.system.bot as sysbot
 
 # ------------- ------------------------------------------------------
+ignore = False
 
 
 def task(

@@ -179,7 +179,7 @@ class timing(dawgie.Algorithm):
             self._failure(message[0])
             pass
         self.__out = svupdate
-        if self.__out.__len__() > 0:
+        if self.__out:
             ds.update()
         else:
             self._raisenoout(self.name())
@@ -278,7 +278,7 @@ class calibration(dawgie.Algorithm):
                 pass
             pass
         self.__out = svupdate
-        if self.__out.__len__() > 0:
+        if self.__out:
             ds.update()
         else:
             self._raisenoout(self.name())

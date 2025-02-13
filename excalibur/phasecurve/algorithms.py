@@ -21,6 +21,8 @@ import excalibur.runtime.binding as rtbind
 import excalibur.system as sys
 import excalibur.system.algorithms as sysalg
 
+from importlib import import_module as fetch  # avoid cyclic-import
+
 log = logging.getLogger(__name__)
 
 # ------------- ------------------------------------------------------

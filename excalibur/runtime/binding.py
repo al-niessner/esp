@@ -10,10 +10,11 @@ from __future__ import unicode_literals
 import pyxb
 import pyxb.binding
 import pyxb.binding.saxer
+# Import bindings for namespaces imported into schema
+import pyxb.binding.datatypes
 import io
 import pyxb.utils.utility
 import pyxb.utils.domutils
-
 # import sys
 import pyxb.utils.sal as _six
 
@@ -31,9 +32,6 @@ if pyxb.__version__ != _PyXBVersion:
 # A holder for module-level binding classes so we can access them from
 # inside class definitions where property names may conflict.
 _module_typeBindings = pyxb.utils.utility.Object()
-
-# Import bindings for namespaces imported into schema
-import pyxb.binding.datatypes
 
 # NOTE: All namespace declarations are reserved within the binding
 Namespace = pyxb.namespace.CreateAbsentNamespace()
@@ -102,6 +100,8 @@ def CreateFromDOM(node, fallback_namespace=None, default_namespace=None):
 
 
 # Atomic simple type: filter_names
+# This is despotic code so we can do this
+# noqa: R0901
 class filter_names(
     pyxb.binding.datatypes.normalizedString,
     pyxb.binding.basis.enumeration_mixin,

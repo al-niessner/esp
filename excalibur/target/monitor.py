@@ -106,7 +106,6 @@ def alert(
     changes.sort()
 
     if changes:
-        # simplest for myriad of possibilities, pylint: disable=bare-except
         try:
             msg = email.message.EmailMessage()
             msg.set_content('\n'.join(changes))
@@ -115,7 +114,8 @@ def alert(
             msg['To'] = 'sdp@jpl.nasa.gov'
             s = smtplib.SMTP('localhost')
             s.send_message(msg)
-        except:
+        # simplest for myriad of possibilities, pylint: disable=bare-except
+        except:  # noqa: E722
             log.exception('Could not send alert email')
         pass
     return changes, kwn, tab

@@ -2,12 +2,11 @@
 ARIEL simulates Ariel observations
 '''
 
-ignore = False
-
 # -- IMPORTS -- ------------------------------------------------------
 import excalibur.ariel.bot as arielbot
-
 # ------------- ------------------------------------------------------
+
+ignore = False
 
 
 def task(

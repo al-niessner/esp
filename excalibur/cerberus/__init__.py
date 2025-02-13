@@ -1,11 +1,10 @@
 '''cerberus __init__ ds'''
 
-ignore = False
-
 # -- IMPORTS -- ------------------------------------------------------
 import excalibur.cerberus.bot as crbbot
-
 # ------------- ------------------------------------------------------
+
+ignore = False
 
 
 def analysis(prefix: str, ps_hint: int = 0, runid: int = -1):

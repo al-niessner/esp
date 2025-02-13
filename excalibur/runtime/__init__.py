@@ -1,11 +1,10 @@
 '''turn runtime operational parameters on disk into a state vector'''
 
-ignore = False
-
 # -- IMPORTS -- ------------------------------------------------------
 import excalibur.runtime.bot
 
 # ------------- ------------------------------------------------------
+ignore = False
 
 
 def analysis(prefix: str, ps_hint: int = 0, runid: int = -1):

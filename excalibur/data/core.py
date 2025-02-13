@@ -1831,7 +1831,7 @@ def isolate(
     eachprofile = np.nansum(flooded, axis=axis)
     eachpixels = np.arange(eachprofile.size)
     loc = eachpixels[eachprofile > 0]
-    if loc.__len__() > 0:
+    if loc:
         diffloc = [0]
         diffloc.extend(np.diff(loc))
         minlocs = [np.nanmin(loc)]
@@ -2652,7 +2652,7 @@ def starecal(
         '>-- IGNORED: %s / %s', str(np.nansum(allignore)), str(len(allignore))
     )
     for index in allindex:
-        if allculprits[index].__len__() > 0:
+        if allculprits[index]:
             log.warning('>-- %s: %s', str(index), str(allculprits[index]))
             pass
         pass
@@ -4745,9 +4745,7 @@ def spitzercal(clc, out):
 def aper_phot(img):
     '''aper_phot ds'''
     # flux weighted centroid
-    yc, xc = np.unravel_index(
-        np.argmax(img, axis=None), img.shape
-    )  # pylint: disable=unbalanced-tuple-unpacking
+    yc, xc = np.unravel_index(np.argmax(img, axis=None), img.shape)  # noqa: W0632
     # Geoff: I don't know why it thinks this is a problem. mesh_box returns 2 things
     xv, yv = mesh_box([xc, yc], 5)
     wx = np.sum(np.unique(xv) * img[yv, xv].sum(0)) / np.sum(img[yv, xv].sum(0))
@@ -4933,16 +4931,16 @@ def jwstcal_NIRISS(fin, clc, tim, tid, flttype, out, verbose=False):
     #   to satisfy used-before-assignment error.
     #  if this part here is removed, then those three lines above can be removed too
     if verbose:
-        _x = fin
-        _x = tim
-        _x = tid
-        _x = flttype
-        _x = header0
-        _x = ftime
-        _x = exptime
-        _x = nframe
-        _x = dtframe
-        _x = ngroups
+        _ = fin
+        _ = tim
+        _ = tid
+        _ = flttype
+        _ = header0
+        _ = ftime
+        _ = exptime
+        _ = nframe
+        _ = dtframe
+        _ = ngroups
         pass
     # DELETE above when real use
     return calibrated

@@ -1,11 +1,10 @@
 '''eclipse __init__ ds'''
 
-ignore = False
-
 # -- IMPORTS -- ------------------------------------------------------
 import excalibur.eclipse.bot as eclbot
 
 # ------------- ------------------------------------------------------
+ignore = False
 
 
 def task(

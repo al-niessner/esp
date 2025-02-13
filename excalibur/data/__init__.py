@@ -1,12 +1,13 @@
 '''data __init__ ds'''
 
-ignore = False
-
 # -- IMPORTS -- ------------------------------------------------------
 import excalibur.data.bot as datbot
 
-
 # ------------- ------------------------------------------------------
+
+ignore = False
+
+
 def task(
     prefix: str, ps_hint: int = 0, runid: int = -1, target: str = '__none__'
 ):

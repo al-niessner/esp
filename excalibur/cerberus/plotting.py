@@ -17,7 +17,7 @@ ssc = ssconstants(mks=True)
 
 
 # --------------------------------------------------------------------
-def rebinData(transitdata, binsize=4):
+def rebin_data(transitdata, binsize=4):
     '''
     rebin a spectrum (blue points calculated from grey ones)
     set uncertainty to median/sqrt(N); ignore correlated/systematic errors
@@ -634,7 +634,7 @@ def plot_corner(
 
 
 # --------------------------------------------------------------------
-def plot_vsPrior(
+def plot_vs_prior(
     allkeys,
     alltraces,
     profiledtraces,
@@ -796,7 +796,7 @@ def plot_vsPrior(
 
 
 # --------------------------------------------------------------------
-def plot_walkerEvolution(
+def plot_walker_evolution(
     allkeys,
     alltraces,
     profiledtraces,
@@ -944,7 +944,7 @@ def plot_walkerEvolution(
 
 
 # --------------------------------------------------------------------
-def plot_fitsVStruths(
+def plot_fits_vs_truths(
     truth_values,
     fit_values,
     fit_errors,
@@ -1176,7 +1176,7 @@ def plot_fitsVStruths(
 
 
 # --------------------------------------------------------------------
-def plot_fitUncertainties(
+def plot_fit_uncertainties(
     fit_values, fit_errors, prior_ranges, filt, saveDir, savetodisk=False
 ):
     '''
@@ -1348,7 +1348,7 @@ def plot_fitUncertainties(
 
 
 # --------------------------------------------------------------------
-def plot_massVSmetals(
+def plot_mass_vs_metals(
     masses,
     stellarFEHs,
     truth_values,

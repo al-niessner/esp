@@ -1,11 +1,10 @@
 '''phasecurve __init__ ds'''
 
-ignore = False
-
 # -- IMPORTS -- ------------------------------------------------------
 import excalibur.phasecurve.bot as phcbot
 
 # ------------- ------------------------------------------------------
+ignore = False
 
 
 def task(

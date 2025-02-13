@@ -1,11 +1,10 @@
 '''First clutch of the pipeline, generates target list and data scraping'''
 
-ignore = False
-
 # -- IMPORTS -- ------------------------------------------------------
 import excalibur.target.bot as trgbot
 
 # ------------- ------------------------------------------------------
+ignore = False
 
 
 def analysis(prefix: str, ps_hint: int = 0, runid: int = -1):

@@ -1,8 +1,8 @@
 '''classifier __init__ ds'''
 
-DAWGIE_IGNORE = True
-
 import excalibur.classifier.bot as clsbot
+
+DAWGIE_IGNORE = True
 
 
 def analysis(prefix: str, ps_hint: int = 0, runid: int = -1):

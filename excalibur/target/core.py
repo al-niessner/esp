@@ -96,7 +96,7 @@ def scrapeids(ds: dawgie.Dataset, out, web, genIDs=True):
     '''
     targets = trgedit.targetlist.__doc__
     targets = targets.split('\n')
-    targets = [t.strip() for t in targets if t.replace(' ', '').__len__() > 0]
+    targets = [t.strip() for t in targets if t.replace(' ', '')]
     tn = os.environ.get('TARGET_NAME', None)
     if tn is not None and tn != '':
         found_target_list = None

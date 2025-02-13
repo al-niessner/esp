@@ -1,11 +1,10 @@
 '''transmission spectrum task'''
 
-ignore = False
-
 # -- IMPORTS -- ------------------------------------------------------
 import excalibur.transit.bot as trnbot
 
 # ------------- ------------------------------------------------------
+ignore = False
 
 
 def analysis(prefix: str, ps_hint: int = 0, runid: int = -1):

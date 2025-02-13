@@ -62,10 +62,10 @@ class autofill(dawgie.Algorithm):
                 'allowed_filter_names',
             ),
             dawgie.V_REF(
-                excalibur.runtime.task, self, self.__status, 'isValidTarget'
+                fetch('excalibur.runtime').task, self, self.__status, 'isValidTarget'
             ),
             dawgie.V_REF(
-                excalibur.runtime.task, self, self.__status, 'runTarget'
+                fetch('excalibur.runtime').task, self, self.__status, 'runTarget'
             ),
         ]
 
