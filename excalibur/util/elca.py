@@ -1002,9 +1002,7 @@ class glc_fitter(lc_fitter):
 
                 print(f"Fitting individual light curve {i+1}/{nobs}")
                 try:
-                    mybounds = dict(
-                        **self.local_bounds[i], **self.global_bounds
-                    )
+                    mybounds = {**self.local_bounds[i], **self.global_bounds}
                 except TypeError:
                     mybounds = {}
                     for k in self.local_bounds[i]:
