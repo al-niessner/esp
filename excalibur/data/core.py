@@ -4748,6 +4748,7 @@ def aper_phot(img):
     yc, xc = np.unravel_index(
         np.argmax(img, axis=None), img.shape
     )  # pylint: disable=unbalanced-tuple-unpacking
+    # Geoff: I don't know why it thinks this is a problem. mesh_box returns 2 things
     xv, yv = mesh_box([xc, yc], 5)
     wx = np.sum(np.unique(xv) * img[yv, xv].sum(0)) / np.sum(img[yv, xv].sum(0))
     wy = np.sum(np.unique(yv) * img[yv, xv].sum(1)) / np.sum(img[yv, xv].sum(1))
