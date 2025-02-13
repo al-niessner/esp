@@ -15,13 +15,13 @@ from importlib import import_module as fetch  # avoid cyclic-import
 log = logging.getLogger(__name__)
 
 
-class autofill(dawgie.Algorithm):
+class Autofill(dawgie.Algorithm):
     '''Breaks the levers and knobs global table to target specific'''
 
     def __init__(self, table: {str: {}} = None, tn: str = None):
         '''init autofill'''
         self._version_ = dawgie.VERSION(1, 0, 0)
-        self.__parent = create()
+        self.__parent = Create()
         self.__status = states.StatusSV()
         self.__table = table
         self.__tn = tn
@@ -104,7 +104,7 @@ class autofill(dawgie.Algorithm):
     pass
 
 
-class create(dawgie.Analyzer):
+class Create(dawgie.Analyzer):
     '''Read the configuration file then turn it into state vectors'''
 
     def __init__(self):
@@ -139,12 +139,12 @@ class create(dawgie.Analyzer):
             # specific state vectors where the information becomes highly
             # condensed and processed. To do this, need to act like dawgie
             # just a little bit and access some hidden information.
-
+            # pylint: disable=protected-access because dawgie requires it
             pbot = aspects.ds()._bot()
             with multiprocessing.Pool(processes=60) as pool:
                 log.info('using the pool to run in parallel')
                 pool.map(
-                    create._do,
+                    Create._do,
                     [
                         (
                             (pbot._name(), 1, pbot._runid(), tn),
@@ -153,7 +153,7 @@ class create(dawgie.Analyzer):
                         for tn in dawgie.db.targets()
                     ],
                 )
-
+            # pylint: enable=prtected-access turn it back on for rest of code
         except FileNotFoundError as e:
             log.exception(e)
             raise dawgie.AbortAEError(
