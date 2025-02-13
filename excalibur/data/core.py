@@ -2278,7 +2278,7 @@ def starecal(
                             * float(fits.header['DELTATIM'])
                         )
                         pass
-                    elif eps and not 'DELTATIM' in fits.header:
+                    elif eps and 'DELTATIM' not in fits.header:
                         frame.append(fitsdata * np.nan)
                         fmin.append(np.nan)
                         fmax.append(np.nan)
