@@ -1567,7 +1567,7 @@ def hstwhitelight(
             )
             mcpost = pymc.stats.summary(
                 trace
-            )  # dynamic attr so, pylint: disable=no-member
+            )  
             pass
         mctrace = {}
         for key in mcpost['mean'].keys():
@@ -2034,7 +2034,7 @@ def whitelight(
             )
             mcpost = pymc.stats.summary(
                 trace
-            )  # dynamic attr so, pylint: disable=no-member
+            )  
             pass
         mctrace = {}
         for key in mcpost['mean'].keys():
@@ -2931,7 +2931,7 @@ def spectrum(
                 )
                 mcpost = pymc.stats.summary(
                     trace
-                )  # dynamic attr so, pylint: disable=no-member
+                )  
                 pass
             # Exclude first channel with Uniform prior
             if not startflag:
@@ -3527,7 +3527,7 @@ def fastspec(
 class pc_fitter:
     '''pc_fitter'''
 
-    # work requires these attributes so, pylint: disable=too-many-instance-attributes
+    
     def __init__(
         self,
         time,

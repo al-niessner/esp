@@ -133,7 +133,7 @@ class create(dawgie.Analyzer):
             # specific state vectors where the information becomes highly
             # condensed and processed. To do this, need to act like dawgie
             # just a little bit and access some hidden information.
-            # need under the hood for this, pylint: disable=protected-access
+            
             pbot = aspects.ds()._bot()
             with multiprocessing.Pool(processes=60) as pool:
                 log.info('using the pool to run in parallel')
@@ -147,7 +147,7 @@ class create(dawgie.Analyzer):
                         for tn in dawgie.db.targets()
                     ],
                 )
-            # done under the hood, pylint: enable=protected-access
+            
         except FileNotFoundError as e:
             log.exception(e)
             raise dawgie.AbortAEError(

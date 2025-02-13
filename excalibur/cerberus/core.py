@@ -1182,7 +1182,7 @@ def atmos(
                         compute_convergence_checks=False,
                         progressbar=verbose,
                     )
-                    # pylint: disable=no-member
+                    
                     stats_summary = pymc.stats.summary(trace)
 
                 # N_TEC = len(trace.posterior.TEC_dim_0)

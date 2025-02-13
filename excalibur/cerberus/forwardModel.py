@@ -14,7 +14,6 @@ from pytensor import tensor
 
 import excalibur
 
-# pylint: disable=import-self
 import excalibur.cerberus.forwardModel  # is this needed for the context updater?
 import excalibur.system.core as syscore
 from excalibur.util.cerberus import crbce, getmmw

@@ -116,7 +116,7 @@ class XSLib(dawgie.Algorithm):
 class Atmos(dawgie.Algorithm):
     '''Atmospheric retrievial'''
 
-    # need lots of state info; pylint: disable=too-many-instance-attributes
+    
     def __init__(self):
         '''__init__ ds'''
         self._version_ = crbcore.atmosversion()

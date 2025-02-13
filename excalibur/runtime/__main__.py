@@ -11,7 +11,7 @@ if 'EXCALIBUR_PRIVATE_PIPELINE_INDEPENDENT' in os.environ:
     # need to fake some dawgie stuff so that can run the unit independent of any
     # pipeline since it is the data in the configuration file that matters not any
     # data or state of the pipeline itself. There going to
-    # pylint: disable=missing-class-docstring,missing-function-docstring
+    
     class FakeDawgie:
         def __init__(self):
             self.__name = 'runtime'
@@ -37,7 +37,7 @@ if 'EXCALIBUR_PRIVATE_PIPELINE_INDEPENDENT' in os.environ:
     def targets():
         return ['a', 'b', 'c', 'GJ 3193', 'GJ 3193 (taurex sim @TS)']
 
-    # pylint: enable=missing-class-docstring,missing-function-docstring
+    
     setattr(dawgie.db, 'connect', connect)
     setattr(dawgie.db, 'targets', targets)
     test = excalibur.runtime.algorithms.create()
