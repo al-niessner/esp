@@ -39,7 +39,7 @@ if 'EXCALIBUR_PRIVATE_PIPELINE_INDEPENDENT' in os.environ:
 
     setattr(dawgie.db, 'connect', connect)
     setattr(dawgie.db, 'targets', targets)
-    test = excalibur.runtime.algorithms.create()
+    test = excalibur.runtime.algorithms.Create()
     test.run(FakeDawgie())
 else:
     fep = os.environ.get('FE_PORT', None)

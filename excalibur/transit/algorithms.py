@@ -46,7 +46,7 @@ class normalization(dawgie.Algorithm):
         self._type = 'transit'
         self.__cal = datalg.calibration()
         self.__tme = datalg.timing()
-        self.__rt = rtalg.autofill()
+        self.__rt = rtalg.Autofill()
         self.__fin = sysalg.finalize()
         self.__out = [trnstates.NormSV(fltr) for fltr in fltrs]
         return
@@ -164,7 +164,7 @@ class whitelight(dawgie.Algorithm):
         self._type = 'transit'
         self._nrm = nrm
         self.__fin = sysalg.finalize()
-        self.__rt = rtalg.autofill()
+        self.__rt = rtalg.Autofill()
         self.__out = [trnstates.WhiteLightSV(fltr) for fltr in fltrs]
         self.__out.append(trnstates.WhiteLightSV('HST'))
         return
@@ -344,7 +344,7 @@ class spectrum(dawgie.Algorithm):
         self._type = 'transit'
         self.__fin = sysalg.finalize()
         self._nrm = nrm
-        self.__rt = rtalg.autofill()
+        self.__rt = rtalg.Autofill()
         self._wht = wht
         self.__out = [trnstates.SpectrumSV(fltr) for fltr in fltrs]
         if sum('HST' in fltr for fltr in fltrs) > 1:
@@ -465,7 +465,7 @@ class starspots(dawgie.Algorithm):
         self.__fin = sysalg.finalize()
         self._wht = wht
         self._spc = spc
-        self.__rt = rtalg.autofill()
+        self.__rt = rtalg.Autofill()
         self.__out = [trnstates.StarspotSV(fltr) for fltr in fltrs]
         return
 

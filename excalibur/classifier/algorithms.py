@@ -342,7 +342,7 @@ class flags(dawgie.Algorithm):
     def __init__(self):
         '''__init__ ds'''
         self._version_ = dawgie.VERSION(1, 0, 0)
-        self.__rt = rtalg.autofill()
+        self.__rt = rtalg.Autofill()
         self.__out = [clsstates.Flags_SV('transit-' + ext) for ext in fltrs]
         self.__out.extend(
             [clsstates.Flags_SV('eclipse-' + ext) for ext in fltrs]

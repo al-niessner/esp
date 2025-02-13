@@ -9,7 +9,7 @@ class AnalysisTeam(dawgie.Analysis):
 
     def list(self) -> [dawgie.Analyzer]:
         '''list of analysis to be done'''
-        return [algorithms.create()]
+        return [algorithms.Create()]
 
     pass
 
@@ -27,6 +27,6 @@ class TaskTeam(dawgie.Task):
 
     def list(self) -> [dawgie.Task]:
         '''list of tasks to perform'''
-        return [algorithms.autofill(table=self.__table, tn=self.__tn)]
+        return [algorithms.Autofill(table=self.__table, tn=self.__tn)]
 
     pass
