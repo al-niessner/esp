@@ -10,11 +10,13 @@ from __future__ import unicode_literals
 import pyxb
 import pyxb.binding
 import pyxb.binding.saxer
+
 # Import bindings for namespaces imported into schema
 import pyxb.binding.datatypes
 import io
 import pyxb.utils.utility
 import pyxb.utils.domutils
+
 # import sys
 import pyxb.utils.sal as _six
 
@@ -68,7 +70,7 @@ def CreateFromDocument(
     """
 
     # GMR: Divine rights apply
-    if pyxb.XMLStyle_saxer != pyxb._XMLStyle:  
+    if pyxb.XMLStyle_saxer != pyxb._XMLStyle:
         dom = pyxb.utils.domutils.StringToDOM(xml_text)
         return CreateFromDOM(dom.documentElement)
     if fallback_namespace is None:
@@ -80,7 +82,7 @@ def CreateFromDocument(
     )
     handler = saxer.getContentHandler()
     xmld = xml_text
-    if isinstance(xmld, _six.text_type):  
+    if isinstance(xmld, _six.text_type):
         xmld = xmld.encode(pyxb._InputEncoding)
     saxer.parse(io.BytesIO(xmld))
     instance = handler.rootObject()
@@ -105,7 +107,7 @@ def CreateFromDOM(node, fallback_namespace=None, default_namespace=None):
 class filter_names(
     pyxb.binding.datatypes.normalizedString,
     pyxb.binding.basis.enumeration_mixin,
-):  
+):
     """An atomic simple type."""
 
     _ExpandedName = pyxb.namespace.ExpandedName(Namespace, 'filter_names')

@@ -179,7 +179,6 @@ def time_bin(time, flux, dt=1.0 / (60 * 24)):
 class lc_fitter:
     """Fit a transit data to a light curve model"""
 
-    
     def __init__(
         self,
         time,
@@ -433,7 +432,7 @@ class lc_fitter:
 
         def loglike_phasecurve(pars):
             '''lc2min_phasecurve ds'''
-            
+
             for i, _ in enumerate(pars):
                 self.prior[freekeys[i]] = pars[i]
             lightcurve = phasecurve(self.time, self.prior)
@@ -481,7 +480,7 @@ class lc_fitter:
             )
 
         def noop(*args, **kwargs):
-            
+
             pass
 
         if self.verbose is True:
@@ -527,13 +526,11 @@ class lc_fitter:
         rprs2 = self.parameters['rprs'] ** 2
         rprs2err = 2 * self.parameters['rprs'] * self.errors['rprs']
 
-        
         lclabel1 = r"$R^{2}_{p}/R^{2}_{s}$ = %s $\pm$ %s" % (
             str(round_to_2(rprs2, rprs2err)),
             str(round_to_2(rprs2err)),
         )
 
-        
         lclabel2 = r"$T_{mid}$ = %s $\pm$ %s BJD$_{TDB}$" % (
             str(
                 round_to_2(self.parameters['tmid'], self.errors.get('tmid', 0))
@@ -954,7 +951,6 @@ class glc_fitter(lc_fitter):
 
     ns_type = 'ultranest'
 
-    
     def __init__(
         self,
         input_data,
@@ -1278,7 +1274,6 @@ class glc_fitter(lc_fitter):
         plt.tight_layout()
         return fig
 
-    
     def plot_bestfit(
         self,
         title="",
@@ -1309,13 +1304,11 @@ class glc_fitter(lc_fitter):
                 * self.lc_data[0]['errors']['rprs']
             )
 
-        
         lclabel1 = r"$R^{2}_{p}/R^{2}_{s}$ = %s $\pm$ %s" % (
             str(round_to_2(rprs2, rprs2err)),
             str(round_to_2(rprs2err)),
         )
 
-        
         lclabel2 = r"$T_{mid}$ = %s $\pm$ %s BJD$_{TDB}$" % (
             str(
                 round_to_2(self.parameters['tmid'], self.errors.get('tmid', 0))
@@ -1432,7 +1425,7 @@ class glc_fitter(lc_fitter):
             )
 
         # create binned plot for all the data
-        
+
         for k in alldata:
             alldata[k] = np.array(alldata[k])
 
@@ -1752,7 +1745,7 @@ def corner(
             # Check for parameters that never change.
             m = np.array([e[0] == e[1] for e in plot_range], dtype=bool)
             if np.any(m):
-                
+
                 raise ValueError(
                     (
                         "It looks like the parameter(s) in "
@@ -1766,17 +1759,17 @@ def corner(
         # Also make sure it's a normal list.
         plot_range = list(plot_range)
         # GMR: No comment
-        
+
         for i, _ in enumerate(plot_range):
             try:
-                
+
                 emin, emax = plot_range[i]
             except TypeError:
                 q = [0.5 - 0.5 * plot_range[i], 0.5 + 0.5 * plot_range[i]]
                 plot_range[i] = quantile(xs[i], q, weights=weights)
                 pass
             pass
-        
+
         pass
 
     if len(plot_range) != xs.shape[0]:
@@ -1822,7 +1815,7 @@ def corner(
         # GMR: This is not our code. I dont know what this thing is doing here
         # I m not gonna sweat this bare except
         except:  # noqa: E722
-            
+
             raise ValueError(
                 "Provided figure has {0} axes, but data has "
                 "dimensions K={1}".format(len(fig.axes), K)
@@ -2128,7 +2121,7 @@ def hist2d(
                 vmin=data_kwargs['vmin'],
                 vmax=data_kwargs['vmax'],
             )
-        
+
         except Exception as err:
             print(err)
             print("contour plotting failed")
@@ -2426,7 +2419,7 @@ def planet_orbit(
     ww=0,
 ):
     '''planet_orbit ds'''
-    
+
     inclination = inclination * np.pi / 180.0
     periastron = periastron * np.pi / 180.0
     ww = ww * np.pi / 180.0
@@ -2547,7 +2540,7 @@ def integral_r_claret(limb_darkening_coefficients, r):
 
 def num_claret(r, limb_darkening_coefficients, rprs, z):
     '''num_claret ds'''
-    
+
     a1, a2, a3, a4 = limb_darkening_coefficients
     rsq = r * r
     mu44 = 1.0 - rsq
@@ -2583,7 +2576,7 @@ def integral_r_zero(_, r):
 
 def num_zero(r, _, rprs, z):
     '''num_zero ds'''
-    
+
     rsq = r * r
     return r * np.arccos(
         np.minimum((-(rprs**2) + z * z + rsq) / (2.0 * z * r), 1.0)
@@ -2609,7 +2602,7 @@ def integral_r_linear(limb_darkening_coefficients, r):
 
 def num_linear(r, limb_darkening_coefficients, rprs, z):
     '''num_linear ds'''
-    
+
     a1 = limb_darkening_coefficients[0]
     rsq = r * r
     return (
@@ -2645,7 +2638,7 @@ def integral_r_quad(limb_darkening_coefficients, r):
 
 def num_quad(r, limb_darkening_coefficients, rprs, z):
     '''num_quad ds'''
-    
+
     a1, a2 = limb_darkening_coefficients[:2]
     rsq = r * r
     cc = 1.0 - np.sqrt(1.0 - rsq)
@@ -2682,7 +2675,7 @@ def integral_r_sqrt(limb_darkening_coefficients, r):
 
 def num_sqrt(r, limb_darkening_coefficients, rprs, z):
     '''num_sqrt ds'''
-    
+
     a1, a2 = limb_darkening_coefficients[:2]
     rsq = r * r
     mu = np.sqrt(1.0 - rsq)
@@ -2734,7 +2727,7 @@ def integral_plus_core(
     method, limb_darkening_coefficients, rprs, z, ww1, ww2, precision=3
 ):
     '''integral_plus_core ds'''
-    
+
     if len(z) == 0:
         return z
     rr1 = z * np.cos(ww1) + np.sqrt(
@@ -2762,7 +2755,7 @@ def integral_minus_core(
     method, limb_darkening_coefficients, rprs, z, ww1, ww2, precision=3
 ):
     '''integral_minus_core ds'''
-    
+
     if len(z) == 0:
         return z
     rr1 = z * np.cos(ww1) - np.sqrt(
@@ -2794,7 +2787,7 @@ def transit_flux_drop(
     precision=3,
 ):
     '''transit_flux_drop ds'''
-    
+
     z_over_rs = np.where(z_over_rs < 0, 1.0 + 100.0 * rp_over_rs, z_over_rs)
     z_over_rs = np.maximum(z_over_rs, 10 ** (-10))
 

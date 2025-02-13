@@ -114,7 +114,7 @@ def alert(
             msg['To'] = 'sdp@jpl.nasa.gov'
             s = smtplib.SMTP('localhost')
             s.send_message(msg)
-        
+
         except:  # noqa: E722
             log.exception('Could not send alert email')
         pass

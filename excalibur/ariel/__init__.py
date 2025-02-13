@@ -4,6 +4,7 @@ ARIEL simulates Ariel observations
 
 # -- IMPORTS -- ------------------------------------------------------
 import excalibur.ariel.bot as arielbot
+
 # ------------- ------------------------------------------------------
 
 ignore = False

@@ -127,7 +127,7 @@ def scrapeids(ds: dawgie.Dataset, out, web, genIDs=True):
             out['starID'][parsedstr[0]]['aliases'].extend(aliaslist)
             pass
         if genIDs:
-            
+
             dawgie.db.connect(
                 fetch('excalibur.target').algorithms.create(),
                 ds._bot(),

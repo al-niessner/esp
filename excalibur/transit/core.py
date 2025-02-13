@@ -1565,9 +1565,7 @@ def hstwhitelight(
                 step=pymc.Metropolis(),
                 progressbar=verbose,
             )
-            mcpost = pymc.stats.summary(
-                trace
-            )  
+            mcpost = pymc.stats.summary(trace)
             pass
         mctrace = {}
         for key in mcpost['mean'].keys():
@@ -2032,9 +2030,7 @@ def whitelight(
                 step=pymc.Metropolis(),
                 progressbar=verbose,
             )
-            mcpost = pymc.stats.summary(
-                trace
-            )  
+            mcpost = pymc.stats.summary(trace)
             pass
         mctrace = {}
         for key in mcpost['mean'].keys():
@@ -2929,9 +2925,7 @@ def spectrum(
                     step=pymc.Metropolis(),
                     progressbar=verbose,
                 )
-                mcpost = pymc.stats.summary(
-                    trace
-                )  
+                mcpost = pymc.stats.summary(trace)
                 pass
             # Exclude first channel with Uniform prior
             if not startflag:
@@ -3527,7 +3521,6 @@ def fastspec(
 class pc_fitter:
     '''pc_fitter'''
 
-    
     def __init__(
         self,
         time,

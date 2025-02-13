@@ -811,7 +811,9 @@ def atmos(
                         fixed_params['HScale'] = input_data['model_params'][
                             'HScale'
                         ]
-                        fixed_params['HLoc'] = input_data['model_params']['HLoc']
+                        fixed_params['HLoc'] = input_data['model_params'][
+                            'HLoc'
+                        ]
                         fixed_params['HThick'] = input_data['model_params'][
                             'HThick'
                         ]
@@ -1026,7 +1028,10 @@ def atmos(
 
                     # new cleaned-up version of adding on the prior bounds as pymc nodes
                     nodes, prior_ranges = add_priors(
-                        prior_range_table, runtime_params, model, modparlbl[model]
+                        prior_range_table,
+                        runtime_params,
+                        model,
+                        modparlbl[model],
                     )
 
                     # before calling MCMC, save the fixed-parameter info in the context
@@ -1182,7 +1187,7 @@ def atmos(
                         compute_convergence_checks=False,
                         progressbar=verbose,
                     )
-                    
+
                     stats_summary = pymc.stats.summary(trace)
 
                 # N_TEC = len(trace.posterior.TEC_dim_0)
@@ -1927,7 +1932,9 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                     1  # arbitrary initialization for the random seed
                 )
                 for char in trgt + ' ' + p:
-                    int_from_target = (123 * int_from_target + ord(char)) % 100000
+                    int_from_target = (
+                        123 * int_from_target + ord(char)
+                    ) % 100000
                 np.random.seed(int_from_target)
 
                 chi2best = chi2model
@@ -2038,7 +2045,9 @@ def results(trgt, filt, fin, anc, xsl, atm, out, verbose=False):
                         )
 
                 # _______________MAKE SOME PLOTS________________
-                save_dir = os.path.join(excalibur.context['data_dir'], 'bryden/')
+                save_dir = os.path.join(
+                    excalibur.context['data_dir'], 'bryden/'
+                )
 
                 # _______________BEST-FIT SPECTRUM PLOT________________
                 transitdata = rebin_data(transitdata)
@@ -2383,9 +2392,9 @@ def analysis(aspects, filt, out, verbose=False):
                                 ['T', '[X/H]', '[C/O]', '[N/O]', 'Mp'],
                             ):
                                 if trueparam in truth_params:
-                                    true_value = atmos_fit['data'][planet_letter][
-                                        'TRUTH_MODELPARAMS'
-                                    ][trueparam]
+                                    true_value = atmos_fit['data'][
+                                        planet_letter
+                                    ]['TRUTH_MODELPARAMS'][trueparam]
                                     # (metallicity and C/O do not have to be converted to log-solar)
                                     # if trueparam=='metallicity':
                                     #    true_value = np.log10(true_value)
@@ -2424,7 +2433,9 @@ def analysis(aspects, filt, out, verbose=False):
                                             )
                                             print(
                                                 'atmosFit',
-                                                atmos_fit['data'][planet_letter],
+                                                atmos_fit['data'][
+                                                    planet_letter
+                                                ],
                                             )
                                         if (
                                             trueparam == 'C/O'

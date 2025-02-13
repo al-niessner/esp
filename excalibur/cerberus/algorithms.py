@@ -116,7 +116,6 @@ class XSLib(dawgie.Algorithm):
 class Atmos(dawgie.Algorithm):
     '''Atmospheric retrievial'''
 
-    
     def __init__(self):
         '''__init__ ds'''
         self._version_ = crbcore.atmosversion()
@@ -435,7 +434,9 @@ class Analysis(dawgie.Analyzer):
             fwr = []
             for trgt in aspects:
                 for fltr in fltrs:
-                    if (fltr not in fwr) and ('cerberus.atmos.' + fltr in aspects[trgt]):
+                    if (fltr not in fwr) and (
+                        'cerberus.atmos.' + fltr in aspects[trgt]
+                    ):
                         # print('This filter exists in the cerb.atmos aspect:',fltr,trgt)
                         fwr.append(fltr)
             if not fwr:

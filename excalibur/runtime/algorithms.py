@@ -62,10 +62,16 @@ class autofill(dawgie.Algorithm):
                 'allowed_filter_names',
             ),
             dawgie.V_REF(
-                fetch('excalibur.runtime').task, self, self.__status, 'isValidTarget'
+                fetch('excalibur.runtime').task,
+                self,
+                self.__status,
+                'isValidTarget',
             ),
             dawgie.V_REF(
-                fetch('excalibur.runtime').task, self, self.__status, 'runTarget'
+                fetch('excalibur.runtime').task,
+                self,
+                self.__status,
+                'runTarget',
             ),
         ]
 
@@ -133,7 +139,7 @@ class create(dawgie.Analyzer):
             # specific state vectors where the information becomes highly
             # condensed and processed. To do this, need to act like dawgie
             # just a little bit and access some hidden information.
-            
+
             pbot = aspects.ds()._bot()
             with multiprocessing.Pool(processes=60) as pool:
                 log.info('using the pool to run in parallel')
@@ -147,7 +153,7 @@ class create(dawgie.Analyzer):
                         for tn in dawgie.db.targets()
                     ],
                 )
-            
+
         except FileNotFoundError as e:
             log.exception(e)
             raise dawgie.AbortAEError(
