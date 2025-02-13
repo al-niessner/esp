@@ -6,15 +6,15 @@ import scipy.constants as cst
 from scipy.interpolate import interp1d as itp
 import logging
 
-# import pytensor
 # import sys
-from pytensor import tensor
-
+# import pytensor
 # from pytensor.ifelse import ifelse
+from pytensor import tensor
 
 import excalibur
 
-import excalibur.cerberus.forwardModel  # is this needed for the context updater?
+# 2/13/25 Geoff: this line has been here for a while. maybe not required anymore? We'll see...
+# import excalibur.cerberus.forwardModel  # is this needed for the context updater?
 import excalibur.system.core as syscore
 from excalibur.util.cerberus import crbce, getmmw
 
