@@ -4378,9 +4378,12 @@ def stiscal_unified(
                     x0 = (1.0 / 4.72, -1000, 1.0)
                 else:
                     x0 = (1.0 / 2.72, -1000, 1.0)
-                result = opt.minimize(chisqfunc, x0,
-                                      args=(g_wav, bin_spec_norm, cond_mid, f, mid_ang),
-                                      method='Nelder-Mead')
+                result = opt.minimize(
+                    chisqfunc,
+                    x0,
+                    args=(g_wav, bin_spec_norm, cond_mid, f, mid_ang),
+                    method='Nelder-Mead',
+                )
                 d_frc = result.x[0]
                 d = 1.0 / result.x[0]
                 dispersion_list.append(d)
