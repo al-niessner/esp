@@ -80,7 +80,7 @@ def tap_query(base_url, query):
         if k != "format":
             uri_full += f"{k} {query[k]} "
         pass
-    uri_full = uri_full[:-1] + f"&format={query.get('format','csv')}"
+    uri_full = uri_full[:-1] + f"&format={query.get('format', 'csv')}"
     uri_full = uri_full.replace(' ', '+')
     response = None
     with urltrick(uri_full) as test:

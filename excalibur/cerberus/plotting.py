@@ -276,14 +276,14 @@ def plot_spectrumfit(
         xlims[1] + xoffset,
         ylims[0] + (ylims[1] - ylims[0]) * 0.12,
         '$\\chi^2_{red}$(model/flat)='
-        + f"{(chi2modelProfiled_red/chi2flat_red):5.2f}",
+        + f"{(chi2modelProfiled_red / chi2flat_red):5.2f}",
         fontsize=12,
     )
     plt.text(
         xlims[1] + xoffset,
         ylims[0] + (ylims[1] - ylims[0]) * 0.05,
         '$\\Delta\\chi^2$(flat-model)='
-        + f"{(chi2flat-chi2modelProfiled):5.1f}",
+        + f"{(chi2flat - chi2modelProfiled):5.1f}",
         fontsize=12,
     )
 
@@ -394,13 +394,13 @@ def plot_spectrumfit(
             xlims[1] + xoffset,
             ylims[0] + (ylims[1] - ylims[0]) * 0.12,
             '$\\chi^2_{red}$(model/flat)='
-            + f"{(chi2model_red/chi2flat_red):5.2f}",
+            + f"{(chi2model_red / chi2flat_red):5.2f}",
             fontsize=12,
         )
         plt.text(
             xlims[1] + xoffset,
             ylims[0] + (ylims[1] - ylims[0]) * 0.05,
-            '$\\Delta\\chi^2$(flat-model)=' + f"{(chi2flat-chi2model):5.1f}",
+            '$\\Delta\\chi^2$(flat-model)=' + f"{(chi2flat - chi2model):5.1f}",
             fontsize=12,
         )
         if filt == 'Ariel-sim':

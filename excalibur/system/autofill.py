@@ -1193,7 +1193,7 @@ def derive_inclination_from_impactParam(starInfo, planetLetter):
                     + (float(smaerr1) / float(sma)) ** 2
                 )
                 inc_lowerr_derived.append(
-                    f'{(cosincfractionalError1 * 180/numpy.pi):6.4f}'
+                    f'{(cosincfractionalError1 * 180 / numpy.pi):6.4f}'
                 )
             if Rstarerr2 == '' or smaerr2 == '' or impacterr2 == '':
                 inc_uperr_derived.append('')
@@ -1204,7 +1204,7 @@ def derive_inclination_from_impactParam(starInfo, planetLetter):
                     + (float(smaerr2) / float(sma)) ** 2
                 )
                 inc_uperr_derived.append(
-                    f'{(cosincfractionalError2 * 180/numpy.pi):6.4f}'
+                    f'{(cosincfractionalError2 * 180 / numpy.pi):6.4f}'
                 )
         else:
             inc_derived.append(inc)

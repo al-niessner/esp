@@ -3788,7 +3788,7 @@ class pc_fitter:
                 self.residuals / np.median(self.data) * 1e6,
                 'k.',
                 alpha=0.15,
-                label=fr'$\sigma$ = {np.std(self.residuals/np.median(self.data)*1e6):.0f} ppm',
+                label=fr'$\sigma$ = {np.std(self.residuals / np.median(self.data) * 1e6):.0f} ppm',
             )
             axs[1].plot(
                 bp,
@@ -3806,7 +3806,7 @@ class pc_fitter:
                 self.residuals / np.median(self.data) * 1e6,
                 'k.',
                 alpha=0.15,
-                label=fr'$\sigma$ = {np.std(self.residuals/np.median(self.data)*1e6):.0f} ppm',
+                label=fr'$\sigma$ = {np.std(self.residuals / np.median(self.data) * 1e6):.0f} ppm',
             )
             axs[1].plot(
                 bt,
@@ -3969,7 +3969,7 @@ class pc_fitter:
             self.residuals / np.median(self.data) * 1e6,
             'k.',
             alpha=0.15,
-            label=fr'$\sigma$ = {np.std(self.residuals/np.median(self.data)*1e6):.0f} ppm',
+            label=fr'$\sigma$ = {np.std(self.residuals / np.median(self.data) * 1e6):.0f} ppm',
         )
 
         axs[1].plot(
@@ -3977,7 +3977,7 @@ class pc_fitter:
             1e6 * br / np.median(self.data),
             'w.',
             zorder=2,
-            label=fr'$\sigma$ = {np.std(1e6*br/np.median(self.data)):.0f} ppm',
+            label=fr'$\sigma$ = {np.std(1e6 * br / np.median(self.data)):.0f} ppm',
         )
 
         axs[1].set_xlim([min(phase), max(phase)])
@@ -4412,21 +4412,21 @@ def eclipse_ratio(priors, p='b', f='IRAC 3.6um', verbose=True):
 
     if verbose:
         print(f" Stellar temp: {priors['T*']:.1f} K")
-        print(f" Transit Depth: {tdepth*100:.4f} %")
+        print(f" Transit Depth: {tdepth * 100:.4f} %")
         pass
 
     if '3.6' in f or '36' in f:
         if verbose:
             print(
-                f" Eclipse Depth @ IRAC 1 (3.6um): ~{tdepth*fp36/fs36*1e6:.0f} ppm"
+                f" Eclipse Depth @ IRAC 1 (3.6um): ~{tdepth * fp36 / fs36 * 1e6:.0f} ppm"
             )
-            print(f"         Fp/Fs @ IRAC 1 (3.6um): ~{fp36/fs36:.4f}")
+            print(f"         Fp/Fs @ IRAC 1 (3.6um): ~{fp36 / fs36:.4f}")
         return float(fp36 / fs36)
     if verbose:
         print(
-            f" Eclipse Depth @ IRAC 2 (4.5um): ~{tdepth*fp45/fs45*1e6:.0f} ppm"
+            f" Eclipse Depth @ IRAC 2 (4.5um): ~{tdepth * fp45 / fs45 * 1e6:.0f} ppm"
         )
-        print(f"         Fp/Fs @ IRAC 2 (4.5um): ~{fp45/fs45:.4f}")
+        print(f"         Fp/Fs @ IRAC 2 (4.5um): ~{fp45 / fs45:.4f}")
     return float(fp45 / fs45)
 
 
@@ -5193,7 +5193,7 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                     subt,
                     raw_residual,
                     marker='.',
-                    label=f"Raw ({np.std(raw_residual,0)*100:.2f} %)",
+                    label=f"Raw ({np.std(raw_residual, 0) * 100:.2f} %)",
                     color=plt.cm.jet(0.25),
                     alpha=0.25,
                 )
@@ -5201,7 +5201,7 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                     subt,
                     rel_residuals,
                     marker='.',
-                    label=f"Detrended ({np.std(rel_residuals,0)*100:.2f} %)",
+                    label=f"Detrended ({np.std(rel_residuals, 0) * 100:.2f} %)",
                     color=plt.cm.jet(0.75),
                     alpha=0.25,
                 )

@@ -483,7 +483,7 @@ def phasecurve_spitzer(nrm, fin, out, selftype, fltr):
                 subt,
                 raw_residual,
                 marker='.',
-                label=f"Raw ({np.std(raw_residual,0)*100:.2f} %)",
+                label=f"Raw ({np.std(raw_residual, 0) * 100:.2f} %)",
                 color=plt.cm.jet(0.25),
                 alpha=0.25,
             )
@@ -491,7 +491,7 @@ def phasecurve_spitzer(nrm, fin, out, selftype, fltr):
                 subt,
                 rel_residuals,
                 marker='.',
-                label=f"Detrended ({np.std(rel_residuals,0)*100:.2f} %)",
+                label=f"Detrended ({np.std(rel_residuals, 0) * 100:.2f} %)",
                 color=plt.cm.jet(0.75),
                 alpha=0.25,
             )

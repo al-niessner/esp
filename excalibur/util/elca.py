@@ -827,7 +827,7 @@ class lc_fitter:
             self.residuals / np.median(self.data) * 1e6,
             'k.',
             alpha=0.15,
-            label=fr'$\sigma$ = {np.std(self.residuals/np.median(self.data)*1e6):.0f} ppm',
+            label=fr'$\sigma$ = {np.std(self.residuals / np.median(self.data) * 1e6):.0f} ppm',
         )
 
         axs[1].plot(
@@ -835,7 +835,7 @@ class lc_fitter:
             1e6 * br / np.median(self.data),
             'w.',
             zorder=2,
-            label=fr'$\sigma$ = {np.std(1e6*br/np.median(self.data)):.0f} ppm',
+            label=fr'$\sigma$ = {np.std(1e6 * br / np.median(self.data)):.0f} ppm',
         )
 
         axs[1].set_xlim([min(phase), max(phase)])
@@ -1000,7 +1000,7 @@ class glc_fitter(lc_fitter):
         if self.individual_fit:
             for i in range(nobs):
 
-                print(f"Fitting individual light curve {i+1}/{nobs}")
+                print(f"Fitting individual light curve {i + 1} / {nobs}")
                 try:
                     mybounds = {**self.local_bounds[i], **self.global_bounds}
                 except TypeError:
@@ -1078,7 +1078,7 @@ class glc_fitter(lc_fitter):
                 maxt = np.max(self.lc_data[i]['time'])
                 try:
                     print(
-                        f"{self.lc_data[i]['name']} & {Time(mint,format='jd').isot} & {Time(maxt,format='jd').isot} & {np.std(myfit.residuals)} & {len(self.lc_data[i]['time'])}"
+                        f"{self.lc_data[i]['name']} & {Time(mint, format='jd').isot} & {Time(maxt, format='jd').isot} & {np.std(myfit.residuals)} & {len(self.lc_data[i]['time'])}"
                     )
                 except ValueError:
                     print(
@@ -1256,7 +1256,7 @@ class glc_fitter(lc_fitter):
                 ax[i].set_xlabel("Time [BJD]", fontsize=14)
                 ax[i].set_ylabel("Relative Flux", fontsize=14)
                 ax[i].set_title(
-                    f"{self.lc_data[i].get('name','')}", fontsize=16
+                    f"{self.lc_data[i].get('name', '')}", fontsize=16
                 )
             else:
                 ax[ri, ci].axis('on')
