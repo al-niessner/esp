@@ -1812,7 +1812,7 @@ def corner(
     else:
         try:
             axes = np.array(fig.axes).reshape((K, K))
-        except:  # fmt: skip # noqa: E722 # pylint: disable=bare-except  because we do not expect exceptions and do not want to crash
+        except:  # fmt: skip # noqa: E722 # pylint: disable=bare-except # because we do not expect exceptions and do not want to crash
             raise ValueError(
                 "Provided figure has {0} axes, but data has "
                 "dimensions K={1}".format(len(fig.axes), K)

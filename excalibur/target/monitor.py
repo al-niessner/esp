@@ -114,7 +114,7 @@ def alert(
             msg['To'] = 'sdp@jpl.nasa.gov'
             s = smtplib.SMTP('localhost')
             s.send_message(msg)
-        except:  # fmt: skip # noqa: E722 # pylint: disable=bare-except  because we do not expect exceptions and do not want to crash
+        except:  # fmt: skip # noqa: E722 # pylint: disable=bare-except # because we do not expect exceptions and do not want to crash
             log.exception('Could not send alert email')
         pass
     return changes, kwn, tab

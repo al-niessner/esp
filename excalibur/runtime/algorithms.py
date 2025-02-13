@@ -139,7 +139,7 @@ class Create(dawgie.Analyzer):
             # specific state vectors where the information becomes highly
             # condensed and processed. To do this, need to act like dawgie
             # just a little bit and access some hidden information.
-            # pylint: disable=protected-access because dawgie requires it
+            # pylint: disable=protected-access # because dawgie requires it
             pbot = aspects.ds()._bot()
             with multiprocessing.Pool(processes=60) as pool:
                 log.info('using the pool to run in parallel')
