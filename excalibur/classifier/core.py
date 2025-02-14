@@ -628,15 +628,8 @@ def savesv(aspects, fltrs):
     '''
     svname = 'classifier.flags'
 
-    RID = os.environ.get('RUNID', None)
-    if RID:
-        RID = f'{int(RID):03}'
-    else:
-        RID = '666'
-
     # directory where the results are saved
-    saveDir = excalibur.context['data_dir'] + '/spreadsheets/RID' + RID + '/'
-    # print('saveDir:',saveDir)
+    saveDir = excalibur.context['data_dir'] + '/spreadsheets/'
     if not os.path.exists(saveDir):
         os.mkdir(saveDir)
 
@@ -651,7 +644,7 @@ def savesv(aspects, fltrs):
     ]
 
     # file name where the results are saved
-    outfileName = svname.replace('.', '_') + '_RID' + RID + '.csv'
+    outfileName = svname.replace('.', '_') + '.csv'
 
     with open(saveDir + outfileName, 'w', encoding='ascii') as outfile:
 

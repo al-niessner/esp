@@ -620,14 +620,9 @@ def simulate_spectra(target, system_dict, runtime_params, out):
                         {'Hs': [Hsscaling]}, 1.0e-2 * fluxDepth_rebin, ax, myfig
                     )
 
-                    # RID = int(os.environ.get('RUNID', None))
-                    RID = os.environ.get('RUNID', None)
-                    if RID:
-                        RID = f'{int(RID):03}'
-                    else:
-                        RID = '666'
-
-                    plotDir = excalibur.context['data_dir'] + '/ariel/RID' + RID
+                    plotDir = (
+                        excalibur.context['data_dir'] + '/ariel/savedplots'
+                    )
                     if not os.path.exists(plotDir):
                         os.mkdir(plotDir)
 
@@ -643,8 +638,7 @@ def simulate_spectra(target, system_dict, runtime_params, out):
                     )
 
                     # REDUNDANT SAVE - above saves to disk; below saves as state vector
-                    # plt.title('Ariel : '+target+' '+planetLetter+'; sv save for RUNID='+RID,
-                    #           fontsize=16)
+                    # plt.title('Ariel : '+target+' '+planetLetter, fontsize=16)
                     buf = io.BytesIO()
                     myfig.savefig(buf, format='png')
                     out['data'][planetLetter][atmosModel][
