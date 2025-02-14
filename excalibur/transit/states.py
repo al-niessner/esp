@@ -7,7 +7,10 @@ import dawgie
 
 import excalibur
 from excalibur.transit.core import composite_spectrum, jwst_lightcurve
-from excalibur.util.plotters import plot_normalized_byvisit
+from excalibur.util.plotters import (
+    plot_normalized_byvisit,
+    add_scale_height_labels,
+)
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -381,29 +384,10 @@ class SpectrumSV(dawgie.StateVector):
                     )
                     plt.xlabel(str('Wavelength [$\\mu$m]'))
                     plt.ylabel(str('$(R_p/R_*)^2$ [%]'))
-                    if ('Hs' in self['data'][p]) and (
-                        'RSTAR' in self['data'][p]
-                    ):
-                        rp0hs = np.sqrt(np.nanmedian(vspectrum))
-                        Hs = self['data'][p]['Hs'][0]
-                        # Retro compatibility for Hs in [m]
-                        if Hs > 1:
-                            Hs = Hs / (self['data'][p]['RSTAR'][0])
-                        ax2 = ax.twinx()
-                        ax2.set_ylabel('$\\Delta$ [H$_s$]')
-                        axmin, axmax = ax.get_ylim()
-                        if axmin >= 0:
-                            ax2.set_ylim(
-                                (np.sqrt(1e-2 * axmin) - rp0hs) / Hs,
-                                (np.sqrt(1e-2 * axmax) - rp0hs) / Hs,
-                            )
-                        else:
-                            ax2.set_ylim(
-                                (-np.sqrt(-1e-2 * axmin) - rp0hs) / Hs,
-                                (np.sqrt(1e-2 * axmax) - rp0hs) / Hs,
-                            )
-                        myfig.tight_layout()
-                        pass
+                    add_scale_height_labels(
+                        self['data'][p], vspectrum, ax, myfig
+                    )
+
                     buf = io.BytesIO()
                     myfig.savefig(buf, format='png')
                     visitor.add_image('...', ' ', buf.getvalue())
@@ -451,29 +435,10 @@ class SpectrumSV(dawgie.StateVector):
                                 )
                                 ax.legend()
                         # show right axis in scale height
-                        if ('Hs' in self['data'][p]) and (
-                            'RSTAR' in self['data'][p]
-                        ):
-                            rp0hs = np.sqrt(np.nanmedian(vspectrum))
-                            Hs = self['data'][p]['Hs'][0]
-                            # Retro compatibility for Hs in [m]
-                            if Hs > 1:
-                                Hs = Hs / (self['data'][p]['RSTAR'][0])
-                            ax2 = ax.twinx()
-                            ax2.set_ylabel('$\\Delta$ [H$_s$]')
-                            axmin, axmax = ax.get_ylim()
-                            if axmin >= 0:
-                                ax2.set_ylim(
-                                    (np.sqrt(1e-2 * axmin) - rp0hs) / Hs,
-                                    (np.sqrt(1e-2 * axmax) - rp0hs) / Hs,
-                                )
-                            else:
-                                ax2.set_ylim(
-                                    (-np.sqrt(-1e-2 * axmin) - rp0hs) / Hs,
-                                    (np.sqrt(1e-2 * axmax) - rp0hs) / Hs,
-                                )
-                            myfig.tight_layout()
-                            pass
+                        add_scale_height_labels(
+                            self['data'][p], vspectrum, ax, myfig
+                        )
+
                         buf = io.BytesIO()
                         myfig.savefig(buf, format='png')
                         visitor.add_image('...', ' ', buf.getvalue())

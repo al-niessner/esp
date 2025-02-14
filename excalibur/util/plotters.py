@@ -347,23 +347,37 @@ def plot_normalized_byvisit(data, vrange, visitor):
 # --------------------------------------------------------------------
 
 
-def add_scale_height_labels(data, vspectrum, ax):
+def add_scale_height_labels(data, vspectrum, ax, fig):
 
     if 'Hs' in data:
-        rp0hs = np.sqrt(np.nanmedian(vspectrum))
+        rpmed = np.sqrt(np.nanmedian(vspectrum))
         Hs = data['Hs'][0]
 
         # Retro compatibility for Hs in [m]
         if Hs > 1 and ('RSTAR' in data):
             Hs /= data['RSTAR'][0]
 
-        axtwin = ax0.twinx()
+        axtwin = ax.twinx()
         axtwin.set_ylabel('$\\Delta$ [H$_s$]')
         axmin, axmax = ax.get_ylim()
-        axtwin.set_ylim(
-            (np.sqrt(1e-2 * axmin) - rp0hs) / Hs,
-            (np.sqrt(1e-2 * axmax) - rp0hs) / Hs,
-        )
+
+        if np.isnan(np.nanmax(vspectrum)):
+            # log.warning(
+            #    '--< PROBLEM: spectrum is all NaN %s %s >--',
+            #    target, planetLetter)
+            pass
+        elif axmin >= 0:
+            axtwin.set_ylim(
+                (np.sqrt(1e-2 * axmin) - rpmed) / Hs,
+                (np.sqrt(1e-2 * axmax) - rpmed) / Hs,
+            )
+        else:
+            axtwin.set_ylim(
+                (-np.sqrt(-1e-2 * axmin) - rpmed) / Hs,
+                (np.sqrt(1e-2 * axmax) - rpmed) / Hs,
+            )
+
+        fig.tight_layout()
 
 
 # --------------------------------------------------------------------

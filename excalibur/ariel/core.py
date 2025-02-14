@@ -18,6 +18,7 @@ from excalibur.ariel.clouds import fixedCloudParameters, randomCloudParameters
 from excalibur.ariel.arielInstrumentModel import load_ariel_instrument
 from excalibur.ariel.forwardModels import makeCerberusAtmos
 from excalibur.cerberus.core import myxsecs
+from excalibur.util.plotters import add_scale_height_labels
 
 import os
 import io
@@ -615,35 +616,9 @@ def simulate_spectra(target, system_dict, runtime_params, out):
                     # add a scale-height-normalized flux scale on the right axis
                     Hsscaling = out['data'][planetLetter][atmosModel]['Hs']
                     # print('H scaling for this plot (%):',Hsscaling*100)
-                    ax2 = ax.twinx()
-                    ax2.set_ylabel('$\\Delta$ [H]')
-                    axmin, axmax = ax.get_ylim()
-                    rpmed = np.sqrt(np.nanmedian(1.0e-2 * fluxDepth_rebin))
-
-                    # print('axmin,axmax',axmin,axmax)
-                    # non-convergent spectra can be all NaN, crashing here on the sqrt
-                    # should now be stopped up above in that case, but just in case add conditional
-                    if np.isnan(np.nanmax(fluxDepth_rebin)):
-                        log.warning(
-                            '--< PROBLEM: spectrum is all NaN %s %s >--',
-                            target,
-                            planetLetter,
-                        )
-                        pass
-                    else:
-                        if axmin >= 0:
-                            ax2.set_ylim(
-                                (np.sqrt(1e-2 * axmin) - rpmed) / Hsscaling,
-                                (np.sqrt(1e-2 * axmax) - rpmed) / Hsscaling,
-                            )
-                        else:
-                            ax2.set_ylim(
-                                (-np.sqrt(-1e-2 * axmin) - rpmed) / Hsscaling,
-                                (np.sqrt(1e-2 * axmax) - rpmed) / Hsscaling,
-                            )
-                            # print('TROUBLE!! y-axis not scaled by H!!')
-
-                    myfig.tight_layout()
+                    add_scale_height_labels(
+                        {'Hs': [Hsscaling]}, 1.0e-2 * fluxDepth_rebin, ax, myfig
+                    )
 
                     # RID = int(os.environ.get('RUNID', None))
                     RID = os.environ.get('RUNID', None)

@@ -8,7 +8,11 @@ import excalibur.system.core as syscore
 import excalibur.util.cerberus as crbutil
 from excalibur.util import elca
 from excalibur.cerberus.plotting import rebin_data
-from excalibur.util.plotters import save_plot, plot_residual_fft
+from excalibur.util.plotters import (
+    save_plot,
+    plot_residual_fft,
+    add_scale_height_labels,
+)
 
 import io
 import copy
@@ -3022,15 +3026,13 @@ def spectrum(
             specwave = np.array(out['data'][p]['WB'])
             specerr = abs(vspectrum**2 - (vspectrum + specerr) ** 2)
             vspectrum = vspectrum**2
-            Rstar = priors['R*'] * sscmks['Rsun']
-            Rp = priors[p]['rp'] * 7.14e7  # m
+            # Rstar = priors['R*'] * sscmks['Rsun']
+            # Rp = priors[p]['rp'] * sscmks['Rjup']
             Hs = (
                 cst.Boltzmann
                 * eqtemp
                 / (mmw * 1e-2 * (10.0 ** float(priors[p]['logg'])))
             )  # m
-            noatm = Rp**2 / (Rstar) ** 2
-            rp0hs = np.sqrt(noatm * (Rstar) ** 2)
             # Smooth spectrum
             binsize = 4
             nspec = int(specwave.size / binsize)
@@ -3078,8 +3080,7 @@ def spectrum(
             )
             ax0.set_xlabel(str('Wavelength [$\\mu m$]'))
             ax0.set_ylabel(str('$(R_p/R_*)^2$ [%]'))
-            add_scale_height_labels(out['data'][p], vspectrum, ax0)
-            myfig.tight_layout()
+            add_scale_height_labels(out['data'][p], vspectrum, ax0, myfig)
             plt.show()
         pass
     return exospec
@@ -3472,27 +3473,19 @@ def fastspec(
         specwave = WB.copy()
         specerr = abs(vspectrum**2 - (vspectrum + specerr) ** 2)
         vspectrum = vspectrum**2
-        Rstar = priors['R*'] * sscmks['Rsun']
-        Rp = priors[p]['rp'] * 7.14e7  # m
+        # Rstar = priors['R*'] * sscmks['Rsun']
+        # Rp = priors[p]['rp'] * sscmks['Rjup']
         Hs = (
             cst.Boltzmann
             * eqtemp
             / (mmw * 1e-2 * (10.0 ** float(priors[p]['logg'])))
         )  # m
-        noatm = Rp**2 / (Rstar) ** 2
-        rp0hs = np.sqrt(noatm * (Rstar) ** 2)
         _fig, ax0 = plt.subplots(figsize=(10, 6))
         ax0.errorbar(specwave, 1e2 * vspectrum, fmt='.', yerr=1e2 * specerr)
         ax0.set_xlabel(str('Wavelength [$\\mu m$]'))
         ax0.set_ylabel(str('$(R_p/R_*)^2$ [%]'))
-        ax1 = ax0.twinx()
-        yaxmin, yaxmax = ax0.get_ylim()
-        ax2min = (np.sqrt(1e-2 * yaxmin) * Rstar - rp0hs) / Hs
-        ax2max = (np.sqrt(1e-2 * yaxmax) * Rstar - rp0hs) / Hs
-        ax1.set_ylabel('Transit Depth Modulation [H$_s$]')
-        ax1.set_ylim(ax2min, ax2max)
+        add_scale_height_labels({'Hs': [Hs]}, vspectrum, ax0)
         plt.show()
-        pass
     priorspec = ES
     # alpha > 1: Increase width, alpha < 1: Decrease width
     # decrease width by half if no modulation detected
@@ -5251,7 +5244,7 @@ def composite_spectrum(SV, target, p='b'):
     '''
     K. PEARSON combine the filters into one plot
     '''
-    f, ax = plt.subplots(figsize=(15, 7))
+    myfig, ax = plt.subplots(figsize=(15, 7))
     colors = ['pink', 'red', 'green', 'cyan', 'blue', 'purple']
     ci = 0
     # keys need to be the same as active filters
@@ -5335,21 +5328,7 @@ def composite_spectrum(SV, target, p='b'):
                 )
 
         try:
-            if ('Hs' in SV1['data'][p]) and ('RSTAR' in SV1['data'][p]):
-                rp0hs = np.sqrt(np.nanmedian(vspectrum))
-                Hs = SV1['data'][p]['Hs'][0]
-                # Retro compatibility for Hs in [m]
-                if Hs > 1:
-                    Hs = Hs / (SV1['data'][p]['RSTAR'][0])
-                ax2 = ax.twinx()
-                ax2.set_ylabel('$\\Delta$ [H$_s$]', fontsize=14)
-                axmin, axmax = ax.get_ylim()
-                ax2.set_ylim(
-                    (np.sqrt(1e-2 * axmin) - rp0hs) / Hs,
-                    (np.sqrt(1e-2 * axmax) - rp0hs) / Hs,
-                )
-                f.tight_layout()
-                pass
+            add_scale_height_labels(SV1['data'][p], vspectrum, ax, myfig)
         except (KeyError, ValueError):
             # print("couldn't plot scale height")
             pass
@@ -5363,7 +5342,7 @@ def composite_spectrum(SV, target, p='b'):
     ax.legend(
         loc='best', shadow=False, frameon=False, fontsize='20', scatterpoints=1
     )
-    return f
+    return myfig
 
 
 def hstspectrum(out, fltrs):
@@ -5517,23 +5496,9 @@ def starspots(fin, wht, spc, out):
         plt.title('planet ' + planetletter)
         plt.xlabel(str('Wavelength [$\\mu$m]'))
         plt.ylabel(str('$(R_p/R_*)^2$ [%]'))
-        if 'Hs' in spc['data'][planetletter]:
-            rp0hs = np.sqrt(np.nanmedian(transitdata['depth']))
-            Hs = spc['data'][planetletter]['Hs'][0]
-            ax2 = ax.twinx()
-            ax2.set_ylabel('$\\Delta$ [H$_s$]')
-            axmin, axmax = ax.get_ylim()
-            if axmin >= 0:
-                ax2.set_ylim(
-                    (np.sqrt(1e-2 * axmin) - rp0hs) / Hs,
-                    (np.sqrt(1e-2 * axmax) - rp0hs) / Hs,
-                )
-            else:
-                ax2.set_ylim(
-                    (-np.sqrt(-1e-2 * axmin) - rp0hs) / Hs,
-                    (np.sqrt(1e-2 * axmax) - rp0hs) / Hs,
-                )
-        myfig.tight_layout()
+        add_scale_height_labels(
+            spc['data'][planetletter], transitdata['depth'], ax, myfig
+        )
 
         # print('saving plot as testsave.png')
         # plt.savefig('/proj/data/bryden/testsave.png')
