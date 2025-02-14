@@ -153,7 +153,7 @@ class Create(dawgie.Analyzer):
                         for tn in dawgie.db.targets()
                     ],
                 )
-            # pylint: enable=prtected-access turn it back on for rest of code
+            # pylint: enable=protected-access # turn it back on for rest of code
         except FileNotFoundError as e:
             log.exception(e)
             raise dawgie.AbortAEError(
