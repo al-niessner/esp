@@ -5,7 +5,7 @@ import dawgie
 
 import excalibur
 import excalibur.ancillary.core as anccore
-import excalibur.ancillary.plot as ancplot
+from excalibur.util.plotters import distrplot, barplot, rendertable
 
 from collections import Counter
 
@@ -36,14 +36,14 @@ class EstimateSV(dawgie.StateVector):
             params = [
                 i for i in list(self['data'].keys()) if is_param(i, pl_params)
             ]
-            ancplot.rendertable(self['data'], params, visitor)
+            rendertable(self['data'], params, visitor)
             # display planetary estimates
             for pl in self['data']['planets']:
                 visitor.add_primitive(f'PLANET: {pl}')
                 params = [
                     i for i in list(self['data'][pl].keys()) if is_param(i)
                 ]
-                ancplot.rendertable(self['data'][pl], params, visitor)
+                rendertable(self['data'][pl], params, visitor)
             pass
         else:
             visitor.add_declaration('State vector marked as unsuccessful.')
@@ -93,7 +93,7 @@ class PopulationSV(dawgie.StateVector):
                     counts = Counter(attrs[key])
                     counts2 = Counter(attrs_roudier62[key])
                     if estimator.scale():
-                        ancplot.barplot(
+                        barplot(
                             key,
                             estimator.scale(),
                             [counts[i] for i in estimator.scale()],
@@ -102,7 +102,7 @@ class PopulationSV(dawgie.StateVector):
                             visitor,
                         )
                     else:
-                        ancplot.barplot(
+                        barplot(
                             key,
                             counts.keys(),
                             counts.values(),
@@ -111,7 +111,7 @@ class PopulationSV(dawgie.StateVector):
                             visitor,
                         )
                 else:
-                    ancplot.distrplot(
+                    distrplot(
                         key,
                         attrs[key],
                         attrs_roudier62[key],

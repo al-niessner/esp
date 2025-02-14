@@ -4,8 +4,7 @@
 import dawgie
 
 import excalibur
-import excalibur.system.plot as sysplot
-
+from excalibur.util.plotters import distrplot
 
 # ------------- ------------------------------------------------------
 # -- SV -- -----------------------------------------------------------
@@ -154,7 +153,7 @@ class PopulationSV(dawgie.StateVector):
         for title, attrs, attrs_roudier62, _ in to_process:
             visitor.add_primitive(title)
             for key in attrs:
-                sysplot.distrplot(
+                distrplot(
                     key, attrs[key], attrs_roudier62[key], visitor, 'no units?'
                 )
 
