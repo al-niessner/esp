@@ -39,7 +39,7 @@ class collect(dawgie.Algorithm):
         '''__init__ ds'''
         self._version_ = datcore.collectversion()
         self.__create = trgalg.create()
-        self.__rt = rtalg.autofill()
+        self.__rt = rtalg.Autofill()
         self.__scrape = trgalg.scrape()
         self.__out = trgstates.FilterSV('frames')
         return
@@ -124,7 +124,7 @@ class timing(dawgie.Algorithm):
         self._version_ = datcore.timingversion()
         self.__fin = sysalg.finalize()
         self.__col = collect()
-        self.__rt = rtalg.autofill()
+        self.__rt = rtalg.Autofill()
         self.__out = [datstates.TimingSV(fltr) for fltr in fltrs]
         return
 
@@ -218,7 +218,7 @@ class calibration(dawgie.Algorithm):
         self._version_ = dawgie.VERSION(1, 4, 4)
         self.__fin = sysalg.finalize()
         self.__col = collect()
-        self.__rt = rtalg.autofill()
+        self.__rt = rtalg.Autofill()
         self.__tim = timing()
         self.__out = [datstates.CalibrateSV(fltr) for fltr in fltrs]
         return

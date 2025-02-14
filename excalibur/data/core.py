@@ -4751,7 +4751,8 @@ def aper_phot(img):
     '''aper_phot ds'''
     # flux weighted centroid
 
-    yc, xc = np.unravel_index(np.argmax(img, axis=None), img.shape)
+    mc = np.unravel_index(np.argmax(img, axis=None), img.shape)
+    xc, yc = mc[0], mc[1]
     # Geoff: I don't know why it thinks this is a problem. mesh_box returns 2 things
     xv, yv = mesh_box([xc, yc], 5)
     wx = np.sum(np.unique(xv) * img[yv, xv].sum(0)) / np.sum(img[yv, xv].sum(0))

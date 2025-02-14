@@ -37,7 +37,7 @@ class validate(dawgie.Algorithm):
             1, 2, 0
         )  # new bestValue() parameter selection
         self.__autofill = trgalg.autofill()
-        self.__rt = rtalg.autofill()
+        self.__rt = rtalg.Autofill()
         self.__out = sysstates.PriorsSV('parameters')
         return
 
@@ -109,7 +109,7 @@ class finalize(dawgie.Algorithm):
 
     def __init__(self):
         self._version_ = dawgie.VERSION(1, 1, 4)
-        self.__rt = rtalg.autofill()
+        self.__rt = rtalg.Autofill()
         self.__val = validate()
         self.__out = sysstates.PriorsSV('parameters')
         return

@@ -145,7 +145,7 @@ class autofill(dawgie.Algorithm):
         '''__init__ ds'''
         self._version_ = trgcore.autofillversion()
         self.__create = create()
-        self.__rt = rtalg.autofill()
+        self.__rt = rtalg.Autofill()
         self.__out = trgstates.TargetSV('parameters')
         return
 
@@ -228,7 +228,7 @@ class scrape(dawgie.Algorithm):
         '''__init__ ds'''
         self._version_ = trgcore.scrapeversion()
         self.__autofill = autofill()
-        self.__rt = rtalg.autofill()
+        self.__rt = rtalg.Autofill()
         self.__out = trgstates.DatabaseSV('databases')
         return
 

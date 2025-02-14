@@ -34,7 +34,7 @@ class estimate(dawgie.Algorithm):
         '''__init__ ds'''
         self._version_ = anccore.estimateversion()
         self._type = 'ancillary'
-        self.__rt = rtalg.autofill()
+        self.__rt = rtalg.Autofill()
         self.__fin = sysalg.finalize()
         self.__out = [ancstates.EstimateSV('parameters')]
         return

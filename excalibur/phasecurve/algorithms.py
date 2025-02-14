@@ -47,7 +47,7 @@ class pcnormalization(dawgie.Algorithm):
         self._type = 'phasecurve'
         self.__cal = datalg.calibration()
         self.__tme = datalg.timing()
-        self.__rt = rtalg.autofill()
+        self.__rt = rtalg.Autofill()
         self.__fin = sysalg.finalize()
         self.__out = [phcstates.NormSV(fltr) for fltr in fltrs]
         return
@@ -129,7 +129,7 @@ class pcwhitelight(dawgie.Algorithm):
         self._version_ = dawgie.VERSION(1, 1, 2)
         self._type = 'phasecurve'
         self._nrm = nrm
-        self.__rt = rtalg.autofill()
+        self.__rt = rtalg.Autofill()
         self.__fin = sysalg.finalize()
         self.__out = [phcstates.WhiteLightSV(fltr) for fltr in fltrs]
         return

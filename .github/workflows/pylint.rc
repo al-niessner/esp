@@ -591,7 +591,9 @@ generated-members=astropy.constants.R_jup,
                   astropy.units.pc,
                   astropy.units.yr,
                   astropy.units.micron,
-                  matplotlib.cm,
+                  .*\.jet,
+                  .*\.rainbow,
+                  .*\.viridis,
                   pymc.stats.summary
 
 

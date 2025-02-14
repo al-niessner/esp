@@ -25,7 +25,7 @@ class sim_spectrum(dawgie.Algorithm):
     def __init__(self):
         '''__init__ ds'''
         self._version_ = dawgie.VERSION(1, 0, 0)
-        self.__rt = rtalg.autofill()
+        self.__rt = rtalg.Autofill()
         self.__system_finalize = sysalg.finalize()
         self.__out = arielstates.PriorsSV('parameters')
         return
