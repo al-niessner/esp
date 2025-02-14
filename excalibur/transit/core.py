@@ -3480,11 +3480,11 @@ def fastspec(
             * eqtemp
             / (mmw * 1e-2 * (10.0 ** float(priors[p]['logg'])))
         )  # m
-        _fig, ax0 = plt.subplots(figsize=(10, 6))
+        fig, ax0 = plt.subplots(figsize=(10, 6))
         ax0.errorbar(specwave, 1e2 * vspectrum, fmt='.', yerr=1e2 * specerr)
         ax0.set_xlabel(str('Wavelength [$\\mu m$]'))
         ax0.set_ylabel(str('$(R_p/R_*)^2$ [%]'))
-        add_scale_height_labels({'Hs': [Hs]}, vspectrum, ax0)
+        add_scale_height_labels({'Hs': [Hs]}, vspectrum, ax0, fig)
         plt.show()
     priorspec = ES
     # alpha > 1: Increase width, alpha < 1: Decrease width
