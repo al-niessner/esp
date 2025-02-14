@@ -10,6 +10,7 @@ from numpy.fft import fft, fftfreq
 
 import dawgie
 
+
 # -- PLOTTING FUNCTIONS-- --------------------------------------------
 # --------------------------------------------------------------------
 def save_plot(plotfn):
@@ -19,6 +20,7 @@ def save_plot(plotfn):
     fig.savefig(buf, format='png')
     plt.close(fig)
     return buf.getvalue()
+
 
 # --------------------------------------------------------------------
 def plot_residual_fft(
@@ -124,6 +126,7 @@ def plot_residual_fft(
     plt.close(fig)
     return buf.getvalue()
 
+
 # --------------------------------------------------------------------
 def rendertable(data, params, visitor: dawgie.Visitor) -> None:
     '''
@@ -151,6 +154,7 @@ def rendertable(data, params, visitor: dawgie.Visitor) -> None:
         pass
     return
 
+
 # --------------------------------------------------------------------
 def barplot(title, categories, counts, categories2, counts2, visitor):
     '''barplot ds'''
@@ -172,6 +176,7 @@ def barplot(title, categories, counts, categories2, counts2, visitor):
     visitor.add_image('...', ' ', buf.getvalue())
     plt.close(myfig)
     return
+
 
 # --------------------------------------------------------------------
 def distrplot(paramName, values, values2, visitor, units=None):
@@ -246,6 +251,7 @@ def distrplot(paramName, values, values2, visitor, units=None):
     plt.close(myfig)
     return
 
+
 # --------------------------------------------------------------------
 def mad(data):
     '''mad ds'''
@@ -254,6 +260,7 @@ def mad(data):
     mad_est = np.nanmedian(diff)
     return mad_est
 
+
 # --------------------------------------------------------------------
 def calculate_bounds(data, z_thresh=3.5):
     '''computes outlier cutoffs'''
@@ -261,6 +268,7 @@ def calculate_bounds(data, z_thresh=3.5):
     median = np.nanmedian(data)
     const = z_thresh * MAD / 0.6745
     return (median - const, median + const)
+
 
 # --------------------------------------------------------------------
 def outlier_aware_hist(data, data2, lower=None, upper=None):
