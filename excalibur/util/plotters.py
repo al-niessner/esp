@@ -343,7 +343,9 @@ def plot_normalized_byvisit(data, vrange, visitor):
         visitor.add_image('...', ' ', buf.getvalue())
         plt.close(myfig)
 
+
 # --------------------------------------------------------------------
+
 
 def add_scale_height_labels(data, vspectrum, ax):
 
@@ -362,6 +364,7 @@ def add_scale_height_labels(data, vspectrum, ax):
             (np.sqrt(1e-2 * axmin) - rp0hs) / Hs,
             (np.sqrt(1e-2 * axmax) - rp0hs) / Hs,
         )
+
 
 # --------------------------------------------------------------------
 

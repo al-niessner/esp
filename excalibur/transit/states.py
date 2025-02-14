@@ -50,7 +50,7 @@ class NormSV(dawgie.StateVector):
                     for index, v in enumerate(self['data'][p]['visits']):
                         textlabel = '--------- Visit: ' + str(v) + ' ---------'
                         if index >= len(
-                                self['data'][p]['plot_normalized_byvisit']
+                            self['data'][p]['plot_normalized_byvisit']
                         ):
                             # this is an error!  should be a plot for each visit!
                             pass
@@ -71,6 +71,7 @@ class NormSV(dawgie.StateVector):
                 pass
             pass
         pass
+
     pass
 
 
