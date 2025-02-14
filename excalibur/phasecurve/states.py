@@ -4,11 +4,10 @@
 import io
 
 import dawgie
-
 import excalibur
 
-import numpy as np
 import matplotlib.pyplot as plt
+from excalibur.util.plotters import plot_normalized_byvisit
 
 
 # ------------- ------------------------------------------------------
@@ -40,27 +39,9 @@ class NormSV(dawgie.StateVector):
                     visitor.add_declaration('VISIT IGNORED: ' + strignore)
                     pass
                 vrange = self['data'][p]['vrange']
-                for index, v in enumerate(self['data'][p]['visits']):
-                    wave = self['data'][p]['wave'][index]
-                    nspec = self['data'][p]['nspec'][index]
-                    myfig = plt.figure()
-                    plt.title('Visit: ' + str(v))
-                    for w, s in zip(wave, nspec):
-                        select = (w > np.min(vrange)) & (w < np.max(vrange))
-                        plt.plot(w[select], s[select], 'o')
-                        pass
-                    plt.ylabel('Normalized Spectra')
-                    plt.xlabel('Wavelength [$\\mu$m]')
-                    plt.xlim(np.min(vrange), np.max(vrange))
-                    buf = io.BytesIO()
-                    myfig.savefig(buf, format='png')
-                    visitor.add_image('...', ' ', buf.getvalue())
-                    plt.close(myfig)
-                    pass
-                pass
+                plot_normalized_byvisit(self['data'][p], vrange, visitor)
             pass
         pass
-
     pass
 
 

@@ -7,6 +7,7 @@ import dawgie
 
 import excalibur
 from excalibur.transit.core import composite_spectrum, jwst_lightcurve
+from excalibur.util.plotters import plot_normalized_byvisit
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -44,12 +45,12 @@ class NormSV(dawgie.StateVector):
                     visitor.add_declaration('VISIT: ' + strignore)
                     pass
                 vrange = self['data'][p]['vrange']
-                for index, v in enumerate(self['data'][p]['visits']):
 
-                    if 'plot_normalized_byvisit' in self['data'][p].keys():
+                if 'plot_normalized_byvisit' in self['data'][p].keys():
+                    for index, v in enumerate(self['data'][p]['visits']):
                         textlabel = '--------- Visit: ' + str(v) + ' ---------'
                         if index >= len(
-                            self['data'][p]['plot_normalized_byvisit']
+                                self['data'][p]['plot_normalized_byvisit']
                         ):
                             # this is an error!  should be a plot for each visit!
                             pass
@@ -61,28 +62,15 @@ class NormSV(dawgie.StateVector):
                                     index
                                 ],
                             )
-
-                    # keep the on-the-fly plotting, so that older RUNIDs still work
-                    else:
-                        wave = self['data'][p]['wave'][index]
-                        nspec = self['data'][p]['nspec'][index]
-                        myfig = plt.figure()
-                        plt.title('Visit: ' + str(v))
-                        for w, s in zip(wave, nspec):
-                            select = (w > np.min(vrange)) & (w < np.max(vrange))
-                            plt.plot(w[select], s[select], 'o')
-                        plt.ylabel('Normalized Spectra')
-                        plt.xlabel('Wavelength [$\\mu$m]')
-                        plt.xlim(np.min(vrange), np.max(vrange))
-                        buf = io.BytesIO()
-                        myfig.savefig(buf, format='png')
-                        visitor.add_image('...', ' ', buf.getvalue())
-                        plt.close(myfig)
+                        pass
+                    pass
+                # keep on-the-fly plotting, so that older RUNIDs still work
+                else:
+                    plot_normalized_byvisit(self['data'][p], vrange, visitor)
                     pass
                 pass
             pass
         pass
-
     pass
 
 

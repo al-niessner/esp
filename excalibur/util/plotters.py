@@ -320,4 +320,53 @@ def outlier_aware_hist(data, data2, lower=None, upper=None):
         )
 
     plt.legend()
-    return
+
+
+# --------------------------------------------------------------------
+def plot_normalized_byvisit(data, vrange, visitor):
+
+    for index, v in enumerate(data['visits']):
+        wave = data['wave'][index]
+        nspec = data['nspec'][index]
+
+        myfig = plt.figure()
+        plt.title('Visit: ' + str(v))
+        for w, s in zip(wave, nspec):
+            select = (w > np.min(vrange)) & (w < np.max(vrange))
+            plt.plot(w[select], s[select], 'o')
+        plt.ylabel('Normalized Flux')
+        plt.xlabel('Wavelength [$\\mu$m]')
+        plt.xlim(np.min(vrange), np.max(vrange))
+
+        buf = io.BytesIO()
+        myfig.savefig(buf, format='png')
+        visitor.add_image('...', ' ', buf.getvalue())
+        plt.close(myfig)
+
+# --------------------------------------------------------------------
+
+def add_scale_height_labels(data, vspectrum, ax):
+
+    if 'Hs' in data:
+        rp0hs = np.sqrt(np.nanmedian(vspectrum))
+        Hs = data['Hs'][0]
+
+        # Retro compatibility for Hs in [m]
+        if Hs > 1 and ('RSTAR' in data):
+            Hs /= data['RSTAR'][0]
+
+        axtwin = ax0.twinx()
+        axtwin.set_ylabel('$\\Delta$ [H$_s$]')
+        axmin, axmax = ax.get_ylim()
+        axtwin.set_ylim(
+            (np.sqrt(1e-2 * axmin) - rp0hs) / Hs,
+            (np.sqrt(1e-2 * axmax) - rp0hs) / Hs,
+        )
+
+# --------------------------------------------------------------------
+
+
+# --------------------------------------------------------------------
+
+
+# --------------------------------------------------------------------

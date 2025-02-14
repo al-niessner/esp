@@ -3078,23 +3078,9 @@ def spectrum(
             )
             ax0.set_xlabel(str('Wavelength [$\\mu m$]'))
             ax0.set_ylabel(str('$(R_p/R_*)^2$ [%]'))
-            if ('Hs' in out['data'][p]) and ('RSTAR' in out['data'][p]):
-                rp0hs = np.sqrt(np.nanmedian(vspectrum))
-                Hs = out['data'][p]['Hs'][0]
-                # Retro compatibility for Hs in [m]
-                if Hs > 1:
-                    Hs = Hs / (out['data'][p]['RSTAR'][0])
-                ax2 = ax0.twinx()
-                ax2.set_ylabel('$\\Delta$ [H$_s$]')
-                axmin, axmax = ax0.get_ylim()
-                ax2.set_ylim(
-                    (np.sqrt(1e-2 * axmin) - rp0hs) / Hs,
-                    (np.sqrt(1e-2 * axmax) - rp0hs) / Hs,
-                )
-                myfig.tight_layout()
-                pass
+            add_scale_height_labels(out['data'][p], vspectrum, ax0)
+            myfig.tight_layout()
             plt.show()
-            pass
         pass
     return exospec
 
