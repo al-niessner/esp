@@ -6,7 +6,6 @@ import dawgie
 import excalibur
 from excalibur.util.plotters import save_plot_toscreen
 
-import io
 import os
 
 import matplotlib.image as img

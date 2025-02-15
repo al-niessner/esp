@@ -5,7 +5,6 @@ import dawgie
 import excalibur
 from excalibur.util.plotters import save_plot_toscreen
 import matplotlib.pyplot as plt
-import io
 import numpy as np
 import logging
 

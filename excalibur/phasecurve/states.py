@@ -1,7 +1,6 @@
 '''Phasecurve Database Products View'''
 
 # -- IMPORTS -- ------------------------------------------------------
-import io
 
 import dawgie
 import excalibur
