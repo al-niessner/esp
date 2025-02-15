@@ -2,7 +2,6 @@
 
 # -- IMPORTS -- ------------------------------------------------------
 import logging
-import io
 import corner
 import numpy as np
 import matplotlib.pyplot as plt
@@ -10,6 +9,7 @@ import matplotlib.pyplot as plt
 # import excalibur
 from excalibur.ariel.metallicity import massMetalRelation
 from excalibur.system.core import ssconstants
+from excalibur.util.plotters import save_plot_tosv
 
 log = logging.getLogger(__name__)
 
@@ -413,6 +413,7 @@ def plot_spectrumfit(
     # figgy.tight_layout()
     # plt.show()
     if savetodisk:
+        # pdf is so much better, but xv gives error (stick with png for debugging)
         plt.savefig(
             saveDir
             + 'bestFit_'
@@ -425,14 +426,8 @@ def plot_spectrumfit(
             + p
             + '.png'
         )
-    # pdf is so much better, but xv gives error (stick with png for debugging)
 
-    # REDUNDANT SAVE - above saves to disk; below saves as state vector
-    buf = io.BytesIO()
-    figgy.savefig(buf, format='png')
-    save_to_state_vector = buf.getvalue()
-    # plt.close(figgy)
-    return save_to_state_vector, figgy
+    return save_plot_tosv(figgy), figgy
 
 
 # --------------------------------------------------------------------
@@ -625,12 +620,8 @@ def plot_corner(
             + p
             + '.png'
         )
-    # REDUNDANT SAVE - above saves to disk; below saves as state vector
-    buf = io.BytesIO()
-    figure.savefig(buf, format='png')
-    save_to_state_vector = buf.getvalue()
-    # plt.close(figure)
-    return save_to_state_vector, figure
+
+    return save_plot_tosv(figure), figure
 
 
 # --------------------------------------------------------------------
@@ -787,12 +778,8 @@ def plot_vs_prior(
             + p
             + '.png'
         )
-    # REDUNDANT SAVE - above saves to disk; below saves as state vector
-    buf = io.BytesIO()
-    figure.savefig(buf, format='png')
-    save_to_state_vector = buf.getvalue()
-    # plt.close(figure)
-    return save_to_state_vector, figure
+
+    return save_plot_tosv(figure), figure
 
 
 # --------------------------------------------------------------------
@@ -934,13 +921,8 @@ def plot_walker_evolution(
             + p
             + '.png'
         )
-    # REDUNDANT SAVE - above saves to disk; below saves as state vector
-    buf = io.BytesIO()
-    figure.savefig(buf, format='png')
-    # out['data'][p]['plot_walkerevol'] = buf.getvalue()
-    plot_as_state_vector = buf.getvalue()
-    # plt.close(figure)
-    return plot_as_state_vector, figure
+
+    return save_plot_tosv(figure), figure
 
 
 # --------------------------------------------------------------------
@@ -1166,11 +1148,7 @@ def plot_fits_vs_truths(
                 + param.replace('/', ':')
                 + '.png'
             )
-        # REDUNDANT SAVE - above saves to disk; below saves as state vector
-        buf = io.BytesIO()
-        figure.savefig(buf, format='png')
-        # out['data'][p]['plot_walkerevol'] = buf.getvalue()
-        plot_statevectors.append(buf.getvalue())
+        plot_statevectors.append(save_plot_tosv(figure))
         plt.close(figure)
     return plot_statevectors
 
@@ -1338,11 +1316,7 @@ def plot_fit_uncertainties(
                 + param.replace('/', ':')
                 + '.png'
             )
-        # REDUNDANT SAVE - above saves to disk; below saves as state vector
-        buf = io.BytesIO()
-        figure.savefig(buf, format='png')
-        # out['data'][p]['plot_walkerevol'] = buf.getvalue()
-        plot_statevectors.append(buf.getvalue())
+        plot_statevectors.append(save_plot_tosv(figure))
         plt.close(figure)
     return plot_statevectors
 
@@ -1819,10 +1793,4 @@ def plot_mass_vs_metals(
     # ('display' doesn't work for pdf files)
     if savetodisk:
         plt.savefig(saveDir + 'massVSmetals_' + filt + '.png')
-    # REDUNDANT SAVE - above saves to disk; below saves as state vector
-    buf = io.BytesIO()
-    figure.savefig(buf, format='png')
-    plot_massMetals = buf.getvalue()
-    # plt.close(figure)
-
-    return plot_massMetals, figure
+    return save_plot_tosv(figure), figure

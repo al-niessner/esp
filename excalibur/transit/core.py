@@ -9,12 +9,12 @@ import excalibur.util.cerberus as crbutil
 from excalibur.util import elca
 from excalibur.cerberus.plotting import rebin_data
 from excalibur.util.plotters import (
+    save_plot_tosv,
     save_plot_myfit,
     plot_residual_fft,
     add_scale_height_labels,
 )
 
-import io
 import copy
 import logging
 import random
@@ -1120,10 +1120,10 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
             # (need to import excalibur and os for this)
             # saveDir = os.path.join(excalibur.context['data_dir'], 'bryden/')
             # plt.savefig(saveDir + 'norm_'+ext+' visit'+str(v)+'.png')
-            # REDUNDANT SAVE - above saves to disk; below saves as state vector
-            buf = io.BytesIO()
-            myfig.savefig(buf, format='png')
-            out['data'][p]['plot_normalized_byvisit'].append(buf.getvalue())
+
+            out['data'][p]['plot_normalized_byvisit'].append(
+                save_plot_tosv(myfig)
+            )
             plt.close(myfig)
 
         if out['data'][p]['visits']:
@@ -5503,9 +5503,9 @@ def starspots(fin, wht, spc, out):
         # print('saving plot as testsave.png')
         # plt.savefig('/proj/data/bryden/testsave.png')
 
-        buf = io.BytesIO()
-        myfig.savefig(buf, format='png')
-        out['data'][planetletter]['plot_starspot_spectrum'] = buf.getvalue()
+        out['data'][planetletter]['plot_starspot_spectrum'] = save_plot_tosv(
+            myfig
+        )
         plt.close(myfig)
 
         # 6) make a plot of the limb darkening as a function of wavelength
@@ -5546,11 +5546,9 @@ def starspots(fin, wht, spc, out):
         #        print('saving plot as testsave.png')
         #        plt.savefig('/proj/data/bryden/testsave.png')
 
-        buf = io.BytesIO()
-        myfig.savefig(buf, format='png')
-        out['data'][planetletter][
-            'plot_starspot_limbdarkening'
-        ] = buf.getvalue()
+        out['data'][planetletter]['plot_starspot_limbdarkening'] = (
+            save_plot_tosv(myfig)
+        )
         plt.close(myfig)
 
         # 7) also plot the limb darkening coefficients
@@ -5588,9 +5586,7 @@ def starspots(fin, wht, spc, out):
         # print('saving plot as testsave.png')
         # plt.savefig('/proj/data/bryden/testsave.png')
 
-        buf = io.BytesIO()
-        myfig.savefig(buf, format='png')
-        out['data'][planetletter]['plot_limbCoeffs'] = buf.getvalue()
+        out['data'][planetletter]['plot_limbCoeffs'] = save_plot_tosv(myfig)
         plt.close(myfig)
 
         exospec = True

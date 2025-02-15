@@ -22,6 +22,13 @@ def save_plot_toscreen(fig, visitor, headertext=' '):
     return
 
 
+def save_plot_tosv(fig):
+    # save a plot as a state vector
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png')
+    return buf.getvalue()
+
+
 def save_plot_myfit(plotfn):
     # extract plot data for states.py. incoming data is from pc_fitter
     fig, _ = plotfn()
@@ -130,10 +137,9 @@ def plot_residual_fft(
     plt.tight_layout()
 
     # save plot to state vector
-    buf = io.BytesIO()
-    fig.savefig(buf, format='png')
+    savedplot = save_plot_tosv(fig)
     plt.close(fig)
-    return buf.getvalue()
+    return savedplot
 
 
 # --------------------------------------------------------------------

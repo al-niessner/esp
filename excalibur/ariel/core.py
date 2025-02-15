@@ -18,10 +18,9 @@ from excalibur.ariel.clouds import fixedCloudParameters, randomCloudParameters
 from excalibur.ariel.arielInstrumentModel import load_ariel_instrument
 from excalibur.ariel.forwardModels import makeCerberusAtmos
 from excalibur.cerberus.core import myxsecs
-from excalibur.util.plotters import add_scale_height_labels
+from excalibur.util.plotters import add_scale_height_labels, save_plot_tosv
 
 import os
-import io
 import sys
 
 # import pickle
@@ -639,11 +638,10 @@ def simulate_spectra(target, system_dict, runtime_params, out):
 
                     # REDUNDANT SAVE - above saves to disk; below saves as state vector
                     # plt.title('Ariel : '+target+' '+planetLetter, fontsize=16)
-                    buf = io.BytesIO()
-                    myfig.savefig(buf, format='png')
+
                     out['data'][planetLetter][atmosModel][
                         'plot_simspectrum'
-                    ] = buf.getvalue()
+                    ] = save_plot_tosv(myfig)
 
                     plt.close(myfig)
 
