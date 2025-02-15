@@ -4,6 +4,7 @@
 import dawgie
 
 import excalibur
+from excalibur.util.plotters import save_plot_toscreen
 
 import io
 import os
@@ -96,20 +97,17 @@ class PriorsSV(dawgie.StateVector):
                         )
                         plt.imshow(plot2show)
                         plt.axis('off')
-                        buf = io.BytesIO()
-                        myfig.savefig(buf, format='png')
-                        visitor.add_image(
-                            '...',
-                            '------ simulated Ariel spectrum for '
+                        save_plot_toscreen(
+                            myfig,
+                            visitor,
+                            headertext='------ simulated Ariel spectrum for '
                             + target
                             + ' '
                             + planetLetter
                             + '  MODEL:'
                             + model
                             + ' ------',
-                            buf.getvalue(),
                         )
-                        plt.close(myfig)
 
         return
 

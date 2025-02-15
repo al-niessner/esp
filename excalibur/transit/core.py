@@ -9,7 +9,7 @@ import excalibur.util.cerberus as crbutil
 from excalibur.util import elca
 from excalibur.cerberus.plotting import rebin_data
 from excalibur.util.plotters import (
-    save_plot,
+    save_plot_myfit,
     plot_residual_fft,
     add_scale_height_labels,
 )
@@ -5087,13 +5087,13 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                 )
                 out['data'][p][ec]['final_errs'] = copy.deepcopy(myfit.errors)
 
-                out['data'][p][ec]['plot_bestfit'] = save_plot(
+                out['data'][p][ec]['plot_bestfit'] = save_plot_myfit(
                     myfit.plot_bestfit
                 )
-                out['data'][p][ec]['plot_posterior'] = save_plot(
+                out['data'][p][ec]['plot_posterior'] = save_plot_myfit(
                     myfit.plot_posterior
                 )
-                out['data'][p][ec]['plot_pixelmap'] = save_plot(
+                out['data'][p][ec]['plot_pixelmap'] = save_plot_myfit(
                     myfit.plot_pixelmap
                 )
 

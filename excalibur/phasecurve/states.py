@@ -7,7 +7,7 @@ import dawgie
 import excalibur
 
 import matplotlib.pyplot as plt
-from excalibur.util.plotters import plot_normalized_byvisit
+from excalibur.util.plotters import plot_normalized_byvisit, save_plot_toscreen
 
 
 # ------------- ------------------------------------------------------
@@ -104,10 +104,7 @@ class WhiteLightSV(dawgie.StateVector):
                         frameon=False,
                     )
                     plt.tight_layout(rect=[0, 0, (1 - 0.1 * ncol), 1])
-                    buf = io.BytesIO()
-                    myfig.savefig(buf, format='png')
-                    visitor.add_image('...', ' ', buf.getvalue())
-                    plt.close(myfig)
+                    save_plot_toscreen(myfig, visitor)
                 elif 'Spitzer' in self.__name:
                     # for each event
                     for i in range(len(self['data'][p])):

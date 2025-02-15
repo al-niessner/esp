@@ -3,6 +3,7 @@
 # -- IMPORTS --------------------------------------------------------
 import dawgie
 import excalibur
+from excalibur.util.plotters import save_plot_toscreen
 import matplotlib.pyplot as plt
 import io
 import numpy as np
@@ -49,12 +50,7 @@ class PredictSV(dawgie.StateVector):
                 #                            loc=5, ncol=1, mode='expand', numpoints=1,
                 #                            borderaxespad=0., frameon=False)
                 #                 plt.tight_layout(rect=[0,0,(1 - 0.1),1])
-                #                 buf = io.BytesIO()
-                #                 myfig.savefig(buf, format='png')
-                #                 visitor.add_image('...', ' ', buf.getvalue())
-                #                 # plt.show()
-                #                 plt.close(myfig)
-                pass
+                #                 save_plot_toscreen(myfig, visitor)
             pass
         pass
 
@@ -177,11 +173,7 @@ class Flags_SV(dawgie.StateVector):
                                 ax[1].set_ylim(y_lim * -1.5, y_lim * 1.5)
                                 ax[1].set_xlim(x_lim * -1.25, x_lim * 1.25)
                                 plt.tight_layout(pad=3.0)
-                                buf = io.BytesIO()
-                                fig.savefig(buf, format='png')
-                                visitor.add_image('...', '', buf.getvalue())
-                                plt.close(fig)
-
+                                save_plot_toscreen(fig, visitor)
                             else:
                                 for field in self['data'][k][alg].keys():
                                     if field not in (
@@ -376,6 +368,8 @@ class Flag_Summary_SV(dawgie.StateVector):
                 metric_info = self['data']['classifier_vals'][metric]
 
                 suptitle = flag_algs_info[metric]['suptitle']
+
+                myfig = plt.figure()
 
                 for count, subplot in enumerate(metric_info):
 
@@ -572,9 +566,6 @@ class Flag_Summary_SV(dawgie.StateVector):
 
                 # display the figure
                 plt.tight_layout()
-                buf = io.BytesIO()
-                plt.savefig(buf, format='png')
-                visitor.add_image('...', ' ', buf.getvalue())
-                plt.close()
+                save_plot_toscreen(myfig, visitor)
 
         pass

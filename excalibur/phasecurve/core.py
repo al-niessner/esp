@@ -8,7 +8,7 @@ import logging
 
 import excalibur.system.core as syscore
 import excalibur.transit.core as trncore
-from excalibur.util.plotters import save_plot, plot_residual_fft
+from excalibur.util.plotters import save_plot_myfit, plot_residual_fft
 
 import ldtk
 
@@ -410,11 +410,15 @@ def phasecurve_spitzer(nrm, fin, out, selftype, fltr):
             # 11/17/24 also save the MCMC results (for corner plot of the posteriors)
             out['data'][p][ec]['results'] = myfit.results
 
-            out['data'][p][ec]['plot_bestfit'] = save_plot(myfit.plot_bestfit)
-            out['data'][p][ec]['plot_posterior'] = save_plot(
+            out['data'][p][ec]['plot_bestfit'] = save_plot_myfit(
+                myfit.plot_bestfit
+            )
+            out['data'][p][ec]['plot_posterior'] = save_plot_myfit(
                 myfit.plot_posterior
             )
-            out['data'][p][ec]['plot_pixelmap'] = save_plot(myfit.plot_pixelmap)
+            out['data'][p][ec]['plot_pixelmap'] = save_plot_myfit(
+                myfit.plot_pixelmap
+            )
 
             # estimates for photon noise
             photons = aper * 1.0  # already converted to e- in data task

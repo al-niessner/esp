@@ -13,8 +13,17 @@ import dawgie
 
 # -- PLOTTING FUNCTIONS-- --------------------------------------------
 # --------------------------------------------------------------------
-def save_plot(plotfn):
-    # extract plot data for states.py
+def save_plot_toscreen(fig, visitor, headertext=' '):
+    # save a plot to the screen
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png')
+    visitor.add_image('...', headertext, buf.getvalue())
+    plt.close(fig)
+    return
+
+
+def save_plot_myfit(plotfn):
+    # extract plot data for states.py. incoming data is from pc_fitter
     fig, _ = plotfn()
     buf = io.BytesIO()
     fig.savefig(buf, format='png')
@@ -171,10 +180,7 @@ def barplot(title, categories, counts, categories2, counts2, visitor):
     plt.ylabel('# of planets', fontsize=14)
     plt.xlabel('Spectral Type', fontsize=14)
     plt.legend()
-    buf = io.BytesIO()
-    myfig.savefig(buf, format='png')
-    visitor.add_image('...', ' ', buf.getvalue())
-    plt.close(myfig)
+    save_plot_toscreen(myfig, visitor)
     return
 
 
@@ -245,10 +251,7 @@ def distrplot(paramName, values, values2, visitor, units=None):
         plt.xlabel(paramName, fontsize=14)
     else:
         plt.xlabel(paramName + f' [{units}]', fontsize=14)
-    buf = io.BytesIO()
-    myfig.savefig(buf, format='png')
-    visitor.add_image('...', ' ', buf.getvalue())
-    plt.close(myfig)
+    save_plot_toscreen(myfig, visitor)
     return
 
 
@@ -338,10 +341,7 @@ def plot_normalized_byvisit(data, vrange, visitor):
         plt.xlabel('Wavelength [$\\mu$m]')
         plt.xlim(np.min(vrange), np.max(vrange))
 
-        buf = io.BytesIO()
-        myfig.savefig(buf, format='png')
-        visitor.add_image('...', ' ', buf.getvalue())
-        plt.close(myfig)
+        save_plot_toscreen(myfig, visitor)
 
 
 # --------------------------------------------------------------------

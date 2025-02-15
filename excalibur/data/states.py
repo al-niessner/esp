@@ -6,6 +6,7 @@ import io
 import dawgie
 
 import excalibur
+from excalibur.util.plotters import save_plot_toscreen
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -103,10 +104,7 @@ class CalibrateSV(dawgie.StateVector):
                 plt.imshow(data['MEXP'][vldi])
                 plt.colorbar()
                 plt.title('Frame Index: ' + str(vldi))
-                buf = io.BytesIO()
-                myfig.savefig(buf, format='png')
-                visitor.add_image('...', ' ', buf.getvalue())
-                plt.close(myfig)
+                save_plot_toscreen(myfig, visitor)
 
                 if np.sum(allignore) > 0:
                     gbgi = np.random.uniform()
@@ -121,10 +119,7 @@ class CalibrateSV(dawgie.StateVector):
                         + ' Ignored: '
                         + data['TRIAL'][gbgi]
                     )
-                    buf = io.BytesIO()
-                    myfig.savefig(buf, format='png')
-                    visitor.add_image('...', ' ', buf.getvalue())
-                    plt.close(myfig)
+                    save_plot_toscreen(myfig, visitor)
                     pass
 
                 myfig = plt.figure()
@@ -132,10 +127,7 @@ class CalibrateSV(dawgie.StateVector):
                     plt.plot(spectrum)
                 plt.xlabel('Pixel Number')
                 plt.ylabel('Stellar Spectra [Counts]')
-                buf = io.BytesIO()
-                myfig.savefig(buf, format='png')
-                visitor.add_image('...', ' ', buf.getvalue())
-                plt.close(myfig)
+                save_plot_toscreen(myfig, visitor)
 
                 myfig = plt.figure()
                 for w, p, s in zip(wave, photoc, spec):
@@ -144,10 +136,7 @@ class CalibrateSV(dawgie.StateVector):
                     pass
                 plt.xlabel('Wavelength [$\\mu$m]')
                 plt.ylabel('Stellar Spectra [Photons]')
-                buf = io.BytesIO()
-                myfig.savefig(buf, format='png')
-                visitor.add_image('...', ' ', buf.getvalue())
-                plt.close(myfig)
+                save_plot_toscreen(myfig, visitor)
 
                 myfig = plt.figure()
                 num_bins = int(math.sqrt(len(allerr)) / 10)
@@ -173,29 +162,20 @@ class CalibrateSV(dawgie.StateVector):
                     verticalalignment='top',
                     transform=ax.transAxes,
                 )
-                buf = io.BytesIO()
-                myfig.savefig(buf, format='png')
-                visitor.add_image('...', ' ', buf.getvalue())
-                plt.close(myfig)
+                save_plot_toscreen(myfig, visitor)
 
                 myfig = plt.figure()
                 plt.plot(dispersion[torder], 'o')
                 plt.xlabel('Time Ordered Frame Number')
                 plt.ylabel('Dispersion [Angstroms/Pixel]')
                 plt.ylim(data['DISPLIM'][0], data['DISPLIM'][1])
-                buf = io.BytesIO()
-                myfig.savefig(buf, format='png')
-                visitor.add_image('...', ' ', buf.getvalue())
-                plt.close(myfig)
+                save_plot_toscreen(myfig, visitor)
 
                 myfig = plt.figure()
                 plt.plot(shift[torder] - np.nanmin(shift), 'o')
                 plt.xlabel('Time Ordered Frame Number')
                 plt.ylabel('Relative Shift [Pixels]')
-                buf = io.BytesIO()
-                myfig.savefig(buf, format='png')
-                visitor.add_image('...', ' ', buf.getvalue())
-                plt.close(myfig)
+                save_plot_toscreen(myfig, visitor)
                 pass
             pass
         return
@@ -291,10 +271,7 @@ class TimingSV(dawgie.StateVector):
                     plt.ylim(-0.5, 0.5)
                     plt.xlabel('Time index')
                     plt.ylabel('Orbital Phase [2pi rad]')
-                    buf = io.BytesIO()
-                    myfig.savefig(buf, format='png')
-                    visitor.add_image('...', ' ', buf.getvalue())
-                    plt.close(myfig)
+                    save_plot_toscreen(myfig, visitor)
 
                     myfig = plt.figure()
                     plt.plot(tmetod, 'o')
@@ -308,10 +285,7 @@ class TimingSV(dawgie.StateVector):
                     plt.xlabel('Time index')
                     plt.ylabel('Frame Separation [Days]')
                     plt.semilogy()
-                    buf = io.BytesIO()
-                    myfig.savefig(buf, format='png')
-                    visitor.add_image('...', ' ', buf.getvalue())
-                    plt.close(myfig)
+                    save_plot_toscreen(myfig, visitor)
 
                     if np.max(dvis) > np.max(self['data'][p]['visits']):
                         myfig = plt.figure()
@@ -319,10 +293,7 @@ class TimingSV(dawgie.StateVector):
                         plt.xlim(0, tmetod.size - 1)
                         plt.xlabel('Time index')
                         plt.ylabel('Double Scan Visit Number')
-                        buf = io.BytesIO()
-                        myfig.savefig(buf, format='png')
-                        visitor.add_image('...', ' ', buf.getvalue())
-                        plt.close(myfig)
+                        save_plot_toscreen(myfig, visitor)
                         pass
                     pass
                 pass

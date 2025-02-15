@@ -6,6 +6,7 @@ import io
 import dawgie
 
 import excalibur
+from excalibur.util.plotters import save_plot_toscreen
 
 import matplotlib.image as img
 import matplotlib.pyplot as plt
@@ -42,14 +43,8 @@ class xslibSV(dawgie.StateVector):
             )
             plt.imshow(crblogo)
             plt.axis('off')
-            buf = io.BytesIO()
-            myfig.savefig(buf, format='png')
-            visitor.add_image('...', 'Cerberus ', buf.getvalue())
-            plt.close(myfig)
-            pass
+            save_plot_toscreen(myfig, visitor, headertext='Cerberus ')
         return
-
-    pass
 
 
 class rlsSV(dawgie.StateVector):
@@ -109,30 +104,22 @@ class rlsSV(dawgie.StateVector):
                     myfig = plt.figure(figsize=(10, 6))
                     plt.imshow(self['data'][p]['modelplot'])
                     plt.axis('off')
-                    buf = io.BytesIO()
-                    myfig.savefig(buf, format='png')
-                    visitor.add_image(
-                        '...', p + ': Atmos results', buf.getvalue()
+                    save_plot_toscreen(
+                        myfig, visitor, headertext=p + ': Atmos results'
                     )
-                    plt.close(myfig)
 
                     myfig = plt.figure(figsize=(20, 15))
                     plt.imshow(self['data'][p]['corrplot'])
                     plt.axis('off')
-                    buf = io.BytesIO()
-                    myfig.savefig(buf, format='png')
-                    visitor.add_image(
-                        '...',
-                        p + ': Profiled best model chains',
-                        buf.getvalue(),
+                    save_plot_toscreen(
+                        myfig,
+                        visitor,
+                        headertext=p + ': Profiled best model chains',
                     )
-                    plt.close(myfig)
-                    pass
                 else:
                     visitor.add_declaration(
                         p + ': No/Low Evidence for Model Selection'
                     )
-                    pass
                 pass
             pass
         else:
@@ -144,14 +131,8 @@ class rlsSV(dawgie.StateVector):
             )
             plt.imshow(crblogo)
             plt.axis('off')
-            buf = io.BytesIO()
-            myfig.savefig(buf, format='png')
-            visitor.add_image('...', 'Cerberus ', buf.getvalue())
-            plt.close(myfig)
-            pass
+            save_plot_toscreen(myfig, visitor, headertext='Cerberus ')
         return
-
-    pass
 
 
 class atmosSV(dawgie.StateVector):
@@ -181,14 +162,8 @@ class atmosSV(dawgie.StateVector):
             )
             plt.imshow(crblogo)
             plt.axis('off')
-            buf = io.BytesIO()
-            myfig.savefig(buf, format='png')
-            visitor.add_image('...', 'Cerberus ', buf.getvalue())
-            plt.close(myfig)
-            pass
+            save_plot_toscreen(myfig, visitor, headertext='Cerberus ')
         return
-
-    pass
 
 
 # -------- -----------------------------------------------------------

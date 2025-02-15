@@ -8,6 +8,7 @@ import dawgie
 import excalibur
 from excalibur.transit.core import composite_spectrum, jwst_lightcurve
 from excalibur.util.plotters import (
+    save_plot_toscreen,
     plot_normalized_byvisit,
     add_scale_height_labels,
 )
@@ -245,10 +246,8 @@ class WhiteLightSV(dawgie.StateVector):
                         )
                         # myfig.tight_layout(rect=[0,0,(1 - 0.1*ncol),1])
 
-                    buf = io.BytesIO()
-                    myfig.savefig(buf, format='png')
-                    visitor.add_image('...', ' ', buf.getvalue())
-                    plt.close(myfig)
+                    save_plot_toscreen(myfig, visitor)
+
             elif 'Spitzer' in self.__name:
                 # for each planet
                 for p in self['data'].keys():
@@ -275,10 +274,7 @@ class WhiteLightSV(dawgie.StateVector):
                     for i in range(len(self['data'][p])):
                         # light curve fit
                         fig = jwst_lightcurve(self['data'][p][i])
-                        buf = io.BytesIO()
-                        fig.savefig(buf, format='png')
-                        visitor.add_image('...', ' ', buf.getvalue())
-                        plt.close(fig)
+                        save_plot_toscreen(fig, visitor)
 
 
 class SpectrumSV(dawgie.StateVector):
@@ -310,10 +306,7 @@ class SpectrumSV(dawgie.StateVector):
                         fig = composite_spectrum(
                             self['data'], 'Composite Spectrum', p
                         )
-                        buf = io.BytesIO()
-                        fig.savefig(buf, format='png')
-                        visitor.add_image('...', ' ', buf.getvalue())
-                        plt.close(fig)
+                        save_plot_toscreen(fig, visitor)
                     except KeyError:
                         pass
             else:
@@ -387,18 +380,13 @@ class SpectrumSV(dawgie.StateVector):
                     add_scale_height_labels(
                         self['data'][p], vspectrum, ax, myfig
                     )
-
-                    buf = io.BytesIO()
-                    myfig.savefig(buf, format='png')
-                    visitor.add_image('...', ' ', buf.getvalue())
-                    plt.close(myfig)
+                    save_plot_toscreen(fig, visitor)
                     # now display unmasked spectrum
                     if 'MCPOST' in self['data'][p]:
                         myfig, ax = plt.subplots(figsize=(8, 6))
                         plt.title('Unmasked Spectrum')
                         plt.xlabel(str('Wavelength [$\\mu$m]'))
                         plt.ylabel(str('$(R_p/R_*)^2$ [%]'))
-                        buf = io.BytesIO()
                         fullspec = [
                             mc['mean']['rprs'] if np.isnan(rp) else rp
                             for mc, rp in zip(
@@ -438,11 +426,7 @@ class SpectrumSV(dawgie.StateVector):
                         add_scale_height_labels(
                             self['data'][p], vspectrum, ax, myfig
                         )
-
-                        buf = io.BytesIO()
-                        myfig.savefig(buf, format='png')
-                        visitor.add_image('...', ' ', buf.getvalue())
-                        plt.close(myfig)
+                        save_plot_toscreen(myfig, visitor)
                     # now display completion plot
                     if 'Hs' in self['data'][p]:
                         Hs = self['data'][p]['Hs'][0]
@@ -481,10 +465,7 @@ class SpectrumSV(dawgie.StateVector):
                         plt.xlabel(str('Absolute Modulation [H$_s$]'))
                         plt.ylabel(str('Percent [%]'))
                         plt.ylim((0, 100))
-                        buf = io.BytesIO()
-                        myfig.savefig(buf, format='png')
-                        visitor.add_image('...', ' ', buf.getvalue())
-                        plt.close(myfig)
+                        save_plot_toscreen(myfig, visitor)
                     if 'LCFIT' in self['data'][p]:
                         spec_rsdpn = [
                             np.nanstd(i['residuals']) / i['dnoise']
@@ -502,10 +483,7 @@ class SpectrumSV(dawgie.StateVector):
                         plt.ylabel(
                             str('Residual Standard Deviation [Shot Noise]')
                         )
-                        buf = io.BytesIO()
-                        myfig.savefig(buf, format='png')
-                        visitor.add_image('...', ' ', buf.getvalue())
-                        plt.close(myfig)
+                        save_plot_toscreen(myfig, visitor)
                     if 'LCFIT' in self['data'][p]:  # correlated noise analysis
                         residuals = [
                             i['residuals'] for i in self['data'][p]['LCFIT']
@@ -560,10 +538,7 @@ class SpectrumSV(dawgie.StateVector):
                         )
                         ax[1].set_xscale('log', base=2)
                         ax[1].legend()
-                        buf = io.BytesIO()
-                        myfig.savefig(buf, format='png')
-                        visitor.add_image('...', ' ', buf.getvalue())
-                        plt.close(myfig)
+                        save_plot_toscreen(myfig, visitor)
                     pass
             pass
         pass
@@ -763,10 +738,7 @@ def distrplot(title, values, visitor, units=None, fit_t=False, bins='auto'):
         )
         pass
     plt.legend()
-    buf = io.BytesIO()
-    myfig.savefig(buf, format='png')
-    visitor.add_image('...', ' ', buf.getvalue())
-    plt.close(myfig)
+    save_plot_toscreen(myfig, visitor)
     return
 
 
