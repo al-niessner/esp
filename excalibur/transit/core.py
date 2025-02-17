@@ -1324,7 +1324,7 @@ def hstwhitelight(
             pass
         else:
             g1, g2, g3, g4 = [[0], [0], [0], [0]]
-        wlmod = tldlc(abs(flatz), rpors, g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0])
+        # wlmod = tldlc(abs(flatz), rpors, g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0])
         out['data'][p]['whiteld'] = [g1[0], g2[0], g3[0], g4[0]]
         # TTV --------------------------------------------------------
         ttv = []
@@ -1736,7 +1736,7 @@ def whitelight(
             pass
         else:
             g1, g2, g3, g4 = [[0], [0], [0], [0]]
-        wlmod = tldlc(abs(flatz), rpors, g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0])
+        # wlmod = tldlc(abs(flatz), rpors, g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0])
         out['data'][p]['whiteld'] = [g1[0], g2[0], g3[0], g4[0]]
         # TTV --------------------------------------------------------
         ttv = []

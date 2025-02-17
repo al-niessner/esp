@@ -2568,8 +2568,8 @@ def stiscal_G750L(
             spec_idx_all = np.arange(spec_idx_dwn, spec_idx_up, 1)
             frame2 = allframe.copy()
             for i, flatnorm in zip(spec_idx_all, div_list):
-                frame_sel = allframe[i, :]
-                coefs_f = poly.polyfit(pixels, frame_sel, 12)
+                # frame_sel = allframe[i, :]
+                # coefs_f = poly.polyfit(pixels, frame_sel, 12)
                 # ffit_f = poly.polyval(pixels, coefs_f)
                 frame2[i, 400:1023] = frame2[i, 400:1023] / flatnorm[400:1023]
 
@@ -2791,8 +2791,8 @@ def stiscal_G430L(fin, clc, tim, tid, flttype, out, verbose=False, debug=False):
     for pkey in tim['data'].keys():
         visits = np.array(tim['data'][pkey]['dvisits'])
     # PHASE ------------------------------------------------------------------------------
-    for pkey in tim['data'].keys():
-        phase = np.array(tim['data'][pkey]['phase'])
+    # for pkey in tim['data'].keys():
+    #    phase = np.array(tim['data'][pkey]['phase'])
     # OPTICS AND FILTER ------------------------------------------------------------------
     vrange = validrange(flttype)
     _wvrng, _disp, ldisp, udisp = fng(flttype)
@@ -3218,8 +3218,8 @@ def stiscal_unified(
     for pkey in tim['data'].keys():
         visits = np.array(tim['data'][pkey]['dvisits'])
     # PHASE ------------------------------------------------------------------------------
-    for pkey in tim['data'].keys():
-        phase = np.array(tim['data'][pkey]['phase'])
+    # for pkey in tim['data'].keys():
+    #    phase = np.array(tim['data'][pkey]['phase'])
     # OPTICS AND FILTER ------------------------------------------------------------------
     vrange = validrange(flttype)
     _wvrng, _disp, ldisp, udisp = fng(flttype)
@@ -3459,8 +3459,8 @@ def stiscal_unified(
                 spec_idx_all = np.arange(spec_idx_dwn, spec_idx_up, 1)
                 frame2 = allframe.copy()
                 for i, flatnorm in zip(spec_idx_all, div_list):
-                    frame_sel = allframe[i, :]
-                    coefs_f = poly.polyfit(pixels, frame_sel, 12)
+                    # frame_sel = allframe[i, :]
+                    # coefs_f = poly.polyfit(pixels, frame_sel, 12)
                     # ffit_f = poly.polyval(pixels, coefs_f)
                     frame2[i, 400:1023] = (
                         frame2[i, 400:1023] / flatnorm[400:1023]
