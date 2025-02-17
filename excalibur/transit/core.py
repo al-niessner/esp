@@ -1318,7 +1318,6 @@ def hstwhitelight(
                 [allwwmax],
                 priors,
                 segmentation=int(10),
-                verbose=verbose,
             )
             g1, g2, g3, g4 = whiteld['LD']
             pass
@@ -1730,7 +1729,6 @@ def whitelight(
                 [allwwmax],
                 priors,
                 segmentation=int(10),
-                verbose=verbose,
             )
             g1, g2, g3, g4 = whiteld['LD']
             pass
@@ -2163,7 +2161,6 @@ def createldgrid(
     ldmodel='nonlinear',
     phoenixmin=1e-1,
     segmentation=int(10),
-    verbose=False,
 ):
     '''
     G. ROUDIER: Wrapper around LDTK downloading tools
