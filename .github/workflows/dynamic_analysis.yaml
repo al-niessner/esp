@@ -20,4 +20,4 @@ jobs:
         run: |
           createdb -h localhost -U tester testspace
       - name: pytest
-        run: pytest --cov=dawgie --cov-branch --cov-report term-missing -v Test
+        run: pytest --cov=dawgie --cov-branch --cov-report term-missing -v test
