@@ -98,11 +98,7 @@ def alert(
                             str(table[index][pk]), str(tab[-1][pk])
                         )
                         changes.append(remark)
-                        pass
-                    pass
-                pass
-            pass
-        pass
+
     changes.sort()
 
     if changes:

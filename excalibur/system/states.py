@@ -109,13 +109,8 @@ class PriorsSV(dawgie.StateVector):
                         table.get_cell(
                             i, starlabels.index(starlabel)
                         ).add_primitive(self['priors'][c][starlabel])
-                        pass
-                    pass
-                pass
-            pass
-        return
 
-    pass
+        return
 
 
 # -------- -----------------------------------------------------------

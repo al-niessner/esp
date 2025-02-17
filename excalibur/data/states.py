@@ -175,11 +175,7 @@ class CalibrateSV(dawgie.StateVector):
                 plt.xlabel('Time Ordered Frame Number')
                 plt.ylabel('Relative Shift [Pixels]')
                 save_plot_toscreen(myfig, visitor)
-                pass
-            pass
         return
-
-    pass
 
 
 # -------------- -----------------------------------------------------
@@ -293,13 +289,8 @@ class TimingSV(dawgie.StateVector):
                         plt.xlabel('Time index')
                         plt.ylabel('Double Scan Visit Number')
                         save_plot_toscreen(myfig, visitor)
-                        pass
-                    pass
-                pass
-            pass
-        return
 
-    pass
+        return
 
 
 # ------------ -------------------------------------------------------

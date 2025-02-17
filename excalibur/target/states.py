@@ -113,18 +113,10 @@ class TargetSV(dawgie.StateVector):
                             elem = starinfo[c][starlabel][0]
                             if elem:
                                 table.get_cell(i, j).add_primitive(elem)
-                                pass
                             else:
                                 table.get_cell(i, j).add_primitive('NA')
-                                pass
-                            pass
-                        pass
-                    pass
-                pass
-            pass
-        return
 
-    pass
+        return
 
 
 # ------------ -------------------------------------------------------
@@ -172,12 +164,7 @@ class FilterSV(dawgie.StateVector):
                     number = len(self['activefilters'][flt]['TOTAL'])
                     table.get_cell(i, 0).add_primitive(flt)
                     table.get_cell(i, 1).add_primitive(number)
-                    pass
-                pass
-            pass
         return
-
-    pass
 
 
 # ------------ -------------------------------------------------------
@@ -220,14 +207,8 @@ class DatabaseSV(dawgie.StateVector):
                                 + '%)'
                             )
                             table.get_cell(0, i).add_primitive(out)
-                            pass
-                        pass
-                    pass
-                pass
-            pass
-        return
 
-    pass
+        return
 
 
 # -------------- -----------------------------------------------------
@@ -282,11 +263,7 @@ class MonitorSV(dawgie.StateVector):
                 # fig.circle (self['runid'], values)
                 js, div = bokeh.embed.components(fig)
                 visitor.add_declaration(None, div=div, js=js)
-                pass
-            pass
         return
-
-    pass
 
 
 # -------------- -----------------------------------------------------
@@ -337,12 +314,8 @@ class AlertSV(dawgie.StateVector):
                     table.get_cell(row, i + 2).add_primitive(
                         str(pp[k]) if k in pp else '-'
                     )
-                    pass
-                pass
-            pass
-        return
 
-    pass
+        return
 
 
 # ------------ -------------------------------------------------------

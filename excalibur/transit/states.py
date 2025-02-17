@@ -70,12 +70,6 @@ class NormSV(dawgie.StateVector):
                 # keep on-the-fly plotting, so that older RUNIDs still work
                 else:
                     plot_normalized_byvisit(self['data'][p], vrange, visitor)
-                    pass
-                pass
-            pass
-        pass
-
-    pass
 
 
 class WhiteLightSV(dawgie.StateVector):
@@ -538,11 +532,6 @@ class SpectrumSV(dawgie.StateVector):
                         ax[1].set_xscale('log', base=2)
                         ax[1].legend()
                         save_plot_toscreen(myfig, visitor)
-                    pass
-            pass
-        pass
-
-    pass
 
 
 class StarspotSV(dawgie.StateVector):

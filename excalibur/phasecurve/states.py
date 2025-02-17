@@ -41,7 +41,6 @@ class NormSV(dawgie.StateVector):
                 plot_normalized_byvisit(self['data'][p], vrange, visitor)
             pass
         pass
-
     pass
 
 
@@ -121,12 +120,7 @@ class WhiteLightSV(dawgie.StateVector):
                             '...', ' ', self['data'][p][i]['plot_pixelmap']
                         )
                         # another centroid timeseries plot?
-                    pass
-                pass
-            pass
         return
-
-    pass
 
 
 # -------- -----------------------------------------------------------
