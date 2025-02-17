@@ -2570,7 +2570,7 @@ def stiscal_G750L(
             for i, flatnorm in zip(spec_idx_all, div_list):
                 frame_sel = allframe[i, :]
                 coefs_f = poly.polyfit(pixels, frame_sel, 12)
-                ffit_f = poly.polyval(pixels, coefs_f)
+                # ffit_f = poly.polyval(pixels, coefs_f)
                 frame2[i, 400:1023] = frame2[i, 400:1023] / flatnorm[400:1023]
 
                 data['SPECTRUM'][index] = np.nansum(frame2, axis=0)
@@ -3143,7 +3143,12 @@ def stiscal_G430L(fin, clc, tim, tid, flttype, out, verbose=False, debug=False):
                 # model = scipy.signal.medfilt(g_wav*bin_spec_norm[cond_mid], 5)
                 # wave = np.arange(spec.size)*disper*1e-4 + shift
                 x0 = (1.0 / 2.72, -1000)
-                result = opt.minimize(chisqfunc, x0, method='Nelder-Mead')
+                result = opt.minimize(
+                    chisqfunc,
+                    x0,
+                    args=(g_wav, bin_spec_norm, cond_mid, f, mid_ang),
+                    method='Nelder-Mead',
+                )
                 d_frc = result.x[0]
                 d = 1.0 / result.x[0]
                 dispersion_list.append(d)
@@ -3456,7 +3461,7 @@ def stiscal_unified(
                 for i, flatnorm in zip(spec_idx_all, div_list):
                     frame_sel = allframe[i, :]
                     coefs_f = poly.polyfit(pixels, frame_sel, 12)
-                    ffit_f = poly.polyval(pixels, coefs_f)
+                    # ffit_f = poly.polyval(pixels, coefs_f)
                     frame2[i, 400:1023] = (
                         frame2[i, 400:1023] / flatnorm[400:1023]
                     )
@@ -3697,7 +3702,7 @@ def stiscal_unified(
                 d = 1.0 / result.x[0]
                 dispersion_list.append(d)
                 s = result.x[1]
-                sc = result.x[2]
+                # sc = result.x[2]  # not used!
                 calib_spec = f(s + (d_frc) * mid_ang[cond_mid])
                 data['SPECTRUM'][index] = calib_spec * np.max(
                     wavecalspec[finitespec]
