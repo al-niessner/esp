@@ -219,7 +219,7 @@ def normversion():
     return dawgie.VERSION(1, 1, 9)
 
 
-def norm_jwst(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
+def norm_jwst(cal, tme, fin, ext, out, selftype, debug=False):
     '''
     JWST spectra normalization
     '''
@@ -324,7 +324,7 @@ def norm_jwst(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
     return normed
 
 
-def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
+def norm(cal, tme, fin, ext, out, selftype, verbose=False):
     '''
     G. ROUDIER: Out of transit data normalization
     '''
@@ -2300,7 +2300,7 @@ def createldgrid(
 
 # -------------------- -----------------------------------------------
 # -- LDX -- ----------------------------------------------------------
-def ldx(psmu, psmean, psstd, mumin=1e-1, debug=False, model='nonlinear'):
+def ldx(psmu, psmean, psstd, mumin=1e-1, model='nonlinear'):
     '''
     G. ROUDIER: Limb darkening coefficient retrievial on PHOENIX GRID models,
     OPTIONAL mumin set up on HAT-P-41 stellar class
@@ -3884,7 +3884,7 @@ def norm_jwst_niriss(cal, tme, fin, out, selftype, _debug=False):
     return normed
 
 
-def norm_spitzer(cal, tme, fin, out, selftype, debug=False):
+def norm_spitzer(cal, tme, fin, out, selftype):
     '''
     K. PEARSON: aperture selection, remove nans, remove zeros, 3 sigma clip time series
     '''

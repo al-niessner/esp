@@ -125,7 +125,7 @@ def timingversion():
     return dawgie.VERSION(1, 3, 0)
 
 
-def timing(force, ext, clc, out, verbose=False):
+def timing(force, ext, clc, out):
     '''
     Uses system orbital parameters to guide the dataset towards
     transit, eclipse or phasecurve tasks
@@ -570,7 +570,7 @@ def timing(force, ext, clc, out, verbose=False):
 
 # ------------ -------------------------------------------------------
 # -- JWST CALIBRATION -- ---------------------------------------------
-def jwstcal(fin, clc, tim, ext, out, ps=None, verbose=False, debug=False):
+def jwstcal(fin, clc, tim, ext, out, ps=None, verbose=False):
     '''
     G. ROUDIER: Extracts and Wavelength calibrates JWST datasets
     '''
@@ -853,7 +853,6 @@ def scancal(
     out,
     emptythr=1e3,
     frame2png=False,
-    verbose=False,
     debug=False,
 ):
     '''
@@ -1619,7 +1618,6 @@ def isolate(
     targetn,
     floodlevel,
     axis=1,
-    debug=False,
     stare=False,
 ):
     '''
@@ -1761,7 +1759,7 @@ def ag2lp(detector, grism):
 
 # --------------------------------------- ----------------------------
 # -- BUILD TOTAL TRANSMISSION FILTER -- ------------------------------
-def bttf(lightpath, debug=False):
+def bttf(lightpath):
     '''
     G. ROUDIER: Builds total transmission filter
     '''
@@ -1804,7 +1802,6 @@ def wavesol(
     fd=False,
     bck=None,
     fs=False,
-    debug=False,
     ovszspc=False,
 ):
     '''
@@ -1962,8 +1959,6 @@ def starecal(
     out,
     emptythr=1e3,
     frame2png=False,
-    verbose=False,
-    debug=False,
 ):
     '''
     G. ROUDIER: WFC3 STARE Calibration
@@ -2341,9 +2336,7 @@ def starecal(
 
 # -------------------------- -----------------------------------------
 # -- STIS CALIBRATION -- ---------------------------------------------
-def stiscal_G750L(
-    _fin, clc, tim, tid, flttype, out, verbose=False, debug=False
-):
+def stiscal_G750L(_fin, clc, tim, tid, flttype, out):
     '''
     R. ESTRELA: STIS .flt data extraction and wavelength calibration
     '''
@@ -2782,7 +2775,7 @@ def stiscal_G750L(
 # ---------------------- ---------------------------------------------
 # -------------------------- -----------------------------------------
 # -- STIS CALIBRATION -- ---------------------------------------------
-def stiscal_G430L(fin, clc, tim, tid, flttype, out, verbose=False, debug=False):
+def stiscal_G430L(fin, clc, tim, tid, flttype, out):
     '''
     R. ESTRELA: STIS .flt data extraction and wavelength calibration
     '''
@@ -3207,9 +3200,7 @@ def stiscal_G430L(fin, clc, tim, tid, flttype, out, verbose=False, debug=False):
 # -------------------------- -----------------------------------------
 
 
-def stiscal_unified(
-    fin, clc, tim, tid, flttype, out, verbose=False, debug=False
-):
+def stiscal_unified(fin, clc, tim, tid, flttype, out):
     '''
     R. ESTRELA: STIS .flt data extraction and wavelength calibration FILTERS G430L and G750L
     '''
