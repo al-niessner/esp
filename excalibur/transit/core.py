@@ -5002,40 +5002,8 @@ def composite_spectrum(SV, target, p='b'):
                     )
             else:
                 # Smooth spectrum
-                binsize = 4
-                nspec = int(specwave.size / binsize)
-                minspec = np.nanmin(specwave)
-                maxspec = np.nanmax(specwave)
-                scale = (maxspec - minspec) / (1e0 * nspec)
-                wavebin = scale * np.arange(nspec) + minspec
-                deltabin = np.diff(wavebin)[0]
-                cbin = wavebin + deltabin / 2e0
-                specbin = []
-                errbin = []
-                for eachbin in cbin:
-                    select = specwave < (eachbin + deltabin / 2e0)
-                    select = select & (specwave >= (eachbin - deltabin / 2e0))
-                    select = select & np.isfinite(vspectrum)
-                    if np.sum(np.isfinite(vspectrum[select])) > 0:
-                        specbin.append(
-                            np.nansum(
-                                vspectrum[select] / (specerr[select] ** 2)
-                            )
-                            / np.nansum(1.0 / (specerr[select] ** 2))
-                        )
-                        errbin.append(
-                            np.nanmedian((specerr[select]))
-                            / np.sqrt(np.sum(select))
-                        )
-                        pass
-                    else:
-                        specbin.append(np.nan)
-                        errbin.append(np.nan)
-                        pass
-                    pass
-                waveb = np.array(cbin)
-                specb = np.array(specbin)
-                errb = np.array(errbin)
+                waveb, specb, errb = bin_spectrum(specwave, vspectrum, specerr)
+
                 ax.errorbar(
                     waveb,
                     1e2 * specb,
@@ -5311,3 +5279,42 @@ def starspots(fin, wht, spc, out):
         out['STATUS'].append(True)
 
     return exospec
+
+def bin_spectrum(specwave, vspectrum, specerr, binsize = 4):
+    
+    nspec = int(specwave.size / binsize)
+    minspec = np.nanmin(specwave)
+    maxspec = np.nanmax(specwave)
+    scale = (maxspec - minspec) / (1e0 * nspec)
+    wavebin = scale * np.arange(nspec) + minspec
+    deltabin = np.diff(wavebin)[0]
+    cbin = wavebin + deltabin / 2e0
+
+    specbin = []
+    errbin = []
+    for eachbin in cbin:
+        select = specwave < (eachbin + deltabin / 2e0)
+        select = select & (specwave >= (eachbin - deltabin / 2e0))
+        select = select & np.isfinite(vspectrum)
+        if np.sum(np.isfinite(vspectrum[select])) > 0:
+            specbin.append(
+                np.nansum(
+                    vspectrum[select] / (specerr[select] ** 2)
+                )
+                / np.nansum(1.0 / (specerr[select] ** 2))
+            )
+            errbin.append(
+                np.nanmedian((specerr[select]))
+                / np.sqrt(np.sum(select))
+            )
+            pass
+        else:
+            specbin.append(np.nan)
+            errbin.append(np.nan)
+            pass
+        pass
+    
+    waveb = np.array(cbin)
+    specb = np.array(specbin)
+    errb = np.array(errbin)
+    return waveb, specb, errb

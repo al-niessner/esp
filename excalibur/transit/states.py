@@ -5,7 +5,7 @@
 import dawgie
 
 import excalibur
-from excalibur.transit.core import composite_spectrum, jwst_lightcurve
+from excalibur.transit.core import composite_spectrum, jwst_lightcurve, bin_spectrum
 from excalibur.util.plotters import (
     save_plot_toscreen,
     plot_normalized_byvisit,
@@ -315,43 +315,7 @@ class SpectrumSV(dawgie.StateVector):
                     specwave = np.array(self['data'][p]['WB'])
                     specerr = abs(vspectrum**2 - (vspectrum + specerr) ** 2)
                     vspectrum = vspectrum**2
-                    # Smooth spectrum
-                    binsize = 4
-                    nspec = int(specwave.size / binsize)
-                    minspec = np.nanmin(specwave)
-                    maxspec = np.nanmax(specwave)
-                    scale = (maxspec - minspec) / (1e0 * nspec)
-                    wavebin = scale * np.arange(nspec) + minspec
-                    deltabin = np.diff(wavebin)[0]
-                    cbin = wavebin + deltabin / 2e0
-                    specbin = []
-                    errbin = []
-                    for eachbin in cbin:
-                        select = specwave < (eachbin + deltabin / 2e0)
-                        select = select & (
-                            specwave >= (eachbin - deltabin / 2e0)
-                        )
-                        select = select & np.isfinite(vspectrum)
-                        if np.sum(np.isfinite(vspectrum[select])) > 0:
-                            specbin.append(
-                                np.nansum(
-                                    vspectrum[select] / (specerr[select] ** 2)
-                                )
-                                / np.nansum(1.0 / (specerr[select] ** 2))
-                            )
-                            errbin.append(
-                                np.nanmedian((specerr[select]))
-                                / np.sqrt(np.sum(select))
-                            )
-                            pass
-                        else:
-                            specbin.append(np.nan)
-                            errbin.append(np.nan)
-                            pass
-                        pass
-                    waveb = np.array(cbin)
-                    specb = np.array(specbin)
-                    errb = np.array(errbin)
+
                     myfig, ax = plt.subplots(figsize=(8, 6))
                     plt.title(p + ' ' + Teq)
                     ax.errorbar(
@@ -361,6 +325,7 @@ class SpectrumSV(dawgie.StateVector):
                         yerr=1e2 * specerr,
                         color='lightgray',
                     )
+                    waveb, specb, errb = bin_spectrum(specwave, vspectrum, specerr)
                     ax.errorbar(
                         waveb,
                         1e2 * specb,
