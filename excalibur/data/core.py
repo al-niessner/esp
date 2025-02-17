@@ -326,19 +326,6 @@ def timing(force, ext, clc, out, verbose=False):
                     pass
                 vis[ordt] = visto.astype(int)
                 ignore[ordt] = ignto
-                # PLOTS
-                if verbose:
-                    plt.figure()
-                    plt.plot(phsto, 'k.')
-                    plt.plot(np.arange(phsto.size)[~ignto], phsto[~ignto], 'bo')
-                    for i in wherev:
-                        plt.axvline(i, ls='--', color='r')
-                    plt.xlim(0, time.size - 1)
-                    plt.ylim(-0.5, 0.5)
-                    plt.xlabel('Time index')
-                    plt.ylabel('Orbital Phase [2pi rad]')
-                    plt.show()
-                    pass
                 out['data'][p]['wherev'] = wherev
                 out['data'][p]['visits'] = vis
                 out['data'][p]['z'] = z
@@ -550,43 +537,6 @@ def timing(force, ext, clc, out, verbose=False):
                 orb[ordt] = orbto.astype(int)
                 dvis[ordt] = dvisto.astype(int)
                 ignore[ordt] = ignto
-                # PLOTS
-                if verbose:
-                    plt.figure()
-                    plt.plot(phsto, 'k.')
-                    plt.plot(np.arange(phsto.size)[~ignto], phsto[~ignto], 'bo')
-                    for i in wherev:
-                        plt.axvline(i, ls='--', color='r')
-                    for i in whereo:
-                        plt.axvline(i, ls='-.', color='g')
-                    plt.xlim(0, tmetod.size - 1)
-                    plt.ylim(-0.5, 0.5)
-                    plt.xlabel('Time index')
-                    plt.ylabel('Orbital Phase [2pi rad]')
-                    plt.figure()
-                    plt.plot(tmetod, 'o')
-                    plt.plot(tmetod * 0 + vstthr, 'r--')
-                    plt.plot(tmetod * 0 + rbtthr, 'g-.')
-                    for i in wherev:
-                        plt.axvline(i, ls='--', color='r')
-                    for i in whereo:
-                        plt.axvline(i, ls='-.', color='g')
-                    plt.xlim(0, tmetod.size - 1)
-                    plt.xlabel('Time index')
-                    plt.ylabel('Frame Separation [Days]')
-                    plt.semilogy()
-                    if np.max(dvis) > np.max(vis):
-                        plt.figure()
-                        plt.plot(dvisto, 'o')
-                        plt.xlim(0, tmetod.size - 1)
-                        plt.ylim(1, np.max(dvisto))
-                        plt.xlabel('Time index')
-                        plt.ylabel('Double Scan Visit Number')
-                        plt.show()
-                        pass
-                    else:
-                        plt.show()
-                    pass
                 out['data'][p]['tmetod'] = tmetod
                 out['data'][p]['whereo'] = whereo
                 out['data'][p]['wherev'] = wherev
@@ -735,16 +685,6 @@ def jwstcal(fin, clc, tim, ext, out, ps=None, verbose=False, debug=False):
         for thisrefX, thisrefS in zip(refX, refS):
             orderme = np.argsort(thisrefX)
             TMX.append(itp.CubicSpline(thisrefX[orderme], thisrefS[orderme]))
-            if debug:
-                select = (thisrefX > 0) & (thisrefX < alldexp[0].shape[1])
-                plt.plot(thisrefX[select], thisrefS[select], 'o')
-                test = np.arange(0, 2048, step=0.1)
-                plt.plot(test, TMX[-1](test), '+')
-                plt.show()
-                # BANG
-                # Order 3 interpolated negative values
-                pass
-            pass
         # STOP TEST JWST
         _ = YY
         _ = XX
@@ -806,21 +746,6 @@ def jwstcal(fin, clc, tim, ext, out, ps=None, verbose=False, debug=False):
                 excld.append(np.sum(select))
                 all1d.append(this1d)
                 all1dwave.append(this1dwave)
-                if debug:
-                    plt.figure()
-                    plt.imshow(np.log10(thisexp), aspect='auto')
-                    plt.colorbar()
-                    plt.figure()
-                    plt.plot(np.log10(this1d), 'o')
-                    plt.plot(flood)
-                    plt.plot(
-                        np.array(flood) - ff * stdflood, color='r', ls='--'
-                    )
-                    plt.plot(
-                        np.array(flood) + ff * stdflood, color='r', ls='--'
-                    )
-                    plt.show()
-                    pass
                 if verbose:
                     log.warning('>-- : %d/%d', it, len(alldexp))
                 pass
@@ -1268,30 +1193,6 @@ def scancal(
             thispstamp[thispstamp == 0] = np.nan
             if abs(spectrace - thispstamp.shape[1]) < 36:
                 ovszspc = True
-            # PLOTS ----------------------------------------------------------------------
-            if debug:
-                show = thispstamp.copy()
-                valid = np.isfinite(show)
-                show[~valid] = 0
-                show[show < data['FLOODLVL'][index]] = np.nan
-                plt.figure()
-                plt.title('Isolate Flood Level')
-                plt.imshow(show)
-                plt.colorbar()
-
-                plt.figure()
-                plt.title('Diff Accum')
-                plt.imshow(thispstamp)
-                plt.colorbar()
-
-                colorlim = np.nanmin(thispstamp)
-                plt.figure()
-                plt.title('Background Sub')
-                plt.imshow(thispstamp)
-                plt.colorbar()
-                plt.clim(colorlim, abs(colorlim))
-                plt.show()
-                pass
             # ISOLATE SCAN X -------------------------------------------------------------
             mltord = thispstamp.copy()
             targetn = 0
@@ -1420,15 +1321,7 @@ def scancal(
                     line *= np.nan
                 pass
             frame = [line for line in frame if not np.all(~np.isfinite(line))]
-            if debug:
-                display = [np.array(line) / template for line in frame]
-                plt.figure()
-                plt.imshow(np.array(display))
-                plt.colorbar()
-                plt.clim(0.95, 1.05)
-                plt.title(str(index))
-                plt.show()
-                pass
+
             spectrum = []
             specerr = []
             nspectrum = []
@@ -1496,20 +1389,6 @@ def scancal(
             data['SPECTRUM'][index] = np.array(spectrum)
             data['SPECERR'][index] = np.array(specerr)
             data['NSPEC'][index] = np.array(nspectrum)
-            pass
-        pass
-    # PLOT -------------------------------------------------------------------------------
-    if debug:
-        for v in set(visits):
-            plt.figure()
-            for spec, vi in zip(data['SPECTRUM'], visits):
-                if vi == v:
-                    plt.plot(spec)
-                pass
-            plt.ylabel('Stellar Spectra [Counts]')
-            plt.xlabel('Pixel Number')
-            plt.title('Visit ' + str(int(v)))
-            plt.show()
             pass
         pass
     # WAVELENGTH CALIBRATION -------------------------------------------------------------
@@ -1596,79 +1475,6 @@ def scancal(
         else:
             data['WAVE'][index] = (data['SPECTRUM'][index]) * np.nan
         data['IGNORED'][index] = ignore
-        pass
-    # PLOTS ------------------------------------------------------------------------------
-    if verbose and (not np.all(data['IGNORED'])):
-        alltime = np.array(
-            [d for d, i in zip(data['TIME'], data['IGNORED']) if not i]
-        )
-        dispersion = np.array(
-            [d for d, i in zip(data['DISPERSION'], data['IGNORED']) if not i]
-        )
-        shift = np.array(
-            [d for d, i in zip(data['SHIFT'], data['IGNORED']) if not i]
-        )
-        spec = np.array(
-            [d for d, i in zip(data['SPECTRUM'], data['IGNORED']) if not i]
-        )
-        photoc = np.array(
-            [d for d, i in zip(data['PHT2CNT'], data['IGNORED']) if not i]
-        )
-        wave = np.array(
-            [d for d, i in zip(data['WAVE'], data['IGNORED']) if not i]
-        )
-        errspec = np.array(
-            [d for d, i in zip(data['SPECERR'], data['IGNORED']) if not i]
-        )
-        allb = np.array(
-            [d for d, i in zip(data['BACKGROUND'], data['IGNORED']) if not i]
-        )
-        torder = np.argsort(alltime)
-        vrange = data['VRANGE']
-        allerr = []
-        for s, e, w in zip(spec, errspec, wave):
-            select = (w > vrange[0]) & (w < vrange[1])
-            allerr.extend(e[select] / np.sqrt(s[select]))
-            pass
-        allerr = np.array(allerr)
-        select = np.isfinite(allerr)
-        allerr = allerr[select]
-        allerr = allerr[allerr > 0.9]
-
-        plt.figure()
-        for spectrum in data['SPECTRUM']:
-            plt.plot(spectrum)
-        plt.ylabel('Stellar Spectra [Counts]')
-        plt.xlabel('Pixel Number')
-
-        plt.figure()
-        for w, p, s in zip(wave, photoc, spec):
-            select = (w > vrange[0]) & (w < vrange[1])
-            plt.plot(w[select], s[select] / p[select])
-            pass
-        plt.ylabel('Stellar Spectra [Photons]')
-        plt.xlabel('Wavelength [microns]')
-
-        plt.figure()
-        plt.hist(allerr)
-        plt.xlabel('Error Distribution [Noise Model Units]')
-
-        plt.figure()
-        plt.plot(dispersion[torder], 'o')
-        plt.xlabel('Time Ordered Frame Number')
-        plt.ylabel('Dispersion [Angstroms/Pixel]')
-        plt.ylim(data['DISPLIM'][0], data['DISPLIM'][1])
-
-        plt.figure()
-        plt.plot(shift[torder] - np.nanmin(shift), 'o')
-        plt.xlabel('Time Ordered Frame Number')
-        plt.ylabel('Shift [Pixels]')
-
-        plt.figure()
-        plt.plot(allb[torder], 'o')
-        plt.xlabel('Time Ordered Frame Number')
-        plt.ylabel('Background [DN]')
-        plt.show()
         pass
     allignore = data['IGNORED']
     allculprits = data['TRIAL']
@@ -1877,22 +1683,6 @@ def isolate(
         mn = np.nan
         mx = np.nan
         pass
-    if debug:
-        show = thisdiff.copy()
-        show[show < floodlevel] = np.nan
-        plt.figure()
-        plt.title('Isolate Flood Level')
-        plt.imshow(show)
-        plt.colorbar()
-        plt.show()
-        if np.isfinite(mn):
-            plt.figure()
-            plt.title('Isolation Level')
-            plt.plot(diffloc)
-            plt.plot(np.array(diffloc) * 0 + thr)
-            plt.show()
-            pass
-        pass
     return mn, mx
 
 
@@ -1977,26 +1767,9 @@ def bttf(lightpath, debug=False):
     '''
     ttp = 1e0
     muref = [np.nan]
-    if debug:
-        plt.subplot(211)
     for name in lightpath:
         muref, t = loadcalf(name, muref)
         ttp *= t
-        if debug:
-            plt.plot(muref, t, 'o--')
-        pass
-    if debug:
-        plt.xlim([min(muref), max(muref)])
-        plt.ylabel('Transmission Curves')
-
-        plt.subplot(212)
-        plt.plot(muref, ttp, 'o--')
-        plt.xlabel('Wavelength [angstroms]')
-        plt.ylabel('Total Throughput')
-        plt.xlim([min(muref), max(muref)])
-        plt.semilogy()
-        plt.show()
-        pass
     return muref, ttp
 
 
@@ -2081,16 +1854,6 @@ def wavesol(
     scale = out.params['scale'].value
     background = out.params['background'].value
     wave = wcme(out.params, logspec, refmu=mutt, reftt=logtt)
-    # PLOTS
-    if debug:
-        plt.figure()
-        plt.plot(mutt, logtt, 'o--', label='Reference')
-        plt.plot(
-            wave, logspec - (scale + wave * slope), 'o--', label='Spectrum'
-        )
-        plt.legend(loc=8)
-        plt.show()
-        pass
     return wave, disper, shift + minwave, slope, background
 
 
@@ -2390,30 +2153,6 @@ def starecal(
                 psdiff[int(maxl) :, :] = np.nan
             thispstamp = psdiff.copy()
             thispstamp[thispstamp <= psmin] = np.nan
-            # PLOTS --------------------------------------------------
-            if debug:
-                show = thispstamp.copy()
-                valid = np.isfinite(show)
-                show[~valid] = 0
-                show[show < fldthr] = np.nan
-                plt.figure()
-                plt.title('Isolate Flood Level')
-                plt.imshow(show)
-                plt.colorbar()
-
-                plt.figure()
-                plt.title('Diff Accum')
-                plt.imshow(thispstamp)
-                plt.colorbar()
-
-                colorlim = np.nanmin(thispstamp)
-                plt.figure()
-                plt.title('Background')
-                plt.imshow(thispstamp)
-                plt.colorbar()
-                plt.clim(colorlim, abs(colorlim))
-                plt.show()
-                pass
             # ISOLATE SCAN X -----------------------------------------
             targetn = 0
             minx, maxx = isolate(
@@ -2578,71 +2317,6 @@ def starecal(
         else:
             data['WAVE'][index] = (data['SPECTRUM'][index]) * np.nan
         data['IGNORED'][index] = ignore
-        pass
-    # PLOTS ----------------------------------------------------------
-    if verbose and (not np.all(data['IGNORED'])):
-        alltime = np.array(
-            [d for d, i in zip(data['TIME'], data['IGNORED']) if not i]
-        )
-        dispersion = np.array(
-            [d for d, i in zip(data['DISPERSION'], data['IGNORED']) if not i]
-        )
-        shift = np.array(
-            [d for d, i in zip(data['SHIFT'], data['IGNORED']) if not i]
-        )
-        spec = np.array(
-            [d for d, i in zip(data['SPECTRUM'], data['IGNORED']) if not i]
-        )
-        photoc = np.array(
-            [d for d, i in zip(data['PHT2CNT'], data['IGNORED']) if not i]
-        )
-        wave = np.array(
-            [d for d, i in zip(data['WAVE'], data['IGNORED']) if not i]
-        )
-        errspec = np.array(
-            [d for d, i in zip(data['SPECERR'], data['IGNORED']) if not i]
-        )
-        torder = np.argsort(alltime)
-        vrange = data['VRANGE']
-        allerr = []
-        for s, e, w in zip(spec, errspec, wave):
-            select = (w > vrange[0]) & (w < vrange[1])
-            allerr.extend(e[select] / np.sqrt(s[select]))
-            pass
-        allerr = np.array(allerr)
-        select = np.isfinite(allerr)
-        allerr = allerr[select]
-        allerr = allerr[allerr > 0.9]
-
-        plt.figure()
-        for spectrum in data['SPECTRUM']:
-            plt.plot(spectrum)
-        plt.ylabel('Stellar Spectra [Counts]')
-        plt.xlabel('Pixel Number')
-
-        plt.figure()
-        for w, p, s in zip(wave, photoc, spec):
-            select = (w > vrange[0]) & (w < vrange[1])
-            plt.plot(w[select], s[select] / p[select])
-            pass
-        plt.ylabel('Stellar Spectra [Photons]')
-        plt.xlabel('Wavelength [microns]')
-
-        plt.figure()
-        plt.hist(allerr)
-        plt.xlabel('Error Distribution [Noise Model Units]')
-
-        plt.figure()
-        plt.plot(dispersion[torder], 'o')
-        plt.xlabel('Time Ordered Frame Number')
-        plt.ylabel('Dispersion [Angstroms/Pixel]')
-        plt.ylim(data['DISPLIM'][0], data['DISPLIM'][1])
-
-        plt.figure()
-        plt.plot(shift[torder] - np.nanmin(shift), 'o')
-        plt.xlabel('Time Ordered Frame Number')
-        plt.ylabel('Shift [Pixels]')
-        plt.show()
         pass
     allignore = data['IGNORED']
     allculprits = data['TRIAL']
@@ -2862,12 +2536,7 @@ def stiscal_G750L(
         bad_fringe = (np.abs(data_fringe - smooth_fringe) / sigma_fringe) > 2
         img_fringe = data_fringe.copy()
         img_fringe[bad_fringe] = smooth_fringe[bad_fringe]
-        if debug:
-            plt.figure()
-            for i in range(0, len(data_fringe)):
-                plt.plot(img_fringe[i, :])
-                pass
-            pass
+
         cont_data = img_fringe.copy()
         div_list = []
         for i in range(508, 515):
@@ -2876,14 +2545,6 @@ def stiscal_G750L(
             ffit = poly.polyval(pixels, coefs)
             div = cont_data[i, :] / ffit
             div_list.append(div)
-            if debug:
-                plt.figure()
-                plt.plot(pixels, ffit, color='red')
-                plt.plot(cont_data[i, :], color='blue')
-                plt.xlabel('Pixels')
-                plt.title('Contemporaneous Flat Fringe - Polynomial fit')
-                pass
-            pass
         #############
         # COSMIC RAY REJECTION IN THE 2D IMAGE
         img_cr = frame.copy()
@@ -2899,7 +2560,6 @@ def stiscal_G750L(
             pass
         allframe = np.array(allframe_list)
         # APPLY FLAT FRINGE
-        # plt.figure()
         if not ignore:
             find_spec = np.where(allframe == np.max(allframe))
             spec_idx = find_spec[0][0]
@@ -2912,29 +2572,7 @@ def stiscal_G750L(
                 coefs_f = poly.polyfit(pixels, frame_sel, 12)
                 ffit_f = poly.polyval(pixels, coefs_f)
                 frame2[i, 400:1023] = frame2[i, 400:1023] / flatnorm[400:1023]
-                if debug:
-                    plt.subplot(2, 1, 1)
-                    plt.plot(pixels, frame_sel, color='blue')
-                    plt.plot(pixels, ffit_f, color='red')
-                    plt.subplot(2, 1, 2)
-                    norm = frame_sel / ffit_f
-                    plt.plot(norm, color='orange', label='Observed spectrum')
-                    plt.plot(
-                        flatnorm,
-                        color='blue',
-                        label='Contemporaneous Flat fringe',
-                    )
-                    plt.xlabel('pixels')
-                    plt.ylabel('Normalized flux')
-                    plt.legend(
-                        loc='lower right',
-                        shadow=False,
-                        frameon=False,
-                        fontsize='7',
-                        scatterpoints=1,
-                    )
-                    pass
-                pass
+
                 data['SPECTRUM'][index] = np.nansum(frame2, axis=0)
                 data['SPECERR'][index] = np.sqrt(np.nansum(frame2, axis=0))
                 pass
@@ -2970,12 +2608,7 @@ def stiscal_G750L(
             smootht[2 + index] = medianvalue
             pass
         smootht = smootht[2:-2]
-        if debug:
-            plt.figure()
-            plt.plot(template, 'o')
-            plt.plot(smootht)
-            plt.show()
-            pass
+
         template = np.array(smootht)
         for vindex, valid in enumerate(select):
             if valid:
@@ -3057,21 +2690,6 @@ def stiscal_G750L(
                 pass
             pass
         pass
-    # Plot first wavelength calibration
-    if debug:
-        for v in set(visits):
-            select = (visits == v) & ~(data['IGNORED'])
-            plt.figure()
-            for index, valid in enumerate(select):
-                if valid:
-                    plt.plot(data['WAVE'][index], data['SPECTRUM'][index], 'o')
-                pass
-            plt.xlabel('Wavelength [microns]')
-            plt.ylabel('Counts')
-            plt.title('Visit number: ' + str(int(v)))
-            pass
-        plt.show()
-        pass
     # SECOND Wavesol
     # SECOND SIGMA CLIPPING
     for index, rejected in enumerate(data['IGNORED']):
@@ -3142,71 +2760,6 @@ def stiscal_G750L(
         #                 data['DISPERSION'][index] = 2.70
         #                 data['SHIFT'][index] = -1079.96
         #             pass
-        pass
-    # PLOTS ------------------------------------------------------------------------------
-    if verbose and (not np.all(data['IGNORED'])):
-        alltime = np.array(
-            [d for d, i in zip(data['TIME'], data['IGNORED']) if not i]
-        )
-        dispersion = np.array(
-            [d for d, i in zip(data['DISPERSION'], data['IGNORED']) if not i]
-        )
-        shift = np.array(
-            [d for d, i in zip(data['SHIFT'], data['IGNORED']) if not i]
-        )
-        spec = np.array(
-            [d for d, i in zip(data['SPECTRUM'], data['IGNORED']) if not i]
-        )
-        photoc = np.array(
-            [d for d, i in zip(data['PHT2CNT'], data['IGNORED']) if not i]
-        )
-        wave = np.array(
-            [d for d, i in zip(data['WAVE'], data['IGNORED']) if not i]
-        )
-        errspec = np.array(
-            [d for d, i in zip(data['SPECERR'], data['IGNORED']) if not i]
-        )
-        torder = np.argsort(alltime)
-        vrange = data['VRANGE']
-        allerr = []
-        for s, e, w in zip(spec, errspec, wave):
-            select = (w > vrange[0]) & (w < vrange[1])
-            allerr.extend(e[select] / np.sqrt(s[select]))
-            pass
-        allerr = np.array(allerr)
-        select = np.isfinite(allerr)
-        allerr = allerr[select]
-        allerr = allerr[allerr > 0.9]
-
-        plt.figure()
-        for spectrum in data['SPECTRUM']:
-            plt.plot(spectrum)
-        plt.ylabel('Stellar Spectra [Counts]')
-        plt.xlabel('Pixel Number')
-
-        plt.figure()
-        for w, p, s in zip(wave, photoc, spec):
-            select = (w > vrange[0]) & (w < vrange[1])
-            plt.plot(w[select], s[select] / p[select])
-            pass
-        plt.ylabel('Stellar Spectra [Photons]')
-        plt.xlabel('Wavelength [microns]')
-
-        plt.figure()
-        plt.hist(allerr)
-        plt.xlabel('Error Distribution [Noise Model Units]')
-
-        plt.figure()
-        plt.plot(dispersion[torder], 'o')
-        plt.xlabel('Time Ordered Frame Number')
-        plt.ylabel('Dispersion [Angstroms/Pixel]')
-        plt.ylim(data['DISPLIM'][0], data['DISPLIM'][1])
-
-        plt.figure()
-        plt.plot(shift[torder] - np.nanmin(shift), 'o')
-        plt.xlabel('Time Ordered Frame Number')
-        plt.ylabel('Shift [Pixels]')
-        plt.show()
         pass
     allignore = data['IGNORED']
     allculprits = data['TRIAL']
@@ -3391,18 +2944,6 @@ def stiscal_G430L(fin, clc, tim, tid, flttype, out, verbose=False, debug=False):
             data['PHT2CNT'][index] = [np.nan] * len(frame[0])
             pass
         pass
-    # if debug:
-    #    for v in set(visits):
-    #        select = (visits == v) & ~(data['IGNORED'])
-    #        plt.figure()
-    #        for index, valid in enumerate(select):
-    #            if valid: plt.plot(data['SPECTRUM'][index], 'o')
-    #            pass
-    #            plt.xlabel('Wavelength [microns]')
-    #            plt.ylabel('Counts')
-    #            plt.title('Visit number: '+str(int(v)))
-    #            pass
-    #        plt.show()
     pass
     wavett, tt = ag2ttf(flttype)
     if 'G430' in flttype:
@@ -3410,14 +2951,7 @@ def stiscal_G430L(fin, clc, tim, tid, flttype, out, verbose=False, debug=False):
         wavett = wavett[select]
         tt = tt[select]
         pass
-    if verbose and (not np.all(data['IGNORED'])):
-        plt.figure()
-        for spectrum in data['SPECTRUM']:
-            plt.plot(spectrum)
-        plt.ylabel('Stellar Spectra [Counts]')
-        plt.xlabel('Pixel Number')
-        plt.show()
-        # MASK BAD PIXELS IN SPECTRUM --------------------------------------------------------
+    # MASK BAD PIXELS IN SPECTRUM --------------------------------------------------------
     for v in set(visits):
         select = (visits == v) & ~(data['IGNORED'])
         specarray = np.array(
@@ -3577,11 +3111,6 @@ def stiscal_G430L(fin, clc, tim, tid, flttype, out, verbose=False, debug=False):
             spec_cut = spec.copy()
             data['SPECTRUM'][index] = spec_cut
             data['SPECTRUM_CLEAN'][index] = spec_cut
-            # if debug:
-            #    plt.plot(temp_spec)
-            #    cd = np.nanmedian(temp_spec2) + 2e0*std1
-            #    plt.axhline(y=cd, xmin=0, xmax=1,color='red')
-            #    plt.show()
             # WAVELENGTH CALIBRATION -----------------------------------------------------
             disp_all = []
             if np.sum(np.isfinite(spec)) > (spec.size / 2):
@@ -3623,27 +3152,6 @@ def stiscal_G430L(fin, clc, tim, tid, flttype, out, verbose=False, debug=False):
                 data['SPECTRUM'][index] = calib_spec * np.max(
                     wavecalspec[finitespec]
                 )
-                if debug:
-                    plt.plot(
-                        mid[cond_mid], calib_spec, 'o', label='calibrated spec'
-                    )
-                    plt.plot(
-                        mid[cond_mid],
-                        g_wav * bin_spec_norm[cond_mid],
-                        'o',
-                        label='calibrated spec',
-                    )
-                    plt.legend(
-                        loc='lower right',
-                        shadow=False,
-                        fontsize='16',
-                        frameon=True,
-                        scatterpoints=1,
-                    )
-                    plt.xlabel('Wavelength [nm]')
-                    plt.ylabel('Normalized Flux')
-                    plt.show()
-                    pass
                 liref = itp.interp1d(
                     wavett, tt, bounds_error=False, fill_value=np.nan
                 )
@@ -3658,46 +3166,6 @@ def stiscal_G430L(fin, clc, tim, tid, flttype, out, verbose=False, debug=False):
                 pass
             pass
 
-    if debug:
-        for v in set(visits):
-            select = (visits == v) & ~(data['IGNORED'])
-            plt.figure()
-            for index, valid in enumerate(select):
-                if valid:
-                    plt.plot(mid, data['SPECTRUM'][index], 'o')
-                plt.xlabel('Wavelength [nm]')
-                plt.ylabel('Counts')
-                plt.title('Visit number: ' + str(int(v)))
-                pass
-            plt.show()
-            pass
-    if debug:
-        plt.figure(figsize=[6, 6])
-        spec_all = []
-        wave_all = []
-        for v in set(visits):
-            select = (visits == v) & ~(data['IGNORED'])
-            for raissaindex, valid in enumerate(select):
-                if valid:
-                    spec_valid = data['SPECTRUM'][raissaindex]
-                    wave_valid = data['WAVE'][raissaindex]
-                    wave_all.append(wave_valid)
-                    spec_all.append(spec_valid)
-        template = np.nanmean(spec_all, 0)
-        flats = []
-        for spectrum, w in zip(spec_all, wave_all):
-            flat = spectrum / template
-            flats.append(flat)
-        plt.imshow(
-            flats,
-            cmap='jet',
-            vmin=0,
-            vmax=1.2,
-            extent=(290, 570, 0, len(flats)),
-        )
-        plt.colorbar()
-        plt.title('Flattened 1D spectrum - all exposures')
-
     for v in set(visits):
         select = (visits == v) & ~(data['IGNORED'])
         for index, valid in enumerate(select):
@@ -3711,109 +3179,6 @@ def stiscal_G430L(fin, clc, tim, tid, flttype, out, verbose=False, debug=False):
             data['PHT2CNT'][index] = phot_all[cond_wavcut]
             data['SPECERR'][index] = err_all[cond_wavcut]
             pass
-    pass
-
-    if debug:
-        inte_res = []
-        phase_all = []
-        for v in set(visits):
-            select = (visits == 1) & ~(data['IGNORED'])
-            for raissaindex, valid in enumerate(select):
-                if valid:
-                    phase_sel = phase[raissaindex]
-                    phase_all.append(phase_sel)
-                    wav = np.array(data['WAVE'][raissaindex])
-                    spec = np.array(data['SPECTRUM'][raissaindex])
-                    fin = np.isfinite(spec)
-                    wav_fin = wav[fin]
-                    spec_fin = spec[fin]
-                    cond = np.where((wav_fin > 0.3) & (wav_fin < 0.5))
-                    # pixels = np.arange(0,1024,1)
-                    # func_spec = itp.interp1d(wav_fin,spec_fin, kind='linear')
-                    # func_teste = itp.interp1d(pixels,spec, kind='linear')
-                    # inte = integrate.quad(lambda x: func_teste(x), pixels[0],pixels[-1])
-                    # inte = integrate.quad(lambda x: func_spec(x), 0.3, 0.54)
-                    inte = np.sum(
-                        spec_fin[cond]
-                        * (wav_fin[cond[0] + 1] - wav_fin[cond[0]])
-                    )
-                    inte_res.append(inte)
-                    # inte_res = np.array(inte_res)
-                    # phase_all = np.array(phase_all)
-                    # cond_out = np.where((phase_all > 0.01) | (phase_all < -0.01))
-                    # oot = inte_res[cond_out]
-                    # norm = inte_res/np.mean(oot)
-                    pass
-                pass
-            pass
-        pass
-        # PLOTS ------------------------------------------------------------------------------
-    if verbose and (not np.all(data['IGNORED'])):
-        alltime = np.array(
-            [d for d, i in zip(data['TIME'], data['IGNORED']) if not i]
-        )
-        dispersion = np.array(
-            [d for d, i in zip(data['DISPERSION'], data['IGNORED']) if not i]
-        )
-        shift = np.array(
-            [d for d, i in zip(data['SHIFT'], data['IGNORED']) if not i]
-        )
-        spec = np.array(
-            [d for d, i in zip(data['SPECTRUM'], data['IGNORED']) if not i]
-        )
-        photoc = np.array(
-            [d for d, i in zip(data['PHT2CNT'], data['IGNORED']) if not i]
-        )
-        wave = np.array(
-            [d for d, i in zip(data['WAVE'], data['IGNORED']) if not i]
-        )
-        errspec = np.array(
-            [d for d, i in zip(data['SPECERR'], data['IGNORED']) if not i]
-        )
-        torder = np.argsort(alltime)
-        vrange = data['VRANGE']
-        allerr = []
-        for s, e, w in zip(spec, errspec, wave):
-            select = (w > vrange[0]) & (w < vrange[1])
-            allerr.extend(e[select] / np.sqrt(s[select]))
-            pass
-        allerr = np.array(allerr)
-        select = np.isfinite(allerr)
-        allerr = allerr[select]
-        allerr = allerr[allerr > 0.9]
-
-        plt.figure()
-        for spectrum in data['SPECTRUM_CLEAN']:
-            plt.plot(spectrum)
-        plt.ylabel('Stellar Spectra [Counts]')
-        plt.xlabel('Pixel Number')
-        plt.figure()
-        for w, p, s in zip(wave, photoc, spec):
-            select = (w > vrange[0]) & (w < vrange[1])
-            plt.plot(w[select], s[select] / p[select])
-            pass
-        plt.ylabel('Stellar Spectra [Photons]')
-        plt.xlabel('Wavelength [microns]')
-
-        plt.figure()
-        plt.hist(allerr)
-        plt.xlabel('Error Distribution [Noise Model Units]')
-
-        plt.figure()
-        plt.plot(dispersion[torder], 'o')
-        disp_1sig = np.median(dispersion[torder]) + 3 * np.std(
-            dispersion[torder]
-        )
-        plt.axhline(y=disp_1sig, xmin=0, xmax=1, color='red')
-        plt.xlabel('Time Ordered Frame Number')
-        plt.ylabel('Dispersion [Angstroms/Pixel]')
-        plt.ylim(data['DISPLIM'][0], data['DISPLIM'][1])
-
-        plt.figure()
-        plt.plot(shift[torder] - np.nanmin(shift), 'o')
-        plt.xlabel('Time Ordered Frame Number')
-        plt.ylabel('Shift [Pixels]')
-        plt.show()
         pass
     allignore = data['IGNORED']
     allculprits = data['TRIAL']
@@ -4059,12 +3424,6 @@ def stiscal_unified(
             ) > 2
             img_fringe = data_fringe.copy()
             img_fringe[bad_fringe] = smooth_fringe[bad_fringe]
-            if debug:
-                plt.figure()
-                for i in range(0, len(data_fringe)):
-                    plt.plot(img_fringe[i, :])
-                    pass
-                pass
             cont_data = img_fringe.copy()
             div_list = []
             for ll in range(508, 515):
@@ -4087,7 +3446,6 @@ def stiscal_unified(
                 pass
             allframe = np.array(allframe_list)
             # APPLY FLAT FRINGE
-            # plt.figure()
             if not ignore:
                 find_spec = np.where(allframe == np.max(allframe))
                 spec_idx = find_spec[0][0]
@@ -4102,31 +3460,6 @@ def stiscal_unified(
                     frame2[i, 400:1023] = (
                         frame2[i, 400:1023] / flatnorm[400:1023]
                     )
-                    if debug:
-                        plt.subplot(2, 1, 1)
-                        plt.plot(pixels, frame_sel, color='blue')
-                        plt.plot(pixels, ffit_f, color='red')
-                        plt.subplot(2, 1, 2)
-                        norm = frame_sel / ffit_f
-                        plt.plot(
-                            norm, color='orange', label='Observed spectrum'
-                        )
-                        plt.plot(
-                            flatnorm,
-                            color='blue',
-                            label='Contemporaneous Flat fringe',
-                        )
-                        plt.xlabel('pixels')
-                        plt.ylabel('Normalized flux')
-                        plt.legend(
-                            loc='lower right',
-                            shadow=False,
-                            frameon=False,
-                            fontsize='7',
-                            scatterpoints=1,
-                        )
-                        pass
-                    pass
                     data['SPECTRUM'][index] = np.nansum(frame2, axis=0)
                     data['SPECERR'][index] = np.sqrt(np.nansum(frame2, axis=0))
                     pass
@@ -4150,18 +3483,6 @@ def stiscal_unified(
                 data['PHT2CNT'][index] = [np.nan] * len(frame[0])
                 pass
             pass
-    # if debug:
-    #    for v in set(visits):
-    #        select = (visits == v) & ~(data['IGNORED'])
-    #        plt.figure()
-    #        for index, valid in enumerate(select):
-    #            if valid: plt.plot(data['SPECTRUM'][index], 'o')
-    #            pass
-    #            plt.xlabel('Wavelength [microns]')
-    #            plt.ylabel('Counts')
-    #            plt.title('Visit number: '+str(int(v)))
-    #            pass
-    #        plt.show()
     pass
     wavett, tt = ag2ttf(flttype)
     if 'G430' in flttype:
@@ -4169,14 +3490,7 @@ def stiscal_unified(
         wavett = wavett[select]
         tt = tt[select]
         pass
-    if verbose and (not np.all(data['IGNORED'])):
-        plt.figure()
-        for spectrum in data['SPECTRUM']:
-            plt.plot(spectrum)
-        plt.ylabel('Stellar Spectra [Counts]')
-        plt.xlabel('Pixel Number')
-        plt.show()
-        # MASK BAD PIXELS IN SPECTRUM ----------------------------------------------------
+    # MASK BAD PIXELS IN SPECTRUM ----------------------------------------------------
     for v in set(visits):
         select = (visits == v) & ~(data['IGNORED'])
         specarray = np.array(
@@ -4336,11 +3650,6 @@ def stiscal_unified(
             spec_cut = spec.copy()
             data['SPECTRUM'][index] = spec_cut
             data['SPECTRUM_CLEAN'][index] = spec_cut
-            # if debug:
-            #    plt.plot(temp_spec)
-            #    cd = np.nanmedian(temp_spec2) + 2e0*std1
-            #    plt.axhline(y=cd, xmin=0, xmax=1,color='red')
-            #    plt.show()
             # WAVELENGTH CALIBRATION -----------------------------------------------------
             disp_all = []
             if np.sum(np.isfinite(spec)) > (spec.size / 2):
@@ -4393,27 +3702,6 @@ def stiscal_unified(
                 data['SPECTRUM'][index] = calib_spec * np.max(
                     wavecalspec[finitespec]
                 )
-                if debug:
-                    plt.plot(
-                        mid[cond_mid], calib_spec, 'o', label='calibrated spec'
-                    )
-                    plt.plot(
-                        mid[cond_mid],
-                        g_wav * bin_spec_norm[cond_mid] * sc,
-                        'o',
-                        label='calibrated spec',
-                    )
-                    plt.legend(
-                        loc='lower right',
-                        shadow=False,
-                        fontsize='16',
-                        frameon=True,
-                        scatterpoints=1,
-                    )
-                    plt.xlabel('Wavelength [nm]')
-                    plt.ylabel('Normalized Flux')
-                    plt.show()
-                    pass
                 liref = itp.interp1d(
                     wavett, tt, bounds_error=False, fill_value=np.nan
                 )
@@ -4427,46 +3715,6 @@ def stiscal_unified(
                 disp_all.append(np.median(dispersion_list))
                 pass
             pass
-
-    if verbose:
-        for v in set(visits):
-            select = (visits == v) & ~(data['IGNORED'])
-            plt.figure()
-            for index, valid in enumerate(select):
-                if valid:
-                    plt.plot(mid[cond_mid], data['SPECTRUM'][index], 'o')
-                plt.xlabel('Wavelength [nm]')
-                plt.ylabel('Counts')
-                plt.title('Visit number: ' + str(int(v)))
-                pass
-            plt.show()
-            pass
-    if debug:
-        plt.figure(figsize=[6, 6])
-        spec_all = []
-        wave_all = []
-        for v in set(visits):
-            select = (visits == v) & ~(data['IGNORED'])
-            for raissaindex, valid in enumerate(select):
-                if valid:
-                    spec_valid = data['SPECTRUM'][raissaindex]
-                    wave_valid = data['WAVE'][raissaindex]
-                    wave_all.append(wave_valid)
-                    spec_all.append(spec_valid)
-        template = np.nanmean(spec_all, 0)
-        flats = []
-        for spectrum, w in zip(spec_all, wave_all):
-            flat = spectrum / template
-            flats.append(flat)
-        plt.imshow(
-            flats,
-            cmap='jet',
-            vmin=0,
-            vmax=1.2,
-            extent=(290, 570, 0, len(flats)),
-        )
-        plt.colorbar()
-        plt.title('Flattened 1D spectrum - all exposures')
 
     if 'G430' in flttype:
         for v in set(visits):
@@ -4483,103 +3731,6 @@ def stiscal_unified(
                 data['SPECERR'][index] = err_all[cond_wavcut]
                 pass
             pass
-
-    if debug:
-        inte_res = []
-        phase_all = []
-        for v in set(visits):
-            select = (visits == 1) & ~(data['IGNORED'])
-            for raissaindex, valid in enumerate(select):
-                if valid:
-                    phase_sel = phase[raissaindex]
-                    phase_all.append(phase_sel)
-                    wav = np.array(data['WAVE'][raissaindex])
-                    spec = np.array(data['SPECTRUM'][raissaindex])
-                    fin = np.isfinite(spec)
-                    wav_fin = wav[fin]
-                    spec_fin = spec[fin]
-                    cond = np.where((wav_fin > 0.3) & (wav_fin < 0.5))
-                    # pixels = np.arange(0,1024,1)
-                    # func_spec = itp.interp1d(wav_fin,spec_fin, kind='linear')
-                    # func_teste = itp.interp1d(pixels,spec, kind='linear')
-                    # inte = integrate.quad(lambda x: func_teste(x), pixels[0],pixels[-1])
-                    # inte = integrate.quad(lambda x: func_spec(x), 0.3, 0.54)
-                    inte = np.sum(
-                        spec_fin[cond]
-                        * (wav_fin[cond[0] + 1] - wav_fin[cond[0]])
-                    )
-                    inte_res.append(inte[0])
-                    pass
-                pass
-            pass
-        pass
-        # PLOTS ------------------------------------------------------------------------------
-    if verbose and (not np.all(data['IGNORED'])):
-        alltime = np.array(
-            [d for d, i in zip(data['TIME'], data['IGNORED']) if not i]
-        )
-        dispersion = np.array(
-            [d for d, i in zip(data['DISPERSION'], data['IGNORED']) if not i]
-        )
-        shift = np.array(
-            [d for d, i in zip(data['SHIFT'], data['IGNORED']) if not i]
-        )
-        spec = np.array(
-            [d for d, i in zip(data['SPECTRUM'], data['IGNORED']) if not i]
-        )
-        photoc = np.array(
-            [d for d, i in zip(data['PHT2CNT'], data['IGNORED']) if not i]
-        )
-        wave = np.array(
-            [d for d, i in zip(data['WAVE'], data['IGNORED']) if not i]
-        )
-        errspec = np.array(
-            [d for d, i in zip(data['SPECERR'], data['IGNORED']) if not i]
-        )
-        torder = np.argsort(alltime)
-        vrange = data['VRANGE']
-        allerr = []
-        for s, e, w in zip(spec, errspec, wave):
-            select = (w > vrange[0]) & (w < vrange[1])
-            allerr.extend(e[select] / np.sqrt(s[select]))
-            pass
-        allerr = np.array(allerr)
-        select = np.isfinite(allerr)
-        allerr = allerr[select]
-        allerr = allerr[allerr > 0.9]
-
-        plt.figure()
-        for spectrum in data['SPECTRUM0']:
-            plt.plot(spectrum)
-        plt.ylabel('Stellar Spectra [Counts]')
-        plt.xlabel('Pixel Number')
-        plt.figure()
-        for w, p, s in zip(wave, photoc, spec):
-            select = (w > vrange[0]) & (w < vrange[1])
-            plt.plot(w[select], s[select] / p[select])
-            pass
-        plt.ylabel('Stellar Spectra [Photons]')
-        plt.xlabel('Wavelength [microns]')
-
-        plt.figure()
-        plt.hist(allerr)
-        plt.xlabel('Error Distribution [Noise Model Units]')
-
-        plt.figure()
-        plt.plot(dispersion[torder], 'o')
-        disp_1sig = np.median(dispersion[torder]) + 3 * np.std(
-            dispersion[torder]
-        )
-        plt.axhline(y=disp_1sig, xmin=0, xmax=1, color='red')
-        plt.xlabel('Time Ordered Frame Number')
-        plt.ylabel('Dispersion [Angstroms/Pixel]')
-        # plt.ylim(data['DISPLIM'][0], data['DISPLIM'][1])
-
-        plt.figure()
-        plt.plot(shift[torder] - np.nanmin(shift), 'o')
-        plt.xlabel('Time Ordered Frame Number')
-        plt.ylabel('Shift [Pixels]')
-        plt.show()
         pass
     allignore = data['IGNORED']
     allculprits = data['TRIAL']

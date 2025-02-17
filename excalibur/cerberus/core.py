@@ -666,13 +666,13 @@ def atmos(
 
     # save the stellar params, so that analysis knows the stellar metallicity
     star_params = [
-        'R*',
         'M*',
+        'R*',
         'LOGG*',
-        'T*',
-        'L*',
         'RHO*',
         'FEH*',
+        'T*',
+        'L*',
         'Jmag',
         'Hmag',
         'Kmag',
