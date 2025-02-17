@@ -2278,7 +2278,7 @@ def starecal(
             cutoff = np.nanmax(spectrum) / scaleco
             spectrum[spectrum < cutoff] = np.nan
             spectrum = abs(spectrum)
-            w, d, s, si, _bck = wavesol(
+            _w, d, _s, si, _bck = wavesol(
                 spectrum, tt, wavett, disper, ovszspc=ovszspc, debug=False
             )
             if ldisp < d < udisp:
