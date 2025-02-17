@@ -8,6 +8,7 @@ import excalibur
 # import estimators
 from excalibur.ancillary.estimators import StEstimator, PlEstimator
 import excalibur.ancillary.estimators as ancestor
+from excalibur.system.core import write_spreadsheet
 
 import os
 import logging
@@ -272,109 +273,42 @@ def savesv(aspects, targetlists):
     save the results as a csv file in /proj/data/spreadsheets
     '''
 
+    svname = 'ancillary.estimate.parameters'
+
     aspecttargets = []
     for a in aspects:
         aspecttargets.append(a)
 
-    svname = 'ancillary.estimate.parameters'
+    # (the list of extensions is hardcoded at the top of this file)
+    exts = SV_EXTS.copy()
+    # print('extensions:',exts)
 
-    # directory where the results are saved
-    saveDir = excalibur.context['data_dir'] + '/spreadsheets/'
-    if not os.path.exists(saveDir):
-        os.mkdir(saveDir)
+    # use 55 Cnc as an example, to make the list of parameters
+    ancillary_data = aspects['55 Cnc'][svname]
+    st_keys = [
+        key
+        for key in ancillary_data['data'].keys()
+        if (
+            (not key == 'planets')
+            and (key not in ancillary_data['data']['planets'])
+            and (not any(ext in key for ext in SV_EXTS))
+        )
+    ]
+    # print('st_keys',st_keys)
+    pl_keys = [
+        i
+        for i in ancillary_data['data']['e'].keys()
+        if not any(ext in i for ext in SV_EXTS)
+    ]
+    # print('pl_keys',pl_keys)
 
-    # file name where the results are saved
-    outfileName = svname.replace('.', '_') + '.csv'
-    with open(saveDir + outfileName, 'w', encoding='ascii') as outfile:
+    # don't print out the full description of the parameter; bulky and repetitive
+    exts.remove('_descr')
+    # these uncertainty fields aren't actually calculated
+    exts.remove('_lowerr')
+    exts.remove('_uperr')
 
-        # (the list of extensions is hardcoded at the top of this file)
-        exts = SV_EXTS.copy()
-        # print('extensions:',exts)
-
-        # use 55 Cnc as an example, to make the list of parameters
-        ancillary_data = aspects['55 Cnc'][svname]
-        st_keys = [
-            key
-            for key in ancillary_data['data'].keys()
-            if (
-                (not key == 'planets')
-                and (key not in ancillary_data['data']['planets'])
-                and (not any(ext in key for ext in SV_EXTS))
-            )
-        ]
-        # print('st_keys',st_keys)
-        pl_keys = [
-            i
-            for i in ancillary_data['data']['e'].keys()
-            if not any(ext in i for ext in SV_EXTS)
-        ]
-        # print('pl_keys',pl_keys)
-
-        # don't print out the full description of the parameter; bulky and repetitive
-        exts.remove('_descr')
-        # these uncertainty fields aren't actually calculated
-        exts.remove('_lowerr')
-        exts.remove('_uperr')
-
-        # write the header row
-        outfile.write('star,planet,')
-        for key in st_keys:
-            # print('key',key)
-            outfile.write(key + ',')
-            for ext in exts:
-                # stellar_type doesn't have units.  maybe add it in estimators.py
-                if (
-                    key + ext != 'stellar_type_units'
-                    and key + ext != 'T_corona_ref'
-                    and key + ext != 'spTyp_units'
-                ):
-                    outfile.write(key + ext + ',')
-        for key in pl_keys:
-            outfile.write(key + ',')
-            for ext in exts:
-                outfile.write(key + ext + ',')
-        outfile.write('\n')
-
-        # loop through each target, with one row per planet
-        # for trgt in targetlists['active']:
-        for trgt in filter(
-            lambda tgt: tgt in aspecttargets, targetlists['active']
-        ):
-
-            ancillary_data = aspects[trgt][svname]
-
-            for planet_letter in ancillary_data['data']['planets']:
-                outfile.write(trgt + ',')
-                outfile.write(planet_letter + ',')
-
-                for key in st_keys:
-                    outfile.write(str(ancillary_data['data'][key]) + ',')
-                    for ext in exts:
-                        if (
-                            key + ext != 'stellar_type_units'
-                            and key + ext != 'T_corona_ref'
-                            and key + ext != 'spTyp_units'
-                        ):
-                            outfile.write(
-                                str(ancillary_data['data'][key + ext]).replace(
-                                    ',', ';'
-                                )
-                                + ','
-                            )
-
-                for key in pl_keys:
-                    outfile.write(
-                        str(ancillary_data['data'][planet_letter][key]) + ','
-                    )
-                    for ext in exts:
-                        outfile.write(
-                            str(
-                                ancillary_data['data'][planet_letter][key + ext]
-                            ).replace(',', ';')
-                            + ','
-                        )
-
-                outfile.write('\n')
-    # outfile.close()
-
+    write_spreadsheet(svname, aspecttargets, targetlists,
+                      st_keys, pl_keys, exts)
+                      
     return

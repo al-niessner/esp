@@ -903,6 +903,27 @@ def savesv(aspects, targetlists):
     for a in aspects:
         aspecttargets.append(a)
 
+    # this extension info is not needed for value histograms, but is required for full data dump
+    exts = system_data['exts']
+
+    # 55 Cnc is used as an example, to get the 
+    system_data = aspects['55 Cnc'][svname]
+    st_keys = system_data['starmdt']  # start with mandatory params
+    # also include non-mandatory params?
+    #  no actually they've already been added in. (see 'awkward' above)
+    # st_keys.extend(system_data['starnonmdt'])
+    pl_keys = system_data['planetmdt']
+
+    write_spreadsheet(svname, aspecttargets, targetlists,
+                      st_keys, pl_keys, exts)
+    return
+
+def write_spreadsheet(svname, aspecttargets, targetlists,
+                      st_keys, pl_keys, exts):
+    '''
+    generic spreadsheet writer; used for both system and ancillary data
+    '''
+
     # directory where the results are saved
     saveDir = excalibur.context['data_dir'] + '/spreadsheets/'
     if not os.path.exists(saveDir):
@@ -912,23 +933,18 @@ def savesv(aspects, targetlists):
     outfileName = svname.replace('.', '_') + '.csv'
     with open(saveDir + outfileName, 'w', encoding='ascii') as outfile:
 
-        # 55 Cnc is used as an example, to get the default header
-        system_data = aspects['55 Cnc'][svname]
-        st_keys = system_data['starmdt']  # start with mandatory params
-        # also include non-mandatory params?
-        #  no actually they've already been added in. (see 'awkward' above)
-        # st_keys.extend(system_data['starnonmdt'])
-        pl_keys = system_data['planetmdt']
-
-        # this extension info is not needed for value histograms, but is required for full data dump
-        exts = system_data['exts']
-
         # write the header row
         outfile.write('star,planet,')
         for key in st_keys:
             outfile.write(key + ',')
             for ext in exts:
-                outfile.write(key + ext + ',')
+                # stellar_type doesn't have units.  maybe add it in estimators.py
+                if (
+                    key + ext != 'stellar_type_units'
+                    and key + ext != 'T_corona_ref'
+                    and key + ext != 'spTyp_units'
+                ):
+                    outfile.write(key + ext + ',')
         for key in pl_keys:
             outfile.write(key + ',')
             for ext in exts:
@@ -936,41 +952,47 @@ def savesv(aspects, targetlists):
         outfile.write('\n')
 
         # loop through each target, with one row per planet
-        # for trgt in targetlists['active']:
         for trgt in filter(
             lambda tgt: tgt in aspecttargets, targetlists['active']
         ):
-            system_data = aspects[trgt][svname]
 
-            for planet_letter in system_data['priors']['planets']:
+            if svname.startswith('ancillary'):
+                data = aspects[trgt][svname]['data']
+            else:  # assume it's system data if it's not ancillary
+                data = aspects[trgt][svname]['priors']
+
+            for planet_letter in data['planets']:
                 outfile.write(trgt + ',')
                 outfile.write(planet_letter + ',')
 
                 for key in st_keys:
-                    outfile.write(str(system_data['priors'][key]) + ',')
+                    outfile.write(str(data[key]) + ',')
                     for ext in exts:
-                        outfile.write(
-                            str(system_data['priors'][key + ext]).replace(
-                                ',', ';'
+                        if (
+                                key + ext != 'stellar_type_units'
+                                and key + ext != 'T_corona_ref'
+                                and key + ext != 'spTyp_units'
+                        ):
+                            outfile.write(key + ext + ',')
+                            outfile.write(
+                                str(data[key + ext]).replace(
+                                    ',', ';'
+                                )
+                                + ','
                             )
-                            + ','
-                        )
 
                 for key in pl_keys:
                     outfile.write(
-                        str(system_data['priors'][planet_letter][key]) + ','
+                        str(data[planet_letter][key]) + ','
                     )
                     for ext in exts:
                         outfile.write(
                             str(
-                                system_data['priors'][planet_letter][key + ext]
+                                data[planet_letter][key + ext]
                             ).replace(',', ';')
                             + ','
                         )
 
                 outfile.write('\n')
-    # CI validation requires with-open, so close isn't needed anymore
-    # instead there's a bunch of dumb indentation
-    # outfile.close()
 
     return
