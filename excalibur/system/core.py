@@ -910,15 +910,11 @@ def savesv(aspects, targetlists):
     # this extension info is not needed for value histograms, but is required for full data dump
     exts = system_data['exts']
 
-    write_spreadsheet(
-        svname, aspects, targetlists, st_keys, pl_keys, exts
-    )
+    write_spreadsheet(svname, aspects, targetlists, st_keys, pl_keys, exts)
     return
 
 
-def write_spreadsheet(
-        svname, aspects, targetlists, st_keys, pl_keys, exts
-):
+def write_spreadsheet(svname, aspects, targetlists, st_keys, pl_keys, exts):
     '''
     generic spreadsheet writer; used for both system and ancillary data
     '''
