@@ -126,7 +126,6 @@ class normalization(dawgie.Algorithm):
                 fltrs[index],
                 self.__out[index],
                 self._type,
-                verbose=False,
                 debug=False,
             )
             pass

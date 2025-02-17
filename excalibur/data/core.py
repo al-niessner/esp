@@ -1205,7 +1205,6 @@ def scancal(
                 targetn,
                 data['FLOODLVL'][index],
                 axis=0,
-                debug=False,
             )
             if np.isfinite(minx * maxx):
                 minx -= 1.5 * 12
@@ -1422,7 +1421,6 @@ def scancal(
                 disper,
                 ovszspc=ovszspc,
                 bck=None,
-                debug=debug,
             )
             if ldisp < disp < udisp:
                 spectralindex.append(si)
@@ -1448,7 +1446,6 @@ def scancal(
                 siv=siv,
                 ovszspc=ovszspc,
                 bck=None,
-                debug=debug,
             )
             if (disp < ldisp) or (disp > udisp):
                 data['TRIAL'][index] = 'Dispersion Out Of Bounds'
@@ -2124,7 +2121,6 @@ def starecal(
                 scanwpi,
                 targetn,
                 fldthr,
-                debug=False,
                 stare=True,
             )
             minlocs.append(lmn)
@@ -2159,7 +2155,6 @@ def starecal(
                 fldthr,
                 axis=0,
                 stare=True,
-                debug=False,
             )
             if np.isfinite(minx * maxx):
                 minx -= 1.5 * 12
@@ -2274,7 +2269,7 @@ def starecal(
             spectrum[spectrum < cutoff] = np.nan
             spectrum = abs(spectrum)
             _w, d, _s, si, _bck = wavesol(
-                spectrum, tt, wavett, disper, ovszspc=ovszspc, debug=False
+                spectrum, tt, wavett, disper, ovszspc=ovszspc
             )
             if ldisp < d < udisp:
                 spectralindex.append(si)
@@ -2658,7 +2653,6 @@ def stiscal_G750L(_fin, clc, tim, tid, flttype, out):
                     disp,
                     fd=True,
                     fs=False,
-                    debug=False,
                 )
                 data['WAVE'][index] = w
                 allsi.append(si)
@@ -2726,7 +2720,6 @@ def stiscal_G750L(_fin, clc, tim, tid, flttype, out):
                     siv=np.nanmedian(allsi),
                     fd=True,
                     fs=False,
-                    debug=False,
                 )
                 liref = itp.interp1d(
                     wavett * 1e-4, tt, bounds_error=False, fill_value=np.nan

@@ -2275,7 +2275,6 @@ def createldgrid(
             ps.profile_averages,
             ps.profile_uncertainties,
             mumin=phoenixmin,
-            debug=verbose,
             model=ldmodel,
         )
         if allcl is None:

@@ -196,7 +196,7 @@ class timing(dawgie.Algorithm):
     def _timing(fin, fltr, colin, out):
         '''Core code call'''
         log.warning('--< DATA TIMING: %s >--', fltr)
-        chunked = datcore.timing(fin, fltr, colin, out, verbose=False)
+        chunked = datcore.timing(fin, fltr, colin, out)
         return chunked
 
     @staticmethod
@@ -297,23 +297,20 @@ class calibration(dawgie.Algorithm):
         log.warning('--< DATA CALIBRATION: %s >--', flttype)
         caled = False
         if 'SCAN' in flttype:
-            caled = datcore.scancal(cll, tim, tid, flttype, out, verbose=False)
+            caled = datcore.scancal(cll, tim, tid, flttype, out)
             pass
         if 'G430' in flttype:
-            caled = datcore.stiscal_G430L(
-                fin, cll, tim, tid, flttype, out, verbose=False
-            )
+            caled = datcore.stiscal_G430L(fin, cll, tim, tid, flttype, out)
             pass
         if 'G750' in flttype:
-            caled = datcore.stiscal_G750L(
-                fin, cll, tim, tid, flttype, out, verbose=False
-            )
+            caled = datcore.stiscal_G750L(fin, cll, tim, tid, flttype, out)
+            pass
         if 'Spitzer' in flttype:
             caled = datcore.spitzercal(cll, out)
             pass
         if 'JWST' in flttype:
             caled = datcore.jwstcal(
-                fin, cll, tim, flttype, out, ps=ps, verbose=False, debug=False
+                fin, cll, tim, flttype, out, ps=ps, verbose=False
             )
             pass
         return caled
