@@ -3,14 +3,10 @@
 # -- IMPORTS -- ------------------------------------------------------
 import dawgie
 
-import excalibur
-
-# import estimators
 from excalibur.ancillary.estimators import StEstimator, PlEstimator
 import excalibur.ancillary.estimators as ancestor
 from excalibur.system.core import write_spreadsheet
 
-import os
 import logging
 
 log = logging.getLogger(__name__)
@@ -275,10 +271,6 @@ def savesv(aspects, targetlists):
 
     svname = 'ancillary.estimate.parameters'
 
-    aspecttargets = []
-    for a in aspects:
-        aspecttargets.append(a)
-
     # (the list of extensions is hardcoded at the top of this file)
     exts = SV_EXTS.copy()
     # print('extensions:',exts)
@@ -309,7 +301,7 @@ def savesv(aspects, targetlists):
     exts.remove('_uperr')
 
     write_spreadsheet(
-        svname, aspecttargets, targetlists, st_keys, pl_keys, exts
+        svname, aspects, targetlists, st_keys, pl_keys, exts
     )
 
     return

@@ -899,13 +899,6 @@ def savesv(aspects, targetlists):
     '''
     svname = 'system.finalize.parameters'
 
-    aspecttargets = []
-    for a in aspects:
-        aspecttargets.append(a)
-
-    # this extension info is not needed for value histograms, but is required for full data dump
-    exts = system_data['exts']
-
     # 55 Cnc is used as an example, to get the
     system_data = aspects['55 Cnc'][svname]
     st_keys = system_data['starmdt']  # start with mandatory params
@@ -914,18 +907,25 @@ def savesv(aspects, targetlists):
     # st_keys.extend(system_data['starnonmdt'])
     pl_keys = system_data['planetmdt']
 
+    # this extension info is not needed for value histograms, but is required for full data dump
+    exts = system_data['exts']
+
     write_spreadsheet(
-        svname, aspecttargets, targetlists, st_keys, pl_keys, exts
+        svname, aspects, targetlists, st_keys, pl_keys, exts
     )
     return
 
 
 def write_spreadsheet(
-    svname, aspecttargets, targetlists, st_keys, pl_keys, exts
+        svname, aspects, targetlists, st_keys, pl_keys, exts
 ):
     '''
     generic spreadsheet writer; used for both system and ancillary data
     '''
+
+    aspecttargets = []
+    for a in aspects:
+        aspecttargets.append(a)
 
     # directory where the results are saved
     saveDir = excalibur.context['data_dir'] + '/spreadsheets/'
