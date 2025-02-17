@@ -906,7 +906,7 @@ def savesv(aspects, targetlists):
     # this extension info is not needed for value histograms, but is required for full data dump
     exts = system_data['exts']
 
-    # 55 Cnc is used as an example, to get the 
+    # 55 Cnc is used as an example, to get the
     system_data = aspects['55 Cnc'][svname]
     st_keys = system_data['starmdt']  # start with mandatory params
     # also include non-mandatory params?
@@ -914,12 +914,15 @@ def savesv(aspects, targetlists):
     # st_keys.extend(system_data['starnonmdt'])
     pl_keys = system_data['planetmdt']
 
-    write_spreadsheet(svname, aspecttargets, targetlists,
-                      st_keys, pl_keys, exts)
+    write_spreadsheet(
+        svname, aspecttargets, targetlists, st_keys, pl_keys, exts
+    )
     return
 
-def write_spreadsheet(svname, aspecttargets, targetlists,
-                      st_keys, pl_keys, exts):
+
+def write_spreadsheet(
+    svname, aspecttargets, targetlists, st_keys, pl_keys, exts
+):
     '''
     generic spreadsheet writer; used for both system and ancillary data
     '''
@@ -969,27 +972,22 @@ def write_spreadsheet(svname, aspecttargets, targetlists,
                     outfile.write(str(data[key]) + ',')
                     for ext in exts:
                         if (
-                                key + ext != 'stellar_type_units'
-                                and key + ext != 'T_corona_ref'
-                                and key + ext != 'spTyp_units'
+                            key + ext != 'stellar_type_units'
+                            and key + ext != 'T_corona_ref'
+                            and key + ext != 'spTyp_units'
                         ):
                             outfile.write(key + ext + ',')
                             outfile.write(
-                                str(data[key + ext]).replace(
-                                    ',', ';'
-                                )
-                                + ','
+                                str(data[key + ext]).replace(',', ';') + ','
                             )
 
                 for key in pl_keys:
-                    outfile.write(
-                        str(data[planet_letter][key]) + ','
-                    )
+                    outfile.write(str(data[planet_letter][key]) + ',')
                     for ext in exts:
                         outfile.write(
-                            str(
-                                data[planet_letter][key + ext]
-                            ).replace(',', ';')
+                            str(data[planet_letter][key + ext]).replace(
+                                ',', ';'
+                            )
                             + ','
                         )
 

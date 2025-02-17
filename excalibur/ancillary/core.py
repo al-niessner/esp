@@ -308,7 +308,8 @@ def savesv(aspects, targetlists):
     exts.remove('_lowerr')
     exts.remove('_uperr')
 
-    write_spreadsheet(svname, aspecttargets, targetlists,
-                      st_keys, pl_keys, exts)
-                      
+    write_spreadsheet(
+        svname, aspecttargets, targetlists, st_keys, pl_keys, exts
+    )
+
     return
