@@ -296,13 +296,6 @@ def norm_jwst(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
             allwavet.append(wavet)
             alltemplates.append(template)
             pass
-        if verbose:
-            plt.figure()
-            for x, y in zip(allwavet, alltemplates):
-                plt.plot(x, y)
-            plt.semilogy()
-            plt.show()
-            pass
         allnorms = []
         allnwaves = []
         for ws, s in zip(wave, spectra):
@@ -315,12 +308,6 @@ def norm_jwst(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
                 pass
             allnorms.append(np.array(norms) / t)
             allnwaves.append(w)
-            pass
-        if verbose:
-            plt.figure()
-            for x, a in zip(allnwaves, allnorms):
-                plt.plot(x, a)
-            plt.show()
             pass
         out['data'][p]['visits'] = tme['data'][p]['visits']
         out['data'][p]['ignore'] = ignore
@@ -684,24 +671,12 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
                             allito.append(lmout.params['oitcp'].value)
                             allslo.append(lmout.params['oslope'].value)
                             pass
-                        if debug:
-                            plt.figure()
-                            plt.plot(fotime, ndata, 'o')
-                            plt.plot(fotime, hstramp(lmout.params, fotime), '*')
-                            plt.show()
-                            pass
                         pass
                     params = lm.Parameters()
                     params.add('oitcp', value=np.nanmedian(allito))
                     params.add('oslope', value=np.nanmedian(allslo))
                     params.add('ologtau', value=np.nanmedian(alltfo))
                     params.add('ologdelay', value=np.nanmedian(alldfo))
-                    if debug:
-                        plt.figure()
-                        plt.title('Breathing ramp orbit: ' + str(int(thisorb)))
-                        plt.plot(fotime, hstramp(params, fotime), 'o')
-                        plt.show()
-                        pass
                     hstbreath[str(int(thisorb))] = params
                     if False in np.isfinite(
                         [np.nanmedian(alltfo), np.nanmedian(alldfo)]
@@ -788,17 +763,6 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
                                 )
                             )
                             witp[str(key)] = poly
-                            if debug:
-                                plt.figure()
-                                plt.plot(eachwfos[finval], eachfos[finval], '+')
-                                plt.plot(
-                                    eachwfos[finval],
-                                    poly(eachwfos[finval]),
-                                    'o',
-                                )
-                                plt.show()
-                                pass
-                            pass
                         pass
                     thisscan = vlincorr == dsscan
                     vtsdt = []
@@ -827,11 +791,6 @@ def norm(cal, tme, fin, ext, out, selftype, verbose=False, debug=False):
                         pass
                     viss[thisscan] = np.array(vtsdt)
                     photnoise[thisscan] = np.array(ptsdt)
-                    pass
-                if debug:
-                    plt.figure()
-                    plt.plot(visw.T, viss.T, 'o')
-                    plt.show()
                     pass
                 # DATA CONSISTENCY AND QUALITY CHECK -------------------------------------
                 wanted = []
@@ -1367,33 +1326,6 @@ def hstwhitelight(
             g1, g2, g3, g4 = [[0], [0], [0], [0]]
         wlmod = tldlc(abs(flatz), rpors, g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0])
         out['data'][p]['whiteld'] = [g1[0], g2[0], g3[0], g4[0]]
-        # PLOT -------------------------------------------------------
-        if verbose:
-            plt.figure(figsize=(10, 6))
-            for v in visits:
-                index = visits.index(v)
-                plt.plot(
-                    phase[index], allwhite[index], 'o', label=allfltrs[index]
-                )
-                pass
-            if len(visits) > 14:
-                ncol = 2
-            else:
-                ncol = 1
-            plt.plot(flatphase, wlmod, '^', label='M')
-            plt.xlabel('Orbital Phase')
-            plt.ylabel('Normalized Raw White Light Curve')
-            plt.legend(
-                loc='best',
-                ncol=ncol,
-                mode='expand',
-                numpoints=1,
-                borderaxespad=0.0,
-                frameon=False,
-            )
-            plt.tight_layout()
-            plt.show()
-            pass
         # TTV --------------------------------------------------------
         ttv = []
         for index, v in enumerate(visits):
@@ -1703,34 +1635,6 @@ def hstwhitelight(
         out['data'][p]['allfltrs'] = allfltrs
         out['data'][p]['allttvs'] = allttvs
         out['STATUS'].append(True)
-        if verbose:
-            plt.figure(figsize=(10, 6))
-            for iv, v in enumerate(visits):
-                vlabel = allfltrs[iv]
-                plt.plot(phase[iv], allwhite[iv], 'k+')
-                plt.plot(
-                    postphase[iv], allwhite[iv] / postim[iv], 'o', label=vlabel
-                )
-                pass
-            if len(visits) > 14:
-                ncol = 2
-            else:
-                ncol = 1
-            plt.plot(postflatphase, postlc, '^', label='M')
-            plt.xlabel('Orbital Phase')
-            plt.ylabel('Normalized Post White Light Curve')
-            plt.legend(
-                loc='best',
-                ncol=ncol,
-                mode='expand',
-                numpoints=1,
-                borderaxespad=0.0,
-                frameon=False,
-            )
-            plt.tight_layout()
-            plt.show()
-            pass
-        pass
     return True
 
 
@@ -1834,32 +1738,6 @@ def whitelight(
             g1, g2, g3, g4 = [[0], [0], [0], [0]]
         wlmod = tldlc(abs(flatz), rpors, g1=g1[0], g2=g2[0], g3=g3[0], g4=g4[0])
         out['data'][p]['whiteld'] = [g1[0], g2[0], g3[0], g4[0]]
-        # PLOT -------------------------------------------------------
-        if verbose:
-            plt.figure(figsize=(10, 6))
-            for v in visits:
-                index = visits.index(v)
-                plt.plot(phase[index], allwhite[index], 'o', label=str(v))
-                pass
-            if len(visits) > 14:
-                ncol = 2
-            else:
-                ncol = 1
-            plt.plot(flatphase, wlmod, '^', label='M')
-            plt.xlabel('Orbital Phase')
-            plt.ylabel('Normalized Raw White Light Curve')
-            plt.legend(
-                bbox_to_anchor=(1 + 0.1 * (ncol - 0.5), 0.5),
-                loc=5,
-                ncol=ncol,
-                mode='expand',
-                numpoints=1,
-                borderaxespad=0.0,
-                frameon=False,
-            )
-            plt.tight_layout(rect=[0, 0, (1 - 0.1 * ncol), 1])
-            plt.show()
-            pass
         # TTV --------------------------------------------------------
         ttv = []
         for index, v in enumerate(visits):
@@ -2161,34 +2039,6 @@ def whitelight(
             'simulated'
         ] = all_sims  # certain targets the simulated data will be empty bc they're not gaussian
         wl = True
-        if verbose:
-            plt.figure(figsize=(10, 6))
-            for iv, v in enumerate(visits):
-                plt.plot(phase[iv], allwhite[iv], 'k+')
-                plt.plot(
-                    postphase[iv], allwhite[iv] / postim[iv], 'o', label=str(v)
-                )
-                pass
-            if len(visits) > 14:
-                ncol = 2
-            else:
-                ncol = 1
-            plt.plot(postflatphase, postlc, '^', label='M')
-            plt.xlabel('Orbital Phase')
-            plt.ylabel('Normalized Post White Light Curve')
-            plt.legend(
-                bbox_to_anchor=(1 + 0.1 * (ncol - 0.5), 0.5),
-                loc=5,
-                ncol=ncol,
-                mode='expand',
-                numpoints=1,
-                borderaxespad=0.0,
-                frameon=False,
-            )
-            plt.tight_layout(rect=[0, 0, (1 - 0.1 * ncol), 1])
-            plt.show()
-            pass
-        pass
     return wl
 
 
@@ -2470,8 +2320,6 @@ def ldx(psmu, psmean, psstd, mumin=1e-1, debug=False, model='nonlinear'):
     params.add('gamma2', value=5e-1)
     params.add('gamma3', value=1e-1)
     params.add('gamma4', expr='1 - gamma1 - gamma2 - gamma3')
-    if debug:
-        plt.figure()
     for iwave in np.arange(nwave):
         select = fitsprfs[iwave] == 0e0
         if True in select:
@@ -2523,24 +2371,6 @@ def ldx(psmu, psmean, psstd, mumin=1e-1, debug=False, model='nonlinear'):
                 ]
             )
             pass
-        if debug:
-            plt.plot(mup, prfs[iwave], 'k^')
-            plt.errorbar(
-                fitmup, fitprfs[iwave], yerr=fitsprfs[iwave], ls='None'
-            )
-            if model == 'linear':
-                plt.plot(fitmup, lnldx(out.params, fitmup))
-            if model == 'quadratic':
-                plt.plot(fitmup, qdldx(out.params, fitmup))
-            if model == 'nonlinear':
-                plt.plot(fitmup, nlldx(out.params, fitmup))
-            pass
-        pass
-    if debug:
-        plt.ylabel('$I(\\mu)$')
-        plt.xlabel('$\\mu$')
-        plt.title(model)
-        plt.show()
         pass
     return np.array(cl), np.array(el)
 
@@ -3013,76 +2843,6 @@ def spectrum(
             pass
         exospec = True
         out['STATUS'].append(True)
-        pass
-    if verbose:
-        for p in out['data'].keys():
-            if 'Teq' in out['data'][p]:
-                Teq = str(int(out['data'][p]['Teq']))
-                pass
-            else:
-                Teq = ''
-            vspectrum = np.array(out['data'][p]['ES'])
-            specerr = np.array(out['data'][p]['ESerr'])
-            specwave = np.array(out['data'][p]['WB'])
-            specerr = abs(vspectrum**2 - (vspectrum + specerr) ** 2)
-            vspectrum = vspectrum**2
-            # Rstar = priors['R*'] * sscmks['Rsun']
-            # Rp = priors[p]['rp'] * sscmks['Rjup']
-            Hs = (
-                cst.Boltzmann
-                * eqtemp
-                / (mmw * 1e-2 * (10.0 ** float(priors[p]['logg'])))
-            )  # m
-            # Smooth spectrum
-            binsize = 4
-            nspec = int(specwave.size / binsize)
-            minspec = np.nanmin(specwave)
-            maxspec = np.nanmax(specwave)
-            scale = (maxspec - minspec) / (1e0 * nspec)
-            wavebin = scale * np.arange(nspec) + minspec
-            deltabin = np.diff(wavebin)[0]
-            cbin = wavebin + deltabin / 2e0
-            specbin = []
-            errbin = []
-            for eachbin in cbin:
-                select = specwave < (eachbin + deltabin / 2e0)
-                select = select & (specwave >= (eachbin - deltabin / 2e0))
-                select = select & np.isfinite(vspectrum)
-                if np.sum(np.isfinite(vspectrum[select])) > 0:
-                    specbin.append(
-                        np.nansum(vspectrum[select] / (specerr[select] ** 2))
-                        / np.nansum(1.0 / (specerr[select] ** 2))
-                    )
-                    errbin.append(
-                        np.nanmedian((specerr[select]))
-                        / np.sqrt(np.sum(select))
-                    )
-                    pass
-                else:
-                    specbin.append(np.nan)
-                    errbin.append(np.nan)
-                    pass
-                pass
-            waveb = np.array(cbin)
-            specb = np.array(specbin)
-            errb = np.array(errbin)
-            myfig, ax0 = plt.subplots(figsize=(8, 6))
-            plt.title(p + ' ' + Teq)
-            ax0.errorbar(
-                specwave,
-                1e2 * vspectrum,
-                fmt='.',
-                yerr=1e2 * specerr,
-                color='lightgray',
-            )
-            ax0.errorbar(
-                waveb, 1e2 * specb, fmt='^', yerr=1e2 * errb, color='blue'
-            )
-            ax0.set_xlabel(str('Wavelength [$\\mu m$]'))
-            ax0.set_ylabel(str('$(R_p/R_*)^2$ [%]'))
-            add_scale_height_labels(out['data'][p], vspectrum, ax0, myfig)
-            plt.show()
-        pass
     return exospec
 
 
@@ -3467,25 +3227,6 @@ def fastspec(
     ES = np.array(ES)
     ESerr = np.array(ESerr)
     WB = np.array(WB)
-    if verbose:
-        vspectrum = ES.copy()
-        specerr = ESerr.copy()
-        specwave = WB.copy()
-        specerr = abs(vspectrum**2 - (vspectrum + specerr) ** 2)
-        vspectrum = vspectrum**2
-        # Rstar = priors['R*'] * sscmks['Rsun']
-        # Rp = priors[p]['rp'] * sscmks['Rjup']
-        Hs = (
-            cst.Boltzmann
-            * eqtemp
-            / (mmw * 1e-2 * (10.0 ** float(priors[p]['logg'])))
-        )  # m
-        fig, ax0 = plt.subplots(figsize=(10, 6))
-        ax0.errorbar(specwave, 1e2 * vspectrum, fmt='.', yerr=1e2 * specerr)
-        ax0.set_xlabel(str('Wavelength [$\\mu m$]'))
-        ax0.set_ylabel(str('$(R_p/R_*)^2$ [%]'))
-        add_scale_height_labels({'Hs': [Hs]}, vspectrum, ax0, fig)
-        plt.show()
     priorspec = ES
     # alpha > 1: Increase width, alpha < 1: Decrease width
     # decrease width by half if no modulation detected
@@ -4244,25 +3985,6 @@ def norm_spitzer(cal, tme, fin, out, selftype, debug=False):
         out['data'][p]['transit'] = tme['data'][p]['transit']
         out['data'][p]['eclipse'] = tme['data'][p]['eclipse']
         out['data'][p]['phasecurve'] = tme['data'][p]['phasecurve']
-
-        if debug:
-            plt.plot(
-                out['data'][p]['TIME'][~badmask],
-                out['data'][p]['PHOT'][~badmask],
-                'k.',
-            )
-            plt.plot(
-                out['data'][p]['TIME'][badmask],
-                out['data'][p]['PHOT'][badmask],
-                'r.',
-            )
-            plt.show()
-
-            plt.plot(out['data'][p]['TIME'], out['data'][p]['PHOT'], 'k.')
-            plt.xlabel('Time')
-            plt.ylabel('Flux')
-            plt.show()
-
         if out['data'][p][selftype]:
             normed = True
             out['STATUS'].append(True)
