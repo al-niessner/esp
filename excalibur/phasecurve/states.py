@@ -41,6 +41,7 @@ class NormSV(dawgie.StateVector):
                 plot_normalized_byvisit(self['data'][p], vrange, visitor)
             pass
         pass
+
     pass
 
 
