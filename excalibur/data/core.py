@@ -46,21 +46,6 @@ from multiprocessing import Pool
 log = logging.getLogger(__name__)
 
 
-# ------------- ------------------------------------------------------
-# -- SV VALIDITY -- --------------------------------------------------
-def checksv(sv):
-    '''
-    G. ROUDIER: Tests for empty SV shell
-    '''
-    valid = False
-    errstring = None
-    if sv['STATUS'][-1]:
-        valid = True
-    else:
-        errstring = sv.name() + ' IS EMPTY'
-    return valid, errstring
-
-
 # ----------------- --------------------------------------------------
 # -- COLLECT DATA -- -------------------------------------------------
 def collectversion():

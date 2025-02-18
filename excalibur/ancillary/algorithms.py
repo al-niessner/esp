@@ -20,6 +20,8 @@ from excalibur.target.targetlists import get_target_lists
 
 from excalibur.ancillary.core import savesv
 
+from excalibur.util.checksv import checksv
+
 from importlib import import_module as fetch  # avoid cicular dependencies
 
 log = logging.getLogger(__name__)
@@ -64,7 +66,7 @@ class estimate(dawgie.Algorithm):
 
         else:
             update = False
-            vfin, _ = anccore.checksv(self.__fin.sv_as_dict()['parameters'])
+            vfin, _ = checksv(self.__fin.sv_as_dict()['parameters'])
             if vfin:
                 update = anccore.estimate(
                     self.__fin.sv_as_dict()['parameters'], self.__out[0]

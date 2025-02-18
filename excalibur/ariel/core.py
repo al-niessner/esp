@@ -43,21 +43,6 @@ ARIEL_PARAMS = namedtuple(
 )
 
 
-# ---------------------------- ---------------------------------------
-# -- SV VALIDITY -- --------------------------------------------------
-def checksv(sv):
-    '''
-    Tests for empty SV shell
-    '''
-    if sv['STATUS'][-1]:
-        valid = True
-        errstring = None
-    else:
-        valid = False
-        errstring = sv.name() + ' IS EMPTY'
-    return valid, errstring
-
-
 # ----------------- --------------------------------------------------
 # -- SIMULATE ARIEL SPECTRA ------------------------------------------
 def simulate_spectra(target, system_dict, runtime_params, out):

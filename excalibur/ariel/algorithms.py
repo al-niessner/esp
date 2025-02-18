@@ -12,6 +12,8 @@ import excalibur.runtime.algorithms as rtalg
 import excalibur.system as sys
 import excalibur.system.algorithms as sysalg
 
+from excalibur.util.checksv import checksv
+
 log = logging.getLogger(__name__)
 
 
@@ -63,7 +65,7 @@ class sim_spectrum(dawgie.Algorithm):
             update = False
 
             system_dict = self.__system_finalize.sv_as_dict()['parameters']
-            valid, errstring = arielcore.checksv(system_dict)
+            valid, errstring = checksv(system_dict)
             if valid:
                 runtime = self.__rt.sv_as_dict()['status']
                 runtime_params = arielcore.ARIEL_PARAMS(

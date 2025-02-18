@@ -19,6 +19,8 @@ import excalibur.system.algorithms as sysalg
 import excalibur.runtime.algorithms as rtalg
 import excalibur.runtime.binding as rtbind
 
+from excalibur.util.checksv import checksv
+
 from importlib import import_module as fetch  # avoid cicular dependencies
 
 log = logging.getLogger(__name__)
@@ -73,7 +75,7 @@ class collect(dawgie.Algorithm):
             update = False
             create = self.__create.sv_as_dict()
             scrape = self.__scrape.sv_as_dict()['databases']
-            valid, errstring = datcore.checksv(scrape)
+            valid, errstring = checksv(scrape)
             if valid:
                 for key in create['filters'].keys():
                     self.__out[key] = create['filters'][key]
@@ -147,9 +149,9 @@ class timing(dawgie.Algorithm):
         '''Top level algorithm call'''
         update = False
         fin = self.__fin.sv_as_dict()['parameters']
-        vfin, efin = datcore.checksv(fin)
+        vfin, efin = checksv(fin)
         col = self.__col.sv_as_dict()['frames']
-        vcol, ecol = datcore.checksv(col)
+        vcol, ecol = checksv(col)
         svupdate = []
         if vfin and vcol:
             log.warning('>-- DATA COLLECT: \n\t%s', list(col['activefilters']))
@@ -244,9 +246,9 @@ class calibration(dawgie.Algorithm):
 
         update = False
         cll = self.__col.sv_as_dict()['frames']
-        vcll, ecll = datcore.checksv(cll)
+        vcll, ecll = checksv(cll)
         fin = self.__fin.sv_as_dict()['parameters']
-        vfin, sfin = datcore.checksv(fin)
+        vfin, sfin = checksv(fin)
         svupdate = []
 
         for fltr in self.__rt.sv_as_dict()['status']['allowed_filter_names']:
@@ -254,7 +256,7 @@ class calibration(dawgie.Algorithm):
                 # stop here if it is not a runtime target
                 self.__rt.proceed(fltr)
                 tim = self.__tim.sv_as_dict()[fltr]
-                vtim, etim = datcore.checksv(tim)
+                vtim, etim = checksv(tim)
                 if vfin and vcll and vtim:
                     # This code needs repair by moving out to config
                     # Dirty secret in repr(self)

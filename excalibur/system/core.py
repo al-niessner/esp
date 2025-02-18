@@ -38,22 +38,6 @@ SYSTEM_PARAMS = namedtuple(
     ['maximizeSelfConsistency', 'selectMostRecent'],
 )
 
-
-# ---------------------------- ---------------------------------------
-# -- SV VALIDITY -- --------------------------------------------------
-def checksv(sv):
-    '''
-    G. ROUDIER: Tests for empty SV shell
-    '''
-    valid = False
-    errstring = None
-    if sv['STATUS'][-1]:
-        valid = True
-    else:
-        errstring = sv.name() + ' IS EMPTY'
-    return valid, errstring
-
-
 # ----------------- --------------------------------------------------
 # -- BUILD SYSTEM PRIORS -- ------------------------------------------
 def buildsp(autofill, runtime_params, out, verbose=False):

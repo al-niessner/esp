@@ -21,6 +21,7 @@ from excalibur import ariel
 import excalibur.ariel.algorithms as arielalg
 import excalibur.cerberus.core as crbcore
 import excalibur.cerberus.states as crbstates
+from excalibur.util.checksv import checksv
 
 from importlib import import_module as fetch  # avoid cicular dependencies
 
@@ -72,11 +73,11 @@ class XSLib(dawgie.Algorithm):
 
             if fltr == 'Ariel-sim':
                 sv = self.__arielsim.sv_as_dict()['parameters']
-                vspc, sspc = crbcore.checksv(sv)
+                vspc, sspc = checksv(sv)
                 sspc = 'Ariel-sim spectrum not found'
             elif fltr in self.__spc.sv_as_dict().keys():
                 sv = self.__spc.sv_as_dict()[fltr]
-                vspc, sspc = crbcore.checksv(sv)
+                vspc, sspc = checksv(sv)
             else:
                 vspc = False
                 sspc = 'This filter doesnt have a spectrum: ' + fltr
@@ -177,7 +178,7 @@ class Atmos(dawgie.Algorithm):
     def run(self, ds, ps):
         '''Top level algorithm call'''
 
-        vfin, sfin = crbcore.checksv(self.__fin.sv_as_dict()['parameters'])
+        vfin, sfin = checksv(self.__fin.sv_as_dict()['parameters'])
         if sfin:
             sfin = 'Missing system params!'
 
@@ -188,7 +189,7 @@ class Atmos(dawgie.Algorithm):
 
             update = False
             if fltr in self.__xsl.sv_as_dict():
-                vxsl, sxsl = crbcore.checksv(self.__xsl.sv_as_dict()[fltr])
+                vxsl, sxsl = checksv(self.__xsl.sv_as_dict()[fltr])
                 if sxsl:
                     sxsl = fltr + ' missing XSL'
             else:
@@ -196,11 +197,11 @@ class Atmos(dawgie.Algorithm):
 
             if fltr == 'Ariel-sim':
                 sv = self.__arielsim.sv_as_dict()['parameters']
-                vspc, sspc = crbcore.checksv(sv)
+                vspc, sspc = checksv(sv)
                 sspc = 'Ariel-sim spectrum not found'
             elif fltr in self.__spc.sv_as_dict().keys():
                 sv = self.__spc.sv_as_dict()[fltr]
-                vspc, sspc = crbcore.checksv(sv)
+                vspc, sspc = checksv(sv)
             else:
                 vspc = False
                 sspc = 'This filter doesnt have a spectrum: ' + fltr
@@ -316,8 +317,8 @@ class Results(dawgie.Algorithm):
         '''Top level algorithm call'''
 
         svupdate = []
-        vfin, sfin = crbcore.checksv(self.__fin.sv_as_dict()['parameters'])
-        vanc, sanc = crbcore.checksv(self.__anc.sv_as_dict()['parameters'])
+        vfin, sfin = checksv(self.__fin.sv_as_dict()['parameters'])
+        vanc, sanc = checksv(self.__anc.sv_as_dict()['parameters'])
 
         update = False
         if vfin and vanc:
@@ -333,8 +334,8 @@ class Results(dawgie.Algorithm):
                 # stop here if it is not a runtime target
                 self.__rt.proceed(fltr)
 
-                vxsl, sxsl = crbcore.checksv(self.__xsl.sv_as_dict()[fltr])
-                vatm, satm = crbcore.checksv(self.__atm.sv_as_dict()[fltr])
+                vxsl, sxsl = checksv(self.__xsl.sv_as_dict()[fltr])
+                vatm, satm = checksv(self.__atm.sv_as_dict()[fltr])
                 if vxsl and vatm:
                     log.warning('--< CERBERUS RESULTS: %s >--', fltr)
                     # FIXMEE: this code needs repaired by moving out to config (Geoff added)

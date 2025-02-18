@@ -57,19 +57,6 @@ class urltrick:
     pass
 
 
-# -------------- -----------------------------------------------------
-# -- SV VALIDITY -- --------------------------------------------------
-def checksv(sv):
-    '''Checks for empty SV'''
-    valid = False
-    errstring = None
-    if sv['STATUS'][-1]:
-        valid = True
-    else:
-        errstring = sv.name() + ' IS EMPTY'
-    return valid, errstring
-
-
 # ----------------- --------------------------------------------------
 # -- TAP QUERY --  ---------------------------------------------------
 def tap_query(base_url, query):

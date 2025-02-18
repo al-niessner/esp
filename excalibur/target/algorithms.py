@@ -13,6 +13,8 @@ import excalibur.runtime as rtime
 import excalibur.runtime.algorithms as rtalg
 import excalibur.runtime.binding as rtbind
 
+from excalibur.util.checksv import checksv
+
 import excalibur.target.core as trgcore
 import excalibur.target.edit as trgedit
 import excalibur.target.monitor as trgmonitor
@@ -186,7 +188,7 @@ class autofill(dawgie.Algorithm):
             pass
         else:
             crt = self.__create.sv_as_dict()
-            valid, errstring = trgcore.checksv(crt['starIDs'])
+            valid, errstring = checksv(crt['starIDs'])
             if valid and (target in crt['starIDs']['starID']):
                 log.warning('--< TARGET AUTOFILL: %s >--', target)
                 update = self._autofill(crt, target)
@@ -262,7 +264,7 @@ class scrape(dawgie.Algorithm):
             )
         else:
             var_autofill = self.__autofill.sv_as_dict()['parameters']
-            valid, errstring = trgcore.checksv(var_autofill)
+            valid, errstring = checksv(var_autofill)
             if valid:
                 # FIXMEE: this code needs repaired by moving out to config (Geoff added)
                 log.warning(

@@ -180,19 +180,6 @@ def getestimators():
     return st_estimators, pl_estimators
 
 
-# ------------- ------------------------------------------------------
-# -- SV VALIDITY -- --------------------------------------------------
-def checksv(sv):
-    '''N. HUBER-FEELY: Tests for empty SV shell'''
-    valid = False
-    errstring = None
-    if sv['STATUS'][-1]:
-        valid = True
-    else:
-        errstring = sv.name() + ' IS EMPTY'
-    return valid, errstring
-
-
 def estimateversion():
     '''estimateversion ds'''
     # return dawgie.VERSION(2,0,0)

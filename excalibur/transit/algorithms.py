@@ -14,6 +14,8 @@ import numpy as np
 import excalibur.transit.core as trncore
 import excalibur.transit.states as trnstates
 
+from excalibur.util.checksv import checksv
+
 import excalibur.data as dat
 import excalibur.data.algorithms as datalg
 import excalibur.runtime as rtime
@@ -71,14 +73,14 @@ class normalization(dawgie.Algorithm):
         '''Top level algorithm call'''
 
         svupdate = []
-        vfin, sfin = trncore.checksv(self.__fin.sv_as_dict()['parameters'])
+        vfin, sfin = checksv(self.__fin.sv_as_dict()['parameters'])
         for fltr in self.__rt.sv_as_dict()['status']['allowed_filter_names']:
             # stop here if it is not a runtime target
             self.__rt.proceed(fltr)
 
             update = False
-            vcal, scal = trncore.checksv(self.__cal.sv_as_dict()[fltr])
-            vtme, stme = trncore.checksv(self.__tme.sv_as_dict()[fltr])
+            vcal, scal = checksv(self.__cal.sv_as_dict()[fltr])
+            vtme, stme = checksv(self.__tme.sv_as_dict()[fltr])
             if vcal and vtme and vfin:
                 log.warning(
                     '--< %s NORMALIZATION: %s >--', self._type.upper(), fltr
@@ -194,7 +196,7 @@ class whitelight(dawgie.Algorithm):
 
         svupdate = []
         fin = self.__fin.sv_as_dict()['parameters']
-        vfin, sfin = trncore.checksv(fin)
+        vfin, sfin = checksv(fin)
         # MERGE PROTOTYPE
         if self._type == "transit":
             allnormdata = []
@@ -217,7 +219,7 @@ class whitelight(dawgie.Algorithm):
                         nrm = self._nrm.sv_as_dict()[fltr]
                     except KeyError:
                         break
-                    vnrm, snrm = trncore.checksv(nrm)
+                    vnrm, snrm = checksv(nrm)
                     if vnrm and vfin:
                         log.warning(
                             '--< %s MERGING: %s >--', self._type.upper(), fltr
@@ -254,7 +256,7 @@ class whitelight(dawgie.Algorithm):
         for fltr in self.__rt.sv_as_dict()['status']['allowed_filter_names']:
             update = False
             nrm = self._nrm.sv_as_dict()[fltr]
-            vnrm, snrm = trncore.checksv(nrm)
+            vnrm, snrm = checksv(nrm)
             if vnrm and vfin:
                 log.warning(
                     '--< %s WHITE LIGHT: %s >--', self._type.upper(), fltr
@@ -378,15 +380,15 @@ class spectrum(dawgie.Algorithm):
         '''Top level algorithm call'''
 
         svupdate = []
-        vfin, sfin = trncore.checksv(self.__fin.sv_as_dict()['parameters'])
+        vfin, sfin = checksv(self.__fin.sv_as_dict()['parameters'])
 
         for fltr in self.__rt.sv_as_dict()['status']['allowed_filter_names']:
             # stop here if it is not a runtime target
             self.__rt.proceed(fltr)
 
             update = False
-            vnrm, snrm = trncore.checksv(self._nrm.sv_as_dict()[fltr])
-            vwht, swht = trncore.checksv(self._wht.sv_as_dict()[fltr])
+            vnrm, snrm = checksv(self._nrm.sv_as_dict()[fltr])
+            vwht, swht = checksv(self._wht.sv_as_dict()[fltr])
             if vfin and vnrm and vwht:
                 log.warning('--< %s SPECTRUM: %s >--', self._type.upper(), fltr)
                 update = self._spectrum(
@@ -489,7 +491,7 @@ class starspots(dawgie.Algorithm):
         '''Top level algorithm call'''
 
         svupdate = []
-        vfin, sfin = trncore.checksv(self.__fin.sv_as_dict()['parameters'])
+        vfin, sfin = checksv(self.__fin.sv_as_dict()['parameters'])
 
         # for fltr in ['HST-WFC3-IR-G141-SCAN']:  # for debugging, just run G141
         for fltr in self.__rt.sv_as_dict()['status']['allowed_filter_names']:
@@ -497,8 +499,8 @@ class starspots(dawgie.Algorithm):
             self.__rt.proceed(fltr)
 
             update = False
-            vwht, swht = trncore.checksv(self._wht.sv_as_dict()[fltr])
-            vspc, sspc = trncore.checksv(self._spc.sv_as_dict()[fltr])
+            vwht, swht = checksv(self._wht.sv_as_dict()[fltr])
+            vspc, sspc = checksv(self._spc.sv_as_dict()[fltr])
             if vfin and vwht and vspc:
                 log.warning(
                     '--< %s STARSPOTS: %s >--', self._type.upper(), fltr

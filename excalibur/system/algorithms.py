@@ -13,6 +13,8 @@ import excalibur.system.core as syscore
 import excalibur.system.states as sysstates
 import excalibur.system.overwriter as sysoverwriter
 
+from excalibur.util.checksv import checksv
+
 import excalibur.target as trg
 import excalibur.target.algorithms as trgalg
 
@@ -74,7 +76,7 @@ class validate(dawgie.Algorithm):
             )
 
             update = False
-            valid, errstring = syscore.checksv(autofill)
+            valid, errstring = checksv(autofill)
             if valid:
                 update = self._validate(autofill, runtime_params, self.__out)
             else:
@@ -146,7 +148,7 @@ class finalize(dawgie.Algorithm):
             update = False
             val = self.__val.sv_as_dict()['parameters']
 
-            valid, errstring = syscore.checksv(val)
+            valid, errstring = checksv(val)
             if valid:
                 overwrite = sysoverwriter.ppar()
                 for key in val:
