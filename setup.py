@@ -1,4 +1,4 @@
-#! /usr/bin/env python3
+#! /usr/bin/env python
 
 import os
 import setuptools
@@ -27,7 +27,7 @@ excalibur = os.path.join('excalibur', '__init__.py')
 version = 'esp-git-rev'
 with open(os.path.join(os.path.dirname(__file__), excalibur)) as f:
     t = f.read()
-t = t.replace('${UNDEFINED}', version)
+t = t.replace('${ESP_GIT_REV}', version)
 with open(os.path.join(os.path.dirname(__file__), excalibur), 'tw') as f:
     f.write(t)
 with open(data_files_names[0], "rt", encoding='utf-8') as f:
