@@ -620,12 +620,15 @@ def upper_outlier_mask(data):
     _, upbound = calculate_bounds(data)
     return np.array(data) > upbound
 
+
 def distrplot(title, values, visitor, units=None, fit_t=False, bins='auto'):
     '''distrplot ds'''
     myfig = plt.figure()
     plt.title(title)
     # CAREFUL: these args might not be in the right order now, with new data/data2
-    outlier_aware_hist(np.array(values), data2=None, *calculate_bounds(values), bins=bins)
+    outlier_aware_hist(
+        np.array(values), None, *calculate_bounds(values), bins=bins
+    )
     plt.ylabel('Density')
     if units is None:
         plt.xlabel('Estimate')

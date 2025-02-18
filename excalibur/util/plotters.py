@@ -263,8 +263,9 @@ def distrplot(paramName, values1, values2, visitor, units=None):
     myfig = plt.figure()
     plt.title(paramName.replace('log(', '').replace(')', ''), fontsize=18)
     outlier_aware_hist(
-        cleanvalues1, cleanvalues2,
-         *calculate_bounds(cleanvalues1),
+        cleanvalues1,
+        cleanvalues2,
+        *calculate_bounds(cleanvalues1),
         label1='everything',
         label2='Roudier et al. 2021',
     )
@@ -298,11 +299,17 @@ def calculate_bounds(data, z_thresh=3.5):
 
 
 # --------------------------------------------------------------------
-def outlier_aware_hist(data, data2=None,
-                       lower=None, upper=None,
-                       color1='khaki', color2='olive',
-                       label1='',label2='',
-                       bins=15):
+def outlier_aware_hist(
+    data,
+    data2=None,
+    lower=None,
+    upper=None,
+    color1='khaki',
+    color2='olive',
+    label1='',
+    label2='',
+    bins=15,
+):
     '''note: code is originally from
     https://stackoverflow.com/questions/15837810/making-pyplot-hist-first-and-last-bins-include-outliers
     '''
@@ -354,6 +361,7 @@ def outlier_aware_hist(data, data2=None,
     if lower_outliers or upper_outliers:
         plt.legend()
     return
+
 
 # --------------------------------------------------------------------
 def plot_normalized_byvisit(data, vrange, visitor):
