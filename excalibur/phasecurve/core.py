@@ -420,32 +420,14 @@ def phasecurve_spitzer(nrm, fin, out, selftype, fltr):
                 myfit.plot_pixelmap
             )
 
-            # estimates for photon noise
-            photons = aper * 1.0  # already converted to e- in data task
-
-            # noise estimate in transit
-            photon_noise_timeseries = 1 / np.sqrt(photons.mean())
-
-            # photon noise factor based on timeseries
-            res_std = np.round(np.std(myfit.residuals / np.median(aper)), 7)
-            nf_timeseries = res_std / photon_noise_timeseries
-            raw_residual = aper / np.median(aper) - myfit.transit
-            nf_timeseries_raw = np.std(raw_residual) / photon_noise_timeseries
-
-            raw_residual = aper / np.median(aper) - myfit.transit
-            rel_residuals = myfit.residuals / np.median(aper)
-            print(f"raw photon noise:{nf_timeseries_raw}")
-            print(f"photon noise: {nf_timeseries}")
-
             out['data'][p][ec]['plot_residual_fft'] = plot_residual_fft(
                 selftype,
                 fltr,
                 p,
-                raw_residual,
-                rel_residuals,
+                aper,
+                photons,
                 subt,
-                nf_timeseries,
-                nf_timeseries_raw,
+                myfit,
             )
 
             ec += 1

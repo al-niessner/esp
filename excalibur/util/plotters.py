@@ -43,15 +43,31 @@ def plot_residual_fft(
     selftype,
     fltr,
     p,
-    raw_residual,
-    rel_residuals,
+    aper,
+    photons,
     subt,
-    nf_timeseries,
-    nf_timeseries_raw,
+    myfit,
     tdur_freq=None,
 ):
-
     # create plot for residual statistics
+
+    # estimates for photon noise
+    photons = aper * 1.0  # already converted to e- in data task
+
+    # noise estimate in transit
+    # tmask = myfit.transit < 1  # not used
+    photon_noise_timeseries = 1 / np.sqrt(photons.mean())
+
+    # photon noise factor based on timeseries
+    res_std = np.round(np.std(myfit.residuals / np.median(aper)), 7)
+    nf_timeseries = res_std / photon_noise_timeseries
+    raw_residual = aper / np.median(aper) - myfit.transit
+    nf_timeseries_raw = np.std(raw_residual) / photon_noise_timeseries
+    rel_residuals = myfit.residuals / np.median(aper)
+
+    # print(f"raw photon noise:{nf_timeseries_raw}")
+    # print(f"photon noise: {nf_timeseries}")
+
     fig, ax = plt.subplots(3, figsize=(10, 10))
     binspace = np.linspace(-0.02, 0.02, 201)
     raw_label = (
