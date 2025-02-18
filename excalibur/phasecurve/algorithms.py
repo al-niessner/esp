@@ -10,8 +10,7 @@ import excalibur.phasecurve.states as phcstates
 import excalibur.phasecurve.core as phccore
 
 # import excalibur.transit as trn
-import excalibur.data.core as trncore
-
+# import excalibur.data.core as trncore
 # import excalibur.transit.states as trnstatxes
 
 import excalibur.data as dat
@@ -22,6 +21,8 @@ import excalibur.system as sys
 import excalibur.system.algorithms as sysalg
 
 from importlib import import_module as fetch  # avoid cyclic-import
+
+from excalibur.util.checksv import checksv
 
 log = logging.getLogger(__name__)
 
@@ -67,7 +68,7 @@ class pcnormalization(dawgie.Algorithm):
 
     def run(self, ds, ps):
 
-        vfin, sfin = trncore.checksv(self.__fin.sv_as_dict()['parameters'])
+        vfin, sfin = checksv(self.__fin.sv_as_dict()['parameters'])
 
         svupdate = []
         for fltr in self.__rt.sv_as_dict()['status']['allowed_filter_names']:
@@ -75,8 +76,8 @@ class pcnormalization(dawgie.Algorithm):
             self.__rt.proceed(fltr)
 
             update = False
-            vcal, scal = trncore.checksv(self.__cal.sv_as_dict()[fltr])
-            vtme, stme = trncore.checksv(self.__tme.sv_as_dict()[fltr])
+            vcal, scal = checksv(self.__cal.sv_as_dict()[fltr])
+            vtme, stme = checksv(self.__tme.sv_as_dict()[fltr])
             if vcal and vtme and vfin:
                 log.warning(
                     '--< %s NORMALIZATION: %s >--', self._type.upper(), fltr
@@ -149,7 +150,7 @@ class pcwhitelight(dawgie.Algorithm):
     def run(self, ds, ps):
 
         fin = self.__fin.sv_as_dict()['parameters']
-        vfin, sfin = trncore.checksv(fin)
+        vfin, sfin = checksv(fin)
 
         svupdate = []
         for fltr in self.__rt.sv_as_dict()['status']['allowed_filter_names']:
@@ -159,7 +160,7 @@ class pcwhitelight(dawgie.Algorithm):
             update = False
             index = fltrs.index(fltr)
             nrm = self._nrm.sv_as_dict()[fltr]
-            vnrm, snrm = trncore.checksv(nrm)
+            vnrm, snrm = checksv(nrm)
             if vnrm and vfin:
                 log.warning(
                     '--< %s WHITE LIGHT: %s >--', self._type.upper(), fltr

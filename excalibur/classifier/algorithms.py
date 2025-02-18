@@ -9,7 +9,7 @@ import dawgie
 import dawgie.context
 
 import excalibur.transit as trn
-import excalibur.transit.core as trncore
+# import excalibur.transit.core as trncore
 import excalibur.transit.algorithms as trnalg
 
 import excalibur.eclipse as ecl
@@ -32,6 +32,8 @@ import excalibur.runtime.binding as rtbind
 
 from excalibur.classifier.core import savesv
 from importlib import import_module as fetch  # avoid cicular dependencies
+
+from excalibur.util.checksv import checksv
 
 log = logging.getLogger(__name__)
 
@@ -390,30 +392,30 @@ class flags(dawgie.Algorithm):
 
         else:
             svupdate = []
-            vfin, sfin = trncore.checksv(
+            vfin, sfin = checksv(
                 self.__state_vecs['finalize'].sv_as_dict()['parameters']
             )
 
             for ext in fltrs:
 
                 # transit.spectrum
-                vsp, ssp = trncore.checksv(
+                vsp, ssp = checksv(
                     self.__state_vecs['spectrum'].sv_as_dict()[ext]
                 )
-                e_vsp, e_ssp = trncore.checksv(
+                e_vsp, e_ssp = checksv(
                     self.__state_vecs['eclspectrum'].sv_as_dict()[ext]
                 )
 
                 # transit.whitelight
-                vwl, swl = trncore.checksv(
+                vwl, swl = checksv(
                     self.__state_vecs['whitelight'].sv_as_dict()[ext]
                 )
-                e_vwl, e_swl = trncore.checksv(
+                e_vwl, e_swl = checksv(
                     self.__state_vecs['eclwhitelight'].sv_as_dict()[ext]
                 )
 
                 # data.calibration
-                vdc, sdc = trncore.checksv(
+                vdc, sdc = checksv(
                     self.__state_vecs['data_calib'].sv_as_dict()[ext]
                 )
 
