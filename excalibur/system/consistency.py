@@ -3,6 +3,7 @@
 # -- IMPORTS -- -----------------------------------------------------
 import numpy
 import excalibur.system.core as syscore
+from excalibur.util.logg import calculate_logg
 import logging
 
 log = logging.getLogger(__name__)

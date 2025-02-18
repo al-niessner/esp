@@ -4,6 +4,7 @@
 import numpy
 import copy
 import excalibur.system.constants as syscons
+from excalibur.util.logg import calculate_logg
 import logging
 
 log = logging.getLogger(__name__)
@@ -741,13 +742,7 @@ def derive_LOGGstar_from_R_and_M(starInfo):
         # check for blank stellar log-g
         #  (but only update it if M* and R* are both defined)
         if LOGG == '' and R != '' and M != '':
-            g = (
-                sscmks['G']
-                * float(M)
-                * sscmks['Msun']
-                / (float(R) * sscmks['Rsun']) ** 2
-            )
-            newLOGG = numpy.log10(g)
+            newLOGG = calculate_logg(M, R, sscmks, units='solar')
             # LOGG_derived.append(str('%6.4f' %newLOGG))
             LOGG_derived.append(f'{newLOGG:6.4f}')
             LOGG_ref_derived.append('derived from M*,R*')
@@ -847,13 +842,7 @@ def derive_LOGGplanet_from_R_and_M(starInfo, planetLetter, verbose=False):
         # if logg=='' and R!='' and M!='':
         # no need to check for blank planetary log-g; it doesn't exist in Archive table
         if R != '' and M != '':
-            g = (
-                sscmks['G']
-                * float(M)
-                * sscmks['Mjup']
-                / (float(R) * sscmks['Rjup']) ** 2
-            )
-            logg = numpy.log10(g)
+            logg = calculate_logg(M, R, sscmks, units='Jupiter')
             # print('M,R,logg',M,R,logg)
             # logg_derived.append(str('%6.4f' %logg))
             logg_derived.append(f'{logg:6.4f}')
