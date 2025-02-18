@@ -80,6 +80,7 @@ expected_jobs=""
 root=$(realpath $(dirname $0)/../..)
 this=$(realpath $(dirname $0))
 wdir=$this/local
+export LDTK_ROOT=$wdir/.ldtk
 cd $root
 rm -f $root/*.rpt.txt
 trap "rm -rf $wdir $root/Python/build $root/Python/dawgie.egg-info $root/Python/dawgie/fe/requirements.txt" EXIT
