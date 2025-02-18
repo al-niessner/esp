@@ -5,7 +5,11 @@
 import dawgie
 
 import excalibur
-from excalibur.transit.core import composite_spectrum, jwst_lightcurve, bin_spectrum
+from excalibur.transit.core import (
+    composite_spectrum,
+    jwst_lightcurve,
+    bin_spectrum,
+)
 from excalibur.util.plotters import (
     save_plot_toscreen,
     plot_normalized_byvisit,
@@ -325,7 +329,9 @@ class SpectrumSV(dawgie.StateVector):
                         yerr=1e2 * specerr,
                         color='lightgray',
                     )
-                    waveb, specb, errb = bin_spectrum(specwave, vspectrum, specerr)
+                    waveb, specb, errb = bin_spectrum(
+                        specwave, vspectrum, specerr
+                    )
                     ax.errorbar(
                         waveb,
                         1e2 * specb,

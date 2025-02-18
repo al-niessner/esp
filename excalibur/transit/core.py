@@ -5280,8 +5280,9 @@ def starspots(fin, wht, spc, out):
 
     return exospec
 
-def bin_spectrum(specwave, vspectrum, specerr, binsize = 4):
-    
+
+def bin_spectrum(specwave, vspectrum, specerr, binsize=4):
+
     nspec = int(specwave.size / binsize)
     minspec = np.nanmin(specwave)
     maxspec = np.nanmax(specwave)
@@ -5298,14 +5299,11 @@ def bin_spectrum(specwave, vspectrum, specerr, binsize = 4):
         select = select & np.isfinite(vspectrum)
         if np.sum(np.isfinite(vspectrum[select])) > 0:
             specbin.append(
-                np.nansum(
-                    vspectrum[select] / (specerr[select] ** 2)
-                )
+                np.nansum(vspectrum[select] / (specerr[select] ** 2))
                 / np.nansum(1.0 / (specerr[select] ** 2))
             )
             errbin.append(
-                np.nanmedian((specerr[select]))
-                / np.sqrt(np.sum(select))
+                np.nanmedian((specerr[select])) / np.sqrt(np.sum(select))
             )
             pass
         else:
@@ -5313,7 +5311,7 @@ def bin_spectrum(specwave, vspectrum, specerr, binsize = 4):
             errbin.append(np.nan)
             pass
         pass
-    
+
     waveb = np.array(cbin)
     specb = np.array(specbin)
     errb = np.array(errbin)
