@@ -34,7 +34,7 @@ context = {
     ),
 }
 os.environ['LDTK_ROOT'] = context['ldtk_root']
-__version__ = '${ESP_GIT_REV}'
+__version__ = 'esp-git-rev'
 
 identity = collections.namedtuple('identity', ['serial'])
 
