@@ -4824,7 +4824,6 @@ def lightcurve_spitzer(nrm, fin, out, selftype, fltr, hstwhitelight_sv):
                     fltr,
                     p,
                     aper,
-                    photons,
                     subt,
                     myfit,
                     tdur_freq=tdur_freq,

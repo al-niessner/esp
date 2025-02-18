@@ -425,7 +425,6 @@ def phasecurve_spitzer(nrm, fin, out, selftype, fltr):
                 fltr,
                 p,
                 aper,
-                photons,
                 subt,
                 myfit,
             )

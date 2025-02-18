@@ -44,7 +44,6 @@ def plot_residual_fft(
     fltr,
     p,
     aper,
-    photons,
     subt,
     myfit,
     tdur_freq=None,
