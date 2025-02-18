@@ -159,13 +159,7 @@ def consistency_check_M_R_LOGG_star(starInfo):
     if LOGG == '' or R == '' or M == '':
         print('ccheck PASS: one of the M/R/LOGG* fields is missing')
     else:
-        g = (
-            sscmks['G']
-            * float(M)
-            * sscmks['Msun']
-            / (float(R) * sscmks['Rsun']) ** 2
-        )
-        LOGGcheck = numpy.log10(g)
+        LOGGcheck = calculate_logg(M, R, sscmks, units='solar')
         # print('ccheck  LOGGcheck',LOGGcheck)
         if not close_to(float(LOGG), LOGGcheck):
             consistent = False
@@ -191,13 +185,7 @@ def consistency_check_M_R_LOGG_planet(starInfo, planetLetter):
     if LOGG == '' or R == '' or M == '':
         print('ccheck PASS: one of the M/R/LOGG planet fields is missing')
     else:
-        g = (
-            sscmks['G']
-            * float(M)
-            * sscmks['Mjup']
-            / (float(R) * sscmks['Rjup']) ** 2
-        )
-        LOGGcheck = numpy.log10(g)
+        LOGGcheck = calculate_logg(M, R, sscmks, units='Jupiter')
         # print('ccheck  LOGGcheck',LOGGcheck)
         if not close_to(float(LOGG), LOGGcheck):
             consistent = False
