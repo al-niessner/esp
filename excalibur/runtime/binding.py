@@ -11,8 +11,10 @@ import pyxb.binding.saxer
 import io
 import pyxb.utils.utility
 import pyxb.utils.domutils
-import sys
 import pyxb.utils.sal as _six
+
+# Import bindings for namespaces imported into schema
+import pyxb.binding.datatypes
 
 # Unique identifier for bindings created at the same time
 _GenerationUID = pyxb.utils.utility.UniqueIdentifier(
@@ -28,9 +30,6 @@ if pyxb.__version__ != _PyXBVersion:
 # A holder for module-level binding classes so we can access them from
 # inside class definitions where property names may conflict.
 _module_typeBindings = pyxb.utils.utility.Object()
-
-# Import bindings for namespaces imported into schema
-import pyxb.binding.datatypes
 
 # NOTE: All namespace declarations are reserved within the binding
 Namespace = pyxb.namespace.CreateAbsentNamespace()

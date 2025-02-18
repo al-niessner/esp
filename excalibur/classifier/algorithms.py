@@ -9,6 +9,7 @@ import dawgie
 import dawgie.context
 
 import excalibur.transit as trn
+
 # import excalibur.transit.core as trncore
 import excalibur.transit.algorithms as trnalg
 
