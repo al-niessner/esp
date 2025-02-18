@@ -5,11 +5,16 @@
 import dawgie
 
 import excalibur
-from excalibur.transit.core import composite_spectrum, jwst_lightcurve
+from excalibur.transit.core import (
+    composite_spectrum,
+    jwst_lightcurve,
+    bin_spectrum,
+)
 from excalibur.util.plotters import (
     save_plot_toscreen,
     plot_normalized_byvisit,
     add_scale_height_labels,
+    outlier_aware_hist,
 )
 
 import numpy as np
@@ -315,43 +320,7 @@ class SpectrumSV(dawgie.StateVector):
                     specwave = np.array(self['data'][p]['WB'])
                     specerr = abs(vspectrum**2 - (vspectrum + specerr) ** 2)
                     vspectrum = vspectrum**2
-                    # Smooth spectrum
-                    binsize = 4
-                    nspec = int(specwave.size / binsize)
-                    minspec = np.nanmin(specwave)
-                    maxspec = np.nanmax(specwave)
-                    scale = (maxspec - minspec) / (1e0 * nspec)
-                    wavebin = scale * np.arange(nspec) + minspec
-                    deltabin = np.diff(wavebin)[0]
-                    cbin = wavebin + deltabin / 2e0
-                    specbin = []
-                    errbin = []
-                    for eachbin in cbin:
-                        select = specwave < (eachbin + deltabin / 2e0)
-                        select = select & (
-                            specwave >= (eachbin - deltabin / 2e0)
-                        )
-                        select = select & np.isfinite(vspectrum)
-                        if np.sum(np.isfinite(vspectrum[select])) > 0:
-                            specbin.append(
-                                np.nansum(
-                                    vspectrum[select] / (specerr[select] ** 2)
-                                )
-                                / np.nansum(1.0 / (specerr[select] ** 2))
-                            )
-                            errbin.append(
-                                np.nanmedian((specerr[select]))
-                                / np.sqrt(np.sum(select))
-                            )
-                            pass
-                        else:
-                            specbin.append(np.nan)
-                            errbin.append(np.nan)
-                            pass
-                        pass
-                    waveb = np.array(cbin)
-                    specb = np.array(specbin)
-                    errb = np.array(errbin)
+
                     myfig, ax = plt.subplots(figsize=(8, 6))
                     plt.title(p + ' ' + Teq)
                     ax.errorbar(
@@ -360,6 +329,9 @@ class SpectrumSV(dawgie.StateVector):
                         fmt='.',
                         yerr=1e2 * specerr,
                         color='lightgray',
+                    )
+                    waveb, specb, errb = bin_spectrum(
+                        specwave, vspectrum, specerr
                     )
                     ax.errorbar(
                         waveb,
@@ -649,49 +621,14 @@ def upper_outlier_mask(data):
     return np.array(data) > upbound
 
 
-def outlier_aware_hist(data, lower=None, upper=None, bins='auto'):
-    '''
-    code is taken with little modification from https://stackoverflow.com/questions/15837810/making-pyplot-hist-first-and-last-bins-include-outliers
-    GMR: added use of f-strings
-    '''
-    if not lower or lower < data.min():
-        lower = data.min()
-        lower_outliers = False
-        pass
-    else:
-        lower_outliers = True
-    if not upper or upper > data.max():
-        upper = data.max()
-        upper_outliers = False
-        pass
-    else:
-        upper_outliers = True
-    _, _, patches = plt.hist(
-        data, range=(lower, upper), bins=bins, density=True
-    )
-    if lower_outliers:
-        n_lower_outliers = (data < lower).sum()
-        patches[0].set_height(patches[0].get_height() + n_lower_outliers)
-        patches[0].set_facecolor('c')
-        patches[0].set_label(f'Lower outliers: ({data.min():.2f}, {lower:.2f})')
-        pass
-    if upper_outliers:
-        n_upper_outliers = (data > upper).sum()
-        patches[-1].set_height(patches[-1].get_height() + n_upper_outliers)
-        patches[-1].set_facecolor('m')
-        patches[-1].set_label(
-            f'Upper outliers: ({upper:.2f}, {data.max():.2f})'
-        )
-    if lower_outliers or upper_outliers:
-        plt.legend()
-    return
-
-
 def distrplot(title, values, visitor, units=None, fit_t=False, bins='auto'):
     '''distrplot ds'''
     myfig = plt.figure()
     plt.title(title)
-    outlier_aware_hist(np.array(values), *calculate_bounds(values), bins)
+    # CAREFUL: these args might not be in the right order now, with new data/data2
+    outlier_aware_hist(
+        np.array(values), None, *calculate_bounds(values), bins=bins
+    )
     plt.ylabel('Density')
     if units is None:
         plt.xlabel('Estimate')
