@@ -16,9 +16,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -r .github/workflows/requirements.txt
-          pip install -e .
-      - name: Prepare Postgres
-        run: |
-          createdb -h localhost -U tester testspace
+          pip install .
       - name: pytest
         run: pytest --cov=dawgie --cov-branch --cov-report term-missing -v test

@@ -17,7 +17,7 @@ jobs:
           pip install -r requirements.txt
           pip install -r .github/workflows/requirements.txt
       - name: black
-        run: black --check --diff -l 80 --skip-string-normalization .
+        run: black --check --diff -l 80 --skip-string-normalization --exclude="(workflows/local|binding.py)" -v .
   Linters:
     name: Code Quality
     runs-on: ubuntu-24.04
@@ -83,5 +83,7 @@ jobs:
           pip install -r requirements.txt
           pip install -r .github/workflows/requirements.txt
       - name: Compliance
+        env:
+          LDTK_ROOT: ${{ runner.temp }}/.ldtk
         run: |
           python -m dawgie.tools.compliant --ae-dir=excalibur --ae-pkg=excalibur
