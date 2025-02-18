@@ -38,6 +38,7 @@ SYSTEM_PARAMS = namedtuple(
     ['maximizeSelfConsistency', 'selectMostRecent'],
 )
 
+
 # ----------------- --------------------------------------------------
 # -- BUILD SYSTEM PRIORS -- ------------------------------------------
 def buildsp(autofill, runtime_params, out, verbose=False):

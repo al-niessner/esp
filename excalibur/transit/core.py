@@ -190,6 +190,7 @@ class LDPSet(ldtk.LDPSet):
 setattr(ldtk, 'LDPSet', LDPSet)
 setattr(ldtk.ldtk, 'LDPSet', LDPSet)
 
+
 # ----------------- --------------------------------------------------
 # -- NORMALIZATION -- ------------------------------------------------
 def normversion():
