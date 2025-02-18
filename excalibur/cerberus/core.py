@@ -55,7 +55,7 @@ log = logging.getLogger(__name__)
 pymclog = logging.getLogger('pymc')
 pymclog.setLevel(logging.ERROR)
 
-CrbParams = namedtuple(
+CERB_PARAMS = namedtuple(
     'cerberus_params_from_runtime',
     [
         'MCMC_chain_length',
