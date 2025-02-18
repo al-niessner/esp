@@ -206,16 +206,16 @@ def barplot(title, categories, counts, categories2, counts2, visitor):
 
 
 # --------------------------------------------------------------------
-def distrplot(paramName, values, values2, visitor, units=None):
+def distrplot(paramName, values1, values2, visitor, units=None):
     '''distrplot ds'''
 
     # clean up the values so that it's just an array of floats; no string error messages
-    cleanvalues = []
-    for value in values:
+    cleanvalues1 = []
+    for value in values1:
         if len(str(value)) > 0:
             if str(value)[0].isdigit() or str(value)[0] == '-':
-                cleanvalues.append(value)
-    cleanvalues = np.array(cleanvalues, dtype=float)
+                cleanvalues1.append(value)
+    cleanvalues1 = np.array(cleanvalues1, dtype=float)
     cleanvalues2 = []
     for value2 in values2:
         if len(str(value2)) > 0:
@@ -225,7 +225,7 @@ def distrplot(paramName, values, values2, visitor, units=None):
 
     # most histograms are better on a log scale
     if paramName == 'luminosity':
-        cleanvalues = np.log10(cleanvalues)
+        cleanvalues1 = np.log10(cleanvalues1)
         cleanvalues2 = np.log10(cleanvalues2)
         paramName = 'log(L*)'
     elif paramName in [
@@ -249,13 +249,13 @@ def distrplot(paramName, values, values2, visitor, units=None):
         'M_loss_rate_evap',
         'Beta_rad',
     ]:
-        cleanvalues = np.log10(cleanvalues)
+        cleanvalues1 = np.log10(cleanvalues1)
         cleanvalues2 = np.log10(cleanvalues2)
         paramName = 'log(' + paramName + ')'
 
     # not sure why this is necessary.  why are some fields and entire params blank?
     # I guess it's the spTyp field, which seems to be missing from the resulting histograms
-    if len(cleanvalues) == 0:
+    if len(cleanvalues1) == 0:
         return
     if len(cleanvalues2) == 0:
         return
@@ -263,7 +263,10 @@ def distrplot(paramName, values, values2, visitor, units=None):
     myfig = plt.figure()
     plt.title(paramName.replace('log(', '').replace(')', ''), fontsize=18)
     outlier_aware_hist(
-        cleanvalues, cleanvalues2, *calculate_bounds(cleanvalues)
+        cleanvalues1, cleanvalues2,
+         *calculate_bounds(cleanvalues1),
+        label1='everything',
+        label2='Roudier et al. 2021',
     )
     plt.ylabel('# of planets', fontsize=14)
     # if units is None: plt.xlabel('Estimate')
@@ -295,7 +298,11 @@ def calculate_bounds(data, z_thresh=3.5):
 
 
 # --------------------------------------------------------------------
-def outlier_aware_hist(data, data2, lower=None, upper=None):
+def outlier_aware_hist(data, data2=None,
+                       lower=None, upper=None,
+                       color1='khaki', color2='olive',
+                       label1='',label2='',
+                       bins=15):
     '''note: code is originally from
     https://stackoverflow.com/questions/15837810/making-pyplot-hist-first-and-last-bins-include-outliers
     '''
@@ -314,20 +321,21 @@ def outlier_aware_hist(data, data2, lower=None, upper=None):
     _, _, patches = plt.hist(
         data,
         range=(lower, upper),
-        bins=15,
-        color='khaki',
+        bins=bins,
+        color=color1,
         zorder=1,
-        label='everything',
+        label=label1,
     )
 
-    plt.hist(
-        data2,
-        range=(lower, upper),
-        bins=15,
-        color='olive',
-        zorder=2,
-        label='Roudier et al. 2021',
-    )
+    if data2:
+        plt.hist(
+            data2,
+            range=(lower, upper),
+            bins=bins,
+            color=color2,
+            zorder=2,
+            label=label2,
+        )
 
     if lower_outliers:
         n_lower_outliers = (data < lower).sum()
@@ -343,8 +351,9 @@ def outlier_aware_hist(data, data2, lower=None, upper=None):
             f'Upper outliers: ({upper:.2f}, {data.max():.2f})'
         )
 
-    plt.legend()
-
+    if lower_outliers or upper_outliers:
+        plt.legend()
+    return
 
 # --------------------------------------------------------------------
 def plot_normalized_byvisit(data, vrange, visitor):
