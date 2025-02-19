@@ -31,7 +31,7 @@ class CalibrateSV(dawgie.StateVector):
         '''name ds'''
         return self.__name
 
-    def view(self, caller: excalibur.identity, visitor: dawgie.Visitor) -> None:
+    def view(self, caller: excalibur.Identity, visitor: dawgie.Visitor) -> None:
         '''view ds'''
         if len(self['STATUS']) == 2:
             if 'Spitzer' in self.__name:
@@ -202,7 +202,7 @@ class TimingSV(dawgie.StateVector):
         '''name ds'''
         return self.__name
 
-    def view(self, caller: excalibur.identity, visitor: dawgie.Visitor) -> None:
+    def view(self, caller: excalibur.Identity, visitor: dawgie.Visitor) -> None:
         '''view ds'''
         if self['STATUS'][-1]:
             for p in self['data'].keys():

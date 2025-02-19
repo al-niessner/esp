@@ -1,5 +1,8 @@
 '''phasecurve algorithms ds'''
 
+# Heritage code shame:
+# pylint: disable=invalid-name
+
 # -- IMPORTS -- ------------------------------------------------------
 import dawgie
 import dawgie.context
@@ -29,8 +32,8 @@ log = logging.getLogger(__name__)
 # ------------- ------------------------------------------------------
 # -- ALGO RUN OPTIONS -- ---------------------------------------------
 # VERBOSE AND DEBUG
-verbose = False
-debug = False
+VERBOSE = False
+DEBUG = False
 # FILTERS
 fltrs = [str(fn) for fn in rtbind.filter_names.values()]
 

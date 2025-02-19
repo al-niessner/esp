@@ -1,5 +1,8 @@
 '''phasecurve core ds'''
 
+# Heritage code shame:
+# pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals,too-many-statements
+
 # -- IMPORTS -- ------------------------------------------------------
 import copy
 import numpy as np

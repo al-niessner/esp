@@ -36,7 +36,7 @@ context = {
 os.environ['LDTK_ROOT'] = context['ldtk_root']
 __version__ = 'esp-git-rev'
 
-identity = collections.namedtuple('identity', ['serial'])
+Identity = collections.namedtuple('identity', ['serial'])
 
 
 class ValuesList(dawgie.Value, list):

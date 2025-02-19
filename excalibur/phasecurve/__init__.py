@@ -4,7 +4,7 @@
 import excalibur.phasecurve.bot as phcbot
 
 # ------------- ------------------------------------------------------
-ignore = False
+IGNORE = False
 
 
 def task(

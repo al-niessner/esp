@@ -35,7 +35,7 @@ jobs:
       - name: pylint
         run: pylint --rcfile .github/workflows/pylint.rc -ry -sy excalibur
       - name: flake8
-        run: flake8 --ignore E501,E203,W503 excalibur
+        run: flake8 --exclude=excalibur/runtime/binding.py --ignore E501,E203,W503 excalibur
   Security:
     name: Code Security
     runs-on: ubuntu-24.04

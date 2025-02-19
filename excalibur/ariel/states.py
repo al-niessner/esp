@@ -33,7 +33,7 @@ class PriorsSV(dawgie.StateVector):
         '''name ds'''
         return self.__name
 
-    def view(self, caller: excalibur.identity, visitor: dawgie.Visitor) -> None:
+    def view(self, caller: excalibur.Identity, visitor: dawgie.Visitor) -> None:
         '''view ds'''
         if self['STATUS'][-1]:
 

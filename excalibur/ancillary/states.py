@@ -29,7 +29,7 @@ class EstimateSV(dawgie.StateVector):
         '''name ds'''
         return self.__name
 
-    def view(self, caller: excalibur.identity, visitor: dawgie.Visitor) -> None:
+    def view(self, caller: excalibur.Identity, visitor: dawgie.Visitor) -> None:
         '''view ds'''
         if self['STATUS'][-1]:
             pl_params = ['planets'] + self['data']['planets']
@@ -68,7 +68,7 @@ class PopulationSV(dawgie.StateVector):
         '''name ds'''
         return self.__name
 
-    def view(self, caller: excalibur.identity, visitor: dawgie.Visitor) -> None:
+    def view(self, caller: excalibur.Identity, visitor: dawgie.Visitor) -> None:
         '''view ds'''
 
         to_process = [

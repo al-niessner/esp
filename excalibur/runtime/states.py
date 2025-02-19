@@ -49,7 +49,7 @@ class CompositeSV(dawgie.StateVector):
         '''database name'''
         return 'composite'
 
-    def view(self, caller: excalibur.identity, visitor: dawgie.Visitor) -> None:
+    def view(self, caller: excalibur.Identity, visitor: dawgie.Visitor) -> None:
         '''Show the configutation information'''
         for key in sorted(self):
             self[key].view(visitor)
@@ -82,7 +82,7 @@ class ControlsSV(dawgie.StateVector, dawgie.Value):
         '''database name'''
         return 'controls'
 
-    def view(self, caller: excalibur.identity, visitor: dawgie.Visitor) -> None:
+    def view(self, caller: excalibur.Identity, visitor: dawgie.Visitor) -> None:
         '''Show the configutation information'''
         visitor.add_declaration_inline('', div='<div><hr>')
         table = visitor.add_table(
@@ -117,7 +117,7 @@ class FilterSV(dawgie.StateVector, dawgie.Value):
         '''datebase name'''
         return 'filters'
 
-    def view(self, caller: excalibur.identity, visitor: dawgie.Visitor) -> None:
+    def view(self, caller: excalibur.Identity, visitor: dawgie.Visitor) -> None:
         '''Show the configutation information'''
         visitor.add_declaration_inline('', div='<div><hr>')
         table_len = max(len(self['excludes']), len(self['includes']))
@@ -163,7 +163,7 @@ class PymcSV(dawgie.StateVector, dawgie.Value):
         '''database name'''
         return f'pymc-{self.__name}'
 
-    def view(self, caller: excalibur.identity, visitor: dawgie.Visitor) -> None:
+    def view(self, caller: excalibur.Identity, visitor: dawgie.Visitor) -> None:
         '''Show the configutation information'''
         visitor.add_declaration_inline('', div='<div><hr>')
         visitor.add_declaration_inline(
@@ -227,7 +227,7 @@ class StatusSV(dawgie.StateVector):
             log.info(msg)
             raise dawgie.NoValidInputDataError(msg)
 
-    def view(self, caller: excalibur.identity, visitor: dawgie.Visitor) -> None:
+    def view(self, caller: excalibur.Identity, visitor: dawgie.Visitor) -> None:
         '''Show the state for this target'''
         visitor.add_declaration_inline(
             'Briefly: ', div='<div><hr><h3>', tag='span'
@@ -302,7 +302,7 @@ class TargetsSV(dawgie.StateVector, dawgie.Value):
         '''database name'''
         return self._name
 
-    def view(self, caller: excalibur.identity, visitor: dawgie.Visitor) -> None:
+    def view(self, caller: excalibur.Identity, visitor: dawgie.Visitor) -> None:
         '''Show the configuration information'''
         visitor.add_declaration_inline('', div='<div><hr>')
         if self._name == 'run_only':
