@@ -47,23 +47,23 @@ class PriorsSV(dawgie.StateVector):
             target = self['data']['target']
 
             if plotStateVector:
-                for planetLetter in self['data']['planets']:
+                for planet_letter in self['data']['planets']:
                     for model in self['data']['models']:
                         # problem: for multiplanet systems, individual models may fail
                         # so there might be some missing planets here
                         # but there should be all models present, if any models present
-                        if planetLetter in self['data'].keys():
-                            if model in self['data'][planetLetter].keys():
+                        if planet_letter in self['data'].keys():
+                            if model in self['data'][planet_letter].keys():
                                 visitor.add_image(
                                     '...',
                                     '------ simulated Ariel spectrum for '
                                     + target
                                     + ' '
-                                    + planetLetter
+                                    + planet_letter
                                     + '  MODEL:'
                                     + model
                                     + ' ------',
-                                    self['data'][planetLetter][model][
+                                    self['data'][planet_letter][model][
                                         'plot_simspectrum'
                                     ],
                                 )
@@ -81,7 +81,7 @@ class PriorsSV(dawgie.StateVector):
                     ):
                         bestsubdir = subdir
 
-                for planetLetter in self['data']['planets']:
+                for planet_letter in self['data']['planets']:
                     for model in self['data']['models']:
                         myfig = plt.figure()
                         plotDir = arielPlotDir + bestsubdir
@@ -93,7 +93,7 @@ class PriorsSV(dawgie.StateVector):
                                 + 'Atmos_'
                                 + target
                                 + '_'
-                                + planetLetter
+                                + planet_letter
                                 + '.png',
                             )
                         )
@@ -105,7 +105,7 @@ class PriorsSV(dawgie.StateVector):
                             headertext='------ simulated Ariel spectrum for '
                             + target
                             + ' '
-                            + planetLetter
+                            + planet_letter
                             + '  MODEL:'
                             + model
                             + ' ------',

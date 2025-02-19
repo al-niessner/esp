@@ -89,14 +89,14 @@ def simulate_spectra(target, system_dict, runtime_params, out):
     xslib = {'data': {}, 'STATUS': [False]}
 
     completed_at_least_one_planet = False
-    for planetLetter in system_params['planets']:
-        out['data'][planetLetter] = {}
+    for planet_letter in system_params['planets']:
+        out['data'][planet_letter] = {}
 
         # set the random seed as a function of target name
         #  (otherwise all spectra have identical noise realizations!)
         #  (also they would have the same C/O and metallicity offset!)
         intFromTarget = 1  # arbitrary initialization for the random seed
-        for char in target + ' ' + planetLetter:
+        for char in target + ' ' + planet_letter:
             intFromTarget = (
                 runtime_params.randomSeed * intFromTarget + ord(char)
             ) % 1000000
@@ -114,7 +114,7 @@ def simulate_spectra(target, system_dict, runtime_params, out):
         # load in the wavelength bins and the noise model
         # there is a separate SNR file for each planet
         ariel_instrument = load_ariel_instrument(
-            target + ' ' + planetLetter, tier
+            target + ' ' + planet_letter, tier
         )
 
         if ariel_instrument:
@@ -122,11 +122,11 @@ def simulate_spectra(target, system_dict, runtime_params, out):
             model_params = {
                 'T*': system_params['T*'],
                 'R*': system_params['R*'],
-                'Rp': system_params[planetLetter]['rp'],
-                'Mp': system_params[planetLetter]['mass'],
-                'logg': system_params[planetLetter]['logg'],
-                'sma': system_params[planetLetter]['sma'],
-                'Teq': system_params[planetLetter]['teq'],
+                'Rp': system_params[planet_letter]['rp'],
+                'Mp': system_params[planet_letter]['mass'],
+                'logg': system_params[planet_letter]['logg'],
+                'sma': system_params[planet_letter]['sma'],
+                'Teq': system_params[planet_letter]['teq'],
             }
 
             # Calculate the atmosphere scale height
@@ -165,15 +165,15 @@ def simulate_spectra(target, system_dict, runtime_params, out):
 
             # skip non-converging atmospheres!!
             # print()
-            # print(target,planetLetter,'  scale height / planet radius (solar metallicity) =',HoverRmax)
+            # print(target,planet_letter,'  scale height / planet radius (solar metallicity) =',HoverRmax)
             # print()
             # this limit corresponds to the maximum scale height allowing for ~1e11 pressure range
             # (our actual range is typically 10 bar to 1 microbar, requiring 0.06 max H/R)
             # if HoverRmax > 0.04:
             #     log.warning('--< WARNING UNBOUND ATMOS: %s %s ; scale height / planet radius = %s >--',
-            #                target,planetLetter,HoverRmax)
+            #                target,planet_letter,HoverRmax)
             #     log.warning('--< SKIP UNBOUND ATMOS: %s %s ; scale height / planet radius = %s >--',
-            #                target,planetLetter,HoverRmax)
+            #                target,planet_letter,HoverRmax)
             if HoverRmax > 666:
                 pass
             else:
@@ -214,7 +214,7 @@ def simulate_spectra(target, system_dict, runtime_params, out):
                 uncertainties = ariel_instrument['noise']
                 # use #-of-visits our ArielRad calculation, not from Edwards table
                 visits = ariel_instrument['nVisits']
-                # print('# of visits:',visits,'  tier',tier,'  ',target+' '+planetLetter)
+                # print('# of visits:',visits,'  tier',tier,'  ',target+' '+planet_letter)
 
                 uncertainties /= np.sqrt(float(visits))
 
@@ -267,7 +267,7 @@ def simulate_spectra(target, system_dict, runtime_params, out):
                         log.warning(
                             '--< WARNING UNBOUND ATMOS: %s %s ; scale height / planet radius = %s %s >--',
                             target,
-                            planetLetter,
+                            planet_letter,
                             HoverRmax,
                             atmosModel,
                         )
@@ -330,15 +330,15 @@ def simulate_spectra(target, system_dict, runtime_params, out):
 
                         if not xslib['STATUS'][-1]:
                             tempspc = {
-                                'data': {planetLetter: {'WB': wavelength_um}}
+                                'data': {planet_letter: {'WB': wavelength_um}}
                             }
                             # print('CALCulating cross-sections START')
                             _ = myxsecs(tempspc, xslib)
                             # print('CALCulating cross-sections DONE')
                         else:
                             # make sure that it exists for this planet letter
-                            if planetLetter in xslib['data']:
-                                # print('XSLIB ALREADY CALCULATED',planetLetter)
+                            if planet_letter in xslib['data']:
+                                # print('XSLIB ALREADY CALCULATED',planet_letter)
                                 pass
                             else:
                                 # print('XSLIB TRANSFERRED TO NEW PLANETLETTER')
@@ -346,7 +346,7 @@ def simulate_spectra(target, system_dict, runtime_params, out):
                                     xslib['data'].keys()
                                 )[-1]
                                 # print('existingPlanetLetter',existingPlanetLetter)
-                                xslib['data'][planetLetter] = xslib['data'][
+                                xslib['data'][planet_letter] = xslib['data'][
                                     existingPlanetLetter
                                 ]
 
@@ -354,7 +354,7 @@ def simulate_spectra(target, system_dict, runtime_params, out):
                             wavelength_um,
                             model_params,
                             xslib,
-                            planetLetter,
+                            planet_letter,
                             Hsmax=20,
                         )
 
@@ -422,8 +422,8 @@ def simulate_spectra(target, system_dict, runtime_params, out):
                     )
 
                     # SAVE THE RESULTS
-                    # if planetLetter not in out['data'].keys():
-                    #    out['data'][planetLetter] = {}
+                    # if planet_letter not in out['data'].keys():
+                    #    out['data'][planet_letter] = {}
 
                     # careful - ES and ESerr are supposed to be radii, not transit depth
                     #  need to take a sqrt of them
@@ -432,8 +432,8 @@ def simulate_spectra(target, system_dict, runtime_params, out):
                         np.abs(fluxDepth_observed)
                     )
                     # move WB location down a level; it should be independent of atmosModel
-                    out['data'][planetLetter]['WB'] = wavelength_um_rebin
-                    out['data'][planetLetter][atmosModel] = {
+                    out['data'][planet_letter]['WB'] = wavelength_um_rebin
+                    out['data'][planet_letter][atmosModel] = {
                         # 'WB':wavelength_um_rebin,
                         'ES': signedSqrt,
                         'ESerr': 0.5 * uncertainties / signedSqrt,
@@ -460,12 +460,12 @@ def simulate_spectra(target, system_dict, runtime_params, out):
                         mixratio, protosolar=False, fH2=fH2, fHe=fHe
                     )
                     # print(' mmwnow,mmwsolar',mmwnow,mmwsolar)
-                    out['data'][planetLetter][atmosModel]['Hs'] = (
+                    out['data'][planet_letter][atmosModel]['Hs'] = (
                         Hssolar * mmwsolar / mmwnow
                     )
                     # print('Hs calculation',Hssolar,mmwsolar,mmwnow)
                     # save the true spectrum (both raw and binned)
-                    out['data'][planetLetter][atmosModel]['true_spectrum'] = {
+                    out['data'][planet_letter][atmosModel]['true_spectrum'] = {
                         'fluxDepth': fluxDepth_rebin,
                         'wavelength_um': wavelength_um_rebin,
                         'fluxDepth_norebin': fluxDepth,
@@ -473,22 +473,22 @@ def simulate_spectra(target, system_dict, runtime_params, out):
                     }
 
                     # also save the Tier level and the number of visits; add these to the plot
-                    out['data'][planetLetter][atmosModel]['tier'] = tier
-                    out['data'][planetLetter][atmosModel]['visits'] = visits
+                    out['data'][planet_letter][atmosModel]['tier'] = tier
+                    out['data'][planet_letter][atmosModel]['visits'] = visits
 
                     # save the parameters used to create the spectrum. some could be useful
                     # should save both observed value and truth with scatter added in
                     #  'system_params' = the info in system() task
                     #  'model_params' = what is actually used to create forward model
-                    out['data'][planetLetter][atmosModel]['system_params'] = {
+                    out['data'][planet_letter][atmosModel]['system_params'] = {
                         'R*': system_params['R*'],
                         'T*': system_params['T*'],
-                        'Rp': system_params[planetLetter]['rp'],
-                        'Teq': system_params[planetLetter]['teq'],
-                        'Mp': system_params[planetLetter]['mass'],
+                        'Rp': system_params[planet_letter]['rp'],
+                        'Teq': system_params[planet_letter]['teq'],
+                        'Mp': system_params[planet_letter]['mass'],
                     }
 
-                    out['data'][planetLetter][atmosModel][
+                    out['data'][planet_letter][atmosModel][
                         'model_params'
                     ] = model_params.copy()
                     # print('model_params in ariel:',model_params)  # asdf
@@ -511,7 +511,7 @@ def simulate_spectra(target, system_dict, runtime_params, out):
                         'Ariel simulation : '
                         + target
                         + ' '
-                        + planetLetter
+                        + planet_letter
                         + ' : Tier-'
                         + str(tier)
                         + ' '
@@ -601,7 +601,7 @@ def simulate_spectra(target, system_dict, runtime_params, out):
                     plt.legend(loc='center left', bbox_to_anchor=(1.15, 0.48))
 
                     # add a scale-height-normalized flux scale on the right axis
-                    Hsscaling = out['data'][planetLetter][atmosModel]['Hs']
+                    Hsscaling = out['data'][planet_letter][atmosModel]['Hs']
                     # print('H scaling for this plot (%):',Hsscaling*100)
                     add_scale_height_labels(
                         {'Hs': [Hsscaling]}, 1.0e-2 * fluxDepth_rebin, ax, myfig
@@ -620,14 +620,14 @@ def simulate_spectra(target, system_dict, runtime_params, out):
                         + 'Atmos_'
                         + target
                         + '_'
-                        + planetLetter
+                        + planet_letter
                         + '.png'
                     )
 
                     # REDUNDANT SAVE - above saves to disk; below saves as state vector
-                    # plt.title('Ariel : '+target+' '+planetLetter, fontsize=16)
+                    # plt.title('Ariel : '+target+' '+planet_letter, fontsize=16)
 
-                    out['data'][planetLetter][atmosModel][
+                    out['data'][planet_letter][atmosModel][
                         'plot_simspectrum'
                     ] = save_plot_tosv(myfig)
 

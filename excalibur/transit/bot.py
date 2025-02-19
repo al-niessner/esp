@@ -14,10 +14,10 @@ class Actor(dawgie.Task):
     def list(self) -> [dawgie.Task]:
         '''Subtasks top level ordered call'''
         return [
-            trnalg.normalization(),
-            trnalg.whitelight(),
-            trnalg.spectrum(),
-            trnalg.starspots(),
+            trnalg.Normalization(),
+            trnalg.WhiteLight(),
+            trnalg.Spectrum(),
+            trnalg.StarSpots(),
         ]
 
     pass
@@ -28,7 +28,7 @@ class Agent(dawgie.Analysis):
 
     def list(self) -> [dawgie.Analyzer]:
         '''Subtasks top level ordered call'''
-        return [trnalg.population()]
+        return [trnalg.Population()]
 
     pass
 

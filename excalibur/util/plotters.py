@@ -405,7 +405,7 @@ def add_scale_height_labels(data, vspectrum, ax, fig):
         if np.isnan(np.nanmax(vspectrum)):
             # log.warning(
             #    '--< PROBLEM: spectrum is all NaN %s %s >--',
-            #    target, planetLetter)
+            #    target, planet_letter)
             pass
         elif axmin >= 0:
             axtwin.set_ylim(

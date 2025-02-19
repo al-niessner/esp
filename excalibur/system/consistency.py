@@ -32,35 +32,35 @@ def consistency_checks(priors, ignoredPlanets):
     if not ok:
         inconsistencies.append('L*')
 
-    for planetLetter in priors['planets']:
+    for planet_letter in priors['planets']:
         # special check needed for HAT-P-11 c
         #  (it's a non-transiting RV planet that shouldn't be here, but there's an Archive bug)
-        if planetLetter in ignoredPlanets:
+        if planet_letter in ignoredPlanets:
             log.warning(
                 'SKIPPING consistency check for ignored planets: %s',
-                planetLetter,
+                planet_letter,
             )
         else:
-            ok = consistency_check_sma_P_Mstar(priors, planetLetter)
+            ok = consistency_check_sma_P_Mstar(priors, planet_letter)
             if not ok:
-                inconsistencies.append(planetLetter + ':semi-major axis')
+                inconsistencies.append(planet_letter + ':semi-major axis')
 
             # planet density does not exist (so no need to check it)
-            # ok = consistency_check_M_R_RHO_planet(priors, planetLetter)
-            # if not ok: inconsistencies.append(planetLetter+':rho')
+            # ok = consistency_check_M_R_RHO_planet(priors, planet_letter)
+            # if not ok: inconsistencies.append(planet_letter+':rho')
 
-            ok = consistency_check_M_R_LOGG_planet(priors, planetLetter)
+            ok = consistency_check_M_R_LOGG_planet(priors, planet_letter)
             if not ok:
-                inconsistencies.append(planetLetter + ':logg')
+                inconsistencies.append(planet_letter + ':logg')
 
-            ok = consistency_check_Teq_sma_Lstar(priors, planetLetter)
+            ok = consistency_check_Teq_sma_Lstar(priors, planet_letter)
             if not ok:
-                inconsistencies.append(planetLetter + ':Teq')
+                inconsistencies.append(planet_letter + ':Teq')
 
             # impact and inclination should be consistent
             # but impact doesn't exist here; not saved by target
-            # ok = consistency_check_inc_impact(priors, planetLetter)
-            # if not ok: inconsistencies.append(planetLetter+':impact')
+            # ok = consistency_check_inc_impact(priors, planet_letter)
+            # if not ok: inconsistencies.append(planet_letter+':impact')
 
     return inconsistencies
 
@@ -113,7 +113,7 @@ def consistency_check_M_R_RHO_star(starInfo):
 
 
 # -------------------------------------------------------------------
-def consistency_check_M_R_RHO_planet(starInfo, planetLetter):
+def consistency_check_M_R_RHO_planet(starInfo, planet_letter):
     '''
     Verify that the stellar density is consistent with the stellar mass,radius
     '''
@@ -121,9 +121,9 @@ def consistency_check_M_R_RHO_planet(starInfo, planetLetter):
     # get Mjup and Rjup definitions, for calculating planet density from Mp,Rp
     sscmks = syscore.ssconstants(cgs=True)
 
-    R = starInfo[planetLetter]['rp']
-    M = starInfo[planetLetter]['mass']
-    RHO = starInfo[planetLetter]['rho']
+    R = starInfo[planet_letter]['rp']
+    M = starInfo[planet_letter]['mass']
+    RHO = starInfo[planet_letter]['rho']
     # print('ccheck R,M,RHO planet',R,M,RHO)
 
     consistent = True
@@ -169,7 +169,7 @@ def consistency_check_M_R_LOGG_star(starInfo):
 
 
 # -------------------------------------------------------------------
-def consistency_check_M_R_LOGG_planet(starInfo, planetLetter):
+def consistency_check_M_R_LOGG_planet(starInfo, planet_letter):
     '''
     Verify that the planetary log(g) is consistent with the planet mass,radius
     '''
@@ -177,9 +177,9 @@ def consistency_check_M_R_LOGG_planet(starInfo, planetLetter):
     # get Mjup and Rjup definitions, for calculating stellar density from Mp,Rp
     sscmks = syscore.ssconstants(cgs=True)
 
-    R = starInfo[planetLetter]['rp']
-    M = starInfo[planetLetter]['mass']
-    LOGG = starInfo[planetLetter]['logg']
+    R = starInfo[planet_letter]['rp']
+    M = starInfo[planet_letter]['mass']
+    LOGG = starInfo[planet_letter]['logg']
     # print('ccheck R,M,LOGG planet',R,M,LOGG)
 
     consistent = True
@@ -195,7 +195,7 @@ def consistency_check_M_R_LOGG_planet(starInfo, planetLetter):
 
 
 # -------------------------------------------------------------------
-def consistency_check_sma_P_Mstar(starInfo, planetLetter):
+def consistency_check_sma_P_Mstar(starInfo, planet_letter):
     '''
     Verify that the semi-major axis and period are self-consistent
     '''
@@ -204,8 +204,8 @@ def consistency_check_sma_P_Mstar(starInfo, planetLetter):
     sscmks = syscore.ssconstants(cgs=True)
 
     M = starInfo['M*']
-    P = starInfo[planetLetter]['period']
-    sma = starInfo[planetLetter]['sma']
+    P = starInfo[planet_letter]['period']
+    sma = starInfo[planet_letter]['sma']
     # print('ccheck M P sma',M,P,sma)
 
     consistent = True
@@ -251,14 +251,14 @@ def consistency_check_R_T_Lstar(starInfo):
 
 
 # -------------------------------------------------------------------
-def consistency_check_Teq_sma_Lstar(starInfo, planetLetter):
+def consistency_check_Teq_sma_Lstar(starInfo, planet_letter):
     '''
     Verify that the planet equilibrium temperature matches it's stellar radiation
     '''
 
     L = starInfo['L*']
-    Teq = starInfo[planetLetter]['teq']
-    sma = starInfo[planetLetter]['sma']
+    Teq = starInfo[planet_letter]['teq']
+    sma = starInfo[planet_letter]['sma']
     # print('ccheck M P sma',M,P,sma)
 
     consistent = True

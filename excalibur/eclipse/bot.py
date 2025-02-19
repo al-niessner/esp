@@ -13,7 +13,7 @@ class Actor(dawgie.Task):
 
     def list(self) -> [dawgie.Task]:
         '''Subtasks top level ordered call'''
-        return [eclalg.normalization(), eclalg.whitelight(), eclalg.spectrum()]
+        return [eclalg.Normalization(), eclalg.WhiteLight(), eclalg.Spectrum()]
 
     pass
 

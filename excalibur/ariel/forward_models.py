@@ -15,7 +15,7 @@ def makeCerberusAtmos(
     wavelength_um,
     model_params,
     xslib,
-    planetLetter,
+    planet_letter,
     mixratios=None,
     Hsmax=15.0,
     solrad=10.0,
@@ -52,10 +52,10 @@ def makeCerberusAtmos(
     # orbp = fin['priors'].copy()
     # orbp = model_params   # just hope this covers it ig
     # orbp = {'sma':model_params['sma']}
-    # planetLetter = 'placeholder'
+    # planet_letter = 'placeholder'
     orbp = {
         'R*': model_params['R*'],
-        planetLetter: {'logg': model_params['logg']},
+        planet_letter: {'logg': model_params['logg']},
     }
 
     crbhzlib = {'PROFILE': []}
@@ -74,8 +74,8 @@ def makeCerberusAtmos(
         float(ctp),
         solidr,
         orbp,
-        xslib['data'][planetLetter]['XSECS'],
-        xslib['data'][planetLetter]['QTGRID'],
+        xslib['data'][planet_letter]['XSECS'],
+        xslib['data'][planet_letter]['QTGRID'],
         float(Teq),
         wavelength_um,
         Hsmax=Hsmax,
@@ -86,7 +86,7 @@ def makeCerberusAtmos(
         hztop=float(hzloc),
         hzwscale=float(hzthick),
         cheq=tceqdict,
-        pnet=planetLetter,
+        pnet=planet_letter,
         verbose=False,
         debug=False,
         break_down_by_molecule=True,

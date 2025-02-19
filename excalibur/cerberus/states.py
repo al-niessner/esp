@@ -15,7 +15,7 @@ import os
 
 # ------------- ------------------------------------------------------
 # -- SV -- -----------------------------------------------------------
-class xslibSV(dawgie.StateVector):
+class XslibSv(dawgie.StateVector):
     '''cerberus.xslib view'''
 
     def __init__(self, name):
@@ -46,7 +46,7 @@ class xslibSV(dawgie.StateVector):
         return
 
 
-class rlsSV(dawgie.StateVector):
+class RlsSv(dawgie.StateVector):
     """
     State Vector (SV) as python dict {}
 
@@ -134,7 +134,7 @@ class rlsSV(dawgie.StateVector):
         return
 
 
-class atmosSV(dawgie.StateVector):
+class AtmosSv(dawgie.StateVector):
     '''cerberus.atmos view'''
 
     def __init__(self, name):
@@ -166,7 +166,7 @@ class atmosSV(dawgie.StateVector):
 
 
 # -------- -----------------------------------------------------------
-class resSV(dawgie.StateVector):
+class ResSv(dawgie.StateVector):
     '''cerberus.results view'''
 
     def __init__(self, name):
@@ -187,8 +187,8 @@ class resSV(dawgie.StateVector):
     def view(self, caller: excalibur.Identity, visitor: dawgie.Visitor) -> None:
         '''view ds'''
         if self['STATUS'][-1]:
-            for target, planetLetter in zip(self['target'], self['planets']):
-                for savedresult in self['data'][planetLetter].keys():
+            for target, planet_letter in zip(self['target'], self['planets']):
+                for savedresult in self['data'][planet_letter].keys():
                     if 'plot' in savedresult:
                         if savedresult.startswith('plot_spectrum'):
                             plotlabel = 'best-fit spectrum'
@@ -210,19 +210,19 @@ class resSV(dawgie.StateVector):
                             + ' for '
                             + target
                             + ' '
-                            + planetLetter
+                            + planet_letter
                             + ' ---------'
                         )
                         visitor.add_image(
                             '...',
                             textlabel,
-                            self['data'][planetLetter][savedresult],
+                            self['data'][planet_letter][savedresult],
                         )
         return
 
 
 # -------- -----------------------------------------------------------
-class analysisSV(dawgie.StateVector):
+class AnalysisSv(dawgie.StateVector):
     '''PopulationSV ds'''
 
     def __init__(self, name):

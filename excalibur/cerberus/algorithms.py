@@ -43,10 +43,10 @@ class XSLib(dawgie.Algorithm):
     def __init__(self):
         '''__init__ ds'''
         self._version_ = crbcore.myxsecsversion()
-        self.__spc = trnalg.spectrum()
+        self.__spc = trnalg.Spectrum()
         self.__arielsim = arielalg.sim_spectrum()
         self.__rt = rtalg.Autofill()
-        self.__out = [crbstates.xslibSV(fltr) for fltr in fltrs]
+        self.__out = [crbstates.XslibSv(fltr) for fltr in fltrs]
         return
 
     def name(self):
@@ -123,12 +123,12 @@ class Atmos(dawgie.Algorithm):
     def __init__(self):
         '''__init__ ds'''
         self._version_ = crbcore.atmosversion()
-        self.__spc = trnalg.spectrum()
+        self.__spc = trnalg.Spectrum()
         self.__fin = sysalg.finalize()
         self.__xsl = XSLib()
         self.__arielsim = arielalg.sim_spectrum()
         self.__rt = rtalg.Autofill()
-        self.__out = [crbstates.atmosSV(fltr) for fltr in fltrs]
+        self.__out = [crbstates.AtmosSv(fltr) for fltr in fltrs]
         return
 
     def name(self):
@@ -296,7 +296,7 @@ class Results(dawgie.Algorithm):
         self.__xsl = XSLib()
         self.__atm = Atmos()
         self.__rt = rtalg.Autofill()
-        self.__out = [crbstates.resSV(fltr) for fltr in fltrs]
+        self.__out = [crbstates.ResSv(fltr) for fltr in fltrs]
         return
 
     def name(self):
@@ -399,8 +399,8 @@ class Analysis(dawgie.Analyzer):
         # self.__fin = sysalg.finalize()
         # self.__xsl = xslib()
         # self.__atm = atmos()
-        # self.__out = crbstates.analysisSV('retrievalCheck')
-        self.__out = [crbstates.analysisSV(fltr) for fltr in fltrs]
+        # self.__out = crbstates.AnalysisSv('retrievalCheck')
+        self.__out = [crbstates.AnalysisSv(fltr) for fltr in fltrs]
         return
 
     # def previous(self):

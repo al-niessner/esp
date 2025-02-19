@@ -41,7 +41,7 @@ fltrs = [str(fn) for fn in rtbind.filter_names.values()]
 
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
-class normalization(dawgie.Algorithm):
+class Normalization(dawgie.Algorithm):
     '''
     G. ROUDIER: Light curve normalization by Out Of Transit data
     '''
@@ -155,14 +155,14 @@ class normalization(dawgie.Algorithm):
     pass
 
 
-class whitelight(dawgie.Algorithm):
+class WhiteLight(dawgie.Algorithm):
     '''
     G. ROUDIER: See inheritance and CI5 thread with A NIESSNER
     for __init__() method and class attributes
     https://github-fn.jpl.nasa.gov/EXCALIBUR/esp/pull/86
     '''
 
-    def __init__(self, nrm=normalization()):
+    def __init__(self, nrm=Normalization()):
         '''__init__ ds'''
         self._version_ = trncore.wlversion()
         self._type = 'transit'
@@ -337,12 +337,12 @@ class whitelight(dawgie.Algorithm):
     pass
 
 
-class spectrum(dawgie.Algorithm):
+class Spectrum(dawgie.Algorithm):
     '''
     G. ROUDIER: See inheritance and CI5 thread with A NIESSNER for __init__() method and class attributes https://github-fn.jpl.nasa.gov/EXCALIBUR/esp/pull/86
     '''
 
-    def __init__(self, nrm=normalization(), wht=whitelight()):
+    def __init__(self, nrm=Normalization(), wht=WhiteLight()):
         '''__init__ ds'''
         self._version_ = trncore.spectrumversion()
         self._type = 'transit'
@@ -457,12 +457,12 @@ class spectrum(dawgie.Algorithm):
     pass
 
 
-class starspots(dawgie.Algorithm):
+class StarSpots(dawgie.Algorithm):
     '''
     include Viktor's starspot model
     '''
 
-    def __init__(self, wht=whitelight(), spc=spectrum()):
+    def __init__(self, wht=WhiteLight(), spc=Spectrum()):
         '''__init__ ds'''
         self._version_ = trncore.spectrumversion()
         self._type = 'transit'
@@ -543,7 +543,7 @@ class starspots(dawgie.Algorithm):
     pass
 
 
-class population(dawgie.Analyzer):
+class Population(dawgie.Analyzer):
     '''population ds'''
 
     def __init__(self):
@@ -566,18 +566,18 @@ class population(dawgie.Analyzer):
             *[
                 dawgie.SV_REF(
                     fetch('excalibur.transit').task,
-                    spectrum(),
-                    spectrum().state_vectors()[i],
+                    Spectrum(),
+                    Spectrum().state_vectors()[i],
                 )
-                for i in range(len(spectrum().state_vectors()))
+                for i in range(len(Spectrum().state_vectors()))
             ],
             *[
                 dawgie.SV_REF(
                     fetch('excalibur.transit').task,
-                    whitelight(),
-                    whitelight().state_vectors()[i],
+                    WhiteLight(),
+                    WhiteLight().state_vectors()[i],
                 )
-                for i in range(len(whitelight().state_vectors()))
+                for i in range(len(WhiteLight().state_vectors()))
             ],
         ]
 

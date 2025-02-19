@@ -200,7 +200,7 @@ good-names=f,
            k,
            ex,
            Run,
-           E,Q,S,T,
+           E,H,Q,S,T,
            _
 
 # Good variable names regexes, separated by a comma. If names match any regex,

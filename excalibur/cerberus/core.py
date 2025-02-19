@@ -2261,10 +2261,10 @@ def analysis(aspects, filt, out, verbose=False):
                     )
                 else:
                     for planet_letter in atmos_fit['data'].keys():
-                        # print(trgt,atmosFit['data'][planetLetter]['MODELPARNAMES'])
-                        # print(trgt,atmosFit['data'][planetLetter]['planet_params'])
+                        # print(trgt,atmosFit['data'][planet_letter]['MODELPARNAMES'])
+                        # print(trgt,atmosFit['data'][planet_letter]['planet_params'])
 
-                        # print('   keys:',atmosFit['data'][planetLetter].keys())
+                        # print('   keys:',atmosFit['data'][planet_letter].keys())
                         if (
                             planet_letter == 'stellar_params'
                         ):  # this is not a planet letter
@@ -2275,7 +2275,7 @@ def analysis(aspects, filt, out, verbose=False):
                             and trgt + ' ' + planet_letter
                             not in analysisplanetlist['planets']
                         ):
-                            # print(' DROP: Ariel doesnt observe this planet',trgt+' '+planetLetter)
+                            # print(' DROP: Ariel doesnt observe this planet',trgt+' '+planet_letter)
                             pass
 
                         elif (
@@ -2437,9 +2437,9 @@ def analysis(aspects, filt, out, verbose=False):
 
                                 elif trueparam == 'Mp':
                                     # if the planet mass is not in the Truth dictionary, pull it from system
-                                    # print(' input keys',atmosFit['data'][planetLetter]['planet_params'])
+                                    # print(' input keys',atmosFit['data'][planet_letter]['planet_params'])
                                     # print(' planet mass from system params:',
-                                    #      atmosFit['data'][planetLetter]['planet_params']['mass'])
+                                    #      atmosFit['data'][planet_letter]['planet_params']['mass'])
                                     truth_values[fitparam].append(
                                         atmos_fit['data'][planet_letter][
                                             'planet_params'

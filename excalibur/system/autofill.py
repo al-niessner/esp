@@ -603,7 +603,7 @@ def derive_RHOstar_from_M_and_R(starInfo):
 
 
 # -------------------------------------------------------------------
-def derive_SMA_from_P_and_Mstar(starInfo, planetLetter):
+def derive_SMA_from_P_and_Mstar(starInfo, planet_letter):
     '''
     If semi-major axis is blank, fill it in based on the orbital period and star mass
     '''
@@ -631,13 +631,13 @@ def derive_SMA_from_P_and_Mstar(starInfo, planetLetter):
         starInfo['M*'],
         starInfo['M*_lowerr'],
         starInfo['M*_uperr'],
-        starInfo[planetLetter]['period'],
-        starInfo[planetLetter]['period_lowerr'],
-        starInfo[planetLetter]['period_uperr'],
-        starInfo[planetLetter]['sma'],
-        starInfo[planetLetter]['sma_lowerr'],
-        starInfo[planetLetter]['sma_uperr'],
-        starInfo[planetLetter]['sma_ref'],
+        starInfo[planet_letter]['period'],
+        starInfo[planet_letter]['period_lowerr'],
+        starInfo[planet_letter]['period_uperr'],
+        starInfo[planet_letter]['sma'],
+        starInfo[planet_letter]['sma_lowerr'],
+        starInfo[planet_letter]['sma_uperr'],
+        starInfo[planet_letter]['sma_ref'],
     ):
 
         # careful: for multi-planet systems,
@@ -649,7 +649,7 @@ def derive_SMA_from_P_and_Mstar(starInfo, planetLetter):
             Merr1 = starInfo['M*_lowerr'][imass]
             Merr2 = starInfo['M*_uperr'][imass]
             # NOTE: didn't finish testing this completely before python3.12/pymc/etc upgrade
-            # if M != Mold: print('new stellar mass',planetLetter, M,'old stellar mass',Mold)
+            # if M != Mold: print('new stellar mass',planet_letter, M,'old stellar mass',Mold)
         else:
             # print('STRANGE: this planet ref doesnt exist in star refs:',sma_ref)
             # log.warning('STRANGE: this planet ref doesnt exist in star refs: %s',sma_ref)
@@ -788,7 +788,7 @@ def derive_LOGGstar_from_R_and_M(starInfo):
 
 
 # -------------------------------------------------------------------
-def derive_LOGGplanet_from_R_and_M(starInfo, planetLetter, verbose=False):
+def derive_LOGGplanet_from_R_and_M(starInfo, planet_letter, verbose=False):
     '''
     If planetary log-g is blank, fill it in based on the planet's radius and mass
     '''
@@ -802,45 +802,45 @@ def derive_LOGGplanet_from_R_and_M(starInfo, planetLetter, verbose=False):
     logg_ref_derived = []
 
     # print()
-    # print(starInfo[planetLetter])
-    # print(starInfo[planetLetter].keys())
+    # print(starInfo[planet_letter])
+    # print(starInfo[planet_letter].keys())
     # print()
 
     # this allows for calls from overwrite, where the dictionary is filled with floats, not lists
-    # print(starInfo[planetLetter]['rp'], type(starInfo[planetLetter]['rp']))
-    if not isinstance(starInfo[planetLetter]['rp'], list):
-        starInfo[planetLetter]['rp'] = [starInfo[planetLetter]['rp']]
-        starInfo[planetLetter]['rp_lowerr'] = [
-            starInfo[planetLetter]['rp_lowerr']
+    # print(starInfo[planet_letter]['rp'], type(starInfo[planet_letter]['rp']))
+    if not isinstance(starInfo[planet_letter]['rp'], list):
+        starInfo[planet_letter]['rp'] = [starInfo[planet_letter]['rp']]
+        starInfo[planet_letter]['rp_lowerr'] = [
+            starInfo[planet_letter]['rp_lowerr']
         ]
-        starInfo[planetLetter]['rp_uperr'] = [
-            starInfo[planetLetter]['rp_uperr']
+        starInfo[planet_letter]['rp_uperr'] = [
+            starInfo[planet_letter]['rp_uperr']
         ]
-        starInfo[planetLetter]['mass'] = [starInfo[planetLetter]['mass']]
-        starInfo[planetLetter]['mass_lowerr'] = [
-            starInfo[planetLetter]['mass_lowerr']
+        starInfo[planet_letter]['mass'] = [starInfo[planet_letter]['mass']]
+        starInfo[planet_letter]['mass_lowerr'] = [
+            starInfo[planet_letter]['mass_lowerr']
         ]
-        starInfo[planetLetter]['mass_uperr'] = [
-            starInfo[planetLetter]['mass_uperr']
+        starInfo[planet_letter]['mass_uperr'] = [
+            starInfo[planet_letter]['mass_uperr']
         ]
     else:
         # this one is different from other subroutines here - the 'logg' field doesn't exist yet
-        if 'logg' in starInfo[planetLetter].keys() and verbose:
+        if 'logg' in starInfo[planet_letter].keys() and verbose:
             print('ERROR: logg field shouldnt exist yet')
 
     # for R,Rerr1,Rerr2, M,Merr1,Merr2, logg,loggerr1,loggerr2,loggref in zip(
     for R, Rerr1, Rerr2, M, Merr1, Merr2 in zip(
-        starInfo[planetLetter]['rp'],
-        starInfo[planetLetter]['rp_lowerr'],
-        starInfo[planetLetter]['rp_uperr'],
-        starInfo[planetLetter]['mass'],
-        starInfo[planetLetter]['mass_lowerr'],
-        starInfo[planetLetter]['mass_uperr'],
+        starInfo[planet_letter]['rp'],
+        starInfo[planet_letter]['rp_lowerr'],
+        starInfo[planet_letter]['rp_uperr'],
+        starInfo[planet_letter]['mass'],
+        starInfo[planet_letter]['mass_lowerr'],
+        starInfo[planet_letter]['mass_uperr'],
     ):
-        # starInfo[planetLetter]['logg'],
-        # starInfo[planetLetter]['logg_lowerr'],
-        # starInfo[planetLetter]['logg_uperr'],
-        # starInfo[planetLetter][planetLetter]['logg_ref']):
+        # starInfo[planet_letter]['logg'],
+        # starInfo[planet_letter]['logg_lowerr'],
+        # starInfo[planet_letter]['logg_uperr'],
+        # starInfo[planet_letter][planet_letter]['logg_ref']):
 
         # if logg=='' and R!='' and M!='':
         # no need to check for blank planetary log-g; it doesn't exist in Archive table
@@ -1011,7 +1011,7 @@ def derive_Lstar_from_R_and_T(starInfo):
 
 
 # -------------------------------------------------------------------
-def derive_Teqplanet_from_Lstar_and_sma(starInfo, planetLetter, verbose=False):
+def derive_Teqplanet_from_Lstar_and_sma(starInfo, planet_letter, verbose=False):
     '''
     If planet T_equilibrium is blank, calculate it from star luminosity, planet sma
     '''
@@ -1026,14 +1026,14 @@ def derive_Teqplanet_from_Lstar_and_sma(starInfo, planetLetter, verbose=False):
     # NOTE: this equilibrium temperature assumes albedo=0
 
     # this allows for calls from overwrite, where the dictionary is filled with floats, not lists
-    # print('sma',starInfo[planetLetter]['sma'], type(starInfo[planetLetter]['sma']))
-    if not isinstance(starInfo[planetLetter]['sma'], list):
-        starInfo[planetLetter]['sma'] = [starInfo[planetLetter]['sma']]
-        starInfo[planetLetter]['sma_lowerr'] = [
-            starInfo[planetLetter]['sma_lowerr']
+    # print('sma',starInfo[planet_letter]['sma'], type(starInfo[planet_letter]['sma']))
+    if not isinstance(starInfo[planet_letter]['sma'], list):
+        starInfo[planet_letter]['sma'] = [starInfo[planet_letter]['sma']]
+        starInfo[planet_letter]['sma_lowerr'] = [
+            starInfo[planet_letter]['sma_lowerr']
         ]
-        starInfo[planetLetter]['sma_uperr'] = [
-            starInfo[planetLetter]['sma_uperr']
+        starInfo[planet_letter]['sma_uperr'] = [
+            starInfo[planet_letter]['sma_uperr']
         ]
 
     Teq_derived = []
@@ -1055,13 +1055,13 @@ def derive_Teqplanet_from_Lstar_and_sma(starInfo, planetLetter, verbose=False):
         starInfo['L*'],
         starInfo['L*_lowerr'],
         starInfo['L*_uperr'],
-        starInfo[planetLetter]['sma'],
-        starInfo[planetLetter]['sma_lowerr'],
-        starInfo[planetLetter]['sma_uperr'],
-        starInfo[planetLetter]['teq'],
-        starInfo[planetLetter]['teq_lowerr'],
-        starInfo[planetLetter]['teq_uperr'],
-        starInfo[planetLetter]['teq_ref'],
+        starInfo[planet_letter]['sma'],
+        starInfo[planet_letter]['sma_lowerr'],
+        starInfo[planet_letter]['sma_uperr'],
+        starInfo[planet_letter]['teq'],
+        starInfo[planet_letter]['teq_lowerr'],
+        starInfo[planet_letter]['teq_uperr'],
+        starInfo[planet_letter]['teq_ref'],
     ):
 
         # check for blank equilibrium temperature
@@ -1075,7 +1075,7 @@ def derive_Teqplanet_from_Lstar_and_sma(starInfo, planetLetter, verbose=False):
             if verbose and Teq != '':
                 print(
                     'updating a published Teq (new,new/old):',
-                    planetLetter,
+                    planet_letter,
                     newTeq,
                     newTeq / Teq,
                 )
@@ -1114,7 +1114,7 @@ def derive_Teqplanet_from_Lstar_and_sma(starInfo, planetLetter, verbose=False):
 
 
 # -------------------------------------------------------------------
-def derive_inclination_from_impactParam(starInfo, planetLetter):
+def derive_inclination_from_impactParam(starInfo, planet_letter):
     '''
     If planet inclination is blank, calculate it from impact param, star radius, semi-major axis
     '''
@@ -1145,16 +1145,16 @@ def derive_inclination_from_impactParam(starInfo, planetLetter):
         starInfo['R*'],
         starInfo['R*_lowerr'],
         starInfo['R*_uperr'],
-        starInfo[planetLetter]['sma'],
-        starInfo[planetLetter]['sma_lowerr'],
-        starInfo[planetLetter]['sma_uperr'],
-        starInfo[planetLetter]['impact'],
-        starInfo[planetLetter]['impact_lowerr'],
-        starInfo[planetLetter]['impact_uperr'],
-        starInfo[planetLetter]['inc'],
-        starInfo[planetLetter]['inc_lowerr'],
-        starInfo[planetLetter]['inc_uperr'],
-        starInfo[planetLetter]['inc_ref'],
+        starInfo[planet_letter]['sma'],
+        starInfo[planet_letter]['sma_lowerr'],
+        starInfo[planet_letter]['sma_uperr'],
+        starInfo[planet_letter]['impact'],
+        starInfo[planet_letter]['impact_lowerr'],
+        starInfo[planet_letter]['impact_uperr'],
+        starInfo[planet_letter]['inc'],
+        starInfo[planet_letter]['inc_lowerr'],
+        starInfo[planet_letter]['inc_uperr'],
+        starInfo[planet_letter]['inc_ref'],
     ):
 
         # check for blank inclination
@@ -1208,7 +1208,7 @@ def derive_inclination_from_impactParam(starInfo, planetLetter):
 
 
 # -------------------------------------------------------------------
-def derive_impactParam_from_inclination(starInfo, planetLetter):
+def derive_impactParam_from_inclination(starInfo, planet_letter):
     '''
     If planet impact parameter is blank, calculate it from inclination, star radius, semi-major axis
     '''
@@ -1239,16 +1239,16 @@ def derive_impactParam_from_inclination(starInfo, planetLetter):
         starInfo['R*'],
         starInfo['R*_lowerr'],
         starInfo['R*_uperr'],
-        starInfo[planetLetter]['sma'],
-        starInfo[planetLetter]['sma_lowerr'],
-        starInfo[planetLetter]['sma_uperr'],
-        starInfo[planetLetter]['inc'],
-        starInfo[planetLetter]['inc_lowerr'],
-        starInfo[planetLetter]['inc_uperr'],
-        starInfo[planetLetter]['impact'],
-        starInfo[planetLetter]['impact_lowerr'],
-        starInfo[planetLetter]['impact_uperr'],
-        starInfo[planetLetter]['impact_ref'],
+        starInfo[planet_letter]['sma'],
+        starInfo[planet_letter]['sma_lowerr'],
+        starInfo[planet_letter]['sma_uperr'],
+        starInfo[planet_letter]['inc'],
+        starInfo[planet_letter]['inc_lowerr'],
+        starInfo[planet_letter]['inc_uperr'],
+        starInfo[planet_letter]['impact'],
+        starInfo[planet_letter]['impact_lowerr'],
+        starInfo[planet_letter]['impact_uperr'],
+        starInfo[planet_letter]['impact_ref'],
     ):
 
         # check for blank impact parameter
@@ -1302,7 +1302,7 @@ def derive_impactParam_from_inclination(starInfo, planetLetter):
 
 
 # -------------------------------------------------------------------
-def derive_sma_from_ars(starInfo, planetLetter):
+def derive_sma_from_ars(starInfo, planet_letter):
     '''
     If planet semi-major axis is blank, calculate it a/Rp (e.g. Stassun)
     '''
@@ -1330,13 +1330,13 @@ def derive_sma_from_ars(starInfo, planetLetter):
         starInfo['R*'],
         starInfo['R*_lowerr'],
         starInfo['R*_uperr'],
-        starInfo[planetLetter]['ars'],
-        starInfo[planetLetter]['ars_lowerr'],
-        starInfo[planetLetter]['ars_uperr'],
-        starInfo[planetLetter]['sma'],
-        starInfo[planetLetter]['sma_lowerr'],
-        starInfo[planetLetter]['sma_uperr'],
-        starInfo[planetLetter]['sma_ref'],
+        starInfo[planet_letter]['ars'],
+        starInfo[planet_letter]['ars_lowerr'],
+        starInfo[planet_letter]['ars_uperr'],
+        starInfo[planet_letter]['sma'],
+        starInfo[planet_letter]['sma_lowerr'],
+        starInfo[planet_letter]['sma_uperr'],
+        starInfo[planet_letter]['sma_ref'],
     ):
 
         # check for blank semi-major axis
@@ -1386,7 +1386,7 @@ def derive_sma_from_ars(starInfo, planetLetter):
 # -------------------------------------------------------------------
 
 
-def fill_in_some_blank_omegas(starInfo, planetLetter):
+def fill_in_some_blank_omegas(starInfo, planet_letter):
     '''
     If omega is blank and eccentricity is zero, omega is undefined (fill with zero)
     '''
@@ -1397,11 +1397,11 @@ def fill_in_some_blank_omegas(starInfo, planetLetter):
     omega_ref_filled = []
 
     for ecc, omega, omegalowerr, omegauperr, omegaref in zip(
-        starInfo[planetLetter]['ecc'],
-        starInfo[planetLetter]['omega'],
-        starInfo[planetLetter]['omega_lowerr'],
-        starInfo[planetLetter]['omega_uperr'],
-        starInfo[planetLetter]['omega_ref'],
+        starInfo[planet_letter]['ecc'],
+        starInfo[planet_letter]['omega'],
+        starInfo[planet_letter]['omega_lowerr'],
+        starInfo[planet_letter]['omega_uperr'],
+        starInfo[planet_letter]['omega_ref'],
     ):
         # print('omega,ecc',omega,ecc)
         circular = False

@@ -18,12 +18,12 @@ log = logging.getLogger(__name__)
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
 # ECLIPSE CLASSES INHERIT FROM TRANSIT CLASSES
-class normalization(trnalg.normalization):
+class Normalization(trnalg.Normalization):
     '''Normalize to out ot transit, inherits from transit.normalization'''
 
     def __init__(self):
         '''__init__ ds'''
-        trnalg.normalization.__init__(self)
+        trnalg.Normalization.__init__(self)
         self._version_ = trncore.normversion()
         self._type = 'eclipse'
         return
@@ -31,12 +31,12 @@ class normalization(trnalg.normalization):
     pass
 
 
-class whitelight(trnalg.whitelight):
+class WhiteLight(trnalg.WhiteLight):
     '''Create White Light Curves, inherits from transit.whitelight'''
 
     def __init__(self):
         '''__init__ ds'''
-        trnalg.whitelight.__init__(self, nrm=normalization())
+        trnalg.WhiteLight.__init__(self, nrm=Normalization())
         self._version_ = trncore.wlversion()
         self._type = 'eclipse'
         return
@@ -51,12 +51,12 @@ class whitelight(trnalg.whitelight):
     pass
 
 
-class spectrum(trnalg.spectrum):
+class Spectrum(trnalg.Spectrum):
     '''Create emission spectrum, inherits from transit.spectrum'''
 
     def __init__(self):
         '''__init__ ds'''
-        trnalg.spectrum.__init__(self, nrm=normalization(), wht=whitelight())
+        trnalg.Spectrum.__init__(self, nrm=Normalization(), wht=WhiteLight())
         self._version_ = trncore.spectrumversion()
         self._type = 'eclipse'
         return

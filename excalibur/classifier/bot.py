@@ -13,7 +13,7 @@ class Actor(dawgie.Task):
 
     def list(self) -> [dawgie.Task]:
         '''GMR: Kicked inference() from this'''
-        return [clsalg.flags()]
+        return [clsalg.Flags()]
 
     pass
 
@@ -24,6 +24,6 @@ class Agent(dawgie.Analysis):
 
     def list(self) -> [dawgie.Analyzer]:
         '''Subtasks top level ordered call'''
-        return [clsalg.summarize_flags()]
+        return [clsalg.SummarizeFlags()]
 
     pass

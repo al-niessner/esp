@@ -49,7 +49,7 @@ fltrs = [str(fn) for fn in rtbind.filter_names.values()]
 
 # -------------------------------------------------------------------
 # -- ALGORITHMS -----------------------------------------------------
-class summarize_flags(dawgie.Analyzer):
+class SummarizeFlags(dawgie.Analyzer):
     '''K. MCCARTHY: Summarize flags across targets'''
 
     def __init__(self):
@@ -77,10 +77,10 @@ class summarize_flags(dawgie.Analyzer):
             *[
                 dawgie.SV_REF(
                     fetch('excalibur.classifier').task,
-                    flags(),
-                    flags().state_vectors()[i],
+                    Flags(),
+                    Flags().state_vectors()[i],
                 )
-                for i in range(len(flags().state_vectors()))
+                for i in range(len(Flags().state_vectors()))
             ]
         ]
 
@@ -342,7 +342,7 @@ class summarize_flags(dawgie.Analyzer):
         return
 
 
-class flags(dawgie.Algorithm):
+class Flags(dawgie.Algorithm):
     '''K. MCCARTHY: Perform data quality assessment checks and flag target accordingly'''
 
     def __init__(self):
@@ -357,10 +357,10 @@ class flags(dawgie.Algorithm):
         # storing input state vectors in dictionary to avoid pylint "too-many-instance-attributes" warning
         self.__state_vecs = {
             'finalize': sysalg.finalize(),
-            'spectrum': trnalg.spectrum(),
-            'eclspectrum': eclalg.spectrum(),
-            'whitelight': trnalg.whitelight(),
-            'eclwhitelight': eclalg.whitelight(),
+            'spectrum': trnalg.Spectrum(),
+            'eclspectrum': eclalg.Spectrum(),
+            'whitelight': trnalg.WhiteLight(),
+            'eclwhitelight': eclalg.WhiteLight(),
             'data_calib': datalg.calibration(),
         }
 
