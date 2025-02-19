@@ -51,7 +51,8 @@ class urltrick:
 
     def __exit__(self, exc_type, exc_value, traceback):
         '''__exit__ ds'''
-        self.req.close()
+        if self.req:
+            self.req.close()
         return
 
     pass
