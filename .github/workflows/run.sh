@@ -109,7 +109,7 @@ EOF
 done
 echo "waiting for jobs to complete"
 wait
-rm -rf $wdir $root/Python/build $root/Python/dawgie.egg-info $root/Python/dawgie/fe/requirements.txt
+rm -rf $wdir $root/build $root/excalibur.egg-info
 declare -i summary=0
 for job in $expected_jobs
 do

@@ -8,7 +8,7 @@ SYSTEM manages the astrophysical parameters of the target observed
 import excalibur.system.bot as sysbot
 
 # ------------- ------------------------------------------------------
-ignore = False
+DAWGIE_IGNORE = False
 
 
 def task(

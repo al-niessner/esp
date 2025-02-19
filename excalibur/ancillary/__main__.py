@@ -14,13 +14,13 @@ import excalibur.ancillary.bot
 rid, tn = main_start()
 
 if tn in ['', '__all__']:
-    name = 'population'
+    NAME = 'population'
     subtasks = excalibur.ancillary.bot.Agent('ancillary', 4, rid)
 else:
-    name = 'estimate'
+    NAME = 'estimate'
     subtasks = excalibur.ancillary.bot.Actor('ancillary', 4, rid, tn)
     pass
 
-subtasks.do(name)
+subtasks.do(NAME)
 dawgie.db.close()
 dawgie.security.finalize()

@@ -5,7 +5,7 @@ import excalibur.data.bot as datbot
 
 # ------------- ------------------------------------------------------
 
-ignore = False
+DAWGIE_IGNORE = False
 
 
 def task(

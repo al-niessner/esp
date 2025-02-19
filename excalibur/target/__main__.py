@@ -16,14 +16,14 @@ import excalibur.target.bot
 rid, tn = main_start()
 
 if tn in ['', '__all__']:
-    name = ['alert', 'create', None][-1]  # -1 to run them all
+    NAME = ['alert', 'create', None][-1]  # -1 to run them all
     subtasks = excalibur.target.bot.Agent('target', 4, rid)
     pass
 else:
-    name = ['autofill', 'scrape', None][-1]  # -1 to run them all
+    NAME = ['autofill', 'scrape', None][-1]  # -1 to run them all
     subtasks = excalibur.target.bot.Actor('target', 4, rid, tn)
     pass
 
-subtasks.do(name)
+subtasks.do(NAME)
 dawgie.db.close()
 dawgie.security.finalize()

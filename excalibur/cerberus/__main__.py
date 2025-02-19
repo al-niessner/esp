@@ -14,13 +14,13 @@ import excalibur.cerberus.bot
 rid, tn = main_start()
 
 if tn in ['', '__all__']:
-    name = 'analysis'
+    NAME = 'analysis'
     subtasks = excalibur.cerberus.bot.Agent('cerberus', 4, rid)
 else:
-    name = ['atmos', 'results', 'xslib', None][-1]  # -1 to run them all
+    NAME = ['atmos', 'results', 'xslib', None][-1]  # -1 to run them all
     subtasks = excalibur.cerberus.bot.Actor('cerberus', 4, rid, tn)
     pass
 
-subtasks.do(name)
+subtasks.do(NAME)
 dawgie.db.close()
 dawgie.security.finalize()

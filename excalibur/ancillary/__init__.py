@@ -5,7 +5,7 @@ import excalibur.ancillary.bot as ancbot
 
 # ------------- ------------------------------------------------------
 
-ignore = False
+DAWGIE_IGNORE = False
 
 
 def analysis(prefix: str, ps_hint: int = 0, runid: int = -1):

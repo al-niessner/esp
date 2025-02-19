@@ -14,14 +14,14 @@ import excalibur.system.bot
 rid, tn = main_start()
 
 if tn in ['', '__all__']:
-    name = 'population'
+    NAME = 'population'
     subtasks = excalibur.system.bot.Agent('system', 4, rid)
     pass
 else:
-    name = ['finalize', 'validate', None][-1]  # -1 to run them all
+    NAME = ['finalize', 'validate', None][-1]  # -1 to run them all
     subtasks = excalibur.system.bot.Actor('system', 4, rid, tn)
     pass
 
-subtasks.do(name)
+subtasks.do(NAME)
 dawgie.db.close()
 dawgie.security.finalize()

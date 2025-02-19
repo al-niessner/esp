@@ -7,7 +7,7 @@ import excalibur.ariel.bot as arielbot
 
 # ------------- ------------------------------------------------------
 
-ignore = False
+DAWGIE_IGNORE = False
 
 
 def task(

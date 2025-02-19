@@ -16,12 +16,12 @@ rid, tn = main_start()
 if tn in ['', '__all__']:
     pass
 else:
-    name = ['normalize', 'spectrum', 'whitelight', None][
+    NAME = ['normalize', 'spectrum', 'whitelight', None][
         -1
     ]  # -1 to run them all
     subtasks = excalibur.eclipse.bot.Actor('eclipse', 4, rid, tn)
 
-    subtasks.do(name)
+    subtasks.do(NAME)
 
 dawgie.db.close()
 dawgie.security.finalize()

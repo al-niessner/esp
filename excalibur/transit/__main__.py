@@ -14,16 +14,16 @@ import excalibur.transit.bot
 rid, tn = main_start()
 
 if tn in ['', '__all__']:
-    name = 'population'
+    NAME = 'population'
     subtasks = excalibur.transit.bot.Agent('transit', 4, rid)
     pass
 else:
-    name = ['normalization', 'spectrum', 'whitelight', 'starspots', None][
+    NAME = ['normalization', 'spectrum', 'whitelight', 'starspots', None][
         -1
     ]  # -1 to run them all
     subtasks = excalibur.transit.bot.Actor('transit', 4, rid, tn)
     pass
 
-subtasks.do(name)
+subtasks.do(NAME)
 dawgie.db.close()
 dawgie.security.finalize()

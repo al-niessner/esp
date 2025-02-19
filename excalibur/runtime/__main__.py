@@ -47,14 +47,14 @@ else:
     rid, tn = main_start()
 
     if tn in ['', '__all__']:
-        name = 'create'
+        NAME = 'create'
         subtasks = excalibur.runtime.bot.AnalysisTeam('runtime', 4, rid)
         pass
     else:
-        name = 'autofill'
+        NAME = 'autofill'
         subtasks = excalibur.runtime.bot.TaskTeam('runtime', 4, rid, tn)
         pass
-    subtasks.do(name)
+    subtasks.do(NAME)
     dawgie.db.close()
     dawgie.security.finalize()
     pass

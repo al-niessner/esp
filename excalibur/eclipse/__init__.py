@@ -4,7 +4,7 @@
 import excalibur.eclipse.bot as eclbot
 
 # ------------- ------------------------------------------------------
-ignore = False
+DAWGIE_IGNORE = False
 
 
 def task(

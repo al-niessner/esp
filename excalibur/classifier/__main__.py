@@ -14,15 +14,15 @@ import excalibur.classifier.bot
 rid, tn = main_start()
 
 if tn in ['', '__all__']:
-    name = 'summarize_flags'
+    NAME = 'summarize_flags'
     subtasks = excalibur.classifier.bot.Agent('classifier', 4, rid)
 else:
-    name = ['inference', 'flags', None][
+    NAME = ['inference', 'flags', None][
         -1
     ]  # 0 is kicked off list, -1 to run them all
     subtasks = excalibur.classifier.bot.Actor('classifier', 4, rid, tn)
     pass
 
-subtasks.do(name)
+subtasks.do(NAME)
 dawgie.db.close()
 dawgie.security.finalize()
