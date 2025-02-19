@@ -10,7 +10,7 @@ import excalibur.system.core as syscore
 from excalibur.target.targetlists import get_target_lists
 
 # from excalibur.cerberus.core import savesv
-from excalibur.cerberus.forwardModel import (
+from excalibur.cerberus.forward_model import (
     ctxtupdt,
     absorb,
     crbmodel,
@@ -58,7 +58,7 @@ log = logging.getLogger(__name__)
 pymclog = logging.getLogger('pymc')
 pymclog.setLevel(logging.ERROR)
 
-CERB_PARAMS = namedtuple(
+CerbParams = namedtuple(
     'cerberus_params_from_runtime',
     [
         'MCMC_chain_length',

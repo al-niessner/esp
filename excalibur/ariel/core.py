@@ -19,7 +19,7 @@ from excalibur.ariel.metallicity import (
 )
 from excalibur.ariel.clouds import fixedCloudParameters, randomCloudParameters
 from excalibur.ariel.arielInstrumentModel import load_ariel_instrument
-from excalibur.ariel.forwardModels import makeCerberusAtmos
+from excalibur.ariel.forward_models import makeCerberusAtmos
 from excalibur.cerberus.core import myxsecs
 from excalibur.util.plotters import add_scale_height_labels, save_plot_tosv
 

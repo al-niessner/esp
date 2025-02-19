@@ -1,4 +1,4 @@
-'''cerberus forwardModel ds'''
+'''cerberus forward_model ds'''
 
 # Heritage code shame:
 # pylint: disable=too-many-arguments,too-many-branches,too-many-lines,too-many-locals,too-many-positional-arguments,too-many-statements
@@ -17,7 +17,7 @@ from pytensor import tensor
 import excalibur
 
 # 2/13/25 Geoff: this line has been here for a while. maybe not required anymore? We'll see...
-# import excalibur.cerberus.forwardModel  # is this needed for the context updater?
+# import excalibur.cerberus.forward_model  # is this needed for the context updater?
 import excalibur.system.core as syscore
 from excalibur.util.cerberus import crbce, getmmw
 
@@ -73,7 +73,7 @@ def ctxtupdt(
     '''
     G. ROUDIER: Update context
     '''
-    excalibur.cerberus.forwardModel.ctxt = CONTEXT(
+    excalibur.cerberus.forward_model.ctxt = CONTEXT(
         cleanup=cleanup,
         model=model,
         p=p,

@@ -213,7 +213,7 @@ class Atmos(dawgie.Algorithm):
                 log.warning('--< CERBERUS ATMOS: %s >--', fltr)
                 runtime = self.__rt.sv_as_dict()['status']
 
-                runtime_params = crbcore.CERB_PARAMS(
+                runtime_params = crbcore.CerbParams(
                     mcmc_chain_length=runtime['cerberus_steps'],
                     fitCloudParameters=runtime[
                         'cerberus_atmos_fitCloudParameters'

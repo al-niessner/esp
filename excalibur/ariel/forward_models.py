@@ -1,4 +1,4 @@
-'''ariel forwardModels ds'''
+'''ariel forward_models ds'''
 
 # Heritage code shame:
 # pylint: disable=too-many-arguments,too-many-locals,too-many-positional-arguments
@@ -7,7 +7,7 @@
 # import excalibur
 import excalibur.system.core as syscore
 from excalibur.cerberus.core import hazelib
-from excalibur.cerberus.forwardModel import crbmodel
+from excalibur.cerberus.forward_model import crbmodel
 
 
 # ----------------------------------------------------------------------------------------------
