@@ -1,5 +1,8 @@
 '''ariel core ds'''
 
+# Heritage code shame:
+# pylint: disable=too-many-branches,too-many-locals,too-many-nested-blocks,too-many-statements
+
 # -- IMPORTS -- ------------------------------------------------------
 import logging
 

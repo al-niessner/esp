@@ -1,5 +1,8 @@
 '''estimators ds'''
 
+# Heritage code shame:
+# pylint: disable=too-many-arguments,too-many-branches,too-many-positional-arguments
+
 # -- IMPORTS -- ------------------------------------------------------
 import excalibur.system.core as syscore
 

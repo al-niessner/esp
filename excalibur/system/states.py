@@ -1,5 +1,8 @@
 '''System Database Products View'''
 
+# Heritage code shame:
+# pylint: disable=too-many-locals
+
 # -- IMPORTS -- ------------------------------------------------------
 import dawgie
 

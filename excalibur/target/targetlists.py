@@ -1,5 +1,8 @@
 '''target targetlists ds'''
 
+# Heritage code shame:
+# pylint: disable=too-many-branches,too-many-lines
+
 import excalibur
 import os
 import csv

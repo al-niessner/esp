@@ -1,5 +1,8 @@
 '''ariel ariel ds'''
 
+# Heritage code shame:
+# pylint: disable=too-many-branches,too-many-locals
+
 # -- IMPORTS -- ------------------------------------------------------
 import os
 import numpy as np

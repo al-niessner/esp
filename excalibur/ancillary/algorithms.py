@@ -1,5 +1,8 @@
 '''ancillary algoithms dc'''
 
+# Heritage code shame:
+# pylint: disable=too-many-branches
+
 # -- IMPORTS -- ------------------------------------------------------
 import dawgie
 import dawgie.context

@@ -1,5 +1,8 @@
 '''system overwriter ds'''
 
+# Heritage code shame:
+# pylint: disable=too-many-lines,too-many-statements
+
 # import numpy
 # import copy
 # import excalibur.system.core as syscore

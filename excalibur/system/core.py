@@ -1,5 +1,8 @@
 '''system core ds'''
 
+# Heritage code shame:
+# pylint: disable=too-many-arguments,too-many-branches,too-many-locals,too-many-nested-blocks,too-many-positional-arguments,too-many-statements
+
 # -- IMPORTS -- ------------------------------------------------------
 import os
 import numpy as np

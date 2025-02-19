@@ -1,5 +1,8 @@
 '''system algorithms ds'''
 
+# Heritage code shame:
+# pylint: disable=too-many-branches,too-many-locals
+
 # -- IMPORTS -- ------------------------------------------------------
 import logging
 

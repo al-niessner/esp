@@ -1,5 +1,8 @@
 '''ancillary core ds'''
 
+# Heritage code shame:
+# pylint: disable=too-many-branches
+
 # -- IMPORTS -- ------------------------------------------------------
 import dawgie
 

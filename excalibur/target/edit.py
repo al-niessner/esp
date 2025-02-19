@@ -1,5 +1,8 @@
 '''target task inputs and parameter overwrite'''
 
+# Heritage code shame:
+# pylint: disable=too-many-lines
+
 # -- IMPORTS -- ------------------------------------------------------
 import dawgie
 import logging

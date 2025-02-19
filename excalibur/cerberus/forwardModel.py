@@ -1,5 +1,8 @@
 '''cerberus forwardModel ds'''
 
+# Heritage code shame:
+# pylint: disable=too-many-arguments,too-many-branches,too-many-lines,too-many-locals,too-many-positional-arguments,too-many-statements
+
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.constants as cst

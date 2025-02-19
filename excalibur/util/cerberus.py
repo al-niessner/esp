@@ -1,5 +1,8 @@
 '''utilites used by many tasks'''
 
+# Heritage code shame:
+# pylint: disable=too-many-locals,too-many-statements
+
 # -- IMPORTS -- ------------------------------------------------------
 import numpy as np
 from pytensor import tensor

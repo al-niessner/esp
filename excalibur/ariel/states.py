@@ -1,5 +1,8 @@
 '''ariel Database Products View'''
 
+# Heritage code shame:
+# pylint: disable=too-many-nested-blocks
+
 # -- IMPORTS -- ------------------------------------------------------
 import dawgie
 

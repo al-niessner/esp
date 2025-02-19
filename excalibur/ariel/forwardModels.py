@@ -1,5 +1,8 @@
 '''ariel forwardModels ds'''
 
+# Heritage code shame:
+# pylint: disable=too-many-arguments,too-many-locals,too-many-positional-arguments
+
 # import os
 # import excalibur
 import excalibur.system.core as syscore

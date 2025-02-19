@@ -1,5 +1,8 @@
 '''Classifier Database Products View'''
 
+# Heritage code shame:
+# pylint: disable=too-many-branches,too-many-locals,too-many-nested-blocks,too-many-statements
+
 # -- IMPORTS --------------------------------------------------------
 import dawgie
 import excalibur

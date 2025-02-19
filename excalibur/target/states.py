@@ -1,5 +1,8 @@
 '''Target Database Products View'''
 
+# Heritage code shame:
+# pylint: disable=too-many-branches,too-many-locals,too-many-nested-blocks,too-many-statements
+
 # -- IMPORTS -- ------------------------------------------------------
 import bokeh.embed
 import bokeh.plotting  # the awesome plotting engine

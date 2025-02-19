@@ -1,5 +1,8 @@
 '''cerberus plotting ds'''
 
+# Heritage code shame:
+# pylint: disable=too-many-arguments,too-many-branches,too-many-lines,too-many-locals,too-many-positional-arguments,too-many-statements
+
 # -- IMPORTS -- ------------------------------------------------------
 import logging
 import corner
