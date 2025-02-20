@@ -1,5 +1,8 @@
 '''system consistency ds'''
 
+# Heritage code shame:
+# pylint: disable=invalid-name
+
 # -- IMPORTS -- -----------------------------------------------------
 import numpy
 import excalibur.system.core as syscore

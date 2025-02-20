@@ -49,10 +49,10 @@ class Normalization(dawgie.Algorithm):
     def __init__(self):
         self._version_ = trncore.normversion()
         self._type = 'transit'
-        self.__cal = datalg.calibration()
-        self.__tme = datalg.timing()
+        self.__cal = datalg.Calibration()
+        self.__tme = datalg.Timing()
         self.__rt = rtalg.Autofill()
-        self.__fin = sysalg.finalize()
+        self.__fin = sysalg.Finalize()
         self.__out = [trnstates.NormSV(fltr) for fltr in fltrs]
         return
 
@@ -167,7 +167,7 @@ class WhiteLight(dawgie.Algorithm):
         self._version_ = trncore.wlversion()
         self._type = 'transit'
         self._nrm = nrm
-        self.__fin = sysalg.finalize()
+        self.__fin = sysalg.Finalize()
         self.__rt = rtalg.Autofill()
         self.__out = [trnstates.WhiteLightSV(fltr) for fltr in fltrs]
         self.__out.append(trnstates.WhiteLightSV('HST'))
@@ -346,7 +346,7 @@ class Spectrum(dawgie.Algorithm):
         '''__init__ ds'''
         self._version_ = trncore.spectrumversion()
         self._type = 'transit'
-        self.__fin = sysalg.finalize()
+        self.__fin = sysalg.Finalize()
         self._nrm = nrm
         self.__rt = rtalg.Autofill()
         self._wht = wht
@@ -466,7 +466,7 @@ class StarSpots(dawgie.Algorithm):
         '''__init__ ds'''
         self._version_ = trncore.spectrumversion()
         self._type = 'transit'
-        self.__fin = sysalg.finalize()
+        self.__fin = sysalg.Finalize()
         self._wht = wht
         self._spc = spc
         self.__rt = rtalg.Autofill()

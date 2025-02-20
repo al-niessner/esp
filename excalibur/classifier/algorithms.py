@@ -55,7 +55,7 @@ class SummarizeFlags(dawgie.Analyzer):
     def __init__(self):
         '''__init__ ds'''
         self._version_ = dawgie.VERSION(1, 0, 0)
-        self.__out = [clsstates.Flag_Summary_SV(ext) for ext in fltrs]
+        self.__out = [clsstates.FlagSummarySV(ext) for ext in fltrs]
         return
 
     def name(self):
@@ -349,19 +349,19 @@ class Flags(dawgie.Algorithm):
         '''__init__ ds'''
         self._version_ = dawgie.VERSION(1, 0, 0)
         self.__rt = rtalg.Autofill()
-        self.__out = [clsstates.Flags_SV('transit-' + ext) for ext in fltrs]
+        self.__out = [clsstates.FlagsSV('transit-' + ext) for ext in fltrs]
         self.__out.extend(
-            [clsstates.Flags_SV('eclipse-' + ext) for ext in fltrs]
+            [clsstates.FlagsSV('eclipse-' + ext) for ext in fltrs]
         )
 
         # storing input state vectors in dictionary to avoid pylint "too-many-instance-attributes" warning
         self.__state_vecs = {
-            'finalize': sysalg.finalize(),
+            'finalize': sysalg.Finalize(),
             'spectrum': trnalg.Spectrum(),
             'eclspectrum': eclalg.Spectrum(),
             'whitelight': trnalg.WhiteLight(),
             'eclwhitelight': eclalg.WhiteLight(),
-            'data_calib': datalg.calibration(),
+            'data_calib': datalg.Calibration(),
         }
 
         return

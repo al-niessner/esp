@@ -29,23 +29,23 @@ fltrs = [str(fn) for fn in rtbind.filter_names.values()]
 # ------------- ------------------------------------------------------
 # -- ALGO RUN OPTIONS -- ---------------------------------------------
 # GENERATE DATABASE IDs
-genIDs = True
+GEN_IDS = True
 # NEXSCI QUERY
-web = 'https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query='
+WEB = 'https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query='
 # DATA ON DISK
 diskloc = os.path.join(excalibur.context['data_dir'], 'sci')
 # MAST MIRRORS
-queryform = 'https://archive.stsci.edu/hst/search.php?target='
-mirror1 = 'http://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/data/pub/HSTCA/'
-mirror2 = 'http://archives.esac.esa.int/ehst-sl-server/servlet/data-action?ARTIFACT_ID='
+QUERY_FORM = 'https://archive.stsci.edu/hst/search.php?target='
+MIRROR_1 = 'http://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/data/pub/HSTCA/'
+MIRROR_2 = 'http://archives.esac.esa.int/ehst-sl-server/servlet/data-action?ARTIFACT_ID='
 # MAST API
-durl = 'https://mast.stsci.edu/api/v0.1/Download/file?'
-hsturl = 'https://mast.stsci.edu/search/hst/api/v0.1/retrieve_product?'
+DURL = 'https://mast.stsci.edu/api/v0.1/Download/file?'
+HSTURL = 'https://mast.stsci.edu/search/hst/api/v0.1/retrieve_product?'
 
 
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
-class alert(dawgie.Analyzer):
+class Alert(dawgie.Analyzer):
     '''alert ds'''
 
     def __init__(self):
@@ -74,8 +74,8 @@ class alert(dawgie.Analyzer):
         return [
             dawgie.V_REF(
                 fetch('excalibur.target').regress,
-                regress(),
-                regress().state_vectors()[0],
+                Regress(),
+                Regress().state_vectors()[0],
                 'last',
             )
         ]
@@ -101,7 +101,7 @@ class alert(dawgie.Analyzer):
     pass
 
 
-class create(dawgie.Analyzer):
+class Create(dawgie.Analyzer):
     '''Creates a list of targets from edit.py'''
 
     def __init__(self):
@@ -127,7 +127,7 @@ class create(dawgie.Analyzer):
 
     def run(self, aspects: dawgie.Aspect):
         '''Top level algorithm call'''
-        trgcore.scrapeids(aspects.ds(), self.__out[0], web, genIDs=genIDs)
+        trgcore.scrapeids(aspects.ds(), self.__out[0], WEB, gen_ids=GEN_IDS)
         update = trgcore.createfltrs(self.__out[1])
         if update:
             aspects.ds().update()
@@ -140,13 +140,13 @@ class create(dawgie.Analyzer):
     pass
 
 
-class autofill(dawgie.Algorithm):
+class Autofill(dawgie.Algorithm):
     '''Fills mandatory info to get the ball rolling'''
 
     def __init__(self):
         '''__init__ ds'''
         self._version_ = trgcore.autofillversion()
-        self.__create = create()
+        self.__create = Create()
         self.__rt = rtalg.Autofill()
         self.__out = trgstates.TargetSV('parameters')
         return
@@ -221,7 +221,7 @@ class autofill(dawgie.Algorithm):
     pass
 
 
-class scrape(dawgie.Algorithm):
+class Scrape(dawgie.Algorithm):
     '''
     Download data or ingest data from disk
     '''
@@ -229,7 +229,7 @@ class scrape(dawgie.Algorithm):
     def __init__(self):
         '''__init__ ds'''
         self._version_ = trgcore.scrapeversion()
-        self.__autofill = autofill()
+        self.__autofill = Autofill()
         self.__rt = rtalg.Autofill()
         self.__out = trgstates.DatabaseSV('databases')
         return
@@ -290,8 +290,8 @@ class scrape(dawgie.Algorithm):
             tfl,
             out,
             dbs,
-            download_url=durl,
-            hst_url=hsturl,
+            download_url=DURL,
+            hst_url=HSTURL,
             verbose=False,
         )
         # Data on DISK
@@ -310,7 +310,7 @@ class scrape(dawgie.Algorithm):
     pass
 
 
-class regress(dawgie.Regression):
+class Regress(dawgie.Regression):
     '''regress ds'''
 
     def __init__(self):
@@ -355,8 +355,8 @@ class regress(dawgie.Regression):
         return [
             dawgie.SV_REF(
                 fetch('excalibur.target').task,
-                autofill(),
-                autofill().state_vectors()[0],
+                Autofill(),
+                Autofill().state_vectors()[0],
             )
         ]
 

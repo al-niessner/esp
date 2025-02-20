@@ -32,7 +32,7 @@ log = logging.getLogger(__name__)
 
 # ------------- ------------------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
-class validate(dawgie.Algorithm):
+class Validate(dawgie.Algorithm):
     '''Pulls out formatted info from NEXSCI and checks what is missing'''
 
     def __init__(self):
@@ -41,7 +41,7 @@ class validate(dawgie.Algorithm):
         self._version_ = dawgie.VERSION(
             1, 2, 0
         )  # new bestValue() parameter selection
-        self.__autofill = trgalg.autofill()
+        self.__autofill = trgalg.Autofill()
         self.__rt = rtalg.Autofill()
         self.__out = sysstates.PriorsSV('parameters')
         return
@@ -73,7 +73,7 @@ class validate(dawgie.Algorithm):
             autofill = self.__autofill.sv_as_dict()['parameters']
             runtime = self.__rt.sv_as_dict()['status']
 
-            runtime_params = syscore.SYSTEM_PARAMS(
+            runtime_params = syscore.SystemParams(
                 maximizeSelfConsistency=True,
                 selectMostRecent=runtime['target_autofill_selectMostRecent'],
             )
@@ -108,14 +108,14 @@ class validate(dawgie.Algorithm):
     pass
 
 
-class finalize(dawgie.Algorithm):
+class Finalize(dawgie.Algorithm):
     '''Generates SV used as input in other algorithm calls,
     throws out incomplete systems'''
 
     def __init__(self):
         self._version_ = dawgie.VERSION(1, 1, 4)
         self.__rt = rtalg.Autofill()
-        self.__val = validate()
+        self.__val = Validate()
         self.__out = sysstates.PriorsSV('parameters')
         return
 
@@ -235,13 +235,13 @@ class finalize(dawgie.Algorithm):
 # ---------------- ---------------------------------------------------
 
 
-class population(dawgie.Analyzer):
+class Population(dawgie.Analyzer):
     '''population ds'''
 
     def __init__(self):
         '''__init__ ds'''
         self._version_ = dawgie.VERSION(1, 0, 3)
-        self.__fin = finalize()
+        self.__fin = Finalize()
         self.__out = sysstates.PopulationSV('statistics')
         return
 
@@ -262,8 +262,8 @@ class population(dawgie.Analyzer):
         return [
             dawgie.SV_REF(
                 fetch('excalibur.system').task,
-                finalize(),
-                finalize().state_vectors()[0],
+                Finalize(),
+                Finalize().state_vectors()[0],
             )
         ]
 

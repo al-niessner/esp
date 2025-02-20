@@ -44,7 +44,7 @@ class XSLib(dawgie.Algorithm):
         '''__init__ ds'''
         self._version_ = crbcore.myxsecsversion()
         self.__spc = trnalg.Spectrum()
-        self.__arielsim = arielalg.sim_spectrum()
+        self.__arielsim = arielalg.SimSpectrum()
         self.__rt = rtalg.Autofill()
         self.__out = [crbstates.XslibSv(fltr) for fltr in fltrs]
         return
@@ -124,9 +124,9 @@ class Atmos(dawgie.Algorithm):
         '''__init__ ds'''
         self._version_ = crbcore.atmosversion()
         self.__spc = trnalg.Spectrum()
-        self.__fin = sysalg.finalize()
+        self.__fin = sysalg.Finalize()
         self.__xsl = XSLib()
-        self.__arielsim = arielalg.sim_spectrum()
+        self.__arielsim = arielalg.SimSpectrum()
         self.__rt = rtalg.Autofill()
         self.__out = [crbstates.AtmosSv(fltr) for fltr in fltrs]
         return
@@ -291,8 +291,8 @@ class Results(dawgie.Algorithm):
     def __init__(self):
         '''__init__ ds'''
         self._version_ = crbcore.resultsversion()
-        self.__fin = sysalg.finalize()
-        self.__anc = ancillaryalg.estimate()
+        self.__fin = sysalg.Finalize()
+        self.__anc = ancillaryalg.Estimate()
         self.__xsl = XSLib()
         self.__atm = Atmos()
         self.__rt = rtalg.Autofill()

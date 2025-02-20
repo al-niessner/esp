@@ -632,9 +632,9 @@ def savesv(aspects, fltrs):
     svname = 'classifier.flags'
 
     # directory where the results are saved
-    saveDir = excalibur.context['data_dir'] + '/spreadsheets/'
-    if not os.path.exists(saveDir):
-        os.mkdir(saveDir)
+    save_dir = excalibur.context['data_dir'] + '/spreadsheets/'
+    if not os.path.exists(save_dir):
+        os.mkdir(save_dir)
 
     flag_types = [
         'count_points_wl',
@@ -647,9 +647,9 @@ def savesv(aspects, fltrs):
     ]
 
     # file name where the results are saved
-    outfileName = svname.replace('.', '_') + '.csv'
+    out_file_name = svname.replace('.', '_') + '.csv'
 
-    with open(saveDir + outfileName, 'w', encoding='ascii') as outfile:
+    with open(save_dir + out_file_name, 'w', encoding='ascii') as outfile:
 
         # write the header row
         outfile.write('star,planet,filter,')

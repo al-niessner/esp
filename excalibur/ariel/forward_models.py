@@ -11,7 +11,7 @@ from excalibur.cerberus.forward_model import crbmodel
 
 
 # ----------------------------------------------------------------------------------------------
-def makeCerberusAtmos(
+def make_cerberus_atmos(
     wavelength_um,
     model_params,
     xslib,

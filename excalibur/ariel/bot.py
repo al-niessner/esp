@@ -17,7 +17,7 @@ class Actor(dawgie.Task):
     def list(self):
         '''Subtasks top level ordered call'''
         return [
-            arielalg.sim_spectrum(),
+            arielalg.SimSpectrum(),
         ]
 
 

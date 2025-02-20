@@ -60,7 +60,7 @@ class PredictSV(dawgie.StateVector):
 
 
 # Summarize flags for each target
-class Flags_SV(dawgie.StateVector):
+class FlagsSV(dawgie.StateVector):
     '''Flags_SV ds'''
 
     def __init__(self, name):
@@ -225,7 +225,7 @@ class Flags_SV(dawgie.StateVector):
 
 
 # Summarize flags across ALL targets
-class Flag_Summary_SV(dawgie.StateVector):
+class FlagSummarySV(dawgie.StateVector):
     '''Flag_Summary_SV ds'''
 
     def __init__(self, name):

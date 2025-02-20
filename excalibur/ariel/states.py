@@ -42,11 +42,11 @@ class PriorsSV(dawgie.StateVector):
 
             # display plot saved as a state vector; easy peasy
             # (alternative below: load a saved .png file)
-            plotStateVector = True
+            plot_state_vector = True
 
             target = self['data']['target']
 
-            if plotStateVector:
+            if plot_state_vector:
                 for planet_letter in self['data']['planets']:
                     for model in self['data']['models']:
                         # problem: for multiplanet systems, individual models may fail
@@ -70,8 +70,8 @@ class PriorsSV(dawgie.StateVector):
 
             else:
                 # determine the most recent RID from subdir filenames
-                arielPlotDir = excalibur.context['data_dir'] + '/ariel/'
-                subdirs = os.listdir(arielPlotDir)
+                ariel_plot_dir = excalibur.context['data_dir'] + '/ariel/'
+                subdirs = os.listdir(ariel_plot_dir)
                 bestsubdir = 'RID000'
                 for subdir in subdirs:
                     if (
@@ -84,10 +84,10 @@ class PriorsSV(dawgie.StateVector):
                 for planet_letter in self['data']['planets']:
                     for model in self['data']['models']:
                         myfig = plt.figure()
-                        plotDir = arielPlotDir + bestsubdir
+                        plot_dir = ariel_plot_dir + bestsubdir
                         plot2show = img.imread(
                             os.path.join(
-                                plotDir,
+                                plot_dir,
                                 'ariel_'
                                 + model
                                 + 'Atmos_'

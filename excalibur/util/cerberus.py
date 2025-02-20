@@ -1,6 +1,7 @@
 '''utilites used by many tasks'''
 
 # Heritage code shame:
+# pylint: disable=invalid-name
 # pylint: disable=too-many-locals,too-many-statements
 
 # -- IMPORTS -- ------------------------------------------------------

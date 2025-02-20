@@ -1,5 +1,8 @@
 '''ariel planet_metallicity ds'''
 
+# Heritage code shame:
+# pylint: disable=invalid-name
+
 # -- IMPORTS -- ------------------------------------------------------
 import numpy as np
 import logging

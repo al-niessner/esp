@@ -34,7 +34,7 @@ log = logging.getLogger(__name__)
 
 # ------------- ------------------------------------------------------
 # -- URLTRICK -- -----------------------------------------------------
-class urltrick:
+class UrlTrick:
     '''
     # GMR: with statement generates an attribute __enter__ error
     # without the with statement it doesnt pass CI checks
@@ -74,14 +74,14 @@ def tap_query(base_url, query):
     uri_full = uri_full[:-1] + f"&format={query.get('format', 'csv')}"
     uri_full = uri_full.replace(' ', '+')
     response = None
-    with urltrick(uri_full) as test:
+    with UrlTrick(uri_full) as test:
         response = test.decode('utf-8')
     return response
 
 
 # ----------------- --------------------------------------------------
 # -- SCRAPE IDS -- ---------------------------------------------------
-def scrapeids(ds: dawgie.Dataset, out, web, genIDs=True):
+def scrapeids(ds: dawgie.Dataset, out, web, gen_ids=True):
     '''
     Parses table from ipac exoplanetarchive
     '''
@@ -117,7 +117,7 @@ def scrapeids(ds: dawgie.Dataset, out, web, genIDs=True):
             aliaslist = [a.strip() for a in aliaslist if a.strip()]
             out['starID'][parsedstr[0]]['aliases'].extend(aliaslist)
             pass
-        if genIDs:
+        if gen_ids:
             # pylint: disable=protected-access # because dawgie requires it
             dawgie.db.connect(
                 fetch('excalibur.target').algorithms.create(),
@@ -205,7 +205,7 @@ def autofill(ident, thistarget, out, allowed_filters, searchrad=0.2, ntrymax=4):
     '''Queries MAST for available data and parses NEXSCI data into tables'''
 
     out['starID'][thistarget] = ident['starIDs']['starID'][thistarget]
-    targetID = [thistarget]
+    target_id = [thistarget]
 
     # AUTOFILL WITH MAST QUERY ---------------------------------------
     solved = False
@@ -368,7 +368,7 @@ def autofill(ident, thistarget, out, allowed_filters, searchrad=0.2, ntrymax=4):
 
     # AUTOFILL WITH NEXSCI EXOPLANET TABLE, DEFAULTS ONLY ---------------------------
     merged = False
-    targetID.extend(ident['starIDs']['starID'][thistarget]['aliases'])
+    target_id.extend(ident['starIDs']['starID'][thistarget]['aliases'])
     response = ident['starIDs']['nexsciDefaults']
     header = response[0].split(',')
     # list all keys contained in csv
@@ -467,7 +467,7 @@ def autofill(ident, thistarget, out, allowed_filters, searchrad=0.2, ntrymax=4):
             elem
         )  # remove things such as bounding quotation marks
         trgt = elem[header.index('hostname')]
-        if trgt in targetID:
+        if trgt in target_id:
             out['starID'][thistarget]['PLANETS #'] = elem[
                 header.index('sy_pnum')
             ]
@@ -700,7 +700,7 @@ def autofill(ident, thistarget, out, allowed_filters, searchrad=0.2, ntrymax=4):
             trgt = elem[header.index('hostname')]
             thisplanet = elem[header.index('pl_letter')]
             pass
-        if trgt in targetID:
+        if trgt in target_id:
             ref_pl = elem[header.index('pl_refname')]
             ref_pl = ref_pl.split('</a>')[0]
             ref_pl = ref_pl.split('target=ref>')[-1]
@@ -1328,7 +1328,7 @@ def mastapi(tfl, out, dbs, download_url=None, hst_url=None, verbose=False):
 def disk(selfstart, out, diskloc, dbs):
     '''Query on disk data'''
     merge = False
-    targetID = list(selfstart['starID'].keys())
+    target_id = list(selfstart['starID'].keys())
 
     # This was originally designed because we wanted to ingest data from X or Y
     # that had crazy directory names.
@@ -1342,7 +1342,7 @@ def disk(selfstart, out, diskloc, dbs):
     for t in targets:
         parsedstr = t.split(':')
         parsedstr = [tt.strip() for tt in parsedstr]
-        if parsedstr[0] in targetID:
+        if parsedstr[0] in target_id:
             folders = parsedstr[1]
             folders = folders.split(',')
             folders = [f.strip() for f in folders]
@@ -1353,7 +1353,7 @@ def disk(selfstart, out, diskloc, dbs):
         log.warning('ADD data subdirectory name to list in target/edit.py!!')
         pass
     # >--
-    lookforme = targetID[0]
+    lookforme = target_id[0]
     # Maybe get rid of this it may work with the original name
     # --<
     lookforme = lookforme.replace(' ', '')
@@ -1402,7 +1402,7 @@ def dbscp(target, locations, dbs, out, verbose=False):
         pass
 
     okfiles = []
-    Nfails = 0
+    n_fails = 0
     for fitsfile in imalist:
         try:
             pyfits.open(fitsfile)
@@ -1411,17 +1411,17 @@ def dbscp(target, locations, dbs, out, verbose=False):
         except OSError:
             log.warning('--< !!! Failed to read: %s ', fitsfile)
             okfiles.append(False)
-            Nfails += 1
+            n_fails += 1
             pass
         pass
     log.warning(
         '--< %s: %i out of %i MAST files are unreadable >--',
         target,
-        Nfails,
+        n_fails,
         len(imalist),
     )
 
-    if Nfails == 0:
+    if n_fails == 0:
         for fitsfile in imalist:
             filedict = {
                 'md5': None,

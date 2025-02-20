@@ -13,7 +13,7 @@ class Actor(dawgie.Task):
 
     def list(self) -> [dawgie.Task]:
         '''Subtasks top level ordered call'''
-        return [datalg.collect(), datalg.timing(), datalg.calibration()]
+        return [datalg.Collect(), datalg.Timing(), datalg.Calibration()]
 
     pass
 

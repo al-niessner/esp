@@ -32,7 +32,7 @@ log = logging.getLogger(__name__)
 
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
-class estimate(dawgie.Algorithm):
+class Estimate(dawgie.Algorithm):
     '''estimate ds'''
 
     def __init__(self):
@@ -40,7 +40,7 @@ class estimate(dawgie.Algorithm):
         self._version_ = anccore.estimateversion()
         self._type = 'ancillary'
         self.__rt = rtalg.Autofill()
-        self.__fin = sysalg.finalize()
+        self.__fin = sysalg.Finalize()
         self.__out = [ancstates.EstimateSV('parameters')]
         return
 
@@ -84,13 +84,13 @@ class estimate(dawgie.Algorithm):
         return
 
 
-class population(dawgie.Analyzer):
+class Population(dawgie.Analyzer):
     '''population ds'''
 
     def __init__(self):
         '''__init__ ds'''
         self._version_ = dawgie.VERSION(1, 0, 3)
-        self.__est = estimate()
+        self.__est = Estimate()
         self.__out = ancstates.PopulationSV('statistics')
         return
 
@@ -111,8 +111,8 @@ class population(dawgie.Analyzer):
         return [
             dawgie.SV_REF(
                 fetch('excalibur.ancillary').task,
-                estimate(),
-                estimate().state_vectors()[0],
+                Estimate(),
+                Estimate().state_vectors()[0],
             )
         ]
 

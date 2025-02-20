@@ -1,6 +1,7 @@
 '''ariel ariel ds'''
 
 # Heritage code shame:
+# pylint: disable=invalid-name
 # pylint: disable=too-many-branches,too-many-locals
 
 # -- IMPORTS -- ------------------------------------------------------

@@ -1,6 +1,7 @@
 '''ariel core ds'''
 
 # Heritage code shame:
+# pylint: disable=invalid-name
 # pylint: disable=too-many-branches,too-many-locals,too-many-nested-blocks,too-many-statements
 
 # -- IMPORTS -- ------------------------------------------------------
@@ -18,8 +19,8 @@ from excalibur.ariel.metallicity import (
     randomCtoO_linear,
 )
 from excalibur.ariel.clouds import fixedCloudParameters, randomCloudParameters
-from excalibur.ariel.arielInstrumentModel import load_ariel_instrument
-from excalibur.ariel.forward_models import makeCerberusAtmos
+from excalibur.ariel.ariel_instrument_model import load_ariel_instrument
+from excalibur.ariel.forward_models import make_cerberus_atmos
 from excalibur.cerberus.core import myxsecs
 from excalibur.util.plotters import add_scale_height_labels, save_plot_tosv
 
@@ -34,7 +35,7 @@ import scipy.constants as cst
 log = logging.getLogger(__name__)
 
 # does this really go here? CIcheck needs it back in algorithms
-ARIEL_PARAMS = namedtuple(
+ArielParams = namedtuple(
     'ariel_params_from_runtime',
     [
         'tier',
@@ -350,7 +351,7 @@ def simulate_spectra(target, system_dict, runtime_params, out):
                                     existingPlanetLetter
                                 ]
 
-                        cerbModel, cerbModel_by_molecule = makeCerberusAtmos(
+                        cerbModel, cerbModel_by_molecule = make_cerberus_atmos(
                             wavelength_um,
                             model_params,
                             xslib,
@@ -607,14 +608,14 @@ def simulate_spectra(target, system_dict, runtime_params, out):
                         {'Hs': [Hsscaling]}, 1.0e-2 * fluxDepth_rebin, ax, myfig
                     )
 
-                    plotDir = (
+                    plot_dir = (
                         excalibur.context['data_dir'] + '/ariel/savedplots'
                     )
-                    if not os.path.exists(plotDir):
-                        os.mkdir(plotDir)
+                    if not os.path.exists(plot_dir):
+                        os.mkdir(plot_dir)
 
                     plt.savefig(
-                        plotDir
+                        plot_dir
                         + '/ariel_'
                         + atmosModel
                         + 'Atmos_'

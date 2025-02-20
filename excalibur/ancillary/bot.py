@@ -16,7 +16,7 @@ class Agent(dawgie.Analysis):
 
     def list(self) -> [dawgie.Analyzer]:
         '''list ds'''
-        return [ancalg.population()]
+        return [ancalg.Population()]
 
     pass
 
@@ -26,7 +26,7 @@ class Actor(dawgie.Task):
 
     def list(self) -> [dawgie.Task]:
         '''list ds'''
-        return [ancalg.estimate()]
+        return [ancalg.Estimate()]
 
     pass
 

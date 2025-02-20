@@ -13,7 +13,7 @@ class Actor(dawgie.Task):
 
     def list(self):
         '''Subtasks top level ordered call'''
-        return [sysalg.validate(), sysalg.finalize()]
+        return [sysalg.Validate(), sysalg.Finalize()]
 
     pass
 
@@ -26,7 +26,7 @@ class Agent(dawgie.Analysis):
 
     def list(self) -> [dawgie.Analyzer]:
         '''list ds'''
-        return [sysalg.population()]
+        return [sysalg.Population()]
 
     pass
 

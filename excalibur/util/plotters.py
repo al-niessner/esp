@@ -1,6 +1,7 @@
 '''util plotters dc'''
 
 # Heritage code shame:
+# pylint: disable=invalid-name
 # pylint: disable=too-many-arguments,too-many-locals,too-many-positional-arguments
 
 # -- IMPORTS -- ------------------------------------------------------

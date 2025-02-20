@@ -13,7 +13,7 @@ class Agent(dawgie.Analysis):
 
     def list(self) -> [dawgie.Analyzer]:
         '''list ds'''
-        return [trgalg.alert(), trgalg.create()]
+        return [trgalg.Alert(), trgalg.Create()]
 
     pass
 
@@ -23,7 +23,7 @@ class Actor(dawgie.Task):
 
     def list(self) -> [dawgie.Task]:
         '''list ds'''
-        return [trgalg.autofill(), trgalg.scrape()]
+        return [trgalg.Autofill(), trgalg.Scrape()]
 
     pass
 
@@ -33,7 +33,7 @@ class Regress(dawgie.Regress):
 
     def list(self) -> [dawgie.Regression]:
         '''list ds'''
-        return [trgalg.regress()]
+        return [trgalg.Regress()]
 
     pass
 

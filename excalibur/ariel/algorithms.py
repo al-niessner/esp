@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 
 # ------------- ------------------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
-class sim_spectrum(dawgie.Algorithm):
+class SimSpectrum(dawgie.Algorithm):
     '''
     Create a simulated Ariel spectrum
     '''
@@ -28,7 +28,7 @@ class sim_spectrum(dawgie.Algorithm):
         '''__init__ ds'''
         self._version_ = dawgie.VERSION(1, 0, 0)
         self.__rt = rtalg.Autofill()
-        self.__system_finalize = sysalg.finalize()
+        self.__system_finalize = sysalg.Finalize()
         self.__out = arielstates.PriorsSV('parameters')
         return
 
@@ -68,7 +68,7 @@ class sim_spectrum(dawgie.Algorithm):
             valid, errstring = checksv(system_dict)
             if valid:
                 runtime = self.__rt.sv_as_dict()['status']
-                runtime_params = arielcore.ARIEL_PARAMS(
+                runtime_params = arielcore.ArielParams(
                     tier=1,
                     randomSeed=123,
                     randomCloudProperties=True,
@@ -78,7 +78,7 @@ class sim_spectrum(dawgie.Algorithm):
                     ],
                 )
                 # FIXMEE: this code needs repaired by moving out to config (Geoff added)
-                update = self._simSpectrum(
+                update = self._sim_spectrum(
                     repr(self).split('.')[1],  # this is the target name
                     system_dict,
                     runtime_params,
@@ -95,7 +95,7 @@ class sim_spectrum(dawgie.Algorithm):
         return
 
     @staticmethod
-    def _simSpectrum(target, system_dict, runtime_params, out):
+    def _sim_spectrum(target, system_dict, runtime_params, out):
         '''Core code call'''
         filled = arielcore.simulate_spectra(
             target, system_dict, runtime_params, out

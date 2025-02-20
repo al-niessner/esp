@@ -15,7 +15,7 @@ def fix_default_reference(target):
     (as opposed to the below code, which sets individual parameters by hand)
     '''
 
-    setRefsByHand = {
+    set_refs_by_hand = {
         # 'GJ 9827':'Bonomo et al. 2023',    # not Rice et al. 2019   # problem is actually scrape/collect
         # not really much improvement on these:
         # 'GJ 3053':'Lillo-Box et al. 2020',   # residuals are better, mainly from 1 point itk
@@ -25,8 +25,8 @@ def fix_default_reference(target):
     }
 
     # default_reference = False
-    # if target in setRefsByHand: default_reference = setRefsByHand[target]
-    default_reference = setRefsByHand.get(target, False)
+    # if target in set_refs_by_hand: default_reference = set_refs_by_hand[target]
+    default_reference = set_refs_by_hand.get(target, False)
 
     return default_reference
 

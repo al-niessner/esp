@@ -1,5 +1,9 @@
 '''ariel planet_clouds ds'''
 
+# Heritage code shame:
+# pylint: disable=invalid-name
+
+
 # -- IMPORTS -- ------------------------------------------------------
 import numpy as np
 import csv

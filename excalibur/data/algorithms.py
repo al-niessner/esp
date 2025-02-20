@@ -35,7 +35,7 @@ fltrs = [str(fn) for fn in rtbind.filter_names.values()]
 
 # ---------------------- ---------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
-class collect(dawgie.Algorithm):
+class Collect(dawgie.Algorithm):
     '''
     G. ROUDIER: Data collection by filters
     '''
@@ -43,9 +43,9 @@ class collect(dawgie.Algorithm):
     def __init__(self):
         '''__init__ ds'''
         self._version_ = datcore.collectversion()
-        self.__create = trgalg.create()
+        self.__create = trgalg.Create()
         self.__rt = rtalg.Autofill()
-        self.__scrape = trgalg.scrape()
+        self.__scrape = trgalg.Scrape()
         self.__out = trgstates.FilterSV('frames')
         return
 
@@ -119,7 +119,7 @@ class collect(dawgie.Algorithm):
     pass
 
 
-class timing(dawgie.Algorithm):
+class Timing(dawgie.Algorithm):
     '''
     G. ROUDIER: Categorize data into 3 science purposes: TRANSIT, ECLIPSE, PHASECURVE
     '''
@@ -127,8 +127,8 @@ class timing(dawgie.Algorithm):
     def __init__(self):
         '''__init__ ds'''
         self._version_ = datcore.timingversion()
-        self.__fin = sysalg.finalize()
-        self.__col = collect()
+        self.__fin = sysalg.Finalize()
+        self.__col = Collect()
         self.__rt = rtalg.Autofill()
         self.__out = [datstates.TimingSV(fltr) for fltr in fltrs]
         return
@@ -213,7 +213,7 @@ class timing(dawgie.Algorithm):
     pass
 
 
-class calibration(dawgie.Algorithm):
+class Calibration(dawgie.Algorithm):
     '''
     G. ROUDIER: Data re-calibration and reduction
     '''
@@ -221,10 +221,10 @@ class calibration(dawgie.Algorithm):
     def __init__(self):
         '''__init__ ds'''
         self._version_ = dawgie.VERSION(1, 4, 4)
-        self.__fin = sysalg.finalize()
-        self.__col = collect()
+        self.__fin = sysalg.Finalize()
+        self.__col = Collect()
         self.__rt = rtalg.Autofill()
-        self.__tim = timing()
+        self.__tim = Timing()
         self.__out = [datstates.CalibrateSV(fltr) for fltr in fltrs]
         return
 

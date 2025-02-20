@@ -1,6 +1,7 @@
 '''system core ds'''
 
 # Heritage code shame:
+# pylint: disable=invalid-name
 # pylint: disable=too-many-arguments,too-many-branches,too-many-locals,too-many-nested-blocks,too-many-positional-arguments,too-many-statements
 
 # -- IMPORTS -- ------------------------------------------------------
@@ -36,7 +37,7 @@ from collections import namedtuple
 
 log = logging.getLogger(__name__)
 
-SYSTEM_PARAMS = namedtuple(
+SystemParams = namedtuple(
     'system_params_from_runtime',
     ['maximizeSelfConsistency', 'selectMostRecent'],
 )
