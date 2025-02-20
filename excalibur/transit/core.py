@@ -1,6 +1,7 @@
 '''transit core ds'''
 
 # Heritage code shame:
+# pylint: disable=duplicate-code
 # pylint: disable=invalid-name
 # pylint: disable=too-many-arguments,too-many-branches,too-many-instance-attributes,too-many-lines,too-many-locals,too-many-nested-blocks,too-many-positional-arguments,too-many-statements
 
@@ -10,6 +11,7 @@ import dawgie
 import excalibur.data.core as datcore
 import excalibur.system.core as syscore
 import excalibur.util.cerberus as crbutil
+import excalibur.util.monkey_patch  # side effects # noqa: F401 # pylint: disable=unused-import
 from excalibur.util import elca
 from excalibur.cerberus.plotting import rebin_data
 from excalibur.util.plotters import (
@@ -46,7 +48,6 @@ except ImportError:
 
 from collections import namedtuple
 
-import ldtk
 from ldtk import LDPSetCreator, BoxcarFilter
 from ldtk.ldmodel import LinearModel, QuadraticModel, NonlinearModel
 
@@ -171,28 +172,6 @@ def ctxtupdt(
         gttv=gttv,
     )
     return
-
-
-class LDPSet(ldtk.LDPSet):
-    '''
-    A. NIESSNER: INLINE HACK TO ldtk.LDPSet
-    '''
-
-    @staticmethod
-    def is_mime():
-        '''is_mime ds'''
-        return True
-
-    @property
-    def profile_mu(self):
-        '''profile_mu ds'''
-        return self._mu
-
-    pass
-
-
-setattr(ldtk, 'LDPSet', LDPSet)
-setattr(ldtk.ldtk, 'LDPSet', LDPSet)
 
 
 # ----------------- --------------------------------------------------
@@ -3997,61 +3976,9 @@ def time2z(time, ipct, tknot, sma, orbperiod, ecc, tperi=None, epsilon=1e-5):
     '''
     G. ROUDIER: Time samples in [Days] to separation in [R*]
     '''
-    if tperi is not None:
-        ft0 = (tperi - tknot) % orbperiod
-        ft0 /= orbperiod
-        if ft0 > 0.5:
-            ft0 += -1e0
-        M0 = 2e0 * np.pi * ft0
-        E0 = solveme(M0, ecc, epsilon)
-        realf = np.sqrt(1e0 - ecc) * np.cos(E0 / 2e0)
-        imagf = np.sqrt(1e0 + ecc) * np.sin(E0 / 2e0)
-        w = np.angle(np.complex(realf, imagf))
-        if abs(ft0) < epsilon:
-            w = np.pi / 2e0
-            tperi = tknot
-            pass
-        pass
-    else:
-        w = np.pi / 2e0
-        tperi = tknot
-        pass
-    ft = (time - tperi) % orbperiod
-    ft /= orbperiod
-    sft = np.copy(ft)
-    sft[(sft > 0.5)] += -1e0
-    M = 2e0 * np.pi * ft
-    E = solveme(M, ecc, epsilon)
-    realf = np.sqrt(1.0 - ecc) * np.cos(E / 2e0)
-    imagf = np.sqrt(1.0 + ecc) * np.sin(E / 2e0)
-    f = []
-    for r, i in zip(realf, imagf):
-        cn = np.complex(r, i)
-        f.append(2e0 * np.angle(cn))
-        pass
-    f = np.array(f)
-    r = sma * (1e0 - ecc**2) / (1e0 + ecc * np.cos(f))
-    z = r * np.sqrt(
-        1e0**2 - (np.sin(w + f) ** 2) * (np.sin(ipct * np.pi / 180e0)) ** 2
+    return excalibur.util.time.time2z(
+        time, ipct, tknot, sma, orbperiod, ecc, tperi, epsilon, False
     )
-    z[sft < 0] *= -1e0
-    return z, sft
-
-
-def solveme(M, e, eps):
-    '''
-    G. ROUDIER: Newton Raphson solver for true anomaly
-    M is a numpy array
-    '''
-    E = np.copy(M)
-    for i in np.arange(M.shape[0]):
-        while abs(E[i] - e * np.sin(E[i]) - M[i]) > eps:
-            num = E[i] - e * np.sin(E[i]) - M[i]
-            den = 1.0 - e * np.cos(E[i])
-            E[i] = E[i] - num / den
-            pass
-        pass
-    return E
 
 
 def eclipse_ratio(priors, p='b', f='IRAC 3.6um', verbose=True):

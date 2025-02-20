@@ -8,6 +8,7 @@ import dawgie
 
 import excalibur
 from excalibur.util.plotters import save_plot_toscreen
+from excalibur.util.svs import ExcaliburSV
 
 import os
 
@@ -17,24 +18,11 @@ import matplotlib.pyplot as plt
 
 # ------------- ------------------------------------------------------
 # -- SV -- -----------------------------------------------------------
-class PriorsSV(dawgie.StateVector):
+class PriorsSV(ExcaliburSV):
     '''General format for ariel State Vector view'''
 
     def __init__(self, name):
-        self._version_ = dawgie.VERSION(1, 1, 4)
-        self.__name = name
-        self['STATUS'] = excalibur.ValuesList()
-        # self['target'] = excalibur.ValuesList()
-        # self['planets'] = excalibur.ValuesList()
-        self['data'] = excalibur.ValuesDict()
-        # self['spectrum'] = excalibur.ValuesDict()
-        # self['spectrum_params'] = excalibur.ValuesDict()
-        self['STATUS'].append(False)
-        return
-
-    def name(self):
-        '''name ds'''
-        return self.__name
+        ExcaliburSV.__init__(self, name, dawgie.VERSION(1, 1, 4))
 
     def view(self, caller: excalibur.Identity, visitor: dawgie.Visitor) -> None:
         '''view ds'''

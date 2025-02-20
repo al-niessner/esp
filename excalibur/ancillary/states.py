@@ -6,28 +6,20 @@ import dawgie
 import excalibur
 import excalibur.ancillary.core as anccore
 from excalibur.util.plotters import distrplot, barplot, rendertable
+from excalibur.util.svs import ExcaliburSV
 
 from collections import Counter
 
 
 # ------------- ------------------------------------------------------
 # -- SV -- -----------------------------------------------------------
-class EstimateSV(dawgie.StateVector):
+class EstimateSV(ExcaliburSV):
     '''EstimateSV ds'''
 
     def __init__(self, name):
         '''__init__ ds'''
         # version 2.0.0 adds Zellem figure-of-merit, mass-loss from wind, etc
-        self._version_ = dawgie.VERSION(2, 0, 0)
-        self.__name = name
-        self['STATUS'] = excalibur.ValuesList()
-        self['data'] = excalibur.ValuesDict()
-        self['STATUS'].append(False)
-        return
-
-    def name(self):
-        '''name ds'''
-        return self.__name
+        ExcaliburSV.__init__(self, name, dawgie.VERSION(2, 0, 0))
 
     def view(self, caller: excalibur.Identity, visitor: dawgie.Visitor) -> None:
         '''view ds'''
@@ -53,20 +45,11 @@ class EstimateSV(dawgie.StateVector):
     pass
 
 
-class PopulationSV(dawgie.StateVector):
+class PopulationSV(ExcaliburSV):
     '''PopulationSV ds'''
 
     def __init__(self, name):
-        self._version_ = dawgie.VERSION(2, 0, 0)
-        self.__name = name
-        self['STATUS'] = excalibur.ValuesList()
-        self['data'] = excalibur.ValuesDict()
-        self['STATUS'].append(False)
-        return
-
-    def name(self):
-        '''name ds'''
-        return self.__name
+        ExcaliburSV.__init__(self, name, dawgie.VERSION(2, 0, 0))
 
     def view(self, caller: excalibur.Identity, visitor: dawgie.Visitor) -> None:
         '''view ds'''

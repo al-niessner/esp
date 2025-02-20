@@ -10,25 +10,17 @@ import excalibur
 
 import matplotlib.pyplot as plt
 from excalibur.util.plotters import plot_normalized_byvisit, save_plot_toscreen
+from excalibur.util.svs import ExcaliburSV
 
 
 # ------------- ------------------------------------------------------
 # -- SV -- -----------------------------------------------------------
-class NormSV(dawgie.StateVector):
+class NormSV(ExcaliburSV):
     '''phasecurve.normalization view'''
 
     def __init__(self, name):
         '''__init__ ds'''
-        self._version_ = dawgie.VERSION(1, 1, 0)
-        self.__name = name
-        self['STATUS'] = excalibur.ValuesList()
-        self['data'] = excalibur.ValuesDict()
-        self['STATUS'].append(False)
-        return
-
-    def name(self):
-        '''name ds'''
-        return self.__name
+        ExcaliburSV.__init__(self, name, dawgie.VERSION(1, 1, 0))
 
     def view(self, caller: excalibur.Identity, visitor: dawgie.Visitor) -> None:
         '''view ds'''
@@ -48,21 +40,12 @@ class NormSV(dawgie.StateVector):
     pass
 
 
-class WhiteLightSV(dawgie.StateVector):
+class WhiteLightSV(ExcaliburSV):
     '''phasecurve.whitelight view'''
 
     def __init__(self, name):
         '''__init__ ds'''
-        self._version_ = dawgie.VERSION(1, 1, 1)
-        self.__name = name
-        self['STATUS'] = excalibur.ValuesList()
-        self['data'] = excalibur.ValuesDict()
-        self['STATUS'].append(False)
-        return
-
-    def name(self):
-        '''name ds'''
-        return self.__name
+        ExcaliburSV.__init__(self, name, dawgie.VERSION(1, 1, 1))
 
     def view(self, caller: excalibur.Identity, visitor: dawgie.Visitor) -> None:
         '''view ds'''

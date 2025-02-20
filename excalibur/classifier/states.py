@@ -7,6 +7,8 @@
 import dawgie
 import excalibur
 from excalibur.util.plotters import save_plot_toscreen
+from excalibur.util.svs import ExcaliburSV
+
 import matplotlib.pyplot as plt
 import numpy as np
 import logging
@@ -15,21 +17,12 @@ log = logging.getLogger(__name__)
 
 
 # -- SV -------------------------------------------------------------
-class PredictSV(dawgie.StateVector):
+class PredictSV(ExcaliburSV):
     '''PredictSV ds'''
 
     def __init__(self, name):
         '''__init__ ds'''
-        self._version_ = dawgie.VERSION(1, 1, 0)
-        self.__name = name
-        self['STATUS'] = excalibur.ValuesList()
-        self['data'] = excalibur.ValuesDict()
-        self['STATUS'].append(False)
-        return
-
-    def name(self):
-        '''name ds'''
-        return self.__name
+        ExcaliburSV.__init__(self, name, dawgie.VERSION(1, 1, 0))
 
     def view(self, caller: excalibur.Identity, visitor: dawgie.Visitor) -> None:
         '''view ds'''
@@ -60,21 +53,12 @@ class PredictSV(dawgie.StateVector):
 
 
 # Summarize flags for each target
-class FlagsSV(dawgie.StateVector):
+class FlagsSV(ExcaliburSV):
     '''Flags_SV ds'''
 
     def __init__(self, name):
         '''__init__ ds'''
-        self._version_ = dawgie.VERSION(1, 0, 0)
-        self.__name = name
-        self['STATUS'] = excalibur.ValuesList()
-        self['data'] = excalibur.ValuesDict()
-        self['STATUS'].append(False)
-        return
-
-    def name(self):
-        '''name ds'''
-        return self.__name
+        ExcaliburSV.__init__(self, name, dawgie.VERSION(1, 0, 0))
 
     def view(self, caller: excalibur.Identity, visitor: dawgie.Visitor) -> None:
         '''view ds'''
@@ -225,21 +209,12 @@ class FlagsSV(dawgie.StateVector):
 
 
 # Summarize flags across ALL targets
-class FlagSummarySV(dawgie.StateVector):
+class FlagSummarySV(ExcaliburSV):
     '''Flag_Summary_SV ds'''
 
     def __init__(self, name):
         '''__init__ ds'''
-        self._version_ = dawgie.VERSION(1, 0, 0)
-        self.__name = name
-        self['STATUS'] = excalibur.ValuesList()
-        self['data'] = excalibur.ValuesDict()
-        self['STATUS'].append(False)
-        return
-
-    def name(self):
-        '''name ds'''
-        return self.__name
+        ExcaliburSV.__init__(self, name, dawgie.VERSION(1, 0, 0))
 
     def view(self, caller: excalibur.Identity, visitor: dawgie.Visitor) -> None:
         '''view ds'''

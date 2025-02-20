@@ -20,6 +20,7 @@ from excalibur.util.plotters import (
     add_scale_height_labels,
     outlier_aware_hist,
 )
+from excalibur.util.svs import ExcaliburSV
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -29,21 +30,12 @@ from scipy.interpolate import interp1d
 
 # ------------- ------------------------------------------------------
 # -- SV -- -----------------------------------------------------------
-class NormSV(dawgie.StateVector):
+class NormSV(ExcaliburSV):
     '''transit.normalization view'''
 
     def __init__(self, name):
         '''__init__ ds'''
-        self._version_ = dawgie.VERSION(1, 1, 1)
-        self.__name = name
-        self['STATUS'] = excalibur.ValuesList()
-        self['data'] = excalibur.ValuesDict()
-        self['STATUS'].append(False)
-        return
-
-    def name(self):
-        '''name ds'''
-        return self.__name
+        ExcaliburSV.__init__(self, name, dawgie.VERSION(1, 1, 1))
 
     def view(self, caller: excalibur.Identity, visitor: dawgie.Visitor) -> None:
         '''view ds'''
@@ -81,21 +73,12 @@ class NormSV(dawgie.StateVector):
                     plot_normalized_byvisit(self['data'][p], vrange, visitor)
 
 
-class WhiteLightSV(dawgie.StateVector):
+class WhiteLightSV(ExcaliburSV):
     '''transit.whitelight view'''
 
     def __init__(self, name):
         '''__init__ ds'''
-        self._version_ = dawgie.VERSION(1, 1, 3)
-        self.__name = name
-        self['STATUS'] = excalibur.ValuesList()
-        self['data'] = excalibur.ValuesDict()
-        self['STATUS'].append(False)
-        return
-
-    def name(self):
-        '''name ds'''
-        return self.__name
+        ExcaliburSV.__init__(self, name, dawgie.VERSION(1, 1, 3))
 
     def view(self, caller: excalibur.Identity, visitor: dawgie.Visitor) -> None:
         '''view ds'''
@@ -279,21 +262,12 @@ class WhiteLightSV(dawgie.StateVector):
                         save_plot_toscreen(fig, visitor)
 
 
-class SpectrumSV(dawgie.StateVector):
+class SpectrumSV(ExcaliburSV):
     '''transit.spectrum view'''
 
     def __init__(self, name):
         '''__init__ ds'''
-        self._version_ = dawgie.VERSION(1, 1, 0)
-        self.__name = name
-        self['STATUS'] = excalibur.ValuesList()
-        self['data'] = excalibur.ValuesDict()
-        self['STATUS'].append(False)
-        return
-
-    def name(self):
-        '''name ds'''
-        return self.__name
+        ExcaliburSV.__init__(self, name, dawgie.VERSION(1, 1, 0))
 
     def view(self, caller: excalibur.Identity, visitor: dawgie.Visitor) -> None:
         '''view ds'''
@@ -510,21 +484,12 @@ class SpectrumSV(dawgie.StateVector):
                         save_plot_toscreen(myfig, visitor)
 
 
-class StarspotSV(dawgie.StateVector):
+class StarspotSV(ExcaliburSV):
     '''transit.spectrum view'''
 
     def __init__(self, name):
         '''__init__ ds'''
-        self._version_ = dawgie.VERSION(1, 1, 0)
-        self.__name = name
-        self['STATUS'] = excalibur.ValuesList()
-        self['data'] = excalibur.ValuesDict()
-        self['STATUS'].append(False)
-        return
-
-    def name(self):
-        '''name ds'''
-        return self.__name
+        ExcaliburSV.__init__(self, name, dawgie.VERSION(1, 1, 0))
 
     def view(self, caller: excalibur.Identity, visitor: dawgie.Visitor) -> None:
         '''view ds'''
@@ -553,21 +518,12 @@ class StarspotSV(dawgie.StateVector):
                         )
 
 
-class PopulationSV(dawgie.StateVector):
+class PopulationSV(ExcaliburSV):
     '''transit.population view'''
 
     def __init__(self, name):
         '''__init__ ds'''
-        self._version_ = dawgie.VERSION(1, 0, 0)
-        self.__name = name
-        self['STATUS'] = excalibur.ValuesList()
-        self['data'] = excalibur.ValuesDict()
-        self['STATUS'].append(False)
-        return
-
-    def name(self):
-        '''name ds'''
-        return self.__name
+        ExcaliburSV.__init__(self, name, dawgie.VERSION(1, 0, 0))
 
     def view(self, caller: excalibur.Identity, visitor: dawgie.Visitor) -> None:
         '''view ds'''

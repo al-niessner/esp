@@ -6,6 +6,7 @@ import dawgie
 
 import excalibur
 from excalibur.util.plotters import save_plot_toscreen
+from excalibur.util.svs import ExcaliburSV
 
 import matplotlib.image as img
 import matplotlib.pyplot as plt
@@ -15,21 +16,12 @@ import os
 
 # ------------- ------------------------------------------------------
 # -- SV -- -----------------------------------------------------------
-class XslibSv(dawgie.StateVector):
+class XslibSv(ExcaliburSV):
     '''cerberus.xslib view'''
 
     def __init__(self, name):
         '''__init__ ds'''
-        self._version_ = dawgie.VERSION(1, 2, 0)
-        self.__name = name
-        self['STATUS'] = excalibur.ValuesList()
-        self['data'] = excalibur.ValuesDict()
-        self['STATUS'].append(False)
-        return
-
-    def name(self):
-        '''name ds'''
-        return self.__name
+        ExcaliburSV.__init__(self, name, dawgie.VERSION(1, 2, 0))
 
     def view(self, caller: excalibur.Identity, visitor: dawgie.Visitor) -> None:
         '''view ds'''
@@ -46,7 +38,7 @@ class XslibSv(dawgie.StateVector):
         return
 
 
-class RlsSv(dawgie.StateVector):
+class RlsSv(ExcaliburSV):
     """
     State Vector (SV) as python dict {}
 
@@ -84,16 +76,7 @@ class RlsSv(dawgie.StateVector):
 
     def __init__(self, name):
         '''1.1.1: GMR - Fixed view for low model selection preference'''
-        self._version_ = dawgie.VERSION(1, 1, 1)
-        self.__name = name
-        self['STATUS'] = excalibur.ValuesList()
-        self['data'] = excalibur.ValuesDict()
-        self['STATUS'].append(False)
-        return
-
-    def name(self):
-        '''dataset name'''
-        return self.__name
+        ExcaliburSV.__init__(self, name, dawgie.VERSION(1, 1, 1))
 
     def view(self, caller: excalibur.Identity, visitor: dawgie.Visitor) -> None:
         '''view ds'''
@@ -134,21 +117,12 @@ class RlsSv(dawgie.StateVector):
         return
 
 
-class AtmosSv(dawgie.StateVector):
+class AtmosSv(ExcaliburSV):
     '''cerberus.atmos view'''
 
     def __init__(self, name):
         '''__init__ ds'''
-        self._version_ = dawgie.VERSION(1, 1, 0)
-        self.__name = name
-        self['STATUS'] = excalibur.ValuesList()
-        self['data'] = excalibur.ValuesDict()
-        self['STATUS'].append(False)
-        return
-
-    def name(self):
-        '''name ds'''
-        return self.__name
+        ExcaliburSV.__init__(self, name, dawgie.VERSION(1, 1, 0))
 
     def view(self, caller: excalibur.Identity, visitor: dawgie.Visitor) -> None:
         '''view ds'''
@@ -166,23 +140,14 @@ class AtmosSv(dawgie.StateVector):
 
 
 # -------- -----------------------------------------------------------
-class ResSv(dawgie.StateVector):
+class ResSv(ExcaliburSV):
     '''cerberus.results view'''
 
     def __init__(self, name):
         '''__init__ ds'''
-        self._version_ = dawgie.VERSION(1, 0, 0)
-        self.__name = name
-        self['STATUS'] = excalibur.ValuesList()
+        ExcaliburSV.__init__(self, name, dawgie.VERSION(1, 0, 0))
         self['target'] = excalibur.ValuesList()
         self['planets'] = excalibur.ValuesList()
-        self['data'] = excalibur.ValuesDict()
-        self['STATUS'].append(False)
-        return
-
-    def name(self):
-        '''name ds'''
-        return self.__name
 
     def view(self, caller: excalibur.Identity, visitor: dawgie.Visitor) -> None:
         '''view ds'''
@@ -222,20 +187,11 @@ class ResSv(dawgie.StateVector):
 
 
 # -------- -----------------------------------------------------------
-class AnalysisSv(dawgie.StateVector):
+class AnalysisSv(ExcaliburSV):
     '''PopulationSV ds'''
 
     def __init__(self, name):
-        self._version_ = dawgie.VERSION(1, 0, 0)
-        self.__name = name
-        self['STATUS'] = excalibur.ValuesList()
-        self['data'] = excalibur.ValuesDict()
-        self['STATUS'].append(False)
-        return
-
-    def name(self):
-        '''name ds'''
-        return self.__name
+        ExcaliburSV.__init__(self, name, dawgie.VERSION(1, 0, 0))
 
     def view(self, caller: excalibur.Identity, visitor: dawgie.Visitor) -> None:
         '''view ds'''

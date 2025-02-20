@@ -8,17 +8,16 @@ import dawgie
 
 import excalibur
 from excalibur.util.plotters import distrplot
+from excalibur.util.svs import ExcaliburSV
 
 
 # ------------- ------------------------------------------------------
 # -- SV -- -----------------------------------------------------------
-class PriorsSV(dawgie.StateVector):
+class PriorsSV(ExcaliburSV):
     '''General format for system State Vector view'''
 
     def __init__(self, name):
-        self._version_ = dawgie.VERSION(1, 1, 4)
-        self.__name = name
-        self['STATUS'] = excalibur.ValuesList()
+        ExcaliburSV.__init__(self, name, dawgie.VERSION(1, 1, 4))
         self['PP'] = excalibur.ValuesList()
         self['priors'] = excalibur.ValuesDict()
         self['pignore'] = excalibur.ValuesDict()
@@ -33,13 +32,8 @@ class PriorsSV(dawgie.StateVector):
         self['starkeys'] = excalibur.ValuesList()
         self['planetkeys'] = excalibur.ValuesList()
         self['exts'] = excalibur.ValuesList()
-        self['STATUS'].append(False)
         self['PP'].append(False)
         return
-
-    def name(self):
-        '''name ds'''
-        return self.__name
 
     def view(self, caller: excalibur.Identity, visitor: dawgie.Visitor) -> None:
         '''view ds'''
@@ -117,20 +111,11 @@ class PriorsSV(dawgie.StateVector):
 
 
 # -------- -----------------------------------------------------------
-class PopulationSV(dawgie.StateVector):
+class PopulationSV(ExcaliburSV):
     '''PopulationSV ds'''
 
     def __init__(self, name):
-        self._version_ = dawgie.VERSION(2, 0, 0)
-        self.__name = name
-        self['STATUS'] = excalibur.ValuesList()
-        self['data'] = excalibur.ValuesDict()
-        self['STATUS'].append(False)
-        return
-
-    def name(self):
-        '''name ds'''
-        return self.__name
+        ExcaliburSV.__init__(self, name, dawgie.VERSION(2, 0, 0))
 
     def view(self, caller: excalibur.Identity, visitor: dawgie.Visitor) -> None:
         '''view ds'''

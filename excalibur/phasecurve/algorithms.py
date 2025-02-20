@@ -1,6 +1,7 @@
 '''phasecurve algorithms ds'''
 
 # Heritage code shame:
+# pylint: disable=duplicate-code
 # pylint: disable=invalid-name
 
 # -- IMPORTS -- ------------------------------------------------------

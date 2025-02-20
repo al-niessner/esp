@@ -1,6 +1,7 @@
 '''phasecurve core ds'''
 
 # Heritage code shame:
+# pylint: disable=duplicate-code
 # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals,too-many-statements
 
 # -- IMPORTS -- ------------------------------------------------------
@@ -11,9 +12,9 @@ import logging
 
 import excalibur.system.core as syscore
 import excalibur.transit.core as trncore
+import excalibur.util.monkey_patch  # side effects # noqa: F401 # pylint: disable=unused-import
 from excalibur.util.plotters import save_plot_myfit, plot_residual_fft
 
-import ldtk
 
 from collections import namedtuple
 
@@ -128,30 +129,6 @@ def ctxtupdt(
         avi=avi,
     )
     return
-
-
-# from ldtk import LDPSetCreator, BoxcarFilter
-# from ldtk.ldmodel import LinearModel, QuadraticModel, NonlinearModel
-class LDPSet(ldtk.LDPSet):
-    '''
-    A. NIESSNER: INLINE HACK TO ldtk.LDPSet
-    '''
-
-    @staticmethod
-    def is_mime():
-        '''is_mime ds'''
-        return True
-
-    @property
-    def profile_mu(self):
-        '''profile_mu ds'''
-        return self._mu
-
-    pass
-
-
-setattr(ldtk, 'LDPSet', LDPSet)
-setattr(ldtk.ldtk, 'LDPSet', LDPSet)
 
 
 # ----------------- --------------------------------------------------
