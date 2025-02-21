@@ -1,4 +1,8 @@
 '''Target Database Products View'''
+
+# Heritage code shame:
+# pylint: disable=too-many-branches,too-many-locals,too-many-nested-blocks,too-many-statements
+
 # -- IMPORTS -- ------------------------------------------------------
 import bokeh.embed
 import bokeh.plotting  # the awesome plotting engine
@@ -6,13 +10,16 @@ import dawgie
 import numpy
 
 import excalibur
+
+
 # ------------- ------------------------------------------------------
 # -- TARGET -- -------------------------------------------------------
 class TargetSV(dawgie.StateVector):
     '''target view'''
+
     def __init__(self, name):
         '''__init__ ds'''
-        self._version_ = dawgie.VERSION(1,1,1)
+        self._version_ = dawgie.VERSION(1, 1, 1)
         self.__name = name
         self['STATUS'] = excalibur.ValuesList()
         self['starID'] = excalibur.ValuesDict()
@@ -29,7 +36,7 @@ class TargetSV(dawgie.StateVector):
         '''name ds'''
         return self.__name
 
-    def view(self, caller:excalibur.identity, visitor:dawgie.Visitor)->None:
+    def view(self, caller: excalibur.Identity, visitor: dawgie.Visitor) -> None:
         '''view ds'''
         if self['STATUS'][-1]:
             targetlist = list(self['starID'].keys())
@@ -58,24 +65,30 @@ class TargetSV(dawgie.StateVector):
                 exts = self['exts']
                 for key in skeys:
                     listkeys = [key]
-                    listkeys.extend([key+x for x in exts])
+                    listkeys.extend([key + x for x in exts])
                     allstar.append(listkeys)
                     pass
                 allplanet = []
                 pkeys = self['planetkeys']
                 for key in pkeys:
                     listkeys = [key]
-                    listkeys.extend([key+x for x in exts])
+                    listkeys.extend([key + x for x in exts])
                     allplanet.append(listkeys)
                     pass
-                labels = [targetlist[0], 'UPPER ERR', 'LOWER ERR', 'UNITS', 'REF']
+                labels = [
+                    targetlist[0],
+                    'UPPER ERR',
+                    'LOWER ERR',
+                    'UNITS',
+                    'REF',
+                ]
                 table = visitor.add_table(clabels=labels, rows=len(allstar))
                 for starlabels in allstar:
                     i = allstar.index(starlabels)
-                    for l in starlabels:
-                        j = starlabels.index(l)
-                        table.get_cell(i, j).add_primitive(l)
-                        elem = starinfo[l][0]
+                    for starlabel in starlabels:
+                        j = starlabels.index(starlabel)
+                        table.get_cell(i, j).add_primitive(starlabel)
+                        elem = starinfo[starlabel][0]
                         if elem:
                             table.get_cell(i, j).add_primitive(elem)
                             pass
@@ -85,35 +98,38 @@ class TargetSV(dawgie.StateVector):
                         pass
                     pass
                 for c in self['starID'][targetlist[0]]['planets']:
-                    labels = ['PLANET '+c, 'UPPER ERR',
-                              'LOWER ERR', 'UNITS', 'REF']
-                    table = visitor.add_table(clabels=labels, rows=len(allplanet))
+                    labels = [
+                        'PLANET ' + c,
+                        'UPPER ERR',
+                        'LOWER ERR',
+                        'UNITS',
+                        'REF',
+                    ]
+                    table = visitor.add_table(
+                        clabels=labels, rows=len(allplanet)
+                    )
                     for starlabels in allplanet:
                         i = allplanet.index(starlabels)
-                        for l in starlabels:
-                            j = starlabels.index(l)
-                            table.get_cell(i, j).add_primitive(l)
-                            elem = starinfo[c][l][0]
+                        for starlabel in starlabels:
+                            j = starlabels.index(starlabel)
+                            table.get_cell(i, j).add_primitive(starlabel)
+                            elem = starinfo[c][starlabel][0]
                             if elem:
                                 table.get_cell(i, j).add_primitive(elem)
-                                pass
                             else:
                                 table.get_cell(i, j).add_primitive('NA')
-                                pass
-                            pass
-                        pass
-                    pass
-                pass
-            pass
+
         return
-    pass
+
+
 # ------------ -------------------------------------------------------
 # -- FILTER -- -------------------------------------------------------
 class FilterSV(dawgie.StateVector):
     '''filter view'''
+
     def __init__(self, name):
         '''__init__ ds'''
-        self._version_ = dawgie.VERSION(1,1,1)
+        self._version_ = dawgie.VERSION(1, 1, 1)
         self.__name = name
         self['STATUS'] = excalibur.ValuesList()
         self['PROCESS'] = excalibur.ValuesDict()
@@ -125,7 +141,7 @@ class FilterSV(dawgie.StateVector):
         '''name ds'''
         return self.__name
 
-    def view(self, caller:excalibur.identity, visitor:dawgie.Visitor)->None:
+    def view(self, caller: excalibur.Identity, visitor: dawgie.Visitor) -> None:
         '''view ds'''
         if self['STATUS'][-1]:
             if len(self['STATUS']) < 3:
@@ -139,27 +155,28 @@ class FilterSV(dawgie.StateVector):
                 pass
             if len(self['STATUS']) > 2:
                 ignorekeys = ['NAMES', 'TOTAL']
-                actflts = [f for f in self['activefilters'].keys() if
-                           f not in ignorekeys]
+                actflts = [
+                    f
+                    for f in self['activefilters'].keys()
+                    if f not in ignorekeys
+                ]
                 labels = ['Filter', 'Frames collected']
-                table = visitor.add_table(clabels=labels,
-                                          rows=len(actflts))
+                table = visitor.add_table(clabels=labels, rows=len(actflts))
                 for flt in actflts:
                     i = actflts.index(flt)
                     number = len(self['activefilters'][flt]['TOTAL'])
                     table.get_cell(i, 0).add_primitive(flt)
                     table.get_cell(i, 1).add_primitive(number)
-                    pass
-                pass
-            pass
         return
-    pass
+
+
 # ------------ -------------------------------------------------------
 # -- DATABASE -- -----------------------------------------------------
 class DatabaseSV(dawgie.StateVector):
     '''target.scrape view'''
+
     def __init__(self, name):
-        self._version_ = dawgie.VERSION(1,1,1)
+        self._version_ = dawgie.VERSION(1, 1, 1)
         self.__name = name
         self['STATUS'] = excalibur.ValuesList()
         self['name'] = excalibur.ValuesDict()
@@ -170,7 +187,7 @@ class DatabaseSV(dawgie.StateVector):
         '''__init__ ds'''
         return self.__name
 
-    def view(self, caller:excalibur.identity, visitor:dawgie.Visitor)->None:
+    def view(self, caller: excalibur.Identity, visitor: dawgie.Visitor) -> None:
         '''view ds'''
         if self['STATUS'][-1]:
             ordlab = ['observatory', 'instrument', 'detector', 'filter', 'mode']
@@ -183,25 +200,28 @@ class DatabaseSV(dawgie.StateVector):
                         total = len(vlist)
                         nb = vlist.count(v)
                         if v is not None:
-                            percent = 1e2*vlist.count(v)/total
-                            out = (str(v) +
-                                   ': ' + str(int(nb)) +
-                                   ' (' + str(round(percent)) + '%)')
+                            percent = 1e2 * vlist.count(v) / total
+                            out = (
+                                str(v)
+                                + ': '
+                                + str(int(nb))
+                                + ' ('
+                                + str(round(percent))
+                                + '%)'
+                            )
                             table.get_cell(0, i).add_primitive(out)
-                            pass
-                        pass
-                    pass
-                pass
-            pass
+
         return
-    pass
+
+
 # -------------- -----------------------------------------------------
 # -- MONITOR -- -------------------------------------------------------
 class MonitorSV(dawgie.StateVector):
     '''MonitorSV ds'''
+
     def __init__(self):
         '''__init__ ds'''
-        self._version_ = dawgie.VERSION(1,1,1)
+        self._version_ = dawgie.VERSION(1, 1, 1)
         self['last'] = excalibur.ValuesDict()
         self['planet'] = excalibur.ValuesDict()
         self['runid'] = excalibur.ValuesList()
@@ -212,42 +232,51 @@ class MonitorSV(dawgie.StateVector):
         '''name ds'''
         return 'parameters'
 
-    def view(self, caller:excalibur.identity, visitor:dawgie.Visitor)->None:
+    def view(self, caller: excalibur.Identity, visitor: dawgie.Visitor) -> None:
         '''view ds'''
         for k in sorted(self['last']):
             outlier = self['outlier']
-            ks = k.split ('_')
+            ks = k.split('_')
             p = ks[0]
             value = self['last'][k]
-            visitor.add_primitive ('Planet ' + p + ' parameter ' +
-                                   '_'.join (ks[1:]) + ' last change: ' +
-                                   str(value)+'; Outlier: '+str(outlier))
-            if not numpy.isnan (value):
+            visitor.add_primitive(
+                'Planet '
+                + p
+                + ' parameter '
+                + '_'.join(ks[1:])
+                + ' last change: '
+                + str(value)
+                + '; Outlier: '
+                + str(outlier)
+            )
+            if not numpy.isnan(value):
                 values = []
                 for v in self['planet'][k]:
-                    try: values.append (float(v))
-                    except ValueError: values.append (numpy.nan)
+                    try:
+                        values.append(float(v))
+                    except ValueError:
+                        values.append(numpy.nan)
                     pass
-                fig = bokeh.plotting.figure (title=('Change of ' +
-                                                    '_'.join (ks[1:]) +
-                                                    ' over RunIDs'),
-                                             x_axis_label='Run ID',
-                                             y_axis_label='Value')
+                fig = bokeh.plotting.figure(
+                    title=('Change of ' + '_'.join(ks[1:]) + ' over RunIDs'),
+                    x_axis_label='Run ID',
+                    y_axis_label='Value',
+                )
                 # GMR: Pass pylint, to be solved
                 # fig.circle (self['runid'], values)
-                js,div = bokeh.embed.components (fig)
-                visitor.add_declaration (None, div=div, js=js)
-                pass
-            pass
+                js, div = bokeh.embed.components(fig)
+                visitor.add_declaration(None, div=div, js=js)
         return
-    pass
+
+
 # -------------- -----------------------------------------------------
 # -- ALERT --- -------------------------------------------------------
 class AlertSV(dawgie.StateVector):
     '''AlertSV ds'''
+
     def __init__(self):
         '''__init__ ds'''
-        self._version_ = dawgie.VERSION(1,1,1)
+        self._version_ = dawgie.VERSION(1, 1, 1)
         self['changes'] = excalibur.ValuesList()
         self['known'] = excalibur.ValuesList()
         self['table'] = excalibur.ValuesList()
@@ -257,37 +286,39 @@ class AlertSV(dawgie.StateVector):
         '''name ds'''
         return 'parameters'
 
-    def view(self, caller:excalibur.identity, visitor:dawgie.Visitor)->None:
+    def view(self, caller: excalibur.Identity, visitor: dawgie.Visitor) -> None:
         '''view ds'''
-        visitor.add_declaration ('Last deltas', tag='h4')
+        visitor.add_declaration('Last deltas', tag='h4')
 
         if self['changes']:
-            visitor.add_declaration ('', list=True)
-            for c in self['changes']: visitor.add_declaration (c, tag='li')
-            visitor.add_declaration ('', list=False)
-        else: visitor.add_primitive ('No change since last run')
+            visitor.add_declaration('', list=True)
+            for c in self['changes']:
+                visitor.add_declaration(c, tag='li')
+            visitor.add_declaration('', list=False)
+        else:
+            visitor.add_primitive('No change since last run')
 
         params = set()
         for te in self['table']:
             # params.update (set (['_'.join(k.split ('_')[1:]) for k in te.keys()]))
-            params.update ({'_'.join(k.split ('_')[1:]) for k in te.keys()})
+            params.update({'_'.join(k.split('_')[1:]) for k in te.keys()})
             pass
-        params = list(sorted (params))
+        params = list(sorted(params))
         row = -1
         table = visitor.add_table(clabels=['target', 'planet'] + params, rows=1)
-        for trg, pp in zip (self['known'], self['table']):
+        for trg, pp in zip(self['known'], self['table']):
             planets = list(sorted({k.split('_')[0] for k in pp.keys()}))
             for planet in planets:
                 row += 1
-                table.get_cell (row, 0).add_primitive (trg)
-                table.get_cell (row, 1).add_primitive (planet)
-                for i,param in enumerate (params):
-                    k = '_'.join ([planet, param])
-                    table.get_cell (row, i+2).add_primitive (str(pp[k])
-                                                             if k in pp else '-')
-                    pass
-                pass
-            pass
+                table.get_cell(row, 0).add_primitive(trg)
+                table.get_cell(row, 1).add_primitive(planet)
+                for i, param in enumerate(params):
+                    k = '_'.join([planet, param])
+                    table.get_cell(row, i + 2).add_primitive(
+                        str(pp[k]) if k in pp else '-'
+                    )
+
         return
-    pass
+
+
 # ------------ -------------------------------------------------------

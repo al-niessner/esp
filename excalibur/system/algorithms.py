@@ -1,6 +1,10 @@
 '''system algorithms ds'''
+
+# Heritage code shame:
+# pylint: disable=too-many-branches,too-many-locals
+
 # -- IMPORTS -- ------------------------------------------------------
-import logging; log = logging.getLogger(__name__)
+import logging
 
 import dawgie
 
@@ -8,10 +12,11 @@ from collections import defaultdict
 
 import excalibur.runtime.algorithms as rtalg
 
-import excalibur.system as sys
 import excalibur.system.core as syscore
 import excalibur.system.states as sysstates
 import excalibur.system.overwriter as sysoverwriter
+
+from excalibur.util.checksv import checksv
 
 import excalibur.target as trg
 import excalibur.target.algorithms as trgalg
@@ -20,16 +25,24 @@ from excalibur.system.consistency import consistency_checks
 from excalibur.target.targetlists import get_target_lists
 from excalibur.system.core import savesv
 
+from importlib import import_module as fetch  # avoid cicular dependencies
+
+log = logging.getLogger(__name__)
+
+
 # ------------- ------------------------------------------------------
 # -- ALGORITHMS -- ---------------------------------------------------
-class validate(dawgie.Algorithm):
+class Validate(dawgie.Algorithm):
     '''Pulls out formatted info from NEXSCI and checks what is missing'''
+
     def __init__(self):
         '''__init__ ds'''
         # self._version_ = dawgie.VERSION(1,1,4)  # typos fixed in core/ssconstants
-        self._version_ = dawgie.VERSION(1,2,0)  # new bestValue() parameter selection
-        self.__autofill = trgalg.autofill()
-        self.__rt = rtalg.autofill()
+        self._version_ = dawgie.VERSION(
+            1, 2, 0
+        )  # new bestValue() parameter selection
+        self.__autofill = trgalg.Autofill()
+        self.__rt = rtalg.Autofill()
         self.__out = sysstates.PriorsSV('parameters')
         return
 
@@ -39,8 +52,9 @@ class validate(dawgie.Algorithm):
 
     def previous(self):
         '''Input State Vectors: target.autofill'''
-        return [dawgie.ALG_REF(trg.task, self.__autofill)] + \
-               self.__rt.refs_for_validity()
+        return [
+            dawgie.ALG_REF(trg.task, self.__autofill)
+        ] + self.__rt.refs_for_validity()
 
     def state_vectors(self):
         '''Output State Vectors: system.validate'''
@@ -51,26 +65,32 @@ class validate(dawgie.Algorithm):
 
         # stop here if it is not a runtime target
         if not self.__rt.is_valid():
-            log.warning('--< SYSTEM.%s: not a valid target >--', self.name().upper())
+            log.warning(
+                '--< SYSTEM.%s: not a valid target >--', self.name().upper()
+            )
 
         else:
             autofill = self.__autofill.sv_as_dict()['parameters']
             runtime = self.__rt.sv_as_dict()['status']
 
-            runtime_params = syscore.SYSTEM_PARAMS(
+            runtime_params = syscore.SystemParams(
                 maximizeSelfConsistency=True,
-                selectMostRecent=runtime['target_autofill_selectMostRecent'])
+                selectMostRecent=runtime['target_autofill_selectMostRecent'],
+            )
 
             update = False
-            valid, errstring = syscore.checksv(autofill)
+            valid, errstring = checksv(autofill)
             if valid:
                 update = self._validate(autofill, runtime_params, self.__out)
             else:
                 self._failure(errstring)
 
-            if update: ds.update()
-            elif valid: raise dawgie.NoValidOutputDataError(
-                    f'No output created for SYSTEM.{self.name()}')
+            if update:
+                ds.update()
+            elif valid:
+                raise dawgie.NoValidOutputDataError(
+                    f'No output created for SYSTEM.{self.name()}'
+                )
         return
 
     @staticmethod
@@ -84,15 +104,18 @@ class validate(dawgie.Algorithm):
         '''Failure log'''
         log.warning('--< SYSTEM VALIDATE: %s >--', errstr)
         return
+
     pass
 
-class finalize(dawgie.Algorithm):
+
+class Finalize(dawgie.Algorithm):
     '''Generates SV used as input in other algorithm calls,
     throws out incomplete systems'''
+
     def __init__(self):
-        self._version_ = dawgie.VERSION(1,1,4)
-        self.__rt = rtalg.autofill()
-        self.__val = validate()
+        self._version_ = dawgie.VERSION(1, 1, 4)
+        self.__rt = rtalg.Autofill()
+        self.__val = Validate()
         self.__out = sysstates.PriorsSV('parameters')
         return
 
@@ -102,8 +125,9 @@ class finalize(dawgie.Algorithm):
 
     def previous(self):
         '''Input State Vectors: system.validate'''
-        return [dawgie.ALG_REF(sys.task, self.__val)] + \
-               self.__rt.refs_for_validity()
+        return [
+            dawgie.ALG_REF(fetch('excalibur.system').task, self.__val)
+        ] + self.__rt.refs_for_validity()
 
     def state_vectors(self):
         '''Output State Vectors: system.finalize'''
@@ -117,16 +141,21 @@ class finalize(dawgie.Algorithm):
 
         # stop here if it is not a runtime target
         if not self.__rt.is_valid():
-            log.warning('--< SYSTEM.%s: %s not a valid target >--', target, self.name().upper())
+            log.warning(
+                '--< SYSTEM.%s: %s not a valid target >--',
+                target,
+                self.name().upper(),
+            )
 
         else:
             update = False
             val = self.__val.sv_as_dict()['parameters']
 
-            valid, errstring = syscore.checksv(val)
+            valid, errstring = checksv(val)
             if valid:
                 overwrite = sysoverwriter.ppar()
-                for key in val: self.__out[key] = val.copy()[key]
+                for key in val:
+                    self.__out[key] = val.copy()[key]
                 if target in overwrite:
                     update = self._priority(overwrite[target], self.__out)
                     if not update:
@@ -136,29 +165,56 @@ class finalize(dawgie.Algorithm):
                 elif not self.__out['PP'][-1]:
                     update = True
                 else:
-                    log.warning('>-- MISSING DICT INFO: %s --<',target)
+                    log.warning('>-- MISSING DICT INFO: %s --<', target)
                     log.warning('>-- ADD KEY TO SYSTEM/OVERWRITER --<')
 
                 # consistency checks
-                inconsistencies = consistency_checks(self.__out['priors'], self.__out['ignore'])
+                inconsistencies = consistency_checks(
+                    self.__out['priors'], self.__out['ignore']
+                )
                 for inconsistency in inconsistencies:
-                    self.__out['autofill'].append('inconsistent:'+inconsistency)
+                    self.__out['autofill'].append(
+                        'inconsistent:' + inconsistency
+                    )
 
                 # log warnings moved to the very end (previously were before forcepar)
                 # 6/16/24 target name added to log, otherwise can't tell which one has the error
-                log.warning('>-- FORCE PARAMETER: %s %s', target, str(self.__out['PP'][-1]))
-                log.warning('>-- MISSING MANDATORY PARAMETERS: %s %s', target, str(self.__out['needed']))
-                log.warning('>-- MISSING PLANET PARAMETERS: %s %s', target, str(self.__out['pneeded']))
-                log.warning('>-- PLANETS IGNORED: %s %s', target, str(self.__out['ignore']))
-                log.warning('>-- INCONSISTENCIES: %s %s', target, str(inconsistencies))
-                log.warning('>-- AUTOFILL: %s %s', target, str(self.__out['autofill']))
+                log.warning(
+                    '>-- FORCE PARAMETER: %s %s',
+                    target,
+                    str(self.__out['PP'][-1]),
+                )
+                log.warning(
+                    '>-- MISSING MANDATORY PARAMETERS: %s %s',
+                    target,
+                    str(self.__out['needed']),
+                )
+                log.warning(
+                    '>-- MISSING PLANET PARAMETERS: %s %s',
+                    target,
+                    str(self.__out['pneeded']),
+                )
+                log.warning(
+                    '>-- PLANETS IGNORED: %s %s',
+                    target,
+                    str(self.__out['ignore']),
+                )
+                log.warning(
+                    '>-- INCONSISTENCIES: %s %s', target, str(inconsistencies)
+                )
+                log.warning(
+                    '>-- AUTOFILL: %s %s', target, str(self.__out['autofill'])
+                )
                 pass
             else:
                 self._failure(errstring)
 
-            if update: ds.update()
-            elif valid: raise dawgie.NoValidOutputDataError(
-                    f'No output created for SYSTEM.{self.name()}')
+            if update:
+                ds.update()
+            elif valid:
+                raise dawgie.NoValidOutputDataError(
+                    f'No output created for SYSTEM.{self.name()}'
+                )
         return
 
     @staticmethod
@@ -172,21 +228,26 @@ class finalize(dawgie.Algorithm):
         '''Failure log'''
         log.warning('--< SYSTEM FINALIZE: %s >--', errstr)
         return
+
     pass
+
+
 # ---------------- ---------------------------------------------------
 
-class population(dawgie.Analyzer):
+
+class Population(dawgie.Analyzer):
     '''population ds'''
+
     def __init__(self):
         '''__init__ ds'''
-        self._version_ = dawgie.VERSION(1,0,3)
-        self.__fin = finalize()
+        self._version_ = dawgie.VERSION(1, 0, 3)
+        self.__fin = Finalize()
         self.__out = sysstates.PopulationSV('statistics')
         return
 
     def previous(self):
         '''Input State Vectors: system.finalize'''
-        return [dawgie.ALG_REF(sys.task, self.__fin)]
+        return [dawgie.ALG_REF(fetch('excalibur.system').task, self.__fin)]
 
     def feedback(self):
         '''feedback ds'''
@@ -196,27 +257,35 @@ class population(dawgie.Analyzer):
         '''name ds'''
         return 'population'
 
-    def traits(self)->[dawgie.SV_REF, dawgie.V_REF]:
+    def traits(self) -> [dawgie.SV_REF, dawgie.V_REF]:
         '''traits ds'''
-        return [dawgie.SV_REF(sys.task, finalize(),
-                              finalize().state_vectors()[0])]
+        return [
+            dawgie.SV_REF(
+                fetch('excalibur.system').task,
+                Finalize(),
+                Finalize().state_vectors()[0],
+            )
+        ]
 
     def state_vectors(self):
         '''state_vectors ds'''
         return [self.__out]
 
-    def run(self, aspects:dawgie.Aspect):
+    def run(self, aspects: dawgie.Aspect):
         '''run ds'''
 
         targetlists = get_target_lists()
 
         aspecttargets = []
-        for a in aspects: aspecttargets.append(a)
+        for a in aspects:
+            aspecttargets.append(a)
 
         # cross-check the 'active' list against __all__
         for target in targetlists['active']:
             if target not in aspecttargets:
-                log.warning('--< SYSTEM.POPULATION: target missing: %s >--', target)
+                log.warning(
+                    '--< SYSTEM.POPULATION: target missing: %s >--', target
+                )
         # this prints out all the excluded targets.  don't bother
         # for target in aspecttargets:
         #    if target not in targetlists['active']:
@@ -233,14 +302,16 @@ class population(dawgie.Analyzer):
         # for trgt in aspects:
         # for trgt in targetlists['active']:
         # for trgt in filter(lambda tgt: 'STATUS' in aspects[tgt][svname], targetlists['active']):
-        for trgt in filter(lambda tgt: tgt in aspecttargets, targetlists['active']):
+        for trgt in filter(
+            lambda tgt: tgt in aspecttargets, targetlists['active']
+        ):
 
             system_data = aspects[trgt][svname]
 
             # verify SV succeeded for target
             if system_data['STATUS'][-1]:
                 # get stellar attributes
-                st_keys = system_data['starmdt']           # mandatory params
+                st_keys = system_data['starmdt']  # mandatory params
                 pl_keys = system_data['planetmdt']
 
                 for key in st_keys:
@@ -249,20 +320,24 @@ class population(dawgie.Analyzer):
                 # get planetary attributes
                 for planet_letter in system_data['priors']['planets']:
                     for key in pl_keys:
-                        pl_attrs[key].append(system_data['priors'][planet_letter][key])
+                        pl_attrs[key].append(
+                            system_data['priors'][planet_letter][key]
+                        )
 
         ntarg = 0
         nplanet = 0
         #  *** second loop for second (overlapping) histogram ***
         # for trgt in targetlists['roudier62']:
         # for trgt in filter(lambda tgt: 'STATUS' in aspects[tgt][svname], targetlists['roudier62']):
-        for trgt in filter(lambda tgt: tgt in aspecttargets, targetlists['roudier62']):
+        for trgt in filter(
+            lambda tgt: tgt in aspecttargets, targetlists['roudier62']
+        ):
             system_data = aspects[trgt][svname]
             ntarg += 1
 
             # verify SV succeeded for target
             if system_data['STATUS'][-1]:
-                st_keys = system_data['starmdt']           # mandatory params
+                st_keys = system_data['starmdt']  # mandatory params
                 # st_keys.extend(system_data['starnonmdt'])  # non-mandatory params
                 pl_keys = system_data['planetmdt']
                 # pl_keys.extend(system_data['planetnonmdt'])
@@ -274,7 +349,9 @@ class population(dawgie.Analyzer):
                 for planet_letter in system_data['priors']['planets']:
                     nplanet += 1
                     for key in pl_keys:
-                        pl_attrs_roudier62[key].append(system_data['priors'][planet_letter][key])
+                        pl_attrs_roudier62[key].append(
+                            system_data['priors'][planet_letter][key]
+                        )
         # print('system population: # of stars  ',ntarg)
         # print('system population: # of planets',nplanet)
         # Add to SV
@@ -289,5 +366,8 @@ class population(dawgie.Analyzer):
         savesv(aspects, targetlists)
 
         return
+
     pass
+
+
 # ---------------- ---------------------------------------------------

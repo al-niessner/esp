@@ -20,6 +20,7 @@ services:
       - DAWGIE_DB_IMPL=${DAWGIE_DB_IMPL}
       - DAWGIE_DB_NAME=${DAWGIE_DB_NAME}
       - DAWGIE_DB_PATH=${DAWGIE_DB_PATH}
+      - DAWGIE_DB_PORT=${DAWGIE_DB_PORT}
       - DAWGIE_FE_PATH=${DAWGIE_FE_PATH}
       - DAWGIE_LISTENER_BACKLOG=${DAWGIE_LISTENER_BACKLOG}
       - DAWGIE_LOG_BACKUP=${DAWGIE_LOG_BACKUP}
@@ -53,6 +54,13 @@ services:
     depends_on:
       - base
     environment:
+      - DAWGIE_AE_BASE_PACKAGE=${DAWGIE_AE_BASE_PACKAGE}
+      - DAWGIE_AE_BASE_PATH=${DAWGIE_AE_BASE_PATH}
+      - DAWGIE_DB_HOST=${DAWGIE_DB_HOST}
+      - DAWGIE_DB_IMPL=${DAWGIE_DB_IMPL}
+      - DAWGIE_DB_NAME=${DAWGIE_DB_NAME}
+      - DAWGIE_DB_PATH=${DAWGIE_DB_PATH}
+      - DAWGIE_DB_PORT=${DAWGIE_DB_PORT}
       - EXCALIBUR_USER=${EXCALIBUR_USER}
       - USERNAME=${USERNAME}
     image: esp/tools:${ESP_VERSION}
@@ -89,4 +97,3 @@ services:
       - /etc/ssl:/etc/ssl:ro
       - /usr/local/share/ca-certificates:/usr/local/share/ca-certificates:ro
       - /usr/share/ca-certificates:/usr/share/ca-certificates:ro
-    

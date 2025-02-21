@@ -1,36 +1,26 @@
 '''cerberus __main__ ds'''
-# -- IMPORTS -- ------------------------------------------------------
-import os
 
+# -- IMPORTS -- ------------------------------------------------------
 import dawgie
 import dawgie.db
 import dawgie.security
-import dawgie.util
+
+from excalibur.util.main import main_start
 
 import excalibur.cerberus.bot
+
 # ------------- ------------------------------------------------------
-fep = os.environ.get('FE_PORT', None)
-rid = int(os.environ.get('RUNID', None))
-tn = os.environ.get('TARGET_NAME', None)
 
-if fep: dawgie.util.set_ports(int(fep))
-
-dawgie.security.initialize(os.path.expandvars
-                           (os.path.expanduser
-                            (dawgie.context.guest_public_keys)),
-                           myname=dawgie.context.ssl_pem_myname,
-                           myself=dawgie.context.ssl_pem_myself,
-                           system=dawgie.context.ssl_pem_file)
-dawgie.db.reopen()
+rid, tn = main_start()
 
 if tn in ['', '__all__']:
-    name = 'analysis'
+    NAME = 'analysis'
     subtasks = excalibur.cerberus.bot.Agent('cerberus', 4, rid)
 else:
-    name = ['atmos', 'results', 'xslib', None][-1]  # -1 to run them all
+    NAME = ['atmos', 'results', 'xslib', None][-1]  # -1 to run them all
     subtasks = excalibur.cerberus.bot.Actor('cerberus', 4, rid, tn)
     pass
 
-subtasks.do(name)
+subtasks.do(NAME)
 dawgie.db.close()
 dawgie.security.finalize()

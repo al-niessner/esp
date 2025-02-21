@@ -1,18 +1,25 @@
 '''ariel planet_metallicity ds'''
-# -- IMPORTS -- ------------------------------------------------------
-import logging; log = logging.getLogger(__name__)
 
+# Heritage code shame:
+# pylint: disable=invalid-name
+
+# -- IMPORTS -- ------------------------------------------------------
 import numpy as np
+import logging
+
+log = logging.getLogger(__name__)
+
 # np.random.seed(123)
 
 # ______________________________________________________
 
-def massMetalRelationDisp(logmetStar,Mp,thorngren=False):
+
+def massMetalRelationDisp(logmetStar, Mp, thorngren=False):
     '''
     Add some realistic scatter to the mass-metallicity relation
     (not that we know reality)
     '''
-    logmet = massMetalRelation(logmetStar,Mp,thorngren=thorngren)
+    logmet = massMetalRelation(logmetStar, Mp, thorngren=thorngren)
 
     # FINESSE used a dispersion of just 0.3
     #  Swain analysis of Thorgren 2016 finds a lot more scatter (0.8)
@@ -23,7 +30,10 @@ def massMetalRelationDisp(logmetStar,Mp,thorngren=False):
     logmet += np.random.normal(scale=dispersion)
 
     return logmet
+
+
 # ______________________________________________________
+
 
 def massMetalRelation(logmetStar, Mp, thorngren=False):
     '''
@@ -42,30 +52,35 @@ def massMetalRelation(logmetStar, Mp, thorngren=False):
         # metallicity for Jupiter mass (trend value; Jupiter itself is lower)
         intercept = np.log10(9.7)
 
-        if logmetStar=='':
-            log.warning('--< Star metallicity missing in Ariel-sim : add to overwriter.py >--')
-            logmet = intercept + slope*np.log10(Mp)
+        if logmetStar == '':
+            log.warning(
+                '--< Star metallicity missing in Ariel-sim : add to overwriter.py >--'
+            )
+            logmet = intercept + slope * np.log10(Mp)
         else:
-            logmet = logmetStar + intercept + slope*np.log10(Mp)
+            logmet = logmetStar + intercept + slope * np.log10(Mp)
 
     else:
         # mass-metallicity relation from FINESSE proposal (Fortney motivated)
-        slope = -1.
-        maxMetal = 2.
+        slope = -1.0
+        maxMetal = 2.0
         # Mpivot = 1.   # (earth units)
         # intercept = maxMetal - slope*Mpivot
         # Mpivot = -1.5  # (jupiter units)
         intercept = 0.5  # metallicity for Jupiter mass
 
-        logmet = logmetStar + intercept + slope*np.log10(Mp)
+        logmet = logmetStar + intercept + slope * np.log10(Mp)
         # change so that it can handle an array of masses (from cerberus/plotting)
-        if isinstance(Mp,float):
-            logmet = min(maxMetal,logmet)
+        if isinstance(Mp, float):
+            logmet = min(maxMetal, logmet)
         else:
             logmet[np.where(logmet > maxMetal)] = maxMetal
 
     return logmet
+
+
 # ______________________________________________________
+
 
 def randomStarMetal():
     '''
@@ -75,10 +90,13 @@ def randomStarMetal():
     # this is from my excel check of Hinkel's Hypatia catalog
     #  logmetStar=0.06 + 0.29*random.gauss(0.,1.)
     # from Kepler-detection-based (Buchhave 2011)
-    logmetStar=-0.01 + 0.25*np.random.normal()
+    logmetStar = -0.01 + 0.25 * np.random.normal()
 
     return logmetStar
+
+
 # ______________________________________________________
+
 
 def randomCtoO_linear():
     '''
@@ -104,8 +122,10 @@ def randomCtoO_linear():
 
     logCtoO_solar = -0.26  # solar C/O is 0.55
 
-    logCtoO = logCtoO_solar + 0.3*np.random.normal()
+    logCtoO = logCtoO_solar + 0.3 * np.random.normal()
 
-    CtoO = 10.**logCtoO
+    CtoO = 10.0**logCtoO
     return CtoO
+
+
 # ______________________________________________________

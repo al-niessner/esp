@@ -1,0 +1,23 @@
+name: Self Diagnositics
+run-name: ${{ github.actor }} is verifying code for merge compliance
+on: [push]
+jobs:
+  PyTesting:
+    name: Test with Coverage
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          architecture: 'x64'
+          python-version: '3.12'
+      - name: Prepare Python
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r .github/workflows/requirements.txt
+          cp excalibur/__init__.py pip.install.save
+          pip install .
+          mv pip.install.save excalibur/__init__.py
+      - name: pytest
+        run: pytest --cov=dawgie --cov-branch --cov-report term-missing -v test

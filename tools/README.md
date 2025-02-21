@@ -1,6 +1,6 @@
 # Development Tools
 
-First, they can be run anywhere. In other words, you can set your PATH to point to this directory and just type `pp_start.sh` to start a private pipeline (pp) or `pp_stop.sh` to stop a private pipeline. You can also not add it to your PATH and just directly access it with a full or relative like `relative/path/to/excalibur/bash/start.sh` or `/absolute/path/to/excalibur/bash/stop.sh`. The scripts will determine where they are and do the right thing.
+First, they can be run anywhere. In other words, you can set your PATH to point to this directory and just type `pp_start.sh` to start a private pipeline (pp) or `pp_stop.sh` to stop a private pipeline. You can also not add it to your PATH and just directly access it with a full or relative like `relative/path/to/excalibur/tools/start.sh` or `/absolute/path/to/excalibur/tools/stop.sh`. The scripts will determine where they are and do the right thing.
 
 Second, they can be run on the mentor cluster or remotely on a laptop. It is not recommended to run post2shelve.sh on a laptop as it could take many days to weeks to complete. The major problem with running on a laptop is access to `/proj/sdp/data`. The simplest way to solve the problem is to do these three items:
 
@@ -17,6 +17,22 @@ When done, be sure to un-mount `/proj/sdp/data` with `fusermount3 -u /proj/sdp/d
 ## Tools
 
 These tools are fairly robust and follow the pythonic guidelines that it should pretty much do out of the box what you want. There may be required values to be set but they will be explicitly noted. Everything else can be left to the default value for the most part. If on your laptop, certainly everything can be left to their defaults.
+
+### autogen.sh
+
+Generate PyXB bindings and update any checksums that go with the new binding. You will normally have to do this when PyTesting fails and it will give you instructions on how to do it.
+
+### inter.sh
+
+At points in time, the operational DB is interred (frozen, copied and moved) in a mausoleum (public facing and accessible data store). The term inter and mausoleum are used partially in humor and partly to describe what is happening to the data. The operational pipeline operates on the concept of current best estimate. To freeze the DB means the data may no longer be the current best estimate; in other words, it has become corpse like in that it resembles the living but is not alive. Once preserved, the data can then be moved to a data store with a more sophisticated UI than the operational system provides; hence, mausoleum.
+
+Interring the data into a mausoleum:
+
+1. list all of the desired values to put into the mausoleum in the file: /proj/sdp/data/nexsci.sv.txt
+1. create a directory to place working files and the final result: mkdir -p /proj/sdp/${USER}/R_x.y.z  
+    where x, y, and z should be numbers like 1.2.3. Any value of x represents some backward compatibily with all other x of the same value. The value y usually indicates what new features have been added. Lastly, z is patching.
+1. run inter.sh to build the mausoleum: tools/inter.sh /proj/sdp/${USER}/R_x.y.z
+1. get the file /proj/sdp/${USER}/R_x.y.z.tgz (not the directory) to its caretaker
 
 ### post2shelve.sh
 
@@ -95,3 +111,50 @@ Stop the private pipeline started with `pp_start.sh`
 ### pp_worker.sh
 
 _Under Construction_
+
+### run.sh
+
+A tool that allows the user to run the github actions on their local computer. The script needs bash and Python 3.12 with pyyaml installed. If on the mentor cluster, use /proj/sdp/.venv/basic.
+
+Two environment variable control the behavior:
+- KEEP_CHANGES : when defined, it will keep changes made by black and others
+- KEEP_REPORTS : when defined, it will leave the reports in place when successful
+
+You can run the tool anywhere but for example say from the root of the repository like:
+
+```$ tools/run.sh```
+
+To get a list of all of the checks available:
+
+```$ tools/run.sh None```
+
+which will produce output something like this:
+```
+yaml: dynamic_analysis.yaml
+   skipping PyTesting
+yaml: static_analysis.yaml
+   skipping Style
+   skipping Linters
+   skipping Security
+   skipping Delivery
+   skipping Compliance
+waiting for jobs to complete
+Summary: All test verifications were successful
+```
+
+To run just style:
+
+```$ tools/run.sh Style```
+
+To run style and keep the changes that black makes:
+```$ KEEP_CHANGES=1 tools/run.sh Style```
+
+Defining the variable as part of the command is a bashism. You can always define them using setenv or export as well but you will lose the easy ability to change your mind later without logging out.
+
+To run more than one check and review the reports:
+```$ KEEP_CHANGES=1 KEEP_REPORTS=1 tools/run.sh Style Linters Compliance```
+
+
+### update_runids.py
+
+Script used by operations to update the information on the UI that indicates what happened in the source code for what run ID. Please just leave this script be.

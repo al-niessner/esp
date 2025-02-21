@@ -1,8 +1,16 @@
 '''target targetlists ds'''
+
+# Heritage code shame:
+# pylint: disable=invalid-name
+# pylint: disable=too-many-branches,too-many-lines
+
 import excalibur
 import os
 import csv
-import logging; log = logging.getLogger(__name__)
+import logging
+
+log = logging.getLogger(__name__)
+
 
 # --------------------------------------------------------------------
 def get_target_lists():
@@ -30,10 +38,18 @@ def get_target_lists():
         'G141': targetlist_G141(),
         'JWST': targetlist_JWST(),
         'Spitzer': targetlist_Spitzer(),
-        'arielMCS_Nov2023_transit': targetlist_ArielMCSknown('Nov2023',transitCategoryOnly=True),
-        'arielMCS_Nov2023_maxVisits25': targetlist_ArielMCSknown('Nov2023',maxVisits=25),
-        'arielMCS_Feb2024_transit': targetlist_ArielMCSknown('Feb2024',transitCategoryOnly=True),
-        'arielMCS_Feb2024_maxVisits25': targetlist_ArielMCSknown('Feb2024',maxVisits=25),
+        'arielMCS_Nov2023_transit': targetlist_ArielMCSknown(
+            'Nov2023', transitCategoryOnly=True
+        ),
+        'arielMCS_Nov2023_maxVisits25': targetlist_ArielMCSknown(
+            'Nov2023', maxVisits=25
+        ),
+        'arielMCS_Feb2024_transit': targetlist_ArielMCSknown(
+            'Feb2024', transitCategoryOnly=True
+        ),
+        'arielMCS_Feb2024_maxVisits25': targetlist_ArielMCSknown(
+            'Feb2024', maxVisits=25
+        ),
         'ariel_Aug2024_2years': targetlist_ariel2year_aug2024(),
         'ariel_Aug2024_2years_withPlanetletters': planetlist_ariel2year_aug2024(),
         'ariel_Nov2024_2years': targetlist_ariel2year_nov2024(),
@@ -47,6 +63,8 @@ def get_target_lists():
     #     print('# of targets:',targetlist,len(targetlists[targetlist]))
 
     return targetlists
+
+
 # --------------------------------------------------------------------
 def targetlist_active():
     '''
@@ -1443,7 +1461,10 @@ def targetlist_active():
         'TOI-260',
     ]
     return targets
+
+
 # --------------------------------------------------------------------
+
 
 def targetlist_roudier62():
     '''
@@ -1478,7 +1499,7 @@ def targetlist_roudier62():
         'HD 97658',
         'K2-18',
         'K2-24',
-        'K2-3',        # c and d
+        'K2-3',  # c and d
         'K2-33',
         'K2-93',
         'K2-96',
@@ -1516,7 +1537,9 @@ def targetlist_roudier62():
 
     return targets
 
+
 # --------------------------------------------------------------------
+
 
 def targetlist_G141():
     '''
@@ -1623,14 +1646,15 @@ def targetlist_G141():
         'HAT-P-14',
         'HD 86226',
         'HAT-P-67',  # new Oct.2024
-        'TOI-178',   # new Oct.2024
+        'TOI-178',  # new Oct.2024
         'TOI-2109',  # new Oct.2024
-        'TOI-700',   # new Oct.2024
-        'TOI-199',     # new Dec.2024
+        'TOI-700',  # new Oct.2024
+        'TOI-199',  # new Dec.2024
         'Kepler-682',  # new Dec.2024
     ]
 
     return targets
+
 
 # --------------------------------------------------------------------
 def targetlist_JWST():
@@ -1642,26 +1666,26 @@ def targetlist_JWST():
         # '55 Cnc',     # no data!
         # 'GJ 1132',    # NIRSPEC data.timing   # no data!
         # 'GJ 1214',    # no data!
-        'GJ 3053',     # added oct.2024
-        'GJ 3470',     # added oct.2024
-        'GJ 357',      # added oct.2024
+        'GJ 3053',  # added oct.2024
+        'GJ 3470',  # added oct.2024
+        'GJ 357',  # added oct.2024
         'GJ 4102',
         'GJ 4332',
         'GJ 486',
-        'GJ 486',      # NIRSPEC data.timing
-        'GJ 9827',     # added oct.2024
-        'HAT-P-1',     # added oct.2024
+        'GJ 486',  # NIRSPEC data.timing
+        'GJ 9827',  # added oct.2024
+        'HAT-P-1',  # added oct.2024
         'HAT-P-14',
-        'HAT-P-26',    # added oct.2024
-        'HATS-6',      # added oct.2024
-        'HD 149026',   # added oct.2024
+        'HAT-P-26',  # added oct.2024
+        'HATS-6',  # added oct.2024
+        'HD 149026',  # added oct.2024
         'HD 15337',
-        'HD 189733',   # added oct.2024
-        'HD 209458',   # added oct.2024
+        'HD 189733',  # added oct.2024
+        'HD 209458',  # added oct.2024
         'HD 80606',
         'HIP 67522',
-        'K2-141',      # added oct.2024
-        'K2-18',       # added oct.2024
+        'K2-141',  # added oct.2024
+        'K2-18',  # added oct.2024
         'Kepler-167',  # added oct.2024
         'Kepler-51',
         'Kepler-769',  # added oct.2024
@@ -1672,37 +1696,39 @@ def targetlist_JWST():
         'LTT 9779',
         'NGTS-10',
         'TOI-3714',
-        'TOI-451',    # added oct.2024
+        'TOI-451',  # added oct.2024
         'TOI-776',
         'V1298 Tau',  # added aug.15,2024
         'WASP-107',
         'WASP-127',
-        'WASP-17',    # added oct.2024
+        'WASP-17',  # added oct.2024
         'WASP-178',
-        'WASP-18',    # added oct.2024
-        'WASP-19',    # NIRISS data.timing
-        'WASP-39',    # NIRISS data.timing
-        'WASP-43',    # added oct.2024
-        'WASP-52',    # added oct.2024
-        'WASP-63',    # added oct.2024
-        'WASP-69',    # added oct.2024
-        'WASP-77',    # added aug.15,2024
-        'WASP-80',    # added oct.2024
-        'WASP-94',    # added oct.2024
+        'WASP-18',  # added oct.2024
+        'WASP-19',  # NIRISS data.timing
+        'WASP-39',  # NIRISS data.timing
+        'WASP-43',  # added oct.2024
+        'WASP-52',  # added oct.2024
+        'WASP-63',  # added oct.2024
+        'WASP-69',  # added oct.2024
+        'WASP-77',  # added aug.15,2024
+        'WASP-80',  # added oct.2024
+        'WASP-94',  # added oct.2024
         'WASP-96',
-        'GJ 3090',    # added nov.2024
-        'GJ 1132',      # added Dec.2024
-        'TOI-178',      # added Dec.2024
-        'TOI-421',      # added Dec.2024
-        'HATS-75',      # added Dec.2024
-        'TOI-3757',     # added Dec.2024
-        'TOI-5205',     # added Dec.2024
+        'GJ 3090',  # added nov.2024
+        'GJ 1132',  # added Dec.2024
+        'TOI-178',  # added Dec.2024
+        'TOI-421',  # added Dec.2024
+        'HATS-75',  # added Dec.2024
+        'TOI-3757',  # added Dec.2024
+        'TOI-5205',  # added Dec.2024
         'WD 1856+534',  # added Dec.2024
     ]
 
     return targets
 
+
 # --------------------------------------------------------------------
+
 
 def targetlist_Spitzer():
     '''
@@ -1873,7 +1899,9 @@ def targetlist_Spitzer():
 
     return targets
 
+
 # --------------------------------------------------------------------
+
 
 def planetlist_ariel2year_nov2024():
     '''
@@ -2145,7 +2173,9 @@ def planetlist_ariel2year_nov2024():
 
     return targets
 
+
 # --------------------------------------------------------------------
+
 
 def targetlist_ariel2year_nov2024():
     '''
@@ -2407,7 +2437,9 @@ def targetlist_ariel2year_nov2024():
 
     return targets
 
+
 # --------------------------------------------------------------------
+
 
 def targetlist_ariel2year_aug2024():
     '''
@@ -2663,7 +2695,9 @@ def targetlist_ariel2year_aug2024():
 
     return targets
 
+
 # --------------------------------------------------------------------
+
 
 def planetlist_ariel2year_aug2024():
     '''
@@ -2929,7 +2963,9 @@ def planetlist_ariel2year_aug2024():
 
     return targets
 
+
 # --------------------------------------------------------------------
+
 
 def read_ArielMCS_info(filename='Ariel_MCS_Known_2024-02-14.csv'):
     '''
@@ -2937,7 +2973,7 @@ def read_ArielMCS_info(filename='Ariel_MCS_Known_2024-02-14.csv'):
     The most recent file is 2/14/24, but also consider the 11/20/23 file
     '''
 
-    arielDir = excalibur.context['data_dir']+'/ariel/'
+    arielDir = excalibur.context['data_dir'] + '/ariel/'
 
     listofDictionaries = []
 
@@ -2952,11 +2988,14 @@ def read_ArielMCS_info(filename='Ariel_MCS_Known_2024-02-14.csv'):
                 listofDictionaries.append(line)
 
     return listofDictionaries
+
+
 # --------------------------------------------------------------------
 
-def targetlist_ArielMCSknown(filedate='Nov2023',
-                             maxVisits=666,
-                             transitCategoryOnly=False):
+
+def targetlist_ArielMCSknown(
+    filedate='Nov2023', maxVisits=666, transitCategoryOnly=False
+):
     '''
     Select a batch of targets from the Ariel MCS list of known planets
 
@@ -2964,9 +3003,9 @@ def targetlist_ArielMCSknown(filedate='Nov2023',
     Otherwise make the selection based on the number of transit visits (<= maxVisits)
     '''
 
-    if filedate=='Nov2023':
+    if filedate == 'Nov2023':
         filename = 'Ariel_MCS_Known_2023-11-20.csv'
-    elif filedate=='Feb2024':
+    elif filedate == 'Feb2024':
         filename = 'Ariel_MCS_Known_2024-02-14.csv'
     else:
         log.warning('--< PROBLEM: Unknown date for the Ariel MCS table >--')
@@ -2980,7 +3019,10 @@ def targetlist_ArielMCSknown(filedate='Nov2023',
     for target in targetinfo:
         selected = False
         if transitCategoryOnly:
-            if target['Preferred Method']=='Transit' or target['Preferred Method']=='Either':
+            if (
+                target['Preferred Method'] == 'Transit'
+                or target['Preferred Method'] == 'Either'
+            ):
                 selected = True
         else:
             if float(target['Tier 2 Transits']) <= maxVisits:
@@ -3010,6 +3052,8 @@ def targetlist_ArielMCSknown(filedate='Nov2023',
                 targetList.append(target['Star Name'])
 
     return targetList
+
+
 # --------------------------------------------------------------------
 def arielAliases():
     '''
@@ -3019,18 +3063,21 @@ def arielAliases():
     '''
 
     aliases = {
-        'HD 3167':'K2-96',
-        'L 168-9':'GJ 4332',
-        'LHS 1140':'GJ 3053',
-        'LHS 475':'GJ 4102',
-        'TOI-836':'LTT 5972',
-        'WASP-94 A':'WASP-94',
-        'GJ 143':'HD 21749',
-        'HIP 41378':'K2-93',
+        'HD 3167': 'K2-96',
+        'L 168-9': 'GJ 4332',
+        'LHS 1140': 'GJ 3053',
+        'LHS 475': 'GJ 4102',
+        'TOI-836': 'LTT 5972',
+        'WASP-94 A': 'WASP-94',
+        'GJ 143': 'HD 21749',
+        'HIP 41378': 'K2-93',
     }
 
     return aliases
+
+
 # --------------------------------------------------------------------
+
 
 def planetlist_arielROSESmasses():
     '''
@@ -3156,7 +3203,9 @@ def planetlist_arielROSESmasses():
     ]
     return targets
 
+
 # --------------------------------------------------------------------
+
 
 def planetlist_ariel2yearTier1_nov2024():
     '''
@@ -3795,7 +3844,10 @@ def planetlist_ariel2yearTier1_nov2024():
     ]
 
     return targets
+
+
 # --------------------------------------------------------------------
+
 
 def targetlist_ariel2yearTier1_nov2024():
     '''

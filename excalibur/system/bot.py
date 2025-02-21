@@ -1,27 +1,34 @@
 '''system bot ds'''
+
 # -- IMPORTS -- ------------------------------------------------------
 import dawgie
 
 import excalibur.system.algorithms as sysalg
+
+
 # ------------- ------------------------------------------------------
 # -- A&A -- ----------------------------------------------------------
 class Actor(dawgie.Task):
     '''Actor ds'''
+
     def list(self):
         '''Subtasks top level ordered call'''
-        return [
-            sysalg.validate(),
-            sysalg.finalize()
-        ]
+        return [sysalg.Validate(), sysalg.Finalize()]
+
     pass
+
+
 # --------- ----------------------------------------------------------
+
 
 class Agent(dawgie.Analysis):
     '''Agent ds'''
-    def list(self)->[dawgie.Analyzer]:
+
+    def list(self) -> [dawgie.Analyzer]:
         '''list ds'''
-        return [
-            sysalg.population()
-        ]
+        return [sysalg.Population()]
+
     pass
+
+
 # --------- ----------------------------------------------------------
