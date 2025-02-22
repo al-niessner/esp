@@ -46,9 +46,10 @@ To run the tool: `post2shelve.sh`
 
 Execute a development task in the private pipeline context started with `pp_start.sh`. Using exec is faster and more resource friendly than using `pp_worker.sh`.
 
-This script has two required values:
+This script has two required and one optional values:
 1. `<task name>` is the python package name after excalibur. For instance, if we wanted to run the python packaage `excalibur.cerberus` we would supply `cerberus` as the first argument to the tool.
 1. `<target name>` is exactly that. Each star is a target so we would supply the star name as [known by the pipeline](https://excalibur.jpl.nasa.gov:8080/pages/database/targets) like 'GJ 1214'.
+1. `<environment profile>` is the set of environment variables that define one pipeline from another. If not provided, it defaults to the username via `${USER}`.
 
 and one optional via an environment variable:
 1. `RUNID` is an environment variable that can define the run id for the job you going to execute. If not supplied, the value 17 is used.
@@ -84,7 +85,8 @@ The script triggers off these environment variables:
 
 The tool will start a private pipeline. If you are on the mentor machines, you must supply an argument because TCP/IP ports cannot be shared amoung private pipelines. Nothing will force you to do this except an error saying port already in use. On your laptop, can just use the default port.
 
-To set the port for the pipeline, can either set the environment variable `DAWGIE_FE_PORT`. It is overriden by putting the port number as an argument like `pp_start.sh 12345`. If nothing is defined, then port 9990 is used.
+It has one optional argument:
+1. `<environment profile>` is the set of environment variables that define one pipeline from another. If not provided, it defaults to the username via `${USER}`.
 
 Test:
 
@@ -107,6 +109,9 @@ Be aware of these two hidden requirements:
 ### pp_stop.sh
 
 Stop the private pipeline started with `pp_start.sh`
+
+It has one optional argument:
+1. `<environment profile>` is the set of environment variables that define one pipeline from another. If not provided, it defaults to the username via `${USER}`.
 
 ### pp_worker.sh
 
