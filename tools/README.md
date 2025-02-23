@@ -11,8 +11,11 @@ Second, they can be run on the mentor cluster or remotely on a laptop. It is not
    1. `sudo mkdir -p /proj/sdp/data` (maybe once in the life of your laptop)
    1. `sudo chown ${USER}:${USER}` (maybe once in the life of your laptop)
    1. run sshfs: `sshfs -o allow_other -o default_permissions -o idmap=user ${USER}@excalibur.jpl.nasa.gov:/proj/sdp/data /proj/sdp/data`
+   1. `sudo mkdir -p /proj/sdp/${USER}` (maybe once in the life of your laptop)
+   1. `sudo chown ${USER}:${USER}` (maybe once in the life of your laptop)
+   1. run sshfs: `sshfs -o allow_other -o default_permissions -o idmap=user ${USER}@excalibur.jpl.nasa.gov:/proj/sdp/${USER} /proj/sdp/${USER}`
    
-When done, be sure to un-mount `/proj/sdp/data` with `fusermount3 -u /proj/sdp/data`.
+When done, be sure to un-mount `/proj/sdp/data` with `fusermount3 -u /proj/sdp/data`. Same for `/proj/sdp/${USER}`
 
 ## Tools
 
@@ -33,6 +36,12 @@ Interring the data into a mausoleum:
     where x, y, and z should be numbers like 1.2.3. Any value of x represents some backward compatibily with all other x of the same value. The value y usually indicates what new features have been added. Lastly, z is patching.
 1. run inter.sh to build the mausoleum: tools/inter.sh /proj/sdp/${USER}/R_x.y.z
 1. get the file /proj/sdp/${USER}/R_x.y.z.tgz (not the directory) to its caretaker
+
+### make_certs.sh
+
+Generate a pair of TLS certificates to use with EXCALIBUR. The operational pipeline will have to be restarted before your new certs can be used for restricted access functions.
+
+`make_certs.sh /proj/sdp/${USER}/certs`
 
 ### post2shelve.sh
 

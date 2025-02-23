@@ -22,6 +22,8 @@ DNS.4 = mentor4.jpl.nasa.gov
 DNS.5 = mentor5.jpl.nasa.gov
 DNS.6 = mentor6.jpl.nasa.gov
 DNS.7 = mentor7.jpl.nasa.gov
+DNS.8 = mentor8.jpl.nasa.gov
+DNS.9 = mentor9.jpl.nasa.gov
 " > v3.ext
 
 # build the certificate
@@ -38,5 +40,5 @@ then
     cp $1.public /proj/sdp/data/certs/dawgie.public.pem.${USER}
     chmod 664 /proj/sdp/data/certs/dawgie.public.pem.${USER}
 else
-    echo "You need to manual place ${1}.public to /proj/sdp/data/certs/dawgie.public.pem.${USER}"
+    echo "You need to manually copy ${1}.public to /proj/sdp/data/certs/dawgie.public.pem.${USER}"
 fi
