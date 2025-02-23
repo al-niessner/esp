@@ -36,10 +36,12 @@ services:
       - "${DAWGIE_FE_PORT:-9990}-${DAWGIE_SFE_PORT:-9995}:9090-9095"
     user: "${EXCALIBUR_UID}:${EXCALIBUR_GID}"
     volumes:
+      - ${EXCALIBUR_CERTS}:/proj/mycerts
       - ${EXCALIBUR_DATA_PATH}:/proj/data
-      - ${EXCALIBUR_CERTS}:/proj/data/certs:ro
       - ${EXCALIBUR_DB_PATH}:/proj/data/db
+      - ${EXCALIBUR_FRONT_END}:/proj/src/front-end
       - ${EXCALIBUR_SOURCE_PATH}:/proj/src/ae
+      - ${EXCALIBUR_PGPASS}:/proj/.pgpass:ro
       - /etc/ssl:/etc/ssl:ro
       - /usr/local/share/ca-certificates:/usr/local/share/ca-certificates:ro
       - /usr/share/ca-certificates:/usr/share/ca-certificates:ro
