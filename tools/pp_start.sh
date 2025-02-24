@@ -16,6 +16,7 @@ usage()
 [[ ${1:-""} == "--help" ]] && usage && exit 0
 [[ $# -gt 1 ]] && usage && exit -1
 
+ep=${1:-${USER}}
 root=$(realpath $(dirname $0)/..)
 
 if [ -f $ep ]
