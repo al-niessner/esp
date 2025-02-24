@@ -65,7 +65,8 @@ services:
     image: esp/tools:${ESP_VERSION}
     user: "${EXCALIBUR_UID}:${EXCALIBUR_GID}"
     volumes:
-      - ${EXCALIBUR_DATA_PATH}:/proj/data
+      - ${EXCALIBUR_PATH}/${EXCALIBUR_USER}:/proj
+      - ${EXCALIBUR_SOURCE_PATH}:/proj/src/ae
 
   workers:
     build:

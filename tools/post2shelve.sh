@@ -1,12 +1,13 @@
 #! /usr/bin/env bash
 
-latest_tag=$(docker images | grep esp_tools | head -n 1 | awk '{print $2}')
-docker run \
-       -e USER=${USER} \
-       -e USERNAME=${USERNAME} \
-       --network host \
-       --rm \
-       -u ${UID}:1512 \
-       -v /proj/sdp/data:/proj/data \
-       esp_tools:${TAG:-${latest_tag}} \
-       dawgie.db.tools.post2shelve -O /proj/data/${USER}/db -p ${USER}
+root=$(realpath $(dirname $0)/..)
+export DAWGIE_DB_IMPL=post \
+       DAWGIE_DB_NAME=ops \
+       DAWGIE_DB_PATH=$(cat /proj/sdp/$USER/.pgpass) \
+       DAWGIE_DB_PORT=5263 \
+       EXCALIBUR_UID=${UID} \
+       EXCALIBUR_USER=${USER} \
+       EXCALIBUR_SOURCE_PATH=${root}
+docker compose -f ${root}/.docker/compose.yaml run tools \
+       dawgie.db.tools.post2shelve -O /proj/db -p ${1:-${USER:-undefined}}
+       
