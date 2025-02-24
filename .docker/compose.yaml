@@ -4,6 +4,8 @@ services:
       context: ..
       dockerfile: .docker/Dockerfile.base
     image: esp/base:${ESP_VERSION}
+    networks:
+      - netlines
   pipeline:
     build:
       args:
@@ -32,14 +34,18 @@ services:
       - EXCALIBUR_USER=${EXCALIBUR_USER}
       - USERNAME=${USERNAME}
     image: esp/server:${ESP_VERSION}
+    networks:
+      - netlines
     ports:
       - "${DAWGIE_FE_PORT:-9990}-${DAWGIE_SFE_PORT:-9995}:9090-9095"
     user: "${EXCALIBUR_UID}:${EXCALIBUR_GID}"
     volumes:
+      - ${EXCALIBUR_CERTS}:/proj/mycerts
       - ${EXCALIBUR_DATA_PATH}:/proj/data
-      - ${EXCALIBUR_CERTS}:/proj/data/certs:ro
       - ${EXCALIBUR_DB_PATH}:/proj/data/db
+      - ${EXCALIBUR_FRONT_END}:/proj/src/front-end
       - ${EXCALIBUR_SOURCE_PATH}:/proj/src/ae
+      - ${EXCALIBUR_PGPASS}:/proj/.pgpass:ro
       - /etc/ssl:/etc/ssl:ro
       - /usr/local/share/ca-certificates:/usr/local/share/ca-certificates:ro
       - /usr/share/ca-certificates:/usr/share/ca-certificates:ro
@@ -63,6 +69,8 @@ services:
       - EXCALIBUR_USER=${EXCALIBUR_USER}
       - USERNAME=${USERNAME}
     image: esp/tools:${ESP_VERSION}
+    networks:
+      - netlines
     user: "${EXCALIBUR_UID}:${EXCALIBUR_GID}"
     volumes:
       - ${EXCALIBUR_PATH}/${EXCALIBUR_USER}:/proj
@@ -90,6 +98,8 @@ services:
       - USERNAME=${USERNAME}
     image: esp/worker:latest
     init: true
+    networks:
+      - netlines
     user: "${EXCALIBUR_UID}:${EXCALIBUR_GID}"
     volumes:
       - ${EXCALIBUR_CERTS}:/proj/data/certs:ro
@@ -97,3 +107,10 @@ services:
       - /etc/ssl:/etc/ssl:ro
       - /usr/local/share/ca-certificates:/usr/local/share/ca-certificates:ro
       - /usr/share/ca-certificates:/usr/share/ca-certificates:ro
+
+networks:
+  netlines:
+     ipam:
+       driver: default
+       config:
+         - subnet: 172.25.0.0/16

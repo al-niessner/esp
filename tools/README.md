@@ -11,8 +11,11 @@ Second, they can be run on the mentor cluster or remotely on a laptop. It is not
    1. `sudo mkdir -p /proj/sdp/data` (maybe once in the life of your laptop)
    1. `sudo chown ${USER}:${USER}` (maybe once in the life of your laptop)
    1. run sshfs: `sshfs -o allow_other -o default_permissions -o idmap=user ${USER}@excalibur.jpl.nasa.gov:/proj/sdp/data /proj/sdp/data`
+   1. `sudo mkdir -p /proj/sdp/${USER}` (maybe once in the life of your laptop)
+   1. `sudo chown ${USER}:${USER}` (maybe once in the life of your laptop)
+   1. run sshfs: `sshfs -o allow_other -o default_permissions -o idmap=user ${USER}@excalibur.jpl.nasa.gov:/proj/sdp/${USER} /proj/sdp/${USER}`
    
-When done, be sure to un-mount `/proj/sdp/data` with `fusermount3 -u /proj/sdp/data`.
+When done, be sure to un-mount `/proj/sdp/data` with `fusermount3 -u /proj/sdp/data`. Same for `/proj/sdp/${USER}`
 
 ## Tools
 
@@ -34,13 +37,21 @@ Interring the data into a mausoleum:
 1. run inter.sh to build the mausoleum: tools/inter.sh /proj/sdp/${USER}/R_x.y.z
 1. get the file /proj/sdp/${USER}/R_x.y.z.tgz (not the directory) to its caretaker
 
+### make_certs.sh
+
+Generate a pair of TLS certificates to use with EXCALIBUR. The operational pipeline will have to be restarted before your new certs can be used for restricted access functions.
+
+`make_certs.sh /proj/sdp/${USER}/certs`
+
 ### post2shelve.sh
 
 Builds a private pipeline database for a private pipeline to use. It requires access to /proj/sdp/data and postgres on the mentor cluster. If using sshfs on a laptop, will also require network access to JPL (VPN).
 
-The person database will end up in `/proj/data/${USER}/db` and named `$USER`.
+The personal database will end up in `/proj/sdp/${USER}/db` and named `$USER`.
 
 To run the tool: `post2shelve.sh`
+
+Optionally, `post2shelve.sh` takes one argument to create the database in `/proj/sdp/${USER}/db' and named `$1` (the argument).
 
 ### pp_exec.sh
 
