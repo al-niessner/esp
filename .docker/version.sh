@@ -1,7 +1,7 @@
 #! /usr/bin/env bash
 
 rdir=$(realpath $(dirname $0)/..)
-baseVersion=$(python <<EOF
+expected=$(python <<EOF
 try:
     import pyblake2 as hashlib
 except:
@@ -25,14 +25,14 @@ with open ('$rdir/.docker/.env', 'rt') as f: config = f.read()
 k = 'ESP_VERSION='
 i = config.find (k)
 if i > -1:
-    v = config[i+len(k):config.find('\n',i+len(k))]
+    found = config[i+len(k):config.find('\n',i+len(k))]
     if 'KEEP_CHANGES' in os.environ:
-        config = config.replace (v, '$baseVersion')
-        v = '$baseVersion'
+        config = config.replace (found, '$expected')
+        found = '$expected'
         with open ('$rdir/.docker/.env', 'tw') as f: f.write(config)
-    if v == '$baseVersion': sys.exit(0)
+    if found == '$expected': sys.exit(0)
     else:
-        print (f'found version $baseVersion but expected version {v}')
+        print (f'found version {found} but expected version {expected}')
         sys.exit(-2)
 else:
     print ("failed to find the ESP_VERSION in .docker/.env")
