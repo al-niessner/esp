@@ -87,3 +87,14 @@ jobs:
           LDTK_ROOT: ${{ runner.temp }}/.ldtk
         run: |
           python -m dawgie.tools.compliant --ae-dir=excalibur --ae-pkg=excalibur
+  Version:
+    name: Docker Version Verification
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          architecture: 'x64'
+          python-version: '3.12'
+      - name: version
+        run: .docker/version.sh
