@@ -46,7 +46,6 @@ fi
 
 docker compose -f $root/.docker/compose.yaml exec \
        -e DISPLAY=${DISPLAY} \
-       -e FE_PORT=${DAWGIE_FE_PORT:-9990} \
        -e RUNID=${RUNID:-17} \
        -e TARGET_NAME="${2}" \
        pipeline python3 -m excalibur.${1}

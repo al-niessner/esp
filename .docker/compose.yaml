@@ -13,8 +13,6 @@ services:
       context: ..
       dockerfile: .docker/Dockerfile.server
     container_name: pipeline-${EXCALIBUR_USER}
-    depends_on:
-      - base
     environment:
       - DAWGIE_AE_BASE_PACKAGE=${DAWGIE_AE_BASE_PACKAGE}
       - DAWGIE_AE_BASE_PATH=${DAWGIE_AE_BASE_PATH}
@@ -56,8 +54,6 @@ services:
         BASE_VER: ${ESP_VERSION}
       context: ..
       dockerfile: .docker/Dockerfile.tools
-    depends_on:
-      - base
     environment:
       - DAWGIE_AE_BASE_PACKAGE=${DAWGIE_AE_BASE_PACKAGE}
       - DAWGIE_AE_BASE_PATH=${DAWGIE_AE_BASE_PATH}
@@ -82,8 +78,6 @@ services:
         BASE_VER: ${ESP_VERSION}
       context: ..
       dockerfile: .docker/Dockerfile.worker
-    depends_on:
-      - base
     deploy:
       mode: replicated
       replicas: ${EXCALIBUR_REPLICAS}
