@@ -75,6 +75,7 @@ services:
   workers:
     build:
       args:
+        AE_VER: ${ESP_CHANGESET}
         BASE_VER: ${ESP_VERSION}
       context: ..
       dockerfile: .docker/Dockerfile.worker
