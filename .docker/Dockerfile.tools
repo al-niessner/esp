@@ -1,4 +1,4 @@
-ARG BASE_VER
+ARG BASE_VER=undefined
 FROM esp/base:$BASE_VER
 ENV DAWGIE_DOCKERIZED_AE_GIT_REVISION=irrelevant
 ENV HOME=/proj/src

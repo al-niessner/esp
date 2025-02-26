@@ -1,4 +1,4 @@
-ARG BASE_VER
+ARG BASE_VER=undefined
 FROM esp/base:$BASE_VER
 ENV HOME=/proj/src
 ENV PYTHONPATH=/proj/src/ae
