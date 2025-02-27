@@ -1,4 +1,4 @@
-ARG BASE_VER:undefined
+ARG BASE_VER=undefined
 FROM esp/base:$BASE_VER
 COPY . /proj/src/ae
 ARG AE_VER=undefined
