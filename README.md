@@ -11,7 +11,6 @@ EXCALIBUR is an event driven pipeline where the events are defined as changes in
 
 1. log into https://github-fn.jpl.nasa.gov (may require a lot of steps to get there)
 2. ask to become a member of the esp worker team
-3. clone this repository
 
 #### --< security certificate >--
 
