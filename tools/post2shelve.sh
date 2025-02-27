@@ -1,7 +1,8 @@
 #! /usr/bin/env bash
 
 root=$(realpath $(dirname $0)/..)
-export DAWGIE_DB_IMPL=post \
+export DAWGIE_DB_HOST=excalibur.jpl.nasa.gov \
+       DAWGIE_DB_IMPL=post \
        DAWGIE_DB_NAME=ops \
        DAWGIE_DB_PATH=$(cat /proj/sdp/$USER/.pgpass) \
        DAWGIE_DB_PORT=5263 \
